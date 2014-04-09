@@ -12,6 +12,6 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
 | [Defensible Classes](http://wiki.ecmascript.org/doku.php?id=strawman:defensible_classes) | Mark Miller & Doug Crockford | 0
 | [Relationships](http://wiki.ecmascript.org/doku.php?id=strawman:relationships) | Mark Miller & Waldemar Horwat | 0
-| [String Extensions](http://wiki.ecmascript.org/doku.php?id=strawman:string_extensions) | Dave Herman | 0
-| [`String.prototype.at`](https://github.com/mathiasbynens/String.prototype.at)                        | Mathias Bynens & Rick Waldron  | 0     |
+| [String padding](http://wiki.ecmascript.org/doku.php?id=strawman:string_padding) | Kevin Grandon, Rick Waldron & Dave Herman | 0     |
+| [`String.prototype.at`](https://github.com/mathiasbynens/String.prototype.at) | Mathias Bynens & Rick Waldron | 0     |
 | [Weak References](http://wiki.ecmascript.org/doku.php?id=strawman:weakreferences) | Mark Miller & Dave Herman | 0
