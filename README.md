@@ -9,6 +9,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | ------------------------------------------------------------------------------------                 |-------------- | ------|------
 | [Async Functions](https://github.com/lukehoban/ecmascript-asyncawait)                                |Luke Hoban     |1      |
 | [Structured Clone](https://github.com/dslomov-chromium/ecmascript-structured-clone)       |Dmitry Lomov   |1
+| [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
 | [Defensible Classes](http://wiki.ecmascript.org/doku.php?id=strawman:defensible_classes) | Mark Miller & Doug Crockford | 0
 | [Relationships](http://wiki.ecmascript.org/doku.php?id=strawman:relationships) | Mark Miller & Waldemar Horwat | 0
 | [String Extensions](http://wiki.ecmascript.org/doku.php?id=strawman:string_extensions) | Dave Herman | 0
