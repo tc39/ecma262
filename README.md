@@ -7,6 +7,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 
 | Proposal                                                                                             | Champion      | Stage | Notes
 | ------------------------------------------------------------------------------------                 |-------------- | ------|------
+| [Object.observe](http://wiki.ecmascript.org/doku.php?id=harmony:observe)                                |Rafael Weinstein     |2      |
 | [Async Functions](https://github.com/lukehoban/ecmascript-asyncawait)                                |Luke Hoban     |1      |
 | [Parallel JavaScript](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)              |Tatiana Shpeisman, Niko Matsakis     |1      |
 | [Structured Clone](https://github.com/dslomov-chromium/ecmascript-structured-clone)       |Dmitry Lomov   |1
