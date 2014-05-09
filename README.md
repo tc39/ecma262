@@ -17,3 +17,4 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | [String padding](http://wiki.ecmascript.org/doku.php?id=strawman:string_padding) | Kevin Grandon, Rick Waldron & Dave Herman | 0     |
 | [`String.prototype.at`](https://github.com/mathiasbynens/String.prototype.at) | Mathias Bynens & Rick Waldron | 0     |
 | [Weak References](http://wiki.ecmascript.org/doku.php?id=strawman:weakreferences) | Mark Miller & Dave Herman | 0
+| [Object.getOwnPropertyDescriptors](https://gist.github.com/WebReflection/9353781) | Rick Waldron & Andrea Giammarchi | 0
