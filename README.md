@@ -18,3 +18,16 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | [`String.prototype.at`](https://github.com/mathiasbynens/String.prototype.at) | Mathias Bynens & Rick Waldron | 0     |
 | [Weak References](http://wiki.ecmascript.org/doku.php?id=strawman:weakreferences) | Mark Miller & Dave Herman | 0
 | [Object.getOwnPropertyDescriptors](https://gist.github.com/WebReflection/9353781) | Rick Waldron & Andrea Giammarchi | 0
+
+### Contributing New Proposals
+If you are a TC39 member representative, just submit a pull request for your proposal.
+
+Ecma TC39 accepts proposals from non-member individuals who have accepted the TC39 copyright and patent policies. Currently all ECMAScript related technical work is done by the TC39 RF TG (Royalty Free Task Group), for which the following IPR Policies apply:
+
+  * [TC39 RF Patent Policy](http://www.ecma-international.org/memento/TC39%20policy/Ecma%20Experimental%20TC39%20Royalty-Free%20Patent%20Policy.pdf)
+  * [TC39 Software Copyright Policy](http://www.ecma-international.org/memento/TC39%20experimental%20policy.htm) 
+
+If you wish to submit a proposal and are not a representative of a TC39 member, here are the steps you need to take:
+
+  1.  [Register as a TC39 contributor](http://www.ecma-international.org/memento/register_TC39_Royalty_Free_Task_Group.php)
+  2. Submit a pull request here for your proposal.
