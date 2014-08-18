@@ -11,6 +11,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | [Async Functions](https://github.com/lukehoban/ecmascript-asyncawait)                                |Luke Hoban     |1      |
 | [Parallel JavaScript](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)              |Tatiana Shpeisman, Niko Matsakis     |1      |
 | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
+| [Array.prototype.contains](https://github.com/domenic/Array.prototype.contains/) | Domenic Denicola, Rick Waldron | 1
 | [Async Generator](https://github.com/jhusain/asyncgenerator) | Jafar Husain | 0 |
 | [Defensible Classes](http://wiki.ecmascript.org/doku.php?id=strawman:defensible_classes) | Mark Miller & Doug Crockford | 0
 | [Relationships](http://wiki.ecmascript.org/doku.php?id=strawman:relationships) | Mark Miller & Waldemar Horwat | 0
