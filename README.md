@@ -8,6 +8,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | Proposal                                                                                             | Champion      | Stage | Notes
 | ------------------------------------------------------------------------------------                 |-------------- | ------|------
 | [Object.observe](http://wiki.ecmascript.org/doku.php?id=harmony:observe)                                |Rafael Weinstein     |2      |
+| [Exponentation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 2
 | [Async Functions](https://github.com/lukehoban/ecmascript-asyncawait)                                |Luke Hoban     |1      |
 | [Parallel JavaScript](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)              |Tatiana Shpeisman, Niko Matsakis     |1      |
 | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
@@ -22,7 +23,6 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | [Weak References](http://wiki.ecmascript.org/doku.php?id=strawman:weakreferences) | Mark Miller & Dave Herman | 0
 | [Object.getOwnPropertyDescriptors](https://gist.github.com/WebReflection/9353781) | Rick Waldron & Andrea Giammarchi | 0
 | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 0
-| [Exponentation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 0
 | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
 
 ### Contributing New Proposals
