@@ -24,6 +24,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 |🚀| [Object.getOwnPropertyDescriptors](https://gist.github.com/WebReflection/9353781) | Rick Waldron & Andrea Giammarchi | 0
 | | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 0
 | | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
+|🚀| [Map.prototype.map](https://gist.github.com/DmitrySoshnikov/a218700746b2d7a7d2c8), [Map.prototype.filter](https://gist.github.com/DmitrySoshnikov/82b46f4674acee5cedc2) | Dmitry Soshnikov | 0
 
 
 
