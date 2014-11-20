@@ -15,6 +15,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
 | | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1yc2NDzFJ-0yD980URiTcV3oE_2cQDVzXuH4Rss1fG8s/edit?usp=sharing) +  [polyfil](https://github.com/johnmccutchan/ecmascript_simd)| John McCutchan, Peter Jensen | 1
 | | [Async Generator](https://github.com/jhusain/asyncgenerator) | Jafar Husain | 1 |
+| | [Trailing commas in function call expressions](https://github.com/tc39/tc39-notes/raw/master/es6/2014-09/trailing_comma_proposal.pdf) | Jeff Morrison | 1
 | | [Defensible Classes](http://wiki.ecmascript.org/doku.php?id=strawman:defensible_classes) | Mark Miller & Doug Crockford | 0
 | | [Relationships](http://wiki.ecmascript.org/doku.php?id=strawman:relationships) | Mark Miller & Waldemar Horwat | 0
 |🚀| [String padding](http://wiki.ecmascript.org/doku.php?id=strawman:string_padding) | Kevin Grandon, Rick Waldron & Dave Herman | 0     |
