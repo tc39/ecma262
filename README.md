@@ -25,6 +25,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 |🚀| [Object.getOwnPropertyDescriptors](https://gist.github.com/WebReflection/9353781) | Rick Waldron & Andrea Giammarchi | 0
 | | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 0
 | | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
+| | [@@clone / Reflect.clone](https://github.com/caitp/TC39-Proposals/blob/master/tc39-well-known-symbol-clone.md) | Caitlin Potter | 0
 
 
 
