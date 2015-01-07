@@ -6,7 +6,7 @@ applied to. That argument also is also reified as arguments to the `construct` p
 
 1.  Built-in object allocation and initialization are merged into a single constructor function, just like in ES5. Note that allocation take place in a base constructor rather than the original constructor and uses 'originalConstructor' argument to determine the [[Prototype]] of the new instance.  The subclass constructor determines what arguments are passed to the base constructor which may use those arguments in its allocation and initialization logic. 
 
-    * There is no [[CreateAction]] of similar seperable allocation step.
+    * There is no [[CreateAction]] or similar separable allocation step.
 
 1.  *When a constructor is invoked via ordinary [[Construct]] and the constructor body was not defined using a `class` definition
 that has an `extends` clause, then `this` is initialized to a newly allocated ordinary object whose [[Prototype]] is provided
@@ -25,7 +25,7 @@ as the *originalConstructor* argument.   Subsequent references to `this` produce
 superclass constructor.
     * In other words, a `super` call delegates allocation and initial initialization steps to the super class constructor. 
 
-1.  When `this` is in its initialized state, any expression of the form 'super(<args>)' throws a TypeRrror exception. 
+1.  When `this` is in its initialized state, any expression of the form 'super(<args>)' throws a TypeError exception. 
            Rather than using [[Call]] to invoke the super class constructor.  
 
 1.  ** Within a constructor, `new.target` can be used, as if it was an identifier, to access the *originalConstructor* value.
@@ -39,7 +39,7 @@ a TypeError is thrown.
     * This covers the case where a constructor with an `extends` clause  does not  invokes `super()`.
 
 1.  When a function explicitly returns a non-object from a [[Construct]] invocation and its `this` binding 
-is still uninitialized an TypeError is thrown.  
+is still uninitialized a TypeError is thrown.  
 
 1.  When a function explicitly returns a non-object from a [[Construct]] invocation but the `this` value has been initialized, 
 the `this` valus is the value of [[Construct]]
@@ -51,5 +51,5 @@ the `this` valus is the value of [[Construct]]
 *if necessary this rule could be changed to only apply to `function` definition based constructors and `class` definitions 
 without an `extends` clause. 
 
-** There is agreement that this functionality is necessary. There is not yet concensus as to whetherer it can be deferred 
+** There is agreement that this functionality is necessary. There is not yet consensus as to whether it can be deferred 
 until ES7 and on the actual special form syntax used to access the value.
