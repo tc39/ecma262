@@ -29,7 +29,7 @@ superclass constructor.
 1.  When `this` is in its initialized state, any expression of the form 'super(<args>)' throws a TypeError exception. 
            Rather than using [[Call]] to invoke the super class constructor.  
 
-1.  *** Within a constructor, `new.target` can be used, as if it was an identifier, to access the *originalConstructor* value.
+1.  ** Within a constructor, `new.target` can be used, as if it was an identifier, to access the *originalConstructor* value.
     * `new.target` can be used to get information about the original constructor (such as its `prototype` property)
 that can be used to manually allocate the instance object. It can also be used to discriminate [[Construct]] vs. [[Call]] 
 invocations.
