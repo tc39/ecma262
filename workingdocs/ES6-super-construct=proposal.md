@@ -8,10 +8,11 @@ applied to. That argument also is also reified as arguments to the `construct` p
 
     * There is no [[CreateAction]] or similar separable allocation step.
 
-1.  *When a constructor is invoked via ordinary [[Construct]] and the constructor body was not defined using a `class` definition
+1.  When a constructor is invoked via ordinary [[Construct]] and the constructor body was not defined using a `class` definition
 that has an `extends` clause, then `this` is initialized to a newly allocated ordinary object whose [[Prototype]] is provided
 by the original constructor.
     * This is the way that `function` definition based constructors work today and must be maintained for legacy compatibility.  
+    * The same `this` initializaton rules are used by both `function` definitions and `class` declarations that don't have `extends` clauses.
 
 1.  When a constructor is invoked via ordinary [[Construct]], `this` is marked as uninitialized if the constructor body was
 defined using a `class` definition that has an `extends` clause. 
@@ -42,14 +43,11 @@ a TypeError is thrown.
 is still uninitialized a TypeError is thrown.  
 
 1.  When a function explicitly returns a non-object from a [[Construct]] invocation but the `this` value has been initialized, 
-the `this` valus is the value of [[Construct]]
+the `this` value is returned as the value of [[Construct]]
     * This is required for ES1-5 compatability
 
 1.  If a `class` definition does not include an explicit constructor definition, it defaults to: `constructor(...args) {super(...args)};`
     * If you define a constructor body then you inherit both the constructor argument signature and body from your superclass.
-
-*if necessary this rule could be changed to only apply to `function` definition based constructors and `class` definitions 
-without an `extends` clause. 
 
 ** There is agreement that this functionality is necessary. There is not yet consensus as to whether it can be deferred 
 until ES7 and on the actual special form syntax used to access the value.
