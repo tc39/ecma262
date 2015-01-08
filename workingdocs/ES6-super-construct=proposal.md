@@ -8,7 +8,7 @@ applied to. That argument also is also reified as arguments to the `construct` p
 
     * There is no [[CreateAction]] or similar separable allocation step.
 
-1.  When a constructor is invoked via ordinary [[Construct]] and the constructor body was not defined using a `class` definition
+1.  ***When a constructor is invoked via ordinary [[Construct]] and the constructor body was not defined using a `class` definition
 that has an `extends` clause, then `this` is initialized to a newly allocated ordinary object whose [[Prototype]] is provided
 by the original constructor.
     * This is the way that `function` definition based constructors work today and must be maintained for legacy compatibility.  
@@ -46,8 +46,10 @@ is still uninitialized a TypeError is thrown.
 the `this` value is returned as the value of [[Construct]]
     * This is required for ES1-5 compatability
 
-1.  If a `class` definition does not include an explicit constructor definition, it defaults to: `constructor(...args) {super(...args)};`
+1.  If a `class` definition does not include an explicit constructor definition, it defaults to: `constructor(...args) {super(...args)};` if the `class` has a non-null `extends` clause. Otherwise it defaults to: `constructor() {};`.
     * If you define a constructor body then you inherit both the constructor argument signature and body from your superclass.
 
 ** There is agreement that this functionality is necessary. There is not yet consensus as to whether it can be deferred 
 until ES7 and on the actual special form syntax used to access the value.
+
+*** For the details covered by this proposal, an `extends null` clause  is considered to be equivalant to an absent `extends` clause.
