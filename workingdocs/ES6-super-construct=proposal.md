@@ -26,10 +26,10 @@ as the *originalConstructor* argument.   Subsequent references to `this` produce
 superclass constructor.
     * In other words, a `super` call delegates allocation and initial initialization steps to the super class constructor. 
 
-7.  When `this` is in its initialized state, any expression of the form 'super(<args>)' throws a TypeError exception. 
+7.  When `this` is in its initialized state, any expression of the form 'super(<args>)' throws a ReferenceError exception. 
            Rather than using [[Call]] to invoke the super class constructor.  
 
-8.  *** Within a constructor, `new.target` can be used, as if it was an identifier, to access the *originalConstructor* value.
+8.  ** Within a constructor, `new.target` can be used, as if it was an identifier, to access the *originalConstructor* value.
     * `new.target` can be used to get information about the original constructor (such as its `prototype` property)
 that can be used to manually allocate the instance object. It can also be used to discriminate [[Construct]] vs. [[Call]] 
 invocations.
