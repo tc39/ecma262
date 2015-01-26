@@ -7,7 +7,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 
 |🚀| Proposal                                                                                             | Champion      | Stage | Notes
 |---|------------------------------------------------------------------------------------                 |-------------- | ------|------
-| | [Object.observe](http://wiki.ecmascript.org/doku.php?id=harmony:observe)                                |Rafael Weinstein     |2      |
+| | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Erik Arvidsson     |2      |
 | | [Exponentation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 2
 | | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 2
 | | [Async Functions](https://github.com/lukehoban/ecmascript-asyncawait)                                |Luke Hoban     |1      |
