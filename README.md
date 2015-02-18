@@ -25,6 +25,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 |🚀| [Object.getOwnPropertyDescriptors](https://gist.github.com/WebReflection/9353781) | Rick Waldron & Andrea Giammarchi | 0
 | | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 0
 | | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
+| | [ReverseIterable Interface](https://github.com/leebyron/ecmascript-reverse-iterator) | Lee Byron | 0
 
 
 
@@ -37,7 +38,7 @@ If you are a TC39 member representative, just submit a pull request for your pro
 Ecma TC39 accepts Strawman Proposals from non-member individuals who have accepted the TC39 copyright and patent policies. Currently all ECMAScript related technical work is done by the TC39 RF TG (Royalty Free Task Group), for which the following IPR Policies apply:
 
   * [TC39 RF Patent Policy](http://www.ecma-international.org/memento/TC39%20policy/Ecma%20Experimental%20TC39%20Royalty-Free%20Patent%20Policy.pdf)
-  * [TC39 Software Copyright Policy](http://www.ecma-international.org/memento/TC39%20experimental%20policy.htm) 
+  * [TC39 Software Copyright Policy](http://www.ecma-international.org/memento/TC39%20experimental%20policy.htm)
 
 If you wish to submit a proposal and are not a representative of a TC39 member, here are the steps you need to take:
 
