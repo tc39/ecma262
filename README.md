@@ -42,6 +42,6 @@ Ecma TC39 accepts Strawman Proposals from non-member individuals who have accept
 If you wish to submit a proposal and are not a representative of a TC39 member, here are the steps you need to take:
 
   1. Read the  [TC39 process document](https://docs.google.com/document/d/1QbEE0BsO4lvl7NFTn5WXWeiEIBfaVUF7Dk0hpPpPDzU).
-  2. [Register as a TC39 contributor](http://www.ecma-international.org/memento/register_TC39_Royalty_Free_Task_Group.php)
+  2. [Register as a TC39 contributor](http://www.ecma-international.org/memento/register_TC39_Royalty_Free_Task_Group.php) (it is not necessary to submit the contribution as attachment to the form)
   3. Submit a pull request here for your strawman proposal.
 
