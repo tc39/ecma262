@@ -28,7 +28,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 0
 |🚀| [Set/Map.prototype.toJSON](https://github.com/DavidBruant/Map-Set.prototype.toJSON) | David Bruant ? | 0
 | | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
-
+| | Annex B - RegExp statics plus a flag to disable them | Jaswant Sreeram & Domenic Denicola | 0
 
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
