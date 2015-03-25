@@ -17,31 +17,19 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | | [Async Generator](https://github.com/jhusain/asyncgenerator) | Jafar Husain | 1 |
 | | [Trailing commas in function call expressions](https://github.com/tc39/tc39-notes/raw/master/es6/2014-09/trailing_comma_proposal.pdf) | Jeff Morrison | 1
 | | [ArrayBuffer.transfer](https://gist.github.com/lukewagner/2735af7eea411e18cf20) | Luke Wagneer & Allen Wirfs-Brock | 1
-|🚀| [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 0 |
-| | [Defensible Classes](http://wiki.ecmascript.org/doku.php?id=strawman:defensible_classes) | Mark Miller & Doug Crockford | 0
-| | [Relationships](http://wiki.ecmascript.org/doku.php?id=strawman:relationships) | Mark Miller & Waldemar Horwat | 0
-|🚀| [String padding](http://wiki.ecmascript.org/doku.php?id=strawman:string_padding) | Kevin Grandon, Rick Waldron & Dave Herman | 0     |
-|🚀| [`String.prototype.at`](https://github.com/mathiasbynens/String.prototype.at) | Mathias Bynens & Rick Waldron | 0     |
-| | [Structured Clone](https://github.com/dslomov-chromium/ecmascript-structured-clone)       |Dmitry Lomov   |0
-| | [Weak References](http://wiki.ecmascript.org/doku.php?id=strawman:weakreferences) | Mark Miller & Dave Herman | 0
-|🚀| [Object.getOwnPropertyDescriptors](https://gist.github.com/WebReflection/9353781) | Rick Waldron & Andrea Giammarchi | 0
-| | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 0
-|🚀| [Set/Map.prototype.toJSON](https://github.com/DavidBruant/Map-Set.prototype.toJSON) | David Bruant ? | 0
-| | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
-| | [Class Property Declarations](https://gist.github.com/jeffmo/054df782c05639da2adb)| Jeff Morrison| 0
-
 
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
 
+See also the [stage 0 proposals](stage0.md).
 
 ### Contributing New Proposals
-If you are a TC39 member representative, just submit a pull request for your proposal.
+If you are a TC39 member representative, just submit a pull request for your proposal, probablyt to the `stage0.md` document.
 
 Ecma TC39 accepts Strawman Proposals from non-member individuals who have accepted the TC39 copyright and patent policies. Currently all ECMAScript related technical work is done by the TC39 RF TG (Royalty Free Task Group), for which the following IPR Policies apply:
 
   * [TC39 RF Patent Policy](http://www.ecma-international.org/memento/TC39%20policy/Ecma%20Experimental%20TC39%20Royalty-Free%20Patent%20Policy.pdf)
-  * [TC39 Software Copyright Policy](http://www.ecma-international.org/memento/TC39%20experimental%20policy.htm) 
+  * [TC39 Software Copyright Policy](http://www.ecma-international.org/memento/TC39%20experimental%20policy.htm)
 
 If you wish to submit a proposal and are not a representative of a TC39 member, here are the steps you need to take:
 
