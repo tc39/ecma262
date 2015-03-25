@@ -24,7 +24,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 See also the [stage 0 proposals](stage0.md).
 
 ### Contributing New Proposals
-If you are a TC39 member representative, just submit a pull request for your proposal, probablyt to the `stage0.md` document.
+If you are a TC39 member representative, just submit a pull request for your proposal, probably to the `stage0.md` document.
 
 Ecma TC39 accepts Strawman Proposals from non-member individuals who have accepted the TC39 copyright and patent policies. Currently all ECMAScript related technical work is done by the TC39 RF TG (Royalty Free Task Group), for which the following IPR Policies apply:
 
