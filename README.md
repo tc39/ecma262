@@ -5,7 +5,7 @@ ECMAScript
 ## Current Proposals
 ES7+ Proposals follow [this process document](https://docs.google.com/document/d/1QbEE0BsO4lvl7NFTn5WXWeiEIBfaVUF7Dk0hpPpPDzU).
 
-|🚀| Proposal                                                                                             | Champion      | Stage | Notes
+|🚀| Proposal                                                                                             | Champion      | Stage
 |---|------------------------------------------------------------------------------------                 |-------------- | ------|------
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Erik Arvidsson     |2      |
 | | [Exponentation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 2

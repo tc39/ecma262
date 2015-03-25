@@ -3,7 +3,7 @@
 Stage 0 proposals have been presented to the committee and not rejected definitively, but have not yet achieved any of the criteria to get into stage 1.
 
 
-|🚀| Proposal                                                                                             | Champion      | Stage | Notes
+|🚀| Proposal                                                                                             | Champion      | Stage
 |---|------------------------------------------------------------------------------------                 |-------------- | ------|------
 |🚀| [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 0 |
 | | [Defensible Classes](http://wiki.ecmascript.org/doku.php?id=strawman:defensible_classes) | Mark Miller & Doug Crockford | 0
