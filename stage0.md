@@ -17,5 +17,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 |🚀| [Set/Map.prototype.toJSON](https://github.com/DavidBruant/Map-Set.prototype.toJSON) | David Bruant ? | 0
 | | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
 | | [Class Property Declarations](https://gist.github.com/jeffmo/054df782c05639da2adb)| Jeff Morrison| 0
+| | [Additional export-from Statements](https://github.com/leebyron/ecmascript-more-export-from)| Lee Byron | 0
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
