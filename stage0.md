@@ -5,7 +5,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 
 |🚀| Proposal                                                                                             | Champion      | Stage
 |---|------------------------------------------------------------------------------------                 |-------------- | ------|------
-|🚀| [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 0 |
 | | [Defensible Classes](http://wiki.ecmascript.org/doku.php?id=strawman:defensible_classes) | Mark Miller & Doug Crockford | 0
 | | [Relationships](http://wiki.ecmascript.org/doku.php?id=strawman:relationships) | Mark Miller & Waldemar Horwat | 0
 |🚀| [String padding](http://wiki.ecmascript.org/doku.php?id=strawman:string_padding) | Kevin Grandon, Rick Waldron & Dave Herman | 0     |
