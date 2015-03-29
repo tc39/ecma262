@@ -7,7 +7,6 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 
 |🚀| Proposal                                                                                             | Champion      | Stage
 |---|------------------------------------------------------------------------------------                 |-------------- | ------|------
-| | [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 1 |
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Erik Arvidsson     |2      |
 | | [Exponentation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 2
 | | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 2
@@ -18,6 +17,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | | [Async Generator](https://github.com/jhusain/asyncgenerator) | Jafar Husain | 1 |
 | | [Trailing commas in function call expressions](https://github.com/tc39/tc39-notes/raw/master/es6/2014-09/trailing_comma_proposal.pdf) | Jeff Morrison | 1
 | | [ArrayBuffer.transfer](https://gist.github.com/lukewagner/2735af7eea411e18cf20) | Luke Wagneer & Allen Wirfs-Brock | 1
+| | [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 1 |
 
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
