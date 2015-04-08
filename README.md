@@ -19,6 +19,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | | [ArrayBuffer.transfer](https://gist.github.com/lukewagner/2735af7eea411e18cf20) | Luke Wagneer & Allen Wirfs-Brock | 1
 |🚀| [Additional export-from Statements](https://github.com/leebyron/ecmascript-more-export-from)| Lee Byron | 1
 | | [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 1 |
+| | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 0
 
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
