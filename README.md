@@ -8,7 +8,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 |🚀| Proposal                                                                                             | Champion      | Stage
 |---|------------------------------------------------------------------------------------                 |-------------- | ------|------
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Erik Arvidsson     |2      |
-| | [Exponentation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 2
+| | [Exponentiation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 2
 | | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 2
 | | [Async Functions](https://github.com/lukehoban/ecmascript-asyncawait)                                |Luke Hoban     |1      |
 | | [Parallel JavaScript](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)              |Tatiana Shpeisman, Niko Matsakis     |1      |
