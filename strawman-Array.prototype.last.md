@@ -4,10 +4,24 @@ A proposal for an ECMAScript native property
 Code
 ---
 
-    //everything in 5 lines
+    //sample code
     Object.defineProperty(Array.prototype, 'last', {
         configurable: true,
         get         : function () {
+            if (this === null || typeof this.length !== "number") {
+                //verify if reference is still an array
+                throw new TypeError;
+            }
+            if (this.length < 0 || this.length > 2147483647) {
+                //checking for inclusive range of 0 to 2^31
+                //2^31 is the 2gb numeric threshold
+                throw new RangeError;
+            }
+            if (this.length === 0) {
+                //undefined would be returned anyways, but this condition
+                //specifies such as intentional behavior and not an oversight
+                return undefined;
+            }
             return this[this.length - 1];
         }
     });
@@ -51,10 +65,31 @@ the contents of the final index then this value could be accessed directly
 without searching the array, a reference from an index, or referencing it's
 length.
 
+Error handling
+---
+
+If the property is mutated at call time so that it continues to receive from the
+global Array prototype but is no longer an actual array a TypeError must be
+thrown.
+
+    throw new TypeError;
+
+If the array's final index is less than 0 or greater than 2147483647 a
+RangeError must be thrown.
+
+    throw new RangeError;
+
+If the array is empty, such that the length property returns 0, or if the final
+index is either undefined or unretrievable the `last` property must return
+`undefined`.
+
+    return undefined;
+
 Changes
 ---
 
 1. Converted method to property, https://github.com/prettydiff/Array.prototype.last/issues/1
+2. Added error handling, https://github.com/tc39/ecma262/pull/36#issuecomment-102920443
 
 Intellectual Property Status
 ---
