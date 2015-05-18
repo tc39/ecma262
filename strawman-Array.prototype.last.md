@@ -1,28 +1,42 @@
-# Array.prototype.last
+# Array.prototype.lastIndex
 A proposal for an ECMAScript native property
 
 Code
 ---
 
     //sample code
-    Object.defineProperty(Array.prototype, 'last', {
+    Object.defineProperty(Array.prototype, 'lastIndex', {
         configurable: true,
         get         : function () {
             if (this === null || typeof this.length !== "number") {
-                //verify if reference is still an array
+                //It must verify that the reference is still an array.
                 throw new TypeError;
             }
             if (this.length < 0 || this.length > 2147483647) {
-                //checking for inclusive range of 0 to 2^31
-                //2^31 is the 2gb numeric threshold
+                //It must check for an inclusive range of 0 to 2^31.
+                //2^31 is the 2gb numeric threshold.
                 throw new RangeError;
             }
             if (this.length === 0) {
-                //undefined would be returned anyways, but this condition
-                //specifies such as intentional behavior and not an oversight
+                //Protects against the case of assigning to a negative index.
+                //arr[arr.length - 1] = "a" would assign "a" to arr[-1] if
+                //arr.length is 0.
                 return undefined;
             }
             return this[this.length - 1];
+        },
+        set         : function (value) {
+            if (this === null || typeof this.length !== "number") {
+                //It must verify that the reference is still an array.
+                throw new TypeError;
+            }
+            if (this.length < 1 || this.length > 2147483647) {
+                //It must check for an inclusive range of 0 to 2^31.
+                //2^31 is the 2gb numeric threshold.
+                throw new RangeError;
+            }
+            //allow assignment via lastIndex property
+            this[this.length = value];
         }
     });
 
@@ -30,7 +44,7 @@ Code
     var a = [
         "asfd", "qwer", "zxcv", "last Item"
     ];
-    a.last; //returns "last Item"
+    a.lastIndex; //returns "last Item"
 
 Why we need it
 ---
@@ -52,9 +66,9 @@ minus 1.  Example:
 
     myArray[myArray.length - 1]; //fastest way to currently get the final index
 
-The proposed `last` property is slower, because it requires access to a global
-protoype, which is the absolute last stop in the scope chain and performs the
-exact same task as the direct and fast approach. Here is a
+The proposed `lastIndex` property is slower, because it requires access to a
+global protoype, which is the absolute last stop in the scope chain and performs
+the exact same task as the direct and fast approach. Here is a
 [JSPerf experiment](http://jsperf.com/array-prototype-last/2). It could be faster,
 though. Much faster.
 
@@ -80,7 +94,7 @@ RangeError must be thrown.
     throw new RangeError;
 
 If the array is empty, such that the length property returns 0, or if the final
-index is either undefined or unretrievable the `last` property must return
+index is either undefined or unretrievable the `lastIndex` property must return
 `undefined`.
 
     return undefined;
@@ -90,6 +104,9 @@ Changes
 
 1. Converted method to property, https://github.com/prettydiff/Array.prototype.last/issues/1
 2. Added error handling, https://github.com/tc39/ecma262/pull/36#issuecomment-102920443
+3. Added a setter to the example code to align to be behavior of the .length property, https://github.com/prettydiff/Array.prototype.last/issues/1#issuecomment-103143297
+4. Clarified the code comments around the error handling, https://github.com/tc39/ecma262/pull/36#discussion_r30532708
+5. Changed the proposed name from `last` to `lastIndex` to avoid name collisions, https://github.com/tc39/ecma262/pull/36#issuecomment-103179082
 
 Intellectual Property Status
 ---
