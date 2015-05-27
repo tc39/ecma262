@@ -17,5 +17,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [Class Property Declarations](https://gist.github.com/jeffmo/054df782c05639da2adb)| Jeff Morrison| 0
 | | [Reflect.isCallable/Reflect.isConstructor](https://github.com/caitp/TC39-Proposals/blob/master/tc39-reflect-isconstructor-iscallable.md)| Caitlin Potter| 0
 | | [Additional metaproperties](https://github.com/allenwb/ESideas/blob/master/ES7MetaProps.md)| Allen Wirfs-Brock| 0
+|🚀| [`Function.prototype.toString` revision](https://github.com/michaelficarra/Function-prototype-toString-revision)| Michael Ficarra| 0
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
