@@ -11,7 +11,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | | [Exponentiation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 2
 | | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 2
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock | 2
-| | [Async Functions](https://github.com/lukehoban/ecmascript-asyncawait)                                |Luke Hoban     |1      |
+| | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |1      |
 | | [Parallel JavaScript](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)              |Tatiana Shpeisman, Niko Matsakis     |1      |
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
 | | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1yc2NDzFJ-0yD980URiTcV3oE_2cQDVzXuH4Rss1fG8s/edit?usp=sharing) +  [polyfil](https://github.com/johnmccutchan/ecmascript_simd)| John McCutchan, Peter Jensen | 1
