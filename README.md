@@ -10,11 +10,11 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Erik Arvidsson     |2      |
 | | [Exponentiation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 2
 | | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 2
-| | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock | 2
+| | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1MY9NHrHmL7ma7C8dyNXvmYNNGgVmmxXk8ZIiQtPlfH4/edit?usp=sharing) +  [polyfil](https://github.com/johnmccutchan/ecmascript_simd)| John McCutchan, Peter Jensen, Dan Gohman |2      |
+| | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
 | | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |1      |
 | | [Parallel JavaScript](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)              |Tatiana Shpeisman, Niko Matsakis     |1      |
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
-| | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1yc2NDzFJ-0yD980URiTcV3oE_2cQDVzXuH4Rss1fG8s/edit?usp=sharing) +  [polyfil](https://github.com/johnmccutchan/ecmascript_simd)| John McCutchan, Peter Jensen | 1
 | | [Async Generator](https://github.com/jhusain/asyncgenerator) | Jafar Husain | 1 |
 | | [Trailing commas in function call expressions](https://github.com/tc39/tc39-notes/raw/master/es6/2014-09/trailing_comma_proposal.pdf) | Jeff Morrison | 1
 | | [ArrayBuffer.transfer](https://gist.github.com/lukewagner/2735af7eea411e18cf20) | Luke Wagneer & Allen Wirfs-Brock | 1
