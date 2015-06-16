@@ -22,6 +22,7 @@ ES7+ Proposals follow [this process document](https://docs.google.com/document/d
 | | [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 1 |
 |🚀| [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 1
 | | [`Function.prototype.toString` revision](https://github.com/michaelficarra/Function-prototype-toString-revision)| Michael Ficarra| 1
+| | [Observable](https://github.com/zenparsing/es-observable) | Kevin Smith & Jafar Husain | 1
 
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
