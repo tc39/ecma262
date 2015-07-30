@@ -10,7 +10,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Exponentiation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 3
 | | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 3
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Erik Arvidsson     |2      |
-| | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1MY9NHrHmL7ma7C8dyNXvmYNNGgVmmxXk8ZIiQtPlfH4/edit?usp=sharing) +  [polyfil](https://github.com/johnmccutchan/ecmascript_simd)| John McCutchan, Peter Jensen, Dan Gohman |2      |
+| | [SIMD.JS - SIMD APIs](http://littledan.github.io/simd.html) | John McCutchan, Peter Jensen, Dan Gohman, Daniel Ehrenberg |2      |
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
 | | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |2      |
 | | [Parallel JavaScript](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)              |Tatiana Shpeisman, Niko Matsakis     |1      |
