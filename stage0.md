@@ -17,7 +17,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [Class Property Declarations](https://gist.github.com/jeffmo/054df782c05639da2adb)| Jeff Morrison| 0
 | | [Reflect.isCallable/Reflect.isConstructor](https://github.com/caitp/TC39-Proposals/blob/master/tc39-reflect-isconstructor-iscallable.md)| Caitlin Potter| 0
 | | [Additional metaproperties](https://github.com/allenwb/ESideas/blob/master/ES7MetaProps.md)| Allen Wirfs-Brock| 0
-| | [RegExp.escape](https://github.com/benjamingr/RexExp.escape)| Domenic Denicola & Benjamin Gruenbaum| 0
 | | [Function Bind Syntax](https://github.com/zenparsing/es-function-bind)| Kevin Smith | 0
 | | [Do Expressions](http://wiki.ecmascript.org/doku.php?id=strawman:do_expressions) | Andreas Rossberg | 0
 
