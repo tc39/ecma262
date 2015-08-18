@@ -13,13 +13,13 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1MY9NHrHmL7ma7C8dyNXvmYNNGgVmmxXk8ZIiQtPlfH4/edit?usp=sharing) +  [polyfil](https://github.com/johnmccutchan/ecmascript_simd)| John McCutchan, Peter Jensen, Dan Gohman |2      |
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
 | | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |2      |
+|🚀| [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
 | | [Parallel JavaScript](http://wiki.ecmascript.org/doku.php?id=strawman:data_parallelism)              |Tatiana Shpeisman, Niko Matsakis     |1      |
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
 | | [Trailing commas in function call expressions](https://github.com/tc39/tc39-notes/raw/master/es6/2014-09/trailing_comma_proposal.pdf) | Jeff Morrison | 1
 | | [ArrayBuffer.transfer](https://gist.github.com/lukewagner/2735af7eea411e18cf20) | Luke Wagneer & Allen Wirfs-Brock | 1
 |🚀| [Additional export-from Statements](https://github.com/leebyron/ecmascript-more-export-from)| Lee Byron | 1
 | | [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 1 |
-|🚀| [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 1
 | | [`Function.prototype.toString` revision](https://github.com/michaelficarra/Function-prototype-toString-revision)| Michael Ficarra| 1
 | | [Observable](https://github.com/zenparsing/es-observable) | Kevin Smith & Jafar Husain | 1
 | | [String.prototype.{trimLeft,trimRight}](https://github.com/sebmarkbage/ecmascript-string-left-right-trim) | Sebastian Markbage | 1
