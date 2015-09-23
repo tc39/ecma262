@@ -14,8 +14,8 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Adam Klein     |2      |
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
 |🚀| [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
+| | [Trailing commas in function parameter lists and calls](https://github.com/jeffmo/es-trailing-function-commas) | Jeff Morrison | 2
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
-| | [Trailing commas in function call expressions](https://github.com/tc39/tc39-notes/raw/master/es6/2014-09/trailing_comma_proposal.pdf) | Jeff Morrison | 1
 | | [ArrayBuffer.transfer](https://gist.github.com/lukewagner/2735af7eea411e18cf20) | Luke Wagneer & Allen Wirfs-Brock | 1
 |🚀| [Additional export-from Statements](https://github.com/leebyron/ecmascript-more-export-from)| Lee Byron | 1
 | | [Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 1 |
