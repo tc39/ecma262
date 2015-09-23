@@ -10,9 +10,9 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Exponentiation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 3
 | | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 3
 | | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1MY9NHrHmL7ma7C8dyNXvmYNNGgVmmxXk8ZIiQtPlfH4/edit?usp=sharing) +  [polyfil](http://tc39.github.io/ecmascript_simd/)| John McCutchan, Peter Jensen, Dan Gohman, Daniel Ehrenberg |3      |
+| | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |3      |
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Adam Klein     |2      |
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
-| | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |2      |
 |🚀| [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
 | | [Trailing commas in function call expressions](https://github.com/tc39/tc39-notes/raw/master/es6/2014-09/trailing_comma_proposal.pdf) | Jeff Morrison | 1
