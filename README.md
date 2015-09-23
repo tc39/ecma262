@@ -13,6 +13,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |3      |
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Adam Klein     |2      |
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
+| | [Object.values/Object.entries](https://github.com/ljharb/proposal-object-values-entries) | Jordan Harband | 2
 |🚀| [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
 | | [Trailing commas in function call expressions](https://github.com/tc39/tc39-notes/raw/master/es6/2014-09/trailing_comma_proposal.pdf) | Jeff Morrison | 1
