@@ -14,7 +14,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 |🚀| [Object.getOwnPropertyDescriptors](https://gist.github.com/WebReflection/9353781) | Rick Waldron & Andrea Giammarchi | 0
 |🚀| [Set/Map.prototype.toJSON](https://github.com/DavidBruant/Map-Set.prototype.toJSON) | David Bruant ? | 0
 | | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
-|🚀| [Class Property Declarations](https://github.com/jeffmo/es-class-properties)| Jeff Morrison| 0
 | | [Reflect.isCallable/Reflect.isConstructor](https://github.com/caitp/TC39-Proposals/blob/master/tc39-reflect-isconstructor-iscallable.md)| Caitlin Potter| 0
 | | [Additional metaproperties](https://github.com/allenwb/ESideas/blob/master/ES7MetaProps.md)| Allen Wirfs-Brock| 0
 | | [Function Bind Syntax](https://github.com/zenparsing/es-function-bind)| Kevin Smith | 0
