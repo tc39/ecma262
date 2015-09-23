@@ -23,6 +23,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Observable](https://github.com/zenparsing/es-observable) | Kevin Smith & Jafar Husain | 1
 | | [String.prototype.{trimLeft,trimRight}](https://github.com/sebmarkbage/ecmascript-string-left-right-trim) | Sebastian Markbage | 1
 | | [Class Property Declarations](https://github.com/jeffmo/es-class-properties)| Jeff Morrison| 1
+| | [String padding](https://github.com/ljharb/proposal-string-pad-left-right) | Jordan Harband & Rick Waldron | 1
 
 
 
