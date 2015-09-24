@@ -13,6 +13,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |3      |
 | | [Object.observe](https://github.com/arv/ecmascript-object-observe)                                   | Adam Klein     |2      |
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
+| | [Object.values/Object.entries](https://github.com/ljharb/proposal-object-values-entries) | Jordan Harband | 2
 |🚀| [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
 | | [Trailing commas in function parameter lists and calls](https://github.com/jeffmo/es-trailing-function-commas) | Jeff Morrison | 2
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
@@ -23,6 +24,8 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Observable](https://github.com/zenparsing/es-observable) | Kevin Smith & Jafar Husain | 1
 | | [String.prototype.{trimLeft,trimRight}](https://github.com/sebmarkbage/ecmascript-string-left-right-trim) | Sebastian Markbage | 1
 | | [Class Property Declarations](https://github.com/jeffmo/es-class-properties)| Jeff Morrison| 1
+| | [String padding](https://github.com/ljharb/proposal-string-pad-left-right) | Jordan Harband & Rick Waldron | 1
+| | [String#matchAll](https://github.com/ljharb/String.prototype.matchAll) | Jordan Harband | 1
 
 
 
