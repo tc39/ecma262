@@ -23,6 +23,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [`Function.prototype.toString` revision](https://github.com/michaelficarra/Function-prototype-toString-revision)| Michael Ficarra| 1
 | | [Observable](https://github.com/zenparsing/es-observable) | Kevin Smith & Jafar Husain | 1
 | | [String.prototype.{trimLeft,trimRight}](https://github.com/sebmarkbage/ecmascript-string-left-right-trim) | Sebastian Markbage | 1
+| | [Shared memory and atomics](https://github.com/lars-t-hansen/ecmascript_sharedmem) | Lars T Hansen | 1
 
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
