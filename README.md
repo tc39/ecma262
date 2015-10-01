@@ -26,6 +26,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Class Property Declarations](https://github.com/jeffmo/es-class-properties)| Jeff Morrison| 1
 | | [String padding](https://github.com/ljharb/proposal-string-pad-left-right) | Jordan Harband & Rick Waldron | 1
 | | [String#matchAll](https://github.com/ljharb/String.prototype.matchAll) | Jordan Harband | 1
+| | [Shared memory and atomics](https://github.com/lars-t-hansen/ecmascript_sharedmem) | Lars T Hansen | 1
 
 
 
