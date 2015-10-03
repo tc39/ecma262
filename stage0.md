@@ -17,6 +17,5 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [Additional metaproperties](https://github.com/allenwb/ESideas/blob/master/ES7MetaProps.md)| Allen Wirfs-Brock| 0
 | | [Function Bind Syntax](https://github.com/zenparsing/es-function-bind)| Kevin Smith | 0
 | | [Do Expressions](http://wiki.ecmascript.org/doku.php?id=strawman:do_expressions) | Andreas Rossberg | 0
-| | [RegExp Look-behind](http://www.akenotsuki.com/misc/srell/lookbehind_proposal.html) | Brendan Eich & Nozomu Katō | 0
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
