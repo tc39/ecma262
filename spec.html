@@ -7194,7 +7194,7 @@ function* enumerate(obj) {
                             1. ReturnIfAbrupt(_initialValue_).
                         1. Call _varEnvRec_.InitializeBinding(_n_, _initialValue_).
                         1. NOTE vars whose names are the same as a formal parameter, initially have the same value as the corresponding initialized parameter.
-            1. NOTE: Annex <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics"></emu-xref> adds additional steps at this point.
+            1. NOTE: Annex <emu-xref href="#sec-web-compat-functiondeclarationinstantiation"></emu-xref> adds additional steps at this point.
             1. If _strict_ is *false*, then
                 1. Let _lexEnv_ be NewDeclarativeEnvironment(_varEnv_).
                 1. NOTE: Non-strict functions use a separate lexical Environment Record for top-level lexical declarations so that a direct `eval` (see <emu-xref href="#sec-function-calls-runtime-semantics-evaluation"></emu-xref>) can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions because a strict direct `eval` always places all declarations into a new Environment Record.
@@ -19885,6 +19885,7 @@ a = b + c(d + e).print()
                             1. If _vn_ is not an element of _declaredVarNames_, then
                                 1. Append _vn_ to _declaredVarNames_.
             1. NOTE: No abnormal terminations occur after this algorithm step if the global object is an ordinary object. However, if the global object is a Proxy exotic object it may exhibit behaviours that cause abnormal terminations in some of the following steps.
+            1. NOTE: <emu-xref href="#sec-web-compat-globaldeclarationinstantiation"></emu-xref> adds additional steps at this point.
             1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _script_.
             1. For each element _d_ in _lexDeclarations_ do
                 1. NOTE Lexically declared names are only instantiated here but not initialized.
@@ -37159,28 +37160,61 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
             </li>
           </ol>
           <p>The first use case is interoperable with the semantics of |Block| level function declarations provided by ECMAScript 2015. Any pre-existing ECMAScript code that employs that use case will operate using the Block level function declarations semantics defined by clauses 9, 13, and 14 of this specification.</p>
-          <p>ECMAScript 2015 interoperability for the second and third use cases requires the following extensions to the clause <emu-xref href="#sec-ordinary-and-exotic-objects-behaviours"></emu-xref> and clause <emu-xref href="#sec-ecmascript-language-functions-and-classes"></emu-xref> semantics. During FunctionDeclarationInstantiation (<emu-xref href="#sec-functiondeclarationinstantiation"></emu-xref>) the following steps are performed in place of step 29:</p>
-          <emu-alg>
-            1. If _strict_ is *false*, then
-                1. For each |FunctionDeclaration| _f_ in _varDeclarations_ that is directly contained in the |StatementList| of a |Block|, |CaseClause|, or |DefaultClause|,
-                    1. Let _F_ be StringValue of the |BindingIdentifier| of |FunctionDeclaration| _f_.
-                    1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _func_ and _F_ is not an element of BoundNames of _argumentsList_, then
-                        1. NOTE A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName, the name of a formal parameter, or another |FunctionDeclaration|.
-                        1. If _instantiatedVarNames_ does not contain _F_, then
-                            1. Let _status_ be _varEnvRec_.CreateMutableBinding(_F_).
-                            1. Assert: _status_ is never an abrupt completion.
-                            1. Perform _varEnvRec_.InitializeBinding(_F_, *undefined*).
-                            1. Append _F_ to _instantiatedVarNames_.
-                        1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                            1. Let _fenv_ be the running execution context's VariableEnvironment.
-                            1. Let _benv_ be the running execution context's LexicalEnvironment.
-                            1. Let _fobj_ be _benv_.GetBindingValue(_F_, *false*).
-                            1. Assert: _fobj_ is never an abrupt completion.
-                            1. Let _status_ be _fenv_.SetMutableBinding(_F_, _fobj_, *false*).
-                            1. Assert: _status_ is never an abrupt completion.
-                            1. Return NormalCompletion(~empty~).
-          </emu-alg>
-          <p>If an ECMAScript implementation has a mechanism for reporting diagnostic warning messages, a warning should be produced for each function whose function code contains a |FunctionDeclaration| for which steps 1.a.ii.1-3 will be performed.</p>
+          <p>ECMAScript 2015 interoperability for the second and third use cases requires the following extensions to the clause <emu-xref href="#sec-ordinary-and-exotic-objects-behaviours"></emu-xref>, clause <emu-xref href="#sec-ecmascript-language-functions-and-classes"></emu-xref>, clause <emu-xref href="#sec-eval-x"></emu-xref> and clause <emu-xref href="#sec-globaldeclarationinstantiation"></emu-xref> semantics.</p>
+          <p>If an ECMAScript implementation has a mechanism for reporting diagnostic warning messages, a warning should be produced when code contains a |FunctionDeclaration| for which these compatability semantics are applied and introduce observable differences from non-compatability semantics. For example, if a var binding is not introduced because its introduction would create an early error, a warning message should not be produced.</p>
+          <emu-annex id="sec-web-compat-functiondeclarationinstantiation">
+            <h1>Changes to FunctionDeclarationInstantiation</h1>
+            <p>During FunctionDeclarationInstantiation (<emu-xref href="#sec-functiondeclarationinstantiation"></emu-xref>) the following steps are performed in place of step 29:</p>
+            <emu-alg>
+              1. If _strict_ is *false*, then
+                  1. For each |FunctionDeclaration| _f_ in _varDeclarations_ that is directly contained in the |StatementList| of a |Block|, |CaseClause|, or |DefaultClause|,
+                      1. Let _F_ be StringValue of the |BindingIdentifier| of |FunctionDeclaration| _f_.
+                      1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _func_ and _F_ is not an element of BoundNames of _argumentsList_, then
+                          1. NOTE A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName, the name of a formal parameter, or another |FunctionDeclaration|.
+                          1. If _instantiatedVarNames_ does not contain _F_, then
+                              1. Let _status_ be _varEnvRec_.CreateMutableBinding(_F_).
+                              1. Assert: _status_ is never an abrupt completion.
+                              1. Perform _varEnvRec_.InitializeBinding(_F_, *undefined*).
+                              1. Append _F_ to _instantiatedVarNames_.
+                          1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
+                              1. Let _fenv_ be the running execution context's VariableEnvironment.
+                              1. Let _benv_ be the running execution context's LexicalEnvironment.
+                              1. Let _fobj_ be _benv_.GetBindingValue(_F_, *false*).
+                              1. Assert: _fobj_ is never an abrupt completion.
+                              1. Let _status_ be _fenv_.SetMutableBinding(_F_, _fobj_, *false*).
+                              1. Assert: _status_ is never an abrupt completion.
+                              1. Return NormalCompletion(~empty~).
+            </emu-alg>
+          </emu-annex>
+          <emu-annex id="sec-web-compat-globaldeclarationinstantiation">
+            <h1>Changes to GlobalDeclarationInstantiation</h1>
+            <p>During GlobalDeclarationInstatiation (<emu-xref href="#sec-globaldeclarationinstantiation"></emu-xref>) the following steps are performed in place of step 14:</p>
+            <emu-alg>
+              1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of a |Block|, |CaseClause|, or |DefaultClause| Contained within script,
+                  1. Let _F_ be StringValue of the |BindingIdentifier| of |FunctionDeclaration| _f_.
+                  2. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for script, then
+                      1. If _envRec_.HasLexicalDeclaration(_F_) is *false*, then
+                          1. Let _fnDefinable_ be _envRec_.CanDeclareGlobalFunction(_F_).
+                          2. ReturnIfAbrupt(_fnDefinable_).
+                          3. If _fnDefinable_ is *true*, then
+                              1. NOTE A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName nor the name of another |FunctionDeclaration|.
+                              2. If _declaredVarNames_ does not contain _F_, then
+                                  1. Let _status_ be _envRec_.CreateGlobalFunctionBinding(_F_, *undefined*, *false*).
+                                  2. ReturnIfAbrupt(_status_).
+                                  3. Append _F_ to declaredVarNames.
+                              3. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
+                                  1. Let _genv_ be the running execution context’s VariableEnvironment.
+                                  2. Let _benv_ be the running execution context’s LexicalEnvironment.
+                                  3. Let _fobj_ be _benv_.GetBindingValue(_F_, *false*).
+                                  4. Assert: _fobj_ is never an abrupt completion.
+                                  5. Let _status_ be _genv_.SetMutableBinding(_F_, _fobj_, *false*).
+                                  6. ReturnIfAbrupt(_status_).
+            </emu-alg>
+          </emu-annex>
+          <emu-annex id="sec-web-compat-evaldeclarationinstantiation">
+            <h1>Changes to EvalDeclarationInstantiation</h1>
+            <p>TODO</p>
+          </emu-annex>
         </emu-annex>
 
         <!-- es6num="B.3.4" -->
