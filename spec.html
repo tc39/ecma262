@@ -29398,17 +29398,14 @@ Date.parse(x.toLocaleString())
           1. Return RegExpExec(_R_, _S_).
         </emu-alg>
 
-        <!-- es6num="21.2.5.2.2" -->
-        <emu-clause id="sec-regexpbuiltinexec" aoid="RegExpExec">
-          <h1>Runtime Semantics: RegExpExec ( _R_, _S_ )</h1>
-          <p>The abstract operation RegExpExec with arguments _R_ and _S_ performs the following steps:</p>
+        <emu-clause id="sec-innerregexpexec" aoid="InnerRegExpExec">
+          <h1>Runtime Semantics: InnerRegExpExec ( _R_, _S_, _lastIndex_, _extraFlags_ )</h1>
+          <p>The abstract operation RegExpExec with arguments _R_, _S_, _lastIndex_ and _extraFlags_ performs the following steps:</p>
           <emu-alg>
             1. Assert: _R_ is an initialized RegExp instance.
             1. Assert: Type(_S_) is String.
             1. Let _length_ be the number of code units in _S_.
-            1. Let _lastIndex_ be ToLength(Get(_R_,`"lastIndex"`)).
-            1. ReturnIfAbrupt(_lastIndex_).
-            1. Let _flags_ be the value of _R_'s [[OriginalFlags]] internal slot.
+            1. Let _flags_ be the concatenation of _R_'s [[OriginalFlags]] internal slot and _extraFlags_.
             1. If _flags_ contains `"g"`, let _global_ be *true*, else let _global_ be *false*.
             1. If _flags_ contains `"y"`, let _sticky_ be *true*, else let _sticky_ be *false*.
             1. If _global_ is *false* and _sticky_ is *false*, let _lastIndex_ be 0.
@@ -29417,15 +29414,11 @@ Date.parse(x.toLocaleString())
             1. Let _matchSucceeded_ be *false*.
             1. Repeat, while _matchSucceeded_ is *false*
               1. If _lastIndex_ &gt; _length_, then
-                1. Let _setStatus_ be Set(_R_, `"lastIndex"`, 0, *true*).
-                1. ReturnIfAbrupt(_setStatus_).
-                1. Return *null*.
+                1. Return { [[Matches]]: *null*, [[LastIndex]]: 0 }
               1. Let _r_ be _matcher_(_S_, _lastIndex_).
               1. If _r_ is ~failure~, then
                 1. If _sticky_ is *true*, then
-                  1. Let _setStatus_ be Set(_R_, `"lastIndex"`, 0, *true*).
-                  1. ReturnIfAbrupt(_setStatus_).
-                  1. Return *null*.
+                  1. Return { [[Matches]]: *null*, [[LastIndex]]: 0 }
                 1. Let _lastIndex_ be AdvanceStringIndex(_S_, _lastIndex_, _fullUnicode_).
               1. Else,
                 1. Assert: _r_ is a State.
@@ -29434,9 +29427,6 @@ Date.parse(x.toLocaleString())
             1. If _fullUnicode_ is *true*, then
               1. _e_ is an index into the _Input_ character list, derived from _S_, matched by _matcher_. Let _eUTF_ be the smallest index into _S_ that corresponds to the character at element _e_ of _Input_. If _e_ is greater than or equal to the length of _Input_, then _eUTF_ is the number of code units in _S_.
               1. Let _e_ be _eUTF_.
-            1. If _global_ is *true* or _sticky_ is *true*,
-              1. Let _setStatus_ be Set(_R_, `"lastIndex"`, _e_, *true*).
-              1. ReturnIfAbrupt(_setStatus_).
             1. Let _n_ be the length of _r_'s _captures_ List. (This is the same value as <emu-xref href="#sec-notation"></emu-xref>'s _NcapturingParens_.)
             1. Let _A_ be ArrayCreate(_n_ + 1).
             1. Assert: The value of _A_'s `"length"` property is _n_ + 1.
@@ -29456,7 +29446,24 @@ Date.parse(x.toLocaleString())
                 1. Assert: _captureI_ is a List of code units.
                 1. Let _capturedValue_ be a string consisting of the code units of _captureI_.
               1. Perform CreateDataProperty(_A_, ToString(_i_) , _capturedValue_).
-            1. Return _A_.
+            1. If _global_ is *true* or _sticky_ is *true*,
+              1. Return { [[Matches]]: _A_, [[LastIndex]]: _e_ }.
+            1. Otherwise, return { [[Matches]]: _A_ }.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-regexpexec" aoid="RegExpExec">
+          <h1>Runtime Semantics: RegExpExec ( _R_, _S_ )</h1>
+          <p>The abstract operation RegExpExec with arguments _R_ and _S_ performs the following steps:</p>
+          <emu-alg>
+            1. Let _lastIndex_ be ToLength(Get(_R_,`"lastIndex"`)).
+            1. ReturnIfAbrupt(_lastIndex_).
+            1. Let _result_ be InnerRegExpExec(_R_, _S_, _lastIndex_, `""`).
+            1. ReturnIfAbrupt(_result_).
+            1. If _result_ has a [[LastIndex]] entry,
+              1. Let _setStatus_ be Set(_R_, `"lastIndex"`, _result_.[[LastIndex]], *true*).
+              1. ReturnIfAbrupt(_setStatus_).
+            1. Return _result_.[[Matches]].
           </emu-alg>
         </emu-clause>
 
@@ -29676,16 +29683,11 @@ Date.parse(x.toLocaleString())
           1. If _rx_ does not have a [[RegExpMatcher]] internal slot, throw a *TypeError* exception.
           1. Let _S_ be ToString(_string_).
           1. ReturnIfAbrupt(_S_).
-          1. Let _previousLastIndex_ be Get(_rx_, `"lastIndex"`).
-          1. ReturnIfAbrupt(_previousLastIndex_).
-          1. Let _status_ be Set(_rx_, `"lastIndex"`, 0, *true*).
-          1. ReturnIfAbrupt(_status_).
-          1. Let _result_ be RegExpExec(_rx_, _S_).
+          1. Let _result_ be InnerRegExpExec(_rx_, _S_, 0, `""`).
           1. ReturnIfAbrupt(_result_).
-          1. Let _status_ be Set(_rx_, `"lastIndex"`, _previousLastIndex_, *true*).
-          1. ReturnIfAbrupt(_status_).
-          1. If _result_ is *null*, return -1.
-          1. Return Get(_result_, `"index"`).
+          1. Let _matches_ = _result_.[[Matches]].
+          1. If _matches_ is *null*, return -1.
+          1. Return Get(_matches_, `"index"`).
         </emu-alg>
         <p>The value of the `name` property of this function is `"[Symbol.search]"`.</p>
         <emu-note>
@@ -29737,10 +29739,6 @@ Date.parse(x.toLocaleString())
           1. Let _flags_ be the value of _R_'s [[OriginalFlags]] internal slot.
           1. If _flags_ contains `"u"`, let _unicodeMatching_ be *true*.
           1. Else, let _unicodeMatching_ be *false*.
-          1. If _flags_ contains `"y"`, let _newFlags_ be _flags_.
-          1. Else, let _newFlags_ be the string that is the concatenation of _flags_ and `"y"`.
-          1. Let _splitter_ be Construct(_C_, &laquo;_rx_, _newFlags_&raquo;).
-          1. ReturnIfAbrupt(_splitter_).
           1. Let _A_ be ArrayCreate(0).
           1. Let _lengthA_ be 0.
           1. If _limit_ is *undefined*, let _lim_ be 2<sup>53</sup>-1; else let _lim_ be ToLength(_limit_).
@@ -29749,22 +29747,19 @@ Date.parse(x.toLocaleString())
           1. Let _p_ be 0.
           1. If _lim_ = 0, return _A_.
           1. If _size_ = 0, then
-            1. Let _z_ be RegExpExec(_splitter_, _S_).
+            1. Let _z_ be InnerRegExpExec(_splitter_, _S_, 0, `"y"`).
             1. ReturnIfAbrupt(_z_).
-            1. If _z_ is not *null*, return _A_.
+            1. If _z_.[[Matches]] is not *null*, return _A_.
             1. Assert: The following call will never result in an abrupt completion.
             1. Perform CreateDataProperty(_A_, `"0"`, _S_).
             1. Return _A_.
           1. Let _q_ be _p_.
           1. Repeat, while _q_ &lt; _size_
-            1. Let _setStatus_ be Set(_splitter_, `"lastIndex"`, _q_, *true*).
-            1. ReturnIfAbrupt(_setStatus_).
-            1. Let _z_ be RegExpExec(_splitter_, _S_).
+            1. Let _z_ be InnerRegExpExec(_splitter_, _S_, _q_, `"y"`).
             1. ReturnIfAbrupt(_z_).
-            1. If _z_ is *null*, let _q_ be AdvanceStringIndex(_S_, _q_, _unicodeMatching_).
-            1. Else _z_ is not *null*,
-              1. Let _e_ be ToLength(Get(_splitter_, `"lastIndex"`)).
-              1. ReturnIfAbrupt(_e_).
+            1. If _z_.[[Matches]] is *null*, let _q_ be AdvanceStringIndex(_S_, _q_, _unicodeMatching_).
+            1. Else _z_.[[Matches]] is not *null*,
+              1. Let _e_ be _z_.[[LastIndex]].
               1. If _e_ = _p_, let _q_ be AdvanceStringIndex(_S_, _q_, _unicodeMatching_).
               1. Else _e_ &ne; _p_,
                 1. Let _T_ be a String value equal to the substring of _S_ consisting of the elements at indices _p_ (inclusive) through _q_ (exclusive).
@@ -29773,12 +29768,12 @@ Date.parse(x.toLocaleString())
                 1. Let _lengthA_ be _lengthA_ +1.
                 1. If _lengthA_ = _lim_, return _A_.
                 1. Let _p_ be _e_.
-                1. Let _numberOfCaptures_ be ToLength(Get(_z_, `"length"`)).
+                1. Let _numberOfCaptures_ be ToLength(Get(_z_.[[Matches]], `"length"`)).
                 1. ReturnIfAbrupt(_numberOfCaptures_).
                 1. Let _numberOfCaptures_ be max(_numberOfCaptures_-1, 0).
                 1. Let _i_ be 1.
                 1. Repeat, while _i_ &le; _numberOfCaptures_.
-                  1. Let _nextCapture_ be Get(_z_, ToString(_i_)).
+                  1. Let _nextCapture_ be Get(_z_.[[Matches]], ToString(_i_)).
                   1. ReturnIfAbrupt(_nextCapture_).
                   1. Perform CreateDataProperty(_A_, ToString(_lengthA_), _nextCapture_).
                   1. Let _i_ be _i_ +1.
