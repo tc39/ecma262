@@ -27,7 +27,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [String padding](https://github.com/ljharb/proposal-string-pad-left-right) | Jordan Harband & Rick Waldron | 1
 | | [String#matchAll](https://github.com/ljharb/String.prototype.matchAll) | Jordan Harband | 1
 | | [Shared memory and atomics](https://github.com/lars-t-hansen/ecmascript_sharedmem) | Lars T Hansen | 1
-
+|🚀|[Callable class constructors](https://github.com/tc39/ecma262/blob/master/workingdocs/callconstructor.md) | Yehuda Katz and Allen Wirfs-Brock | 1
 
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
