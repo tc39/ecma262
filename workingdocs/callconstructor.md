@@ -4,7 +4,7 @@
 
 Champions:
   - Yehuda Katz
-  - Allen Wirfs-Brok
+  - Allen Wirfs-Brock
 
 ## Motivation
 
