@@ -18,6 +18,8 @@ TC39 stands for "Technical Committee 39" and is the committee responsible for it
 
 Changes to ECMAScript must carefully consider the state of the world using the previous version of the language. This includes a large percentage of the web. As a result, in order to remove a feature from ECMAScript, TC39 must be able to show that the feature is used almost never (and thus can be removed). Going through this exercise is extremely difficult and sometimes impossible -- so in general ECMAScript *very* rarely removes features.
 
+Because the web is so large, even features that behave in a way that's surprising and potentially lead to bugs are often relied upon by real programs. Therefore, only actual use data, and not a sense of whether some feature is correct or useful, can guide TC39 in potentially changing existing behavior.
+
 # Feature Questions
 
 ### Arrow Functions
