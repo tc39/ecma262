@@ -78,7 +78,7 @@ export function isOdd(num) {
 
 ```javascript
 // main.js
-import {isOdd} from "./OddNumberUtils";
+import {isOdd} from "./Odd";
 
 isOdd(2);
 ```
