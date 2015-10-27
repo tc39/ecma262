@@ -8,7 +8,7 @@ An index of frequently asked questions regarding all things ECMA-262.
 
 New features start life as a proposal to the [TC39](#what-is-a-tc39) committee and must be championed (or co-championed) by at least one member of the committee. Once the proposal is raised at a committee meeting, it will become a Stage 0 proposal and move along from there. For more details on how proposal stages work, check out the [proposal process document][proposal-process-document].
 
-If you would like to contribute, please check out [Contributing to ECMAScript](https://github.com/jeffmo/ecma262/blob/master/CONTRIBUTING.md).
+If you would like to contribute, please check out [Contributing to ECMAScript](https://github.com/tc39/ecma262/blob/master/CONTRIBUTING.md).
 
 ##### What is a "TC39"?
 
@@ -85,7 +85,7 @@ The list of operations that execute will go something like the following:
 
 1. Note that **main.js** has a named import called `isOdd` that comes from **Odd.js**
 2. Begin loading **Odd.js**.
-3. Once **Odd.js** has loaded, note that it has a named export called `isOdd` and a named import called `isEven` that comes from **Even.js**. 
+3. Once **Odd.js** has loaded, note that it has a named export called `isOdd` and a named import called `isEven` that comes from **Even.js**.
 4. Create an empty binding called `isOdd` for **Odd.js**'s exports.
 5. Begin loading **Even.js**.
 6. Once **Even.js** has loaded, note that it has a named export called `isEven` and a named import called `isOdd` that comes from **Odd.js**.
