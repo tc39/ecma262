@@ -36070,6 +36070,9 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
         <h1>Changes to GlobalDeclarationInstantiation</h1>
         <p>During GlobalDeclarationInstatiation (<emu-xref href="#sec-globaldeclarationinstantiation"></emu-xref>) the following steps are performed in place of step 14:</p>
         <emu-alg>
+          1. Let _declaredFunctionOrVarNames_ be an empty List.
+          1. Append to _declaredFunctionOrVarNames_ the elements of _declaredFunctionNames_.
+          1. Append to _declaredFunctionOrVarNames_ the elements of _declaredVarNames_.
           1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of a |Block|, |CaseClause|, or |DefaultClause| Contained within script,
             1. Let _F_ be StringValue of the |BindingIdentifier| of |FunctionDeclaration| _f_.
             2. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for script, then
@@ -36077,9 +36080,9 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                 1. Let _fnDefinable_ be ? _envRec_.CanDeclareGlobalFunction(_F_).
                 3. If _fnDefinable_ is *true*, then
                   1. NOTE A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName nor the name of another |FunctionDeclaration|.
-                  2. If _declaredVarNames_ does not contain _F_, then
+                  2. If _declaredFunctionOrVarNames_ does not contain _F_, then
                     1. Let _status_ be ? _envRec_.CreateGlobalFunctionBinding(_F_, *undefined*, *false*).
-                    3. Append _F_ to declaredVarNames.
+                    1. Append _F_ to _declaredFunctionOrVarNames_.
                   3. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                     1. Let _genv_ be the running execution context’s VariableEnvironment.
                     2. Let _benv_ be the running execution context’s LexicalEnvironment.
@@ -36094,11 +36097,13 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
         <p>During EvalDeclarationInstantiation (<emu-xref href="#sec-evaldeclarationinstantiation"></emu-xref>) the following steps are performed in place of step 9:</p>
         <emu-alg>
           1. If _strict_ is *false*, then
+            1. Let _declaredFunctionOrVarNames_ be an empty List.
+            1. Append to _declaredFunctionOrVarNames_ the elements of _declaredFunctionNames_.
+            1. Append to _declaredFunctionOrVarNames_ the elements of _declaredVarNames_.
             1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of a |Block|, |CaseClause|, or |DefaultClause| Contained within _body_,
               1. Let _F_ be StringValue of the |BindingIdentifier| of |FunctionDeclaration| _f_.
               2. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _body_, then
                 1. Let _bindingExists_ be *false*.
-                2. Let _fnDefinable_ be *true*.
                 3. Let _thisLex_ be _lexEnv_.
                 4. Assert: the following loop will terminate.
                 5. Repeat while _thisLex_ is not the same as _varEnv_,
@@ -36108,17 +36113,24 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                       1. Let _bindingExists_ be *true*.
                   1. Let _thisLex_ be _thisLex_'s outer environment reference.
                 6. If _bindingExists_ is *false* and _varEnvRec_ is a global Environment Record, then
-                  1. If _envRec_.HasLexicalDeclaration(_F_) is *false*, then
-                    1. Let _fnDefinable_ be ? _envRec_.CanDeclareGlobalFunction(_F_).
+                  1. If _varEnvRec_.HasLexicalDeclaration(_F_) is *false*, then
+                    1. Let _fnDefinable_ be ? _varEnvRec_.CanDeclareGlobalFunction(_F_).
+                  1. Else,
+                    1. Let _fnDefinable_ be *false*.
+                1. Else,
+                  1. Let _fnDefinable_ be *true*.
                 7. If _bindingExists_ is *false* and _fnDefinable_ is *true*, then
-                  1. If _declaredFunctionNames_ does not contain _F_, then
+                  1. If _declaredFunctionOrVarNames_ does not contain _F_, then
                     1. If _varEnvRec_ is a global Environment Record, then
                       1. Let _status_ be ? _varEnvRec_.CreateGlobalFunctionBinding(_F_, *undefined*, *true*).
                     1. Else,
-                      1. Let _status_ be _varEnvRec_.CreateMutableBinding(_F_).
-                      2. Assert: _status_ is never an abrupt completion.
-                      3. Perform _varEnvRec_.InitializeBinding(_F_, *undefined*).
-                    1. Append _F_ to _declaredFunctionNames_.
+                      1. Let _bindingExists_ be _varEnvRec_.HasBinding(_F_).
+                      1. If _bindingExists_ is *false*, then
+                        1. Let _status_ be _varEnvRec_.CreateMutableBinding(_F_, *true*).
+                        1. Assert: _status_ is not an abrupt completion.
+                        1. Let _status_ be _varEnvRec_.InitializeBinding(_F_, *undefined*).
+                        1. Assert: _status_ is not an abrupt completion.
+                    1. Append _F_ to _declaredFunctionOrVarNames_.
                   2. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                     1. Let _genv_ be the running execution context’s VariableEnvironment.
                     2. Let _benv_ be the running execution context’s LexicalEnvironment.
