@@ -18,5 +18,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [Function Bind Syntax](https://github.com/zenparsing/es-function-bind)| Kevin Smith | 0
 | | [Do Expressions](http://wiki.ecmascript.org/doku.php?id=strawman:do_expressions) | Andreas Rossberg | 0
 | | [RegExp Look-behind](http://www.akenotsuki.com/misc/srell/lookbehind_proposal.html) | Gorkem Yakin, Brian Terlson, & Nozomu Katō | 0 
+| | [Concise Method Binding](https://github.com/jisaacks/tc39-proposals/blob/master/concise-method-binding.md) | JD Isaacks | 0
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
