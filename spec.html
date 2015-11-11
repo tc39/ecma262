@@ -10709,7 +10709,9 @@ a = b + c
         `(` Expression[In, ?Yield] `)`
         `(` `)`
         `(` `...` BindingIdentifier[?Yield] `)`
+        `(` `...` BindingPattern[?Yield] `)`
         `(` Expression[In, ?Yield] `,` `...` BindingIdentifier[?Yield] `)`
+        `(` Expression[In, ?Yield] `,` `...` BindingPattern[?Yield] `)`
     </emu-grammar>
     <h2>Supplemental Syntax</h2>
     <p>When processing the production
@@ -14743,6 +14745,7 @@ eval("1;var a;")
 
         BindingRestElement[Yield] :
           `...` BindingIdentifier[?Yield]
+          `...` BindingPattern[?Yield]
       </emu-grammar>
 
       <!-- es6num="13.3.3.1" -->
@@ -14815,7 +14818,7 @@ eval("1;var a;")
         </emu-alg>
         <emu-grammar>ArrayBindingPattern : `[` Elision? BindingRestElement `]`</emu-grammar>
         <emu-alg>
-          1. Return *false*.
+          1. Return ContainsExpression of |BindingRestElement|.
         </emu-alg>
         <emu-grammar>ArrayBindingPattern : `[` BindingElementList `,` Elision? `]`</emu-grammar>
         <emu-alg>
@@ -14823,7 +14826,9 @@ eval("1;var a;")
         </emu-alg>
         <emu-grammar>ArrayBindingPattern : `[` BindingElementList `,` Elision? BindingRestElement `]`</emu-grammar>
         <emu-alg>
-          1. Return ContainsExpression of |BindingElementList|.
+          1. Let _has_ be ContainsExpression of |BindingElementList|.
+          1. If _has_ is *true*, return *true*.
+          1. Return ContainsExpression of |BindingRestElement|.
         </emu-alg>
         <emu-grammar>BindingPropertyList : BindingPropertyList `,` BindingProperty</emu-grammar>
         <emu-alg>
@@ -14858,6 +14863,14 @@ eval("1;var a;")
         <emu-grammar>SingleNameBinding : BindingIdentifier Initializer</emu-grammar>
         <emu-alg>
           1. Return *true*.
+        </emu-alg>
+        <emu-grammar>BindingRestElement : `...` BindingIdentifier</emu-grammar>
+        <emu-alg>
+          1. Return *false*.
+        </emu-alg>
+        <emu-grammar>BindingRestElement : `...` BindingPattern</emu-grammar>
+        <emu-alg>
+          1. Return ContainsExpression of |BindingPattern|.
         </emu-alg>
       </emu-clause>
 
@@ -15073,6 +15086,25 @@ eval("1;var a;")
             1. If _iteratorRecord_.[[done]] is *true*, then
               1. If _environment_ is *undefined*, return PutValue(_lhs_, _A_).
               1. Return InitializeReferencedBinding(_lhs_, _A_).
+            1. Let _nextValue_ be IteratorValue(_next_).
+            1. If _nextValue_ is an abrupt completion, set _iteratorRecord_.[[done]] to *true*.
+            1. ReturnIfAbrupt(_nextValue_).
+            1. Let _status_ be CreateDataProperty(_A_, ToString (_n_), _nextValue_).
+            1. Assert: _status_ is *true*.
+            1. Increment _n_ by 1.
+        </emu-alg>
+        <emu-grammar>BindingRestElement : `...` BindingPattern</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be ArrayCreate(0).
+          1. Let _n_ be 0.
+          1. Repeat,
+            1. If _iteratorRecord_.[[done]] is *false*, then
+              1. Let _next_ be IteratorStep(_iteratorRecord_.[[iterator]]).
+              1. If _next_ is an abrupt completion, set _iteratorRecord_.[[done]] to *true*.
+              1. ReturnIfAbrupt(_next_).
+              1. If _next_ is *false*, set _iteratorRecord_.[[done]] to *true*.
+            1. If _iteratorRecord_.[[done]] is *true*, then
+              1. Return the result of performing BindingInitialization of |BindingPattern| with _A_ and _environment_ as the arguments.
             1. Let _nextValue_ be IteratorValue(_next_).
             1. If _nextValue_ is an abrupt completion, set _iteratorRecord_.[[done]] to *true*.
             1. ReturnIfAbrupt(_nextValue_).
@@ -17475,11 +17507,12 @@ eval("1;var a;")
       </emu-alg>
       <emu-grammar>FormalParameterList : FunctionRestParameter</emu-grammar>
       <emu-alg>
-        1. Return *false*.
+        1. Return ContainsExpression of |FunctionRestParameter|.
       </emu-alg>
       <emu-grammar>FormalParameterList : FormalsList `,` FunctionRestParameter</emu-grammar>
       <emu-alg>
-        1. Return ContainsExpression of |FormalsList|.
+        1. If ContainsExpression of |FormalsList| is *true*, return *true*.
+        1. Return ContainsExpression of |FunctionRestParameter|.
       </emu-alg>
       <emu-grammar>FormalsList : FormalsList `,` FormalParameter</emu-grammar>
       <emu-alg>
@@ -17717,6 +17750,24 @@ eval("1;var a;")
       <emu-note>
         <p>The new Environment Record created in step 6 is only used if the |BindingElement| contains a direct eval.</p>
       </emu-note>
+      <emu-grammar>FunctionRestParameter : BindingRestElement</emu-grammar>
+      <emu-alg>
+        1. If ContainsExpression of |BindingRestElement| is *false*, return the result of performing IteratorBindingInitialization for |BindingRestElement| using _iteratorRecord_ and _environment_ as the arguments.
+        1. Let _currentContext_ be the running execution context.
+        1. Let _originalEnv_ be the VariableEnvironment of _currentContext_.
+        1. Assert: The VariableEnvironment and LexicalEnvironment of _currentContext_ are the same.
+        1. Assert: _environment_ and _originalEnv_ are the same.
+        1. Let _paramVarEnv_ be NewDeclarativeEnvironment(_originalEnv_).
+        1. Set the VariableEnvironment of _currentContext_ to _paramVarEnv_.
+        1. Set the LexicalEnvironment of _currentContext_ to _paramVarEnv_.
+        1. Let _result_ be the result of performing IteratorBindingInitialization for |BindingRestElement| using _iteratorRecord_ and _environment_ as the arguments.
+        1. Set the VariableEnvironment of _currentContext_ to _originalEnv_.
+        1. Set the LexicalEnvironment of _currentContext_ to _originalEnv_.
+        1. Return _result_.
+      </emu-alg>
+      <emu-note>
+        <p>The new Environment Record created in step 6 is only used if the |BindingRestElement| contains a direct eval.</p>
+      </emu-note>
     </emu-clause>
 
     <!-- es6num="14.1.19" -->
@@ -17932,7 +17983,9 @@ eval("1;var a;")
           `(` Expression `)`
           `(` `)`
           `(` `...` BindingIdentifier `)`
+          `(` `...` BindingPattern `)`
           `(` Expression `,` `...` BindingIdentifier `)`
+          `(` Expression `,` `...` BindingPattern `)`
       </emu-grammar>
       <emu-alg>
         1. If the <sub>[Yield]</sub> grammar parameter is present for |CoverParenthesizedExpressionAndArrowParameterList[Yield]|, return the result of parsing the lexical token stream matched by |CoverParenthesizedExpressionAndArrowParameterList[Yield]| using |ArrowFormalParameters[Yield]| as the goal symbol.
