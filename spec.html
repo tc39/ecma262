@@ -6621,7 +6621,7 @@ for (let protoName of Reflect.enumerate(proto)) {
       <p>The abstract operation GetPrototypeFromConstructor determines the [[Prototype]] value that should be used to create an object corresponding to a specific constructor. The value is retrieved from the constructor's `prototype` property, if it exists. Otherwise the intrinsic named by _intrinsicDefaultProto_ is used for [[Prototype]]. This abstract operation performs the following steps:</p>
       <emu-alg>
         1. Assert: _intrinsicDefaultProto_ is a String value that is this specification's name of an intrinsic object. The corresponding object must be an intrinsic that is intended to be used as the [[Prototype]] value of an object.
-        1. Assert: IsConstructor (_constructor_) is *true*.
+        1. Assert: IsCallable (_constructor_) is *true*.
         1. Let _proto_ be ? Get(_constructor_, `"prototype"`).
         1. If Type(_proto_) is not Object, then
           1. Let _realm_ be ? GetFunctionRealm(_constructor_).
@@ -6862,24 +6862,20 @@ for (let protoName of Reflect.enumerate(proto)) {
 
     <!-- es6num="9.2.3" -->
     <emu-clause id="sec-functionallocate" aoid="FunctionAllocate">
-      <h1>FunctionAllocate (_functionPrototype_, _strict_ [,_functionKind_] )</h1>
-      <p>The abstract operation FunctionAllocate requires the two arguments _functionPrototype_ and _strict_. It also accepts one optional argument, _functionKind_. FunctionAllocate performs the following steps:</p>
+      <h1>FunctionAllocate (_functionPrototype_, _strict_, _functionKind_)</h1>
+      <p>The abstract operation FunctionAllocate requires the three arguments _functionPrototype_, _strict_ and _functionKind_. FunctionAllocate performs the following steps:</p>
       <emu-alg>
         1. Assert: Type(_functionPrototype_) is Object.
-        1. Assert: If _functionKind_ is present, its value is either `"normal"`, `"non-constructor"` or `"generator"`.
-        1. If _functionKind_ is not present, let _functionKind_ be `"normal"`.
-        1. If _functionKind_ is `"non-constructor"`, then
-          1. Let _functionKind_ be `"normal"`.
-          1. Let _needsConstruct_ be *false*.
-        1. Else let _needsConstruct_ be *true*.
+        1. Assert: _functionKind_ is either `"normal"`, `"non-constructor"` or `"generator"`.
+        1. If _functionKind_ is `"normal"`, let _needsConstruct_ be *true*.
+        1. Else, let _needsConstruct_ be *false*.
+        1. If _functionKind_ is `"non-constructor"`, let _functionKind_ be `"normal"`.
         1. Let _F_ be a newly created ECMAScript function object with the internal slots listed in <emu-xref href="#table-27"></emu-xref>. All of those internal slots are initialized to *undefined*.
         1. Set _F_'s essential internal methods to the default ordinary object definitions specified in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>.
         1. Set _F_'s [[Call]] internal method to the definition specified in <emu-xref href="#sec-ecmascript-function-objects-call-thisargument-argumentslist"></emu-xref>.
         1. If _needsConstruct_ is *true*, then
           1. Set _F_'s [[Construct]] internal method to the definition specified in <emu-xref href="#sec-ecmascript-function-objects-construct-argumentslist-newtarget"></emu-xref>.
-          1. If _functionKind_ is `"generator"`, set the [[ConstructorKind]] internal slot of _F_ to `"derived"`.
-          1. Else, set the [[ConstructorKind]] internal slot of _F_ to `"base"`.
-          1. NOTE Generator functions are tagged as `"derived"` constructors to prevent [[Construct]] from preallocating a generator instance. Generator instance objects are allocated when EvaluateBody is applied to the |GeneratorBody| of a generator function.
+          1. Set the [[ConstructorKind]] internal slot of _F_ to `"base"`.
         1. Set the [[Strict]] internal slot of _F_ to _strict_.
         1. Set the [[FunctionKind]] internal slot of _F_ to _functionKind_.
         1. Set the [[Prototype]] internal slot of _F_ to _functionPrototype_.
@@ -18455,7 +18451,7 @@ eval("1;var a;")
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Let _F_ be GeneratorFunctionCreate(~Normal~, |FormalParameters|, |GeneratorBody|, _scope_, _strict_).
         1. Let _prototype_ be ObjectCreate(%GeneratorPrototype%).
-        1. Perform MakeConstructor(_F_, *true*, _prototype_).
+        1. Perform DefinePropertyOrThrow(_F_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
         1. Perform SetFunctionName(_F_, _name_).
         1. Return _F_.
       </emu-alg>
@@ -18464,7 +18460,7 @@ eval("1;var a;")
         1. If the function code for |GeneratorDeclaration| is strict mode code, let _strict_ be *true*. Otherwise let _strict_ be *false*.
         1. Let _F_ be GeneratorFunctionCreate(~Normal~, |FormalParameters|, |GeneratorBody|, _scope_, _strict_).
         1. Let _prototype_ be ObjectCreate(%GeneratorPrototype%).
-        1. Perform MakeConstructor(_F_, *true*, _prototype_).
+        1. Perform DefinePropertyOrThrow(_F_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
         1. Perform SetFunctionName(_F_, `"default"`).
         1. Return _F_.
       </emu-alg>
@@ -18487,7 +18483,7 @@ eval("1;var a;")
         1. Let _closure_ be GeneratorFunctionCreate(~Method~, |StrictFormalParameters|, |GeneratorBody|, _scope_, _strict_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Let _prototype_ be ObjectCreate(%GeneratorPrototype%).
-        1. Perform MakeConstructor(_closure_, *true*, _prototype_).
+        1. Perform DefinePropertyOrThrow(_closure_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
         1. Perform SetFunctionName(_closure_, _propKey_).
         1. Let _desc_ be the Property Descriptor{[[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true*}.
         1. Return DefinePropertyOrThrow(_object_, _propKey_, _desc_).
@@ -18503,7 +18499,7 @@ eval("1;var a;")
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _closure_ be GeneratorFunctionCreate(~Normal~, |FormalParameters|, |GeneratorBody|, _scope_, _strict_).
         1. Let _prototype_ be ObjectCreate(%GeneratorPrototype%).
-        1. Perform MakeConstructor(_closure_, *true*, _prototype_).
+        1. Perform DefinePropertyOrThrow(_closure_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
         1. Return _closure_.
       </emu-alg>
       <emu-grammar>GeneratorExpression : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
@@ -18516,7 +18512,7 @@ eval("1;var a;")
         1. Perform _envRec_.CreateImmutableBinding(_name_).
         1. Let _closure_ be GeneratorFunctionCreate(~Normal~, |FormalParameters|, |GeneratorBody|, _funcEnv_, _strict_).
         1. Let _prototype_ be ObjectCreate(%GeneratorPrototype%).
-        1. Perform MakeConstructor (_closure_, *true*, _prototype_).
+        1. Perform DefinePropertyOrThrow(_closure_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Perform _envRec_.InitializeBinding(_name_, _closure_).
         1. Return _closure_.
@@ -18880,7 +18876,6 @@ eval("1;var a;")
             1. Let _constructorParent_ be the intrinsic object %FunctionPrototype%.
           1. Else if IsConstructor(_superclass_) is *false*, throw a *TypeError* exception.
           1. Else,
-            1. If _superclass_ has a [[FunctionKind]] internal slot whose value is `"generator"`, throw a *TypeError* exception.
             1. Let _protoParent_ be ? Get(_superclass_, `"prototype"`).
             1. If Type(_protoParent_) is neither Object nor Null, throw a *TypeError* exception.
             1. Let _constructorParent_ be _superclass_.
@@ -22784,7 +22779,7 @@ new Function("a,b", "c", "return a+b+c")
             1. Perform FunctionInitialize(_F_, ~Normal~, _parameters_, _body_, _scope_).
             1. If _kind_ is `"generator"`, then
               1. Let _prototype_ be ObjectCreate(%GeneratorPrototype%).
-              1. Perform MakeConstructor(_F_, *true*, _prototype_).
+              1. Perform DefinePropertyOrThrow(_F_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
             1. Else, perform MakeConstructor(_F_).
             1. Perform SetFunctionName(_F_, `"anonymous"`).
             1. Return _F_.
@@ -33846,7 +33841,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
   <!-- es6num="25.2" -->
   <emu-clause id="sec-generatorfunction-objects">
     <h1>GeneratorFunction Objects</h1>
-    <p>Generator Function objects are constructor functions that are usually created by evaluating |GeneratorDeclaration|, |GeneratorExpression|, and |GeneratorMethod| syntactic productions. They may also be created by calling the %GeneratorFunction% intrinsic.</p>
+    <p>Generator Function objects are functions that are usually created by evaluating |GeneratorDeclaration|, |GeneratorExpression|, and |GeneratorMethod| syntactic productions. They may also be created by calling the %GeneratorFunction% intrinsic.</p>
     <emu-figure id="figure-2" caption="Generator Objects Relationships" informative>
       <img alt="A staggering variety of boxes and arrows." height="958" src="figure-2.png" width="968">
     </emu-figure>
@@ -33945,7 +33940,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
       <!-- es6num="25.2.4.3" -->
       <emu-clause id="sec-generatorfunction-instances-prototype">
         <h1>prototype</h1>
-        <p>Whenever a GeneratorFunction instance is created another ordinary object is also created and is the initial value of the generator function's `prototype` property. The value of the prototype property is used to initialize the [[Prototype]] internal slot of a newly created Generator object when the generator function object is invoked using either [[Call]] or [[Construct]].</p>
+        <p>Whenever a GeneratorFunction instance is created another ordinary object is also created and is the initial value of the generator function's `prototype` property. The value of the prototype property is used to initialize the [[Prototype]] internal slot of a newly created Generator object when the generator function object is invoked using [[Call]].</p>
         <p>This property has the attributes { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
         <emu-note>
           <p>Unlike function instances, the object that is the value of the a GeneratorFunction's `prototype` property does not have a `constructor` property whose value is the GeneratorFunction instance.</p>
