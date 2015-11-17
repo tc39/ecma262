@@ -7,8 +7,8 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 
 |🚀| Proposal                                                                                             | Champion      | Stage
 |---|------------------------------------------------------------------------------------                 |-------------- | ------|------
+| | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 4
 | | [Exponentiation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 3
-| | [Array.prototype.includes](https://github.com/tc39/Array.prototype.includes/) | Domenic Denicola, Rick Waldron | 3
 | | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1MY9NHrHmL7ma7C8dyNXvmYNNGgVmmxXk8ZIiQtPlfH4/edit?usp=sharing) +  [polyfil](http://tc39.github.io/ecmascript_simd/)| John McCutchan, Peter Jensen, Dan Gohman, Daniel Ehrenberg |3      |
 | | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |3      |
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
