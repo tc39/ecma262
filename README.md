@@ -11,8 +11,9 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Exponentiation Operator](https://github.com/rwaldron/exponentiation-operator) | Rick Waldron | 3
 | | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1MY9NHrHmL7ma7C8dyNXvmYNNGgVmmxXk8ZIiQtPlfH4/edit?usp=sharing) +  [polyfil](http://tc39.github.io/ecmascript_simd/)| John McCutchan, Peter Jensen, Dan Gohman, Daniel Ehrenberg |3      |
 | | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |3      |
+| | [Object.values/Object.entries](https://github.com/tc39/proposal-object-values-entries) | Jordan Harband | 3
+| | [String padding](https://github.com/tc39/proposal-string-pad-start-end) | Jordan Harband & Rick Waldron | 3
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
-| | [Object.values/Object.entries](https://github.com/ljharb/proposal-object-values-entries) | Jordan Harband | 2
 | | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
 | | [Trailing commas in function parameter lists and calls](https://github.com/jeffmo/es-trailing-function-commas) | Jeff Morrison | 2
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
@@ -23,7 +24,6 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Observable](https://github.com/zenparsing/es-observable) | Kevin Smith & Jafar Husain | 1
 | | [String.prototype.{trimLeft,trimRight}](https://github.com/sebmarkbage/ecmascript-string-left-right-trim) | Sebastian Markbage | 1
 | | [Class Property Declarations](https://github.com/jeffmo/es-class-properties)| Jeff Morrison| 1
-| | [String padding](https://github.com/ljharb/proposal-string-pad-left-right) | Jordan Harband & Rick Waldron | 1
 | | [String#matchAll](https://github.com/ljharb/String.prototype.matchAll) | Jordan Harband | 1
 | | [Shared memory and atomics](https://github.com/lars-t-hansen/ecmascript_sharedmem) | Lars T Hansen | 1
 |🚀|[Callable class constructors](https://github.com/tc39/ecma262/blob/master/workingdocs/callconstructor.md) | Yehuda Katz and Allen Wirfs-Brock | 1
