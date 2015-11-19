@@ -15,7 +15,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [String padding](https://github.com/tc39/proposal-string-pad-start-end) | Jordan Harband & Rick Waldron | 3
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
 | | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
-| | [Trailing commas in function parameter lists and calls](https://github.com/jeffmo/es-trailing-function-commas) | Jeff Morrison | 2
+| | [Trailing commas in function parameter lists and calls](https://jeffmo.github.io/es-trailing-function-commas/) | Jeff Morrison | 2
 | | [Typed Objects](https://github.com/dslomov-chromium/typed-objects-es7)       |Dmitry Lomov, Niko Matsakis   |1
 | | [ArrayBuffer.transfer](https://gist.github.com/lukewagner/2735af7eea411e18cf20) | Luke Wagneer & Allen Wirfs-Brock | 1
 |🚀| [Additional export-from Statements](https://github.com/leebyron/ecmascript-more-export-from)| Lee Byron | 1
