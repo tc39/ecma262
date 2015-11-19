@@ -19,5 +19,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [Do Expressions](http://wiki.ecmascript.org/doku.php?id=strawman:do_expressions) | Andreas Rossberg | 0
 | | [RegExp Look-behind](http://www.akenotsuki.com/misc/srell/lookbehind_proposal.html) | Gorkem Yakin, Brian Terlson, & Nozomu Katō | 0 
 |🚀| [Encapsulated private state for objects](https://github.com/wycats/javascript-private-state) | Yehuda Katz & Allen Wirfs-Brock | 0
+| | [Error.isError](https://github.com/ljharb/proposal-is-error) | Jordan Harband | 0
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
