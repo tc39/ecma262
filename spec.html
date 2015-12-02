@@ -4649,7 +4649,7 @@
     <p>A <dfn>Lexical Environment</dfn> is a specification type used to define the association of |Identifier|s to specific variables and functions based upon the lexical nesting structure of ECMAScript code. A Lexical Environment consists of an Environment Record and a possibly null reference to an <em>outer</em> Lexical Environment. Usually a Lexical Environment is associated with some specific syntactic structure of ECMAScript code such as a |FunctionDeclaration|, a |BlockStatement|, or a |Catch| clause of a |TryStatement| and a new Lexical Environment is created each time such code is evaluated.</p>
     <p>An Environment Record records the identifier bindings that are created within the scope of its associated Lexical Environment. It is referred to as the Lexical Environment's <dfn>EnvironmentRecord</dfn></p>
     <p>The outer environment reference is used to model the logical nesting of Lexical Environment values. The outer reference of a (inner) Lexical Environment is a reference to the Lexical Environment that logically surrounds the inner Lexical Environment. An outer Lexical Environment may, of course, have its own outer Lexical Environment. A Lexical Environment may serve as the outer environment for multiple inner Lexical Environments. For example, if a |FunctionDeclaration| contains two nested |FunctionDeclaration|s then the Lexical Environments of each of the nested functions will have as their outer Lexical Environment the Lexical Environment of the current evaluation of the surrounding function.</p>
-    <p>A <dfn id="global-environment">global environment</dfn> is a Lexical Environment which does not have an outer environment. The global environment's outer environment reference is *null*. A global environment's EnvironmentRecord may be prepopulated with identifier bindings and includes an associated <dfn id="global-object">global object</dfn> whose properties provide some of the global environment's identifier bindings. This global object is the value of a global environment's `this` binding. As ECMAScript code is executed, additional properties may be added to the global object and the initial properties may be modified.</p>
+    <p>A <dfn id="global-environment">global environment</dfn> is a Lexical Environment which does not have an outer environment. The global environment's outer environment reference is *null*. A global environment's EnvironmentRecord may be prepopulated with identifier bindings and includes an associated <dfn id="global-object">global object</dfn> whose properties provide some of the global environment's identifier bindings. As ECMAScript code is executed, additional properties may be added to the global object and the initial properties may be modified.</p>
     <p>A <dfn id="module-environment">module environment</dfn> is a Lexical Environment that contains the bindings for the top level declarations of a |Module|. It also contains the bindings that are explicitly imported by the |Module|. The outer environment of a module environment is a global environment.</p>
     <p>A <dfn id="function-environment">function environment</dfn> is a Lexical Environment that corresponds to the invocation of an ECMAScript function object. A function environment may establish a new `this` binding. A function environment also captures the state necessary to support `super` method invocations.</p>
     <p>Lexical Environments and Environment Record values are purely specification mechanisms and need not correspond to any specific artefact of an ECMAScript implementation. It is impossible for an ECMAScript program to directly access or manipulate such values.</p>
@@ -5219,6 +5219,17 @@
             </tr>
             <tr>
               <td>
+                [[GlobalThisValue]]
+              </td>
+              <td>
+                Object
+              </td>
+              <td>
+                The value returned by `this` in global scope. Hosts may provide any ECMAScript Object value.
+              </td>
+            </tr>
+            <tr>
+              <td>
                 [[DeclarativeRecord]]
               </td>
               <td>
@@ -5427,7 +5438,6 @@
         <!-- es6num="8.1.1.4.8" -->
         <emu-clause id="sec-global-environment-records-hasthisbinding">
           <h1>HasThisBinding ()</h1>
-          <p>Global Environment Records always provide a `this` binding whose value is the associated global object.</p>
           <emu-alg>
             1. Return *true*.
           </emu-alg>
@@ -5455,9 +5465,7 @@
           <h1>GetThisBinding ()</h1>
           <emu-alg>
             1. Let _envRec_ be the global Environment Record for which the method was invoked.
-            1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
-            1. Let _bindings_ be the binding object for _ObjRec_.
-            1. Return _bindings_.
+            1. Return _envRec_.[[GlobalThisValue]].
           </emu-alg>
         </emu-clause>
 
@@ -5756,14 +5764,15 @@
 
       <!-- es6num="8.1.2.5" -->
       <emu-clause id="sec-newglobalenvironment" aoid="NewGlobalEnvironment">
-        <h1>NewGlobalEnvironment ( _G_ )</h1>
-        <p>When the abstract operation NewGlobalEnvironment is called with an ECMAScript Object _G_ as its argument, the following steps are performed:</p>
+        <h1>NewGlobalEnvironment ( _G_, _thisValue_ )</h1>
+        <p>When the abstract operation NewGlobalEnvironment is called with arguments _G_ and _thisValue_, the following steps are performed:</p>
         <emu-alg>
           1. Let _env_ be a new Lexical Environment.
           1. Let _objRec_ be a new object Environment Record containing _G_ as the binding object.
           1. Let _dclRec_ be a new declarative Environment Record containing no bindings.
           1. Let _globalRec_ be a new global Environment Record.
           1. Set _globalRec_.[[ObjectRecord]] to _objRec_.
+          1. Set _globalRec_.[[GlobalThisValue]] to _thisValue_.
           1. Set _globalRec_.[[DeclarativeRecord]] to _dclRec_.
           1. Set _globalRec_.[[VarNames]] to a new empty List.
           1. Set _env_'s EnvironmentRecord to _globalRec_.
@@ -5819,7 +5828,7 @@
         </tr>
         <tr>
           <td>
-            [[globalThis]]
+            [[globalObject]]
           </td>
           <td>
             Object
@@ -5862,7 +5871,7 @@
       <emu-alg>
         1. Let _realmRec_ be a new Record.
         1. Perform CreateIntrinsics(_realmRec_).
-        1. Set _realmRec_.[[globalThis]] to *undefined*.
+        1. Set _realmRec_.[[globalObject]] to *undefined*.
         1. Set _realmRec_.[[globalEnv]] to *undefined*.
         1. Set _realmRec_.[[templateMap]] to a new empty List.
         1. Return _realmRec_.
@@ -5893,15 +5902,16 @@
 
     <!-- es6num="8.2.3" -->
     <emu-clause id="sec-setrealmglobalobject" aoid="SetRealmGlobalObject">
-      <h1>SetRealmGlobalObject ( _realmRec_, _globalObj_ )</h1>
-      <p>The abstract operation SetRealmGlobalObject with arguments _realmRec_ and _globalObj_ performs the following steps:</p>
+      <h1>SetRealmGlobalObject ( _realmRec_, _globalObj_, _thisValue_ )</h1>
+      <p>The abstract operation SetRealmGlobalObject with arguments _realmRec_, _globalObj_, and _thisValue_ performs the following steps:</p>
       <emu-alg>
         1. If _globalObj_ is *undefined*, then
           1. Let _intrinsics_ be _realmRec_.[[intrinsics]].
           1. Let _globalObj_ be ObjectCreate(_intrinsics_.[[%ObjectPrototype%]]).
         1. Assert: Type(_globalObj_) is Object.
-        1. Set _realmRec_.[[globalThis]] to _globalObj_.
-        1. Let _newGlobalEnv_ be NewGlobalEnvironment(_globalObj_).
+        1. If _thisValue_ is *undefined*, let _thisValue_ be _globalObj_.
+        1. Set _realmRec_.[[globalObject]] to _globalObj_.
+        1. Let _newGlobalEnv_ be NewGlobalEnvironment(_globalObj_, _thisValue_).
         1. Set _realmRec_.[[globalEnv]] to _newGlobalEnv_.
         1. Return _realmRec_.
       </emu-alg>
@@ -5912,7 +5922,7 @@
       <h1>SetDefaultGlobalBindings ( _realmRec_ )</h1>
       <p>The abstract operation SetDefaultGlobalBindings with argument _realmRec_ performs the following steps:</p>
       <emu-alg>
-        1. Let _global_ be _realmRec_.[[globalThis]].
+        1. Let _global_ be _realmRec_.[[globalObject]].
         1. For each property of the Global Object specified in clause <emu-xref href="#sec-global-object"></emu-xref>, do
           1. Let _name_ be the String value of the property name.
           1. Let _desc_ be the fully populated data property descriptor for the property containing the specified attributes for the property. For properties listed in <emu-xref href="#sec-function-properties-of-the-global-object"></emu-xref>, <emu-xref href="#sec-constructor-properties-of-the-global-object"></emu-xref>, or <emu-xref href="#sec-other-properties-of-the-global-object"></emu-xref> the value of the [[Value]] attribute is the corresponding intrinsic object from _realmRec_.
@@ -6087,7 +6097,7 @@
       <emu-alg>
         1. Let _ctx_ be the running execution context.
         1. Let _currentRealm_ be _ctx_'s Realm.
-        1. Return _currentRealm_.[[globalThis]].
+        1. Return _currentRealm_.[[globalObject]].
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -6269,7 +6279,8 @@
       <p>The abstract operation InitializeHostDefinedRealm with parameter _realm_ performs the following steps:</p>
       <emu-alg>
         1. If this implementation requires use of an exotic object to serve as _realm_'s global object, let _global_ be such an object created in an implementation defined manner. Otherwise, let _global_ be *undefined* indicating that an ordinary object should be created as the global object.
-        1. Perform SetRealmGlobalObject(_realm_, _global_).
+        1. If this implementation requires a specific value for the _realm_'s global `this` binding, let _thisValue_ be that value. Otherwise, let _thisValue_ be *undefined* indicating that the global object should be used.
+        1. Perform SetRealmGlobalObject(_realm_, _global_, _thisValue_).
         1. Let _globalObj_ be ? SetDefaultGlobalBindings(_realm_).
         1. Create any implementation defined global object properties on _globalObj_.
         1. Return NormalCompletion(*undefined*).
@@ -6810,7 +6821,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. If _thisMode_ is ~strict~, let _thisValue_ be _thisArgument_.
           1. Else,
             1. If _thisArgument_ is *null* or *undefined*, then
-              1. Let _thisValue_ be _calleeRealm_.[[globalThis]].
+              1. Let _thisValue_ be _calleeRealm_.[[globalEnv]].[[GlobalThisValue]].
             1. Else,
               1. Let _thisValue_ be ToObject(_thisArgument_).
               1. Assert: _thisValue_ is not an abrupt completion.
