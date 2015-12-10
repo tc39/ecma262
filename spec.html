@@ -2537,7 +2537,7 @@
       <h1>The List and Record Specification Type</h1>
       <p>The <dfn>List</dfn> type is used to explain the evaluation of argument lists (see <emu-xref href="#sec-argument-lists"></emu-xref>) in `new` expressions, in function calls, and in other algorithms where a simple ordered list of values is needed. Values of the List type are simply ordered sequences of list elements containing the individual values. These sequences may be of any length. The elements of a list may be randomly accessed using 0-origin indices. For notational convenience an array-like syntax can be used to access List elements. For example, _arguments_[2] is shorthand for saying the 3<sup>rd</sup> element of the List _arguments_.</p>
       <p>For notational convenience within this specification, a literal syntax can be used to express a new List value. For example, &laquo; 1, 2 &raquo; defines a List value that has two elements each of which is initialized to a specific value. A new empty List can be expressed as &laquo; &raquo;.</p>
-      <p>The Record type is used to describe data aggregations within the algorithms of this specification. A Record type value consists of one or more named fields. The value of each field is either an ECMAScript value or an abstract value represented by a name associated with the Record type. Field names are always enclosed in double brackets, for example [[value]].</p>
+      <p>The <dfn>Record</dfn> type is used to describe data aggregations within the algorithms of this specification. A Record type value consists of one or more named fields. The value of each field is either an ECMAScript value or an abstract value represented by a name associated with the Record type. Field names are always enclosed in double brackets, for example [[value]].</p>
       <p>For notational convenience within this specification, an object literal-like syntax can be used to express a Record value. For example, {[[field1]]: 42, [[field2]]: *false*, [[field3]]: ~empty~} defines a Record value that has three fields, each of which is initialized to a specific value. Field name order is not significant. Any fields that are not explicitly listed are considered to be absent.</p>
       <p>In specification text and algorithms, dot notation may be used to refer to a specific field of a Record value. For example, if R is the record shown in the previous paragraph then R.[[field2]] is shorthand for &ldquo;the field of R named [[field2]]&rdquo;.</p>
       <p>Schema for commonly used Record field combinations may be named, and that name may be used as a prefix to a literal Record value to identify the specific kind of aggregations that is being described. For example: PropertyDescriptor{[[Value]]: 42, [[Writable]]: *false*, [[Configurable]]: *true*}.</p>
@@ -5935,7 +5935,8 @@
   <!-- es6num="8.3" -->
   <emu-clause id="sec-execution-contexts">
     <h1>Execution Contexts</h1>
-    <p>An <dfn>execution context</dfn> is a specification device that is used to track the runtime evaluation of code by an ECMAScript implementation. At any point in time, there is at most one execution context that is actually executing code. This is known as the <em>running</em> execution context. A stack is used to track execution contexts. The running execution context is always the top element of this stack. A new execution context is created whenever control is transferred from the executable code associated with the currently running execution context to executable code that is not associated with that execution context. The newly created execution context is pushed onto the stack and becomes the running execution context.</p>
+    <p>An <dfn>execution context</dfn> is a specification device that is used to track the runtime evaluation of code by an ECMAScript implementation. At any point in time, there is at most one execution context that is actually executing code. This is known as the <dfn id="running-execution-context">running execution context</dfn>.</p>
+    <p>The <dfn id="execution-context-stack">execution context stack</dfn> is used to track execution contexts. The running execution context is always the top element of this stack. A new execution context is created whenever control is transferred from the executable code associated with the currently running execution context to executable code that is not associated with that execution context. The newly created execution context is pushed onto the stack and becomes the running execution context.</p>
     <p>An execution context contains whatever implementation specific state is necessary to track the execution progress of its associated code. Each execution context has at least the state components listed in <emu-xref href="#table-22"></emu-xref>.</p>
     <emu-table id="table-22" caption="State Components for All Execution Contexts">
       <table>
@@ -5972,11 +5973,19 @@
             The Realm from which associated code accesses ECMAScript resources.
           </td>
         </tr>
+        <tr>
+          <td>
+            ScriptOrModule
+          </td>
+          <td>
+            The Module Record or Script Record from which associated code originates. If there is no originating script or module, as is the case for the original execution context created in InitializeHostDefinedRealm, the value is *null*.
+          </td>
+        </tr>
         </tbody>
       </table>
     </emu-table>
     <p>Evaluation of code by the running execution context may be suspended at various points defined within this specification. Once the running execution context has been suspended a different execution context may become the running execution context and commence evaluating its code. At some later time a suspended execution context may again become the running execution context and continue evaluating its code at the point where it had previously been suspended. Transition of the running execution context status among execution contexts usually occurs in stack-like last-in/first-out manner. However, some ECMAScript features require non-LIFO transitions of the running execution context.</p>
-    <p>The value of the Realm component of the running execution context is also called <dfn>the current Realm</dfn>. The value of the Function component of the running execution context is also called the <dfn>active function object</dfn>.</p>
+    <p>The value of the Realm component of the running execution context is also called <dfn id="current-realm">the current Realm</dfn>. The value of the Function component of the running execution context is also called the <dfn id="active-function-object">active function object</dfn>.</p>
     <p>Execution contexts for ECMAScript code have the additional state components listed in <emu-xref href="#table-23"></emu-xref>.</p>
     <emu-table id="table-23" caption="Additional State Components for ECMAScript Code Execution Contexts">
       <table>
@@ -6034,6 +6043,20 @@
     </emu-table>
     <p>In most situations only the running execution context (the top of the execution context stack) is directly manipulated by algorithms within this specification. Hence when the terms &ldquo;LexicalEnvironment&rdquo;, and &ldquo;VariableEnvironment&rdquo; are used without qualification they are in reference to those components of the running execution context.</p>
     <p>An execution context is purely a specification mechanism and need not correspond to any particular artefact of an ECMAScript implementation. It is impossible for ECMAScript code to directly access or observe an execution context.</p>
+
+    <emu-clause id="sec-getactivescriptormodule" aoid="GetActiveScriptOrModule">
+      <h1>GetActiveScriptOrModule ()</h1>
+      <p>The GetActiveScriptOrModule abstract operation is used to determine the running script or module, based on the active function object. GetActiveScriptOrModule performs the following steps:</p>
+
+      <emu-alg>
+        1. If the execution context stack is empty, return *null*.
+        1. Let _ec_ be the topmost execution context on the execution context stack whose Function component's [[ScriptOrModule]] component is not *null*.
+        1. If such an execution context exists, return _ec_'s Function component's [[ScriptOrModule]] slot's value.
+        1. Otherwise, let _ec_ be the running execution context.
+        1. Assert: _ec_'s ScriptOrModule component is not *null*.
+        1. Return _ec_'s ScriptOrModule component.
+      </emu-alg>
+    </emu-clause>
 
     <!-- es6num="8.3.1" -->
     <emu-clause id="sec-resolvebinding" aoid="ResolveBinding">
@@ -6156,6 +6179,17 @@
         </tr>
         <tr>
           <td>
+            [[ScriptOrModule]]
+          </td>
+          <td>
+            A Script Record or Module Record
+          </td>
+          <td>
+            The script or module for the initial execution context when this PendingJob is initiated.
+          </td>
+        </tr>
+        <tr>
+          <td>
             [[HostDefined]]
           </td>
           <td>
@@ -6216,7 +6250,8 @@
         1. Assert: _arguments_ is a List that has the same number of elements as the number of parameters required by _job_.
         1. Let _callerContext_ be the running execution context.
         1. Let _callerRealm_ be _callerContext_'s Realm.
-        1. Let _pending_ be PendingJob{ [[Job]]: _job_, [[Arguments]]: _arguments_, [[Realm]]: _callerRealm_, [[HostDefined]]: *undefined* }.
+        1. Let _callerScriptOrModule_ be _callerContext_'s ScriptOrModule.
+        1. Let _pending_ be PendingJob{ [[Job]]: _job_, [[Arguments]]: _arguments_, [[Realm]]: _callerRealm_, [[ScriptOrModule]]: _callerScriptOrModule_, [[HostDefined]]: *undefined* }.
         1. Perform any implementation or host environment defined processing of _pending_. This may include modifying the [[HostDefined]] field or any other field of _pending_.
         1. Add _pending_ at the back of the Job Queue named by _queueName_.
         1. Return NormalCompletion(~empty~).
@@ -6236,7 +6271,7 @@
       </emu-alg>
       <p>Job abstract operations must not contain a Return step or a ReturnIfAbrupt step. The NextJob _result_ operation is equivalent to the following steps:</p>
       <emu-alg>
-        1. If _result_ is an abrupt completion, perform implementation defined unhandled exception processing.
+        1. If _result_ is an abrupt completion, perform HostReportErrors(« _result_.[[value]] »).
         1. Suspend the running execution context and remove it from the execution context stack.
         1. Assert: The execution context stack is now empty.
         1. Let _nextQueue_ be a non-empty Job Queue chosen in an implementation defined manner. If all Job Queues are empty, the result is implementation defined.
@@ -6244,6 +6279,7 @@
         1. Let _newContext_ be a new execution context.
         1. Set _newContext_'s Function to *null*.
         1. Set _newContext_'s Realm to _nextPending_.[[Realm]].
+        1. Set _newContext_'s ScriptOrModule to _nextPending_.[[ScriptOrModule]].
         1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
         1. Perform any implementation or host environment defined job initialization using _nextPending_.
         1. Perform the abstract operation named by _nextPending_.[[Job]] using the elements of _nextPending_.[[Arguments]] as its arguments.
@@ -6260,17 +6296,18 @@
       1. Let _newContext_ be a new execution context.
       1. Set the Function of _newContext_ to *null*.
       1. Set the Realm of _newContext_ to _realm_.
+      1. Set the ScriptOrModule of _newContext_ to *null*.
       1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
       1. If the host requires use of an exotic object to serve as _realm_'s global object, let _global_ be such an object created in an implementation defined manner. Otherwise, let _global_ be *undefined*, indicating that an ordinary object should be created as the global object.
       1. If the host requires that the `this` binding in _realm_'s global scope return an object other than the global object, let _thisValue_ be such an object created in an implementation defined manner. Otherwise, let _thisValue_ be *undefined*, indicating that _realm_'s global `this` binding should be the global object.
       1. Perform SetRealmGlobalObject(_realm_, _global_, _thisValue_).
       1. Let _globalObj_ be ? SetDefaultGlobalBindings(_realm_).
       1. Create any implementation defined global object properties on _globalObj_.
-      1. In an implementation dependent manner, obtain the ECMAScript source texts (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>) for zero or more ECMAScript scripts and/or ECMAScript modules. For each such _sourceText_ do,
+      1. In an implementation dependent manner, obtain the ECMAScript source texts (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>) and any associated host-defined values for zero or more ECMAScript scripts and/or ECMAScript modules. For each such _sourceText_ and _hostDefined_,
         1. If _sourceText_ is the source code of a script, then
-          1. Perform EnqueueJob(`"ScriptJobs"`, ScriptEvaluationJob, &laquo; _sourceText_ &raquo;).
+          1. Perform EnqueueJob(`"ScriptJobs"`, ScriptEvaluationJob, &laquo; _sourceText_, _hostDefined_ &raquo;).
         1. Else _sourceText_ is the source code of a module,
-          1. Perform EnqueueJob(`"ScriptJobs"`, TopLevelModuleEvaluationJob, &laquo; _sourceText_ &raquo;).
+          1. Perform EnqueueJob(`"ScriptJobs"`, TopLevelModuleEvaluationJob, &laquo; _sourceText_, _hostDefined_ &raquo;).
       1. NextJob NormalCompletion(*undefined*).
     </emu-alg>
   </emu-clause>
@@ -6718,6 +6755,17 @@ for (let protoName of Reflect.enumerate(proto)) {
         </tr>
         <tr>
           <td>
+            [[ScriptOrModule]]
+          </td>
+          <td>
+            Script Record or Module Record
+          </td>
+          <td>
+            The script or module in which the function was created.
+          </td>
+        </tr>
+        <tr>
+          <td>
             [[ThisMode]]
           </td>
           <td>
@@ -6786,6 +6834,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. Set the Function of _calleeContext_ to _F_.
           1. Let _calleeRealm_ be the value of _F_'s [[Realm]] internal slot.
           1. Set the Realm of _calleeContext_ to _calleeRealm_.
+          1. Set the ScriptOrModule of _calleeContext_ to the value of _F_'s [[ScriptOrModule]] internal slot.
           1. Let _localEnv_ be NewFunctionEnvironment(_F_, _newTarget_).
           1. Set the LexicalEnvironment of _calleeContext_ to _localEnv_.
           1. Set the VariableEnvironment of _calleeContext_ to _localEnv_.
@@ -6895,6 +6944,7 @@ for (let protoName of Reflect.enumerate(proto)) {
         1. Set the [[Environment]] internal slot of _F_ to the value of _Scope_.
         1. Set the [[FormalParameters]] internal slot of _F_ to _ParameterList_ .
         1. Set the [[ECMAScriptCode]] internal slot of _F_ to _Body_.
+        1. Set the [[ScriptOrModule]] internal slot of _F_ to GetActiveScriptOrModule().
         1. If _kind_ is ~Arrow~, set the [[ThisMode]] internal slot of _F_ to ~lexical~.
         1. Else if _Strict_ is *true*, set the [[ThisMode]] internal slot of _F_ to ~strict~.
         1. Else set the [[ThisMode]] internal slot of _F_ to ~global~.
@@ -7145,7 +7195,7 @@ for (let protoName of Reflect.enumerate(proto)) {
   <emu-clause id="sec-built-in-function-objects">
     <h1>Built-in Function Objects</h1>
     <p>The built-in function objects defined in this specification may be implemented as either ECMAScript function objects (<emu-xref href="#sec-ecmascript-function-objects"></emu-xref>) whose behaviour is provided using ECMAScript code or as implementation provided exotic function objects whose behaviour is provided in some other manner. In either case, the effect of calling such functions must conform to their specifications. An implementation may also provide additional built-in function objects that are not defined in this specification.</p>
-    <p>If a built-in function object is implemented as an exotic object it must have the ordinary object behaviour specified in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>. All such exotic function objects also have [[Prototype]], [[Extensible]], and [[Realm]] internal slots.</p>
+    <p>If a built-in function object is implemented as an exotic object it must have the ordinary object behaviour specified in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>. All such exotic function objects also have [[Prototype]], [[Extensible]], [[Realm]], and [[ScriptOrModule]] internal slots.</p>
     <p>Unless otherwise specified every built-in function object has the %FunctionPrototype% object (<emu-xref href="#sec-properties-of-the-function-prototype-object"></emu-xref>) as the initial value of its [[Prototype]] internal slot.</p>
     <p>The behaviour specified for each built-in function via algorithm steps or other means is the specification of the function body behaviour for both [[Call]] and [[Construct]] invocations of the function. However, [[Construct]] invocation is not supported by all built-in functions. For each built-in function, when invoked with [[Call]], the [[Call]] _thisArgument_ provides the *this* value, the [[Call]] _argumentsList_ provides the named parameters, and the NewTarget value is *undefined*. When invoked with [[Construct]], the *this* value is uninitialized, the [[Construct]] _argumentsList_ provides the named parameters, and the [[Construct]] _newTarget_ parameter provides the NewTarget value. If the built-in function is implemented as an ECMAScript function object then this specified behaviour must be implemented by the ECMAScript code that is the body of the function. Built-in functions that are ECMAScript function objects must be strict mode functions. If a built-in constructor has any [[Call]] behaviour other than throwing a *TypeError* exception, an ECMAScript implementation of the function must be done in a manner that does not cause the function's [[FunctionKind]] internal slot to have the value `"classConstructor"`.</p>
     <p>Built-in function objects that are not identified as constructors do not implement the [[Construct]] internal method unless otherwise specified in the description of a particular function. When a built-in constructor is called as part of a `new` expression the _argumentsList_ parameter of the invoked [[Construct]] internal method provides the values for the built-in constructor's named parameters.</p>
@@ -7163,6 +7213,7 @@ for (let protoName of Reflect.enumerate(proto)) {
         1. Set the Function of _calleeContext_ to _F_.
         1. Let _calleeRealm_ be the value of _F_'s [[Realm]] internal slot.
         1. Set the Realm of _calleeContext_ to _calleeRealm_.
+        1. Set the ScriptOrModule of _calleeContext_ to the value of _F_'s [[ScriptOrModule]] internal slot.
         1. Perform any necessary implementation defined initialization of _calleeContext_.
         1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
         1. Let _result_ be the Completion Record that is the result of evaluating _F_ in an implementation defined manner that conforms to the specification of _F_. _thisArgument_ is the *this* value, _argumentsList_ provides the named parameters, and the NewTarget value is *undefined*.
@@ -7177,9 +7228,9 @@ for (let protoName of Reflect.enumerate(proto)) {
     <!-- es6num="9.3.2" -->
     <emu-clause id="sec-built-in-function-objects-construct-argumentslist-newtarget">
       <h1>[[Construct]] (_argumentsList_, _newTarget_)</h1>
-      <p>The [[Construct]] internal method for built-in function object _F_ is called with parameters _argumentsList_ and _newTarget_. The steps performed are the same as [[Call]] (see <emu-xref href="#sec-built-in-function-objects-call-thisargument-argumentslist"></emu-xref>) except that step 9 is replaced by:</p>
+      <p>The [[Construct]] internal method for built-in function object _F_ is called with parameters _argumentsList_ and _newTarget_. The steps performed are the same as [[Call]] (see <emu-xref href="#sec-built-in-function-objects-call-thisargument-argumentslist"></emu-xref>) except that step 10 is replaced by:</p>
       <emu-alg>
-        9. Let _result_ be the Completion Record that is the result of evaluating _F_ in an implementation defined manner that conforms to the specification of _F_. The *this* value is uninitialized, _argumentsList_ provides the named parameters, and _newTarget_ provides the NewTarget value.
+        10. Let _result_ be the Completion Record that is the result of evaluating _F_ in an implementation defined manner that conforms to the specification of _F_. The *this* value is uninitialized, _argumentsList_ provides the named parameters, and _newTarget_ provides the NewTarget value.
       </emu-alg>
     </emu-clause>
 
@@ -7194,6 +7245,7 @@ for (let protoName of Reflect.enumerate(proto)) {
         1. Set the [[Realm]] internal slot of _func_ to _realm_.
         1. Set the [[Prototype]] internal slot of _func_ to _prototype_.
         1. Set the [[Extensible]] internal slot of _func_ to *true*.
+        1. Set the [[ScriptOrModule]] internal slot of _func_ to *null*.
         1. Return _func_.
       </emu-alg>
       <p>Each built-in function defined in this specification is created as if by calling the CreateBuiltinFunction abstract operation, unless otherwise specified.</p>
@@ -19472,17 +19524,111 @@ eval("1;var a;")
       </emu-alg>
     </emu-clause>
 
-    <!-- es6num="15.1.7" -->
-    <emu-clause id="sec-runtime-semantics-scriptevaluation">
-      <h1>Runtime Semantics: ScriptEvaluation</h1>
-      <p>With argument _realm_.</p>
-      <emu-grammar>Script : ScriptBody?</emu-grammar>
+    <emu-clause id="sec-script-semantics-runtime-semantics-evaluation">
+      <h1>Runtime Semantics: Evaluation</h1>
+      <emu-grammar>Script : [empty]</emu-grammar>
       <emu-alg>
-        1. If |ScriptBody| is not present, return NormalCompletion(~empty~).
-        1. Let _globalEnv_ be _realm_.[[globalEnv]].
+        1. Return NormalCompletion(*undefined*).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-script-records">
+      <h1>Script Records</h1>
+
+      <p>A <dfn id="script-record">Script Record</dfn> encapsulates information about a script being evaluated. Each script record contains the fields listed in <emu-xref href="#table-script-records"></emu-xref>.</p>
+
+      <emu-table id="table-script-records" caption="Script Record Fields">
+        <table>
+          <thead>
+          <tr>
+            <th>
+              Field Name
+            </th>
+            <th>
+              Value Type
+            </th>
+            <th>
+              Meaning
+            </th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>
+              [[Realm]]
+            </td>
+            <td>
+              Realm Record | *undefined*
+            </td>
+            <td>
+              The Realm within which this script was created. *undefined* if not yet assigned.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              [[Environment]]
+            </td>
+            <td>
+              Lexical Environment | *undefined*
+            </td>
+            <td>
+              The Lexical Environment containing the top level bindings for this script. This field is set when the script is instantiated.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              [[ECMAScriptCode]]
+            </td>
+            <td>
+              a parse result
+            </td>
+            <td>
+              The result of parsing the source text of this module using |Script| as the goal symbol.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              [[HostDefined]]
+            </td>
+            <td>
+              Any, default value is *undefined*.
+            </td>
+            <td>
+              Field reserved for use by host environments that need to associate additional information with a script.
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-parse-script" aoid="ParseScript">
+      <h1>ParseScript ( _sourceText_, _hostDefined_ )</h1>
+
+      <p>The abstract operation ParseScript with arguments _sourceText_ and _hostDefined_ creates a Script Record based upon the result of parsing _sourceText_ as a |Script|. ParseScript performs the following steps:</p>
+
+      <emu-alg>
+        1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
+        1. Parse _sourceText_ using |Script| as the goal symbol and analyze the parse result for any Early Error conditions. If the parse was successful and no early errors were found, let _body_ be the resulting parse tree. Otherwise, let _body_ be a List of one or more *SyntaxError* or *ReferenceError* objects representing the parsing errors and/or early errors. Parsing and early error detection may be interweaved in an implementation dependent manner. If more than one parsing error or early error is present, the number and ordering of error objects in the list is implementation dependent, but at least one must be present.
+        1. If _body_ is a List of errors, then return _body_.
+        1. Let _realm_ be the running execution context's Realm.
+        1. Return Script Record {[[Realm]]: _realm_, [[Environment]]: *undefined*, [[ECMAScriptCode]]: _body_, [[HostDefined]]: _hostDefined_}.
+      </emu-alg>
+      <emu-note>
+        <p>An implementation may parse script source text and analyze it for Early Error conditions prior to evaluation of ParseScript for that script source text. However, the reporting of any errors must be deferred until the point where this specification actually performs ParseScript upon that source text.</p>
+      </emu-note>
+    </emu-clause>
+
+    <!-- es6num="15.1.7" -->
+    <emu-clause id="sec-runtime-semantics-scriptevaluation" aoid="ScriptEvaluation">
+      <h1>ScriptEvaluation ( _scriptRecord_ )</h1>
+
+      <emu-alg>
+        1. Let _globalEnv_ be _scriptRecord_.[[Realm]].[[globalEnv]].
         1. Let _scriptCxt_ be a new ECMAScript code execution context.
         1. Set the Function of _scriptCxt_ to *null*.
-        1. Set the Realm of _scriptCxt_ to _realm_.
+        1. Set the Realm of _scriptCxt_ to _scriptRecord_.[[Realm]].
+        1. Set the ScriptOrModule of _scriptCxt_ to _scriptRecord_.
         1. Set the VariableEnvironment of _scriptCxt_ to _globalEnv_.
         1. Set the LexicalEnvironment of _scriptCxt_ to _globalEnv_.
         1. Suspend the currently running execution context.
@@ -19567,22 +19713,17 @@ eval("1;var a;")
 
     <!-- es6num="15.1.9" -->
     <emu-clause id="sec-scriptevaluationjob" aoid="ScriptEvaluationJob">
-      <h1>Runtime Semantics: ScriptEvaluationJob ( _sourceText_ )</h1>
-      <p>The job ScriptEvaluationJob with parameter _sourceText_ parses, validates, and evaluates _sourceText_ as a |Script|.</p>
+      <h1>Runtime Semantics: ScriptEvaluationJob ( _sourceText_, _hostDefined_ )</h1>
+      <p>The job ScriptEvaluationJob with parameters _sourceText_ and _hostDefined_ parses, validates, and evaluates _sourceText_ as a |Script|.</p>
       <emu-alg>
         1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
-        1. Parse _sourceText_ using |Script| as the goal symbol and analyze the parse result for any Early Error conditions. If the parse was successful and no early errors were found, let _code_ be the resulting parse tree. Otherwise, let _code_ be an indication of one or more parsing errors and/or early errors. Parsing and early error detection may be interweaved in an implementation dependent manner. If more than one parse or early error is present, the number and ordering of reported errors is implementation dependent but at least one error must be reported.
-        1. If _code_ is an error indication, then
-          1. Report or log the error(s) in an implementation dependent manner.
-          1. Let _status_ be NormalCompletion(*undefined*).
-        1. Else,
-          1. Let _realm_ be the running execution context's Realm.
-          1. Let _status_ be the result of ScriptEvaluation of _code_ with argument _realm_.
+        1. Let _s_ be ParseScript(_sourceText_, _hostDefined_).
+        1. If _s_ is a List of errors, then
+          1. Perform HostReportErrors(_s_).
+          1. NextJob NormalCompletion(*undefined*).
+        1. Let _status_ be ScriptEvaluation(_s_).
         1. NextJob Completion(_status_).
       </emu-alg>
-      <emu-note>
-        <p>An implementation may parse a _sourceText_ as a |Script| and analyze it for Early Error conditions prior to the execution of the ScriptEvaluationJob for that _sourceText_. However, the reporting of any errors must be deferred until the ScriptEvaluationJob is actually executed.</p>
-      </emu-note>
     </emu-clause>
   </emu-clause>
 
@@ -19956,7 +20097,7 @@ eval("1;var a;")
         <p>Module Record defines the fields listed in <emu-xref href="#table-36"></emu-xref>. All Module Definition subclasses include at least those fields. Module Record also defines the abstract method list in <emu-xref href="#table-37"></emu-xref>. All Module definition subclasses must provide concrete implementations of these abstract methods.</p>
         <emu-table id="table-36" caption="Module Record Fields">
           <table>
-            <tbody>
+            <thead>
             <tr>
               <th>
                 Field Name
@@ -19968,6 +20109,8 @@ eval("1;var a;")
                 Meaning
               </th>
             </tr>
+            </thead>
+            <tbody>
             <tr>
               <td>
                 [[Realm]]
@@ -20010,6 +20153,17 @@ eval("1;var a;")
               </td>
               <td>
                 Initially *false*, *true* if evaluation of this module has started. Remains *true* when evaluation completes, even if it is an abrupt completion.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[HostDefined]]
+              </td>
+              <td>
+                Any, default value is *undefined*.
+              </td>
+              <td>
+                Field reserved for use by host environments that need to associate additional information with a module.
               </td>
             </tr>
             </tbody>
@@ -20535,13 +20689,12 @@ eval("1;var a;")
 
         <!-- es6num="15.2.1.16.1" -->
         <emu-clause id="sec-parsemodule" aoid="ParseModule">
-          <h1>Runtime Semantics: ParseModule ( _sourceText_ )</h1>
-          <p>The abstract operation ParseModule with argument _sourceText_ creates a Source Text Module Record based upon the result of parsing _sourceText_ as a |Module|. ParseModule performs the following steps:</p>
+          <h1>ParseModule ( _sourceText_, _hostDefined_ )</h1>
+          <p>The abstract operation ParseModule with arguments _sourceText_ and _hostDefined_ creates a Source Text Module Record based upon the result of parsing _sourceText_ as a |Module|. ParseModule performs the following steps:</p>
           <emu-alg>
             1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
-            1. Parse _sourceText_ using |Module| as the goal symbol and analyze the parse result for any Early Error conditions. If the parse was successful and no early errors were found, let _body_ be the resulting parse tree. Otherwise, let _body_ be an indication of one or more parsing errors and/or early errors. Parsing and early error detection may be interweaved in an implementation dependent manner. If more than one parse or early error is present, the number and ordering of reported errors is implementation dependent but at least one error must be reported.
-            1. If _body_ is an abrupt completion or error indication, then
-              1. Throw a *SyntaxError* exception.
+            1. Parse _sourceText_ using |Module| as the goal symbol and analyze the parse result for any Early Error conditions. If the parse was successful and no early errors were found, let _body_ be the resulting parse tree. Otherwise, let _body_ be a List of one or more *SyntaxError* or *ReferenceError* objects representing the parsing errors and/or early errors. Parsing and early error detection may be interweaved in an implementation dependent manner. If more than one parsing error or early error is present, the number and ordering of error objects in the list is implementation dependent, but at least one must be present.
+            1. If _body_ is a List of errors, then return _body_.
             1. Let _requestedModules_ be the ModuleRequests of _body_.
             1. Let _importEntries_ be ImportEntries of _body_.
             1. Let _importedBoundNames_ be ImportedLocalNames(_importEntries_).
@@ -20564,7 +20717,8 @@ eval("1;var a;")
                 1. Append _ee_ to _starExportEntries_.
               1. Else,
                 1. Append _ee_ to _indirectExportEntries_.
-            1. Return Source Text Module Record {[[Realm]]: *undefined*, [[Environment]]: *undefined*, [[Namespace]]: *undefined*, [[Evaluated]]: *false*, [[ECMAScriptCode]]: _body_, [[RequestedModules]]: _requestedModules_, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_}.
+            1. Let _realm_ be the running execution context's Realm.
+            1. Return Source Text Module Record {[[Realm]]: _realm_, [[Environment]]: *undefined*, [[HostDefined]]: _hostDefined_, [[Namespace]]: *undefined*, [[Evaluated]]: *false*, [[ECMAScriptCode]]: _body_, [[RequestedModules]]: _requestedModules_, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_}.
           </emu-alg>
           <emu-note>
             <p>An implementation may parse module source text and analyze it for Early Error conditions prior to the evaluation of ParseModule for that module source text. However, the reporting of any errors must be deferred until the point where this specification actually performs ParseModule upon that source text.</p>
@@ -20719,6 +20873,7 @@ eval("1;var a;")
             1. Let _moduleCxt_ be a new ECMAScript code execution context.
             1. Set the Function of _moduleCxt_ to *null*.
             1. Set the Realm of _moduleCxt_ to _module_.[[Realm]].
+            1. Set the ScriptOrModule of _moduleCxt_ to _module_.
             1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
             1. Set the VariableEnvironment of _moduleCxt_ to _module_.[[Environment]].
             1. Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].
@@ -20772,16 +20927,14 @@ eval("1;var a;")
 
       <!-- es6num="15.2.1.19" -->
       <emu-clause id="sec-toplevelmoduleevaluationjob" aoid="TopLevelModuleEvaluationJob">
-        <h1>Runtime Semantics: TopLevelModuleEvaluationJob ( _sourceText_)</h1>
-        <p>A TopLevelModuleEvaluationJob with parameter _sourceText_ is a job that parses, validates, and evaluates _sourceText_ as a |Module|.</p>
+        <h1>Runtime Semantics: TopLevelModuleEvaluationJob ( _sourceText_, _hostDefined_ )</h1>
+        <p>A TopLevelModuleEvaluationJob with parameters _sourceText_ and _hostDefined_ is a job that parses, validates, and evaluates _sourceText_ as a |Module|.</p>
         <emu-alg>
           1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
-          1. Let _realm_ be the running execution context's Realm.
-          1. Let _m_ be ParseModule(_sourceText_).
-          1. If _m_ is an abrupt completion or any other implementation defined error indication, then
-            1. Report or log the error(s) in an implementation dependent manner.
+          1. Let _m_ be ParseModule(_sourceText_, _hostDefined_).
+          1. If _m_ is a List of errors, then
+            1. Perform HostReportErrors(_m_).
             1. NextJob NormalCompletion(*undefined*).
-          1. Set _m_.[[Realm]] to _realm_.
           1. Let _status_ be _m_.ModuleDeclarationInstantiation().
           1. If _status_ is not an abrupt completion, then
             1. Assert: all dependencies of _m_ have been transitively resolved and _m_ is ready for evaluation.
@@ -21444,7 +21597,7 @@ eval("1;var a;")
 <!-- es6num="16" -->
 <emu-clause id="sec-error-handling-and-language-extensions">
   <h1>Error Handling and Language Extensions</h1>
-  <p>An implementation must report most errors at the time the relevant ECMAScript language construct is evaluated. An <em>early error</em> is an error that can be detected and reported prior to the evaluation of any construct in the |Script| containing the error. The presence of an early error prevents the evaluation of the construct. An implementation must report early errors in a |Script| as part of the ScriptEvaluationJob for that |Script|. Early errors in a |Module| are reported at the point when the |Module| would be evaluated and the |Module| is never initialized. Early errors in <b>eval</b> code are reported at the time `eval` is called and prevent evaluation of the <b>eval</b> code. All errors that are not early errors are runtime errors.</p>
+  <p>An implementation must report most errors at the time the relevant ECMAScript language construct is evaluated. An <dfn id="early-error">early error</dfn> is an error that can be detected and reported prior to the evaluation of any construct in the |Script| containing the error. The presence of an early error prevents the evaluation of the construct. An implementation must report early errors in a |Script| as part of parsing that |Script| in ParseScript. Early errors in a |Module| are reported at the point when the |Module| would be evaluated and the |Module| is never initialized. Early errors in <b>eval</b> code are reported at the time `eval` is called and prevent evaluation of the <b>eval</b> code. All errors that are not early errors are runtime errors.</p>
   <p>An implementation must report as an early error any occurrence of a condition that is listed in a &ldquo;Static Semantics: Early Errors&rdquo; subclause of this specification.</p>
   <p>An implementation shall not treat other kinds of errors as early errors even if the compiler can prove that a construct cannot execute without error under any circumstances. An implementation may issue an early warning in such a case, but it should not report the error until the relevant construct is actually executed.</p>
   <p>An implementation shall report all errors as specified, except for the following:</p>
@@ -21457,6 +21610,18 @@ eval("1;var a;")
     </li>
   </ul>
   <p>An implementation may define behaviour other than throwing *RangeError* for `toFixed`, `toExponential`, and `toPrecision` when the _fractionDigits_ or _precision_ argument is outside the specified range.</p>
+
+  <emu-clause id="sec-host-report-errors" aoid="HostReportErrors">
+    <h1>HostReportErrors( _errorList_ )</h1>
+
+    <p>HostReportErrors is an implementation-defined abstract operation that allows host environments to report parsing errors, early errors, and runtime errors.</p>
+
+    <p>An implementation of HostReportErrors must complete normally in all cases. The default implementation of HostReportErrors is to do nothing.</p>
+
+    <emu-note>
+      _errorList_ will be a List of ECMAScript language values. If the errors are parsing errors or early errors, these will always be *SyntaxError* or *ReferenceError* objects. Runtime errors, however, can be any ECMAScript value.
+    </emu-note>
+  </emu-clause>
 
   <!-- es6num="16.1" -->
   <emu-clause id="sec-forbidden-extensions">
@@ -21591,6 +21756,7 @@ eval("1;var a;")
           1. Let _evalCxt_ be a new ECMAScript code execution context.
           1. Set the _evalCxt_'s Function to *null*.
           1. Set the _evalCxt_'s Realm to _evalRealm_.
+          1. Set the _evalCxt_'s ScriptOrModule to _ctx_'s ScriptOrModule.
           1. Set the _evalCxt_'s VariableEnvironment to _varEnv_.
           1. Set the _evalCxt_'s LexicalEnvironment to _lexEnv_.
           1. Push _evalCxt_ on to the execution context stack; _evalCxt_ is now the running execution context.
@@ -34581,7 +34747,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
       </emu-clause>
 
       <emu-clause id="sec-host-promise-rejection-tracker" aoid="HostPromiseRejectionTracker">
-        <h1>HostPromiseRejectionTracker ( promise, operation )</h1>
+        <h1>HostPromiseRejectionTracker ( _promise_, _operation_ )</h1>
 
         <p>HostPromiseRejectionTracker is an implementation-defined abstract operation that allows host environments to track promise rejections.</p>
 
