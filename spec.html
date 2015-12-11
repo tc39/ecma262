@@ -31381,7 +31381,7 @@ Date.parse(x.toLocaleString())
           1. If _end_ is *undefined*, let _relativeEnd_ be _len_; else let _relativeEnd_ be ? ToInteger(_end_).
           1. If _relativeEnd_ &lt; 0, let _final_ be max((_len_ + _relativeEnd_),0); else let _final_ be min(_relativeEnd_, _len_).
           1. Let _count_ be max(_final_ - _k_, 0).
-          1. Let _A_ be ? TypedArraySpeciesCreate(_O_, &laquo;_len_&raquo;).
+          1. Let _A_ be ? TypedArraySpeciesCreate(_O_, &laquo;_count_&raquo;).
           1. Let _srcName_ be the String value of _O_'s [[TypedArrayName]] internal slot.
           1. Let _srcType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _srcName_.
           1. Let _targetName_ be the String value of _A_'s [[TypedArrayName]] internal slot.
@@ -31398,14 +31398,13 @@ Date.parse(x.toLocaleString())
             1. Let _srcBuffer_ be the value of _O_'s [[ViewedArrayBuffer]] internal slot.
             1. If IsDetachedBuffer(_srcBuffer_) is *true*, throw a *TypeError* exception.
             1. Let _targetBuffer_ be the value of _A_'s [[ViewedArrayBuffer]] internal slot.
-            1. If IsDetachedBuffer(_targetBuffer_) is *true*, throw a *TypeError* exception."
-            1. If the value of _A_'s [[ArrayLength]] internal slot < _count_, throw a *TypeError* exception.
             1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _srcType_.
             1. NOTE: If _srcType_ and _targetType_ are the same the transfer must be performed in a manner that preserves the bit-level encoding of the source data.
             1. Let _srcByteOffet_ be the value of _O_'s [[ByteOffset]] internal slot.
             1. Let _targetByteIndex_ be _A_'s [[ByteOffset]] internal slot.
             1. Let _srcByteIndex_ be (_k_ &times; _elementSize_) + _srcByteOffet_.
-            1. Repeat, while _targetByteIndex_ &minus; _A_'s [[ByteOffset]] internal slot &lt; _count_ &times; _elementSize_
+            1. Let _limit_ be _targetByteIndex_ + _count_ &times; _elementSize_.
+            1. Repeat, while _targetByteIndex_ < _limit_
               1. Let _value_ be GetValueFromBuffer(_srcBuffer_, _srcByteIndex_, `"Uint8"`).
               1. Perform SetValueInBuffer (_targetBuffer_, _targetByteIndex_, `"Uint8"`, _value_).
               1. Increase _srcByteIndex_ by 1.
@@ -31548,7 +31547,7 @@ Date.parse(x.toLocaleString())
         <p>This description applies only if the _TypedArray_ function is called with no arguments.</p>
         <emu-alg>
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
-          1. Return AllocateTypedArray(_TypedArray_, 0).
+          1. Return AllocateTypedArray(_TypedArray_.[[TypedArrayConstructorName]], NewTarget, 0).
         </emu-alg>
       </emu-clause>
 
@@ -31564,15 +31563,15 @@ Date.parse(x.toLocaleString())
           1. Let _numberLength_ be ToNumber(_length_).
           1. Let _elementLength_ be ? ToLength(_numberLength_).
           1. If SameValueZero(_numberLength_, _elementLength_) is *false*, throw a *RangeError* exception.
-          1. Return AllocateTypedArray(_TypedArray_, _elementLength_).
+          1. Return AllocateTypedArray(_TypedArray_.[[TypedArrayConstructorName]], NewTarget, _elementLength_).
         </emu-alg>
 
         <!-- es6num="22.2.1.2.1" -->
         <emu-clause id="sec-allocatetypedarray" aoid="AllocateTypedArray">
-          <h1>Runtime Semantics: AllocateTypedArray (_typedArray_, _length_ )</h1>
-          <p>The abstract operation AllocateTypedArray with argument _typedArray_ and optional argument _length_ is used to validate and create an instance of a TypedArray constructor. _typedArray_ is required to be one of the intrinsic TypedArray constructors which _TypedArray_ ranges over. If the _length_ argument is passed an ArrayBuffer of that length is also allocated and associated with the new TypedArray instance. AllocateTypedArray provides common semantics that is used by all of the _TypeArray_ overloads and other methods. AllocateTypedArray performs the following steps:</p>
+          <h1>Runtime Semantics: AllocateTypedArray (_constructorName_, _newTarget_, _length_ )</h1>
+          <p>The abstract operation AllocateTypedArray with arguments _constructorName_ and _newTarget_ and optional argument _length_ is used to validate and create an instance of a TypedArray constructor. _constructorName_ is required to be the name of a TypedArray in <emu-xref href="#table-49"></emu-xref>. If the _length_ argument is passed an ArrayBuffer of that length is also allocated and associated with the new TypedArray instance. AllocateTypedArray provides common semantics that is used by all of the _TypeArray_ overloads and other methods. AllocateTypedArray performs the following steps:</p>
           <emu-alg>
-            1. Let _proto_ be the initial value of the `"prototype"` property of _typedArray_.
+            1. Let _proto_ be GetPrototypeFromConstructor(_newTarget_, %TypedArrayPrototype%);
             1. Let _obj_ be IntegerIndexedObjectCreate (_proto_, &laquo;[[ViewedArrayBuffer]], [[TypedArrayName]], [[ByteLength]], [[ByteOffset]], [[ArrayLength]]&raquo; ).
             1. Assert: The [[ViewedArrayBuffer]] internal slot of _obj_ is *undefined*.
             1. Set _obj_'s [[TypedArrayName]] internal slot to _constructorName_.
@@ -31601,7 +31600,7 @@ Date.parse(x.toLocaleString())
         <emu-alg>
           1. Assert: Type(_typedArray_) is Object and _typedArray_ has a [[TypedArrayName]] internal slot.
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
-          1. Let _O_ be ? AllocateTypedArray(_TypedArray_).
+          1. Let _O_ be ? AllocateTypedArray(_TypedArray_.[[TypedArrayConstructorName]], NewTarget).
           1. Let _srcArray_ be _typedArray_.
           1. Let _srcData_ be the value of _srcArray_'s [[ViewedArrayBuffer]] internal slot.
           1. If IsDetachedBuffer(_srcData_) is *true*, throw a *TypeError* exception.
@@ -31657,7 +31656,7 @@ Date.parse(x.toLocaleString())
         <emu-alg>
           1. Assert: Type(_buffer_) is Object and _buffer_ has an [[ArrayBufferData]] internal slot.
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
-          1. Let _O_ be ? AllocateTypedArray(_TypedArray_).
+          1. Let _O_ be ? AllocateTypedArray(_TypedArray_.[[TypedArrayConstructorName]], NewTarget).
           1. Let _constructorName_ be the String value of _O_'s [[TypedArrayName]] internal slot.
           1. Let _elementSize_ be the Number value of the Element Size value in <emu-xref href="#table-49"></emu-xref> for _constructorName_.
           1. Let _offset_ be ? ToInteger(_byteOffset_).
@@ -31696,6 +31695,7 @@ Date.parse(x.toLocaleString())
       <emu-clause id="typedarray-species-create">
         <h1>TypedArraySpeciesCreate( _exemplar_, _argumentList_ )</h1>
         <emu-alg>
+          1. Assert: _exemplar_ has a [[TypedArrayName]] internal slot.
           1. Let _defaultConstructor_ be the intrinsic object listed in column one of <emu-xref href="#table-49"></emu-xref> for the value of _exemplar_'s [[TypedArrayName]] internal slot.
           1. Let _constructor_ be ? SpeciesConstructor(_exemplar_, _defaultConstructor_).
           1. Return ? TypedArrayCreate(_constructor_, _argumentList_).
