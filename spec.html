@@ -653,7 +653,13 @@
     <h1>Algorithm Conventions</h1>
     <p>The specification often uses a numbered list to specify steps in an algorithm. These algorithms are used to precisely specify the required semantics of ECMAScript language constructs. The algorithms are not intended to imply the use of any specific implementation technique. In practice, there may be more efficient algorithms available to implement a given feature.</p>
     <p>Algorithms may be explicitly parameterized, in which case the names and usage of the parameters must be provided as part of the algorithm's definition. In order to facilitate their use in multiple parts of this specification, some algorithms, called <em>abstract operations</em>, are named and written in parameterized functional form so that they may be referenced by name from within other algorithms. Abstract operations are typically referenced using a functional application style such as <emu-eqn>operationName(_arg1_, _arg2_)</emu-eqn>. Some abstract operations are treated as polymorphically dispatched methods of class-like specification abstractions. Such method-like abstract operations are typically referenced using a method application style such as <emu-eqn>_someValue_.operationName(_arg1_, _arg2_)</emu-eqn>.</p>
-    <p>Calls to abstract operations return Completion Records. Abstract operations referenced using the functional application style and the method application style that are prefixed by `?` indicate that ReturnIfAbrupt should be applied to the Completion Record returned by the abstract operation. For example, <emu-eqn>?operationName()</emu-eqn> is equivalent to: <emu-eqn>ReturnIfAbrupt(operationName())</emu-eqn>. Similarly, <emu-eqn>? _someValue_.operationName()</emu-eqn> is equivalent to <emu-eqn>ReturnIfAbrupt(_someValue_.operationName())</emu-eqn>.</p>
+    <p>Calls to abstract operations return Completion Records. Abstract operations referenced using the functional application style and the method application style that are prefixed by `?` indicate that ReturnIfAbrupt should be applied to the resulting Completion Record. For example, <emu-eqn>?operationName()</emu-eqn> is equivalent to: <emu-eqn>ReturnIfAbrupt(operationName())</emu-eqn>. Similarly, <emu-eqn>? _someValue_.operationName()</emu-eqn> is equivalent to <emu-eqn>ReturnIfAbrupt(_someValue_.operationName())</emu-eqn>.</p>
+    <p>The prefix `!` is used to indicate that an abstract operation will never return an abrupt completion and that the resulting Completion Record's value field should be used in place of the return value of the operation. For example, <emu-eqn>Let _val_ be ! operationName()</emu-eqn> is equivalent to the following algorithm steps:</p>
+    <emu-alg>
+      1. Let _val_ be operationName().
+      1. Assert: _val_ is never an abrupt completion.
+      1. If _val_ is a Completion Record, let _val_ be _val_.[[value]].
+    </emu-alg>
     <p>Algorithms may be associated with productions of one of the ECMAScript grammars. A production that has multiple alternative definitions will typically have a distinct algorithm for each alternative. When an algorithm is associated with a grammar production, it may reference the terminal and nonterminal symbols of the production alternative as if they were parameters of the algorithm. When used in this manner, nonterminal symbols refer to the actual alternative definition that is matched when parsing the source text.</p>
     <p>When an algorithm is associated with a production alternative, the alternative is typically shown without any &ldquo;[ ]&rdquo; grammar annotations. Such annotations should only affect the syntactic recognition of the alternative and have no effect on the associated semantics for the alternative.</p>
     <p>Unless explicitly specified otherwise, all chain productions have an implicit definition for every algorithm that might be applied to that production's left-hand side nonterminal. The implicit definition simply reapplies the same algorithm name with the same parameters, if any, to the chain production's sole right-hand side nonterminal and then returns the result. For example, assume there is a production:</p>
@@ -3796,7 +3802,7 @@
         1. Let _key_ be ? ToPrimitive(_argument_, hint String).
         1. If Type(_key_) is Symbol, then
           1. Return _key_.
-        1. Return ToString(_key_).
+        1. Return ! ToString(_key_).
       </emu-alg>
     </emu-clause>
 
@@ -3821,7 +3827,7 @@
         1. Assert: Type(_argument_) is String.
         1. If _argument_ is `"-0"`, return -0.
         1. Let _n_ be ToNumber(_argument_).
-        1. If SameValue(ToString(_n_), _argument_) is *false*, return *undefined*.
+        1. If SameValue(! ToString(_n_), _argument_) is *false*, return *undefined*.
         1. Return _n_.
       </emu-alg>
       <p>A <em>canonical numeric string</em> is any String value for which the CanonicalNumericIndexString abstract operation does not return *undefined*.</p>
@@ -4382,7 +4388,7 @@
         1. Let _array_ be ArrayCreate(0) (see <emu-xref href="#sec-arraycreate"></emu-xref>).
         1. Let _n_ be 0.
         1. For each element _e_ of _elements_
-          1. Let _status_ be CreateDataProperty(_array_, ToString(_n_), _e_).
+          1. Let _status_ be CreateDataProperty(_array_, ! ToString(_n_), _e_).
           1. Assert: _status_ is *true*.
           1. Increment _n_ by 1.
         1. Return _array_.
@@ -4401,7 +4407,7 @@
         1. Let _list_ be an empty List.
         1. Let _index_ be 0.
         1. Repeat while _index_ &lt; _len_
-          1. Let _indexName_ be ToString(_index_).
+          1. Let _indexName_ be ! ToString(_index_).
           1. Let _next_ be ? Get(_obj_, _indexName_).
           1. If Type(_next_) is not an element of _elementTypes_, throw a *TypeError* exception.
           1. Append _next_ as the last element of _list_.
@@ -7059,8 +7065,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. Else, let _name_ be the concatenation of `"["`, _description_, and `"]"`.
         1. If _prefix_ was passed, then
           1. Let _name_ be the concatenation of _prefix_, code unit 0x0020 (SPACE), and _name_.
-        1. Return DefinePropertyOrThrow(_F_, `"name"`, PropertyDescriptor{[[Value]]: _name_, [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true*}).
-        1. Assert: the result is never an abrupt completion.
+        1. Return ! DefinePropertyOrThrow(_F_, `"name"`, PropertyDescriptor{[[Value]]: _name_, [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true*}).
       </emu-alg>
     </emu-clause>
 
@@ -7108,10 +7113,9 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. Let _alreadyDeclared_ be _envRec_.HasBinding(_paramName_).
           1. NOTE Early errors ensure that duplicate parameter names can only occur in non-strict functions that do not have parameter default values or rest parameters.
           1. If _alreadyDeclared_ is *false*, then
-            1. Let _status_ be _envRec_.CreateMutableBinding(_paramName_).
+            1. Let _status_ be ! _envRec_.CreateMutableBinding(_paramName_).
             1. If _hasDuplicates_ is *true*, then
-              1. Let _status_ be _envRec_.InitializeBinding(_paramName_, *undefined*).
-            1. Assert: _status_ is never an abrupt completion for either of the above operations.
+              1. Let _status_ be ! _envRec_.InitializeBinding(_paramName_, *undefined*).
         1. If _argumentsObjectNeeded_ is *true*, then
           1. If _strict_ is *true* or if _simpleParameterList_ is *false*, then
             1. Let _ao_ be CreateUnmappedArgumentsObject(_argumentsList_).
@@ -7119,10 +7123,9 @@ for (let protoName of Reflect.enumerate(proto)) {
             1. NOTE mapped argument object is only provided for non-strict functions that don't have a rest parameter, any parameter default value initializers, or any destructured parameters .
             1. Let _ao_ be CreateMappedArgumentsObject(_func_, _formals_, _argumentsList_, _envRec_).
           1. If _strict_ is *true*, then
-            1. Let _status_ be _envRec_.CreateImmutableBinding(`"arguments"`).
+            1. Let _status_ be ! _envRec_.CreateImmutableBinding(`"arguments"`).
           1. Else,
-            1. Let _status_ be _envRec_.CreateMutableBinding(`"arguments"`).
-          1. Assert: _status_ is never an abrupt completion.
+            1. Let _status_ be ! _envRec_.CreateMutableBinding(`"arguments"`).
           1. Call _envRec_.InitializeBinding(`"arguments"`, _ao_).
           1. Append `"arguments"` to _parameterNames_.
         1. Let _iteratorRecord_ be Record {[[iterator]]: CreateListIterator(_argumentsList_), [[done]]: *false*}.
@@ -7137,8 +7140,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. For each _n_ in _varNames_, do
             1. If _n_ is not an element of _instantiatedVarNames_, then
               1. Append _n_ to _instantiatedVarNames_.
-              1. Let _status_ be _envRec_.CreateMutableBinding(_n_).
-              1. Assert: _status_ is never an abrupt completion.
+              1. Let _status_ be ! _envRec_.CreateMutableBinding(_n_).
               1. Call _envRec_.InitializeBinding(_n_, *undefined*).
           1. Let _varEnv_ be _env_.
           1. Let _varEnvRec_ be _envRec_.
@@ -7151,12 +7153,10 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. For each _n_ in _varNames_, do
             1. If _n_ is not an element of _instantiatedVarNames_, then
               1. Append _n_ to _instantiatedVarNames_.
-              1. Let _status_ be _varEnvRec_.CreateMutableBinding(_n_).
-              1. Assert: _status_ is never an abrupt completion.
+              1. Let _status_ be ! _varEnvRec_.CreateMutableBinding(_n_).
               1. If _n_ is not an element of _parameterNames_ or if _n_ is an element of _functionNames_, let _initialValue_ be *undefined*.
               1. Else,
-                1. Let _initialValue_ be _envRec_.GetBindingValue(_n_, *false*).
-                1. Assert: _initialValue_ is never an abrupt completion.
+                1. Let _initialValue_ be ! _envRec_.GetBindingValue(_n_, *false*).
               1. Call _varEnvRec_.InitializeBinding(_n_, _initialValue_).
               1. NOTE vars whose names are the same as a formal parameter, initially have the same value as the corresponding initialized parameter.
         1. NOTE: Annex <emu-xref href="#sec-web-compat-functiondeclarationinstantiation"></emu-xref> adds additional steps at this point.
@@ -7171,15 +7171,13 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. NOTE A lexically declared name cannot be the same as a function/generator declaration, formal parameter, or a var name. Lexically declared names are only instantiated here but not initialized.
           1. For each element _dn_ of the BoundNames of _d_ do
             1. If IsConstantDeclaration of _d_ is *true*, then
-              1. Let _status_ be _lexEnvRec_.CreateImmutableBinding(_dn_, *true*).
+              1. Let _status_ be ! _lexEnvRec_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
-              1. Let _status_ be _lexEnvRec_.CreateMutableBinding(_dn_, *false*).
-          1. Assert: _status_ is never an abrupt completion.
+              1. Let _status_ be ! _lexEnvRec_.CreateMutableBinding(_dn_, *false*).
         1. For each parsed grammar phrase _f_ in _functionsToInitialize_, do
           1. Let _fn_ be the sole element of the BoundNames of _f_.
           1. Let _fo_ be the result of performing InstantiateFunctionObject for _f_ with argument _lexEnv_.
-          1. Let _status_ be _varEnvRec_.SetMutableBinding(_fn_, _fo_, *false*).
-          1. Assert: _status_ is never an abrupt completion.
+          1. Let _status_ be ! _varEnvRec_.SetMutableBinding(_fn_, _fo_, *false*).
         1. Return NormalCompletion(~empty~).
       </emu-alg>
       <emu-note>
@@ -7476,7 +7474,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. If _succeeded_ is *false*, return *false*.
           1. While _newLen_ &lt; _oldLen_ repeat,
             1. Set _oldLen_ to _oldLen_ - 1.
-            1. Let _deleteSucceeded_ be _A_.[[Delete]](ToString(_oldLen_)).
+            1. Let _deleteSucceeded_ be _A_.[[Delete]](! ToString(_oldLen_)).
             1. Assert: _deleteSucceeded_ is not an abrupt completion.
             1. If _deleteSucceeded_ is *false*, then
               1. Set _newLenDesc_.[[Value]] to _oldLen_ + 1.
@@ -7552,7 +7550,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. Let _str_ be the String value of the [[StringData]] internal slot of _O_.
           1. Let _len_ be the number of elements in _str_.
           1. For each integer _i_ starting with 0 such that _i_ &lt; _len_, in ascending order,
-            1. Add ToString(_i_) as the last element of _keys_.
+            1. Add ! ToString(_i_) as the last element of _keys_.
           1. For each own property key _P_ of _O_ such that _P_ is an integer index and ToInteger(_P_) &ge; _len_, in ascending numeric index order,
             1. Add _P_ as the last element of _keys_.
           1. For each own property key _P_ of _O_ such that Type(_P_) is String and _P_ is not an integer index, in ascending chronological order of property creation,
@@ -7611,8 +7609,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. Let _desc_ be OrdinaryGetOwnProperty(_args_, _P_).
           1. If _desc_ is *undefined*, return _desc_.
           1. Let _map_ be the value of the [[ParameterMap]] internal slot of the arguments object.
-          1. Let _isMapped_ be HasOwnProperty(_map_, _P_).
-          1. Assert: _isMapped_ is never an abrupt completion.
+          1. Let _isMapped_ be ! HasOwnProperty(_map_, _P_).
           1. If the value of _isMapped_ is *true*, then
             1. Set _desc_.[[Value]] to Get(_map_, _P_).
           1. If IsDataDescriptor(_desc_) is *true* and _P_ is `"caller"` and _desc_.[[Value]] is a strict mode Function object, throw a *TypeError* exception.
@@ -7712,7 +7709,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. Let _index_ be 0.
           1. Repeat while _index_ &lt; _len_,
             1. Let _val_ be _argumentsList_[_index_].
-            1. Perform CreateDataProperty(_obj_, ToString(_index_), _val_).
+            1. Perform CreateDataProperty(_obj_, ! ToString(_index_), _val_).
             1. Let _index_ be _index_ + 1.
           1. Perform DefinePropertyOrThrow(_obj_, @@iterator, PropertyDescriptor {[[Value]]:%ArrayProto_values%, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true*}).
           1. Perform DefinePropertyOrThrow(_obj_, `"callee"`, PropertyDescriptor {[[Get]]: %ThrowTypeError%, [[Set]]: %ThrowTypeError%, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
@@ -7745,7 +7742,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. Let _index_ be 0.
           1. Repeat while _index_ &lt; _len_ ,
             1. Let _val_ be _argumentsList_[_index_].
-            1. Perform CreateDataProperty(_obj_, ToString(_index_), _val_).
+            1. Perform CreateDataProperty(_obj_, ! ToString(_index_), _val_).
             1. Let _index_ be _index_ + 1.
           1. Perform DefinePropertyOrThrow(_obj_, `"length"`, PropertyDescriptor{[[Value]]: _len_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true*}).
           1. Let _mappedNames_ be an empty List.
@@ -7757,7 +7754,7 @@ for (let protoName of Reflect.enumerate(proto)) {
               1. If _index_ &lt; _len_, then
                 1. Let _g_ be MakeArgGetter(_name_, _env_).
                 1. Let _p_ be MakeArgSetter(_name_, _env_).
-                1. Perform _map_.[[DefineOwnProperty]](ToString(_index_), PropertyDescriptor{[[Set]]: _p_, [[Get]]: _g_, [[Enumerable]]: *false*, [[Configurable]]: *true*}).
+                1. Perform _map_.[[DefineOwnProperty]](! ToString(_index_), PropertyDescriptor{[[Set]]: _p_, [[Get]]: _g_, [[Enumerable]]: *false*, [[Configurable]]: *true*}).
             1. Let _index_ be _index_ - 1
           1. Perform DefinePropertyOrThrow(_obj_, @@iterator, PropertyDescriptor {[[Value]]:%ArrayProto_values%, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true*}).
           1. Perform DefinePropertyOrThrow(_obj_, `"callee"`, PropertyDescriptor {[[Value]]: _func_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true*}).
@@ -7928,7 +7925,7 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. Assert: _O_ is an Object that has [[ViewedArrayBuffer]], [[ArrayLength]], [[ByteOffset]], and [[TypedArrayName]] internal slots.
           1. Let _len_ be the value of _O_'s [[ArrayLength]] internal slot.
           1. For each integer _i_ starting with 0 such that _i_ &lt; _len_, in ascending order,
-            1. Add ToString(_i_) as the last element of _keys_.
+            1. Add ! ToString(_i_) as the last element of _keys_.
           1. For each own property key _P_ of _O_ such that Type(_P_) is String and _P_ is not an integer index, in ascending chronological order of property creation
             1. Add _P_ as the last element of _keys_.
           1. For each own property key _P_ of _O_ such that Type(_P_) is Symbol, in ascending chronological order of property creation
@@ -11218,7 +11215,7 @@ a = b + c
         <emu-grammar>LiteralPropertyName : NumericLiteral</emu-grammar>
         <emu-alg>
           1. Let _nbr_ be the result of forming the value of the |NumericLiteral|.
-          1. Return ToString(_nbr_).
+          1. Return ! ToString(_nbr_).
         </emu-alg>
         <emu-grammar>ComputedPropertyName : `[` AssignmentExpression `]`</emu-grammar>
         <emu-alg>
@@ -11272,7 +11269,7 @@ a = b + c
         <emu-grammar>LiteralPropertyName : NumericLiteral</emu-grammar>
         <emu-alg>
           1. Let _nbr_ be the result of forming the value of the |NumericLiteral|.
-          1. Return ToString(_nbr_).
+          1. Return ! ToString(_nbr_).
         </emu-alg>
         <emu-grammar>ComputedPropertyName : `[` AssignmentExpression `]`</emu-grammar>
         <emu-alg>
@@ -11476,7 +11473,7 @@ a = b + c
           1. Let _rawObj_ be ArrayCreate(_count_).
           1. Let _index_ be 0.
           1. Repeat while _index_ &lt; _count_
-            1. Let _prop_ be ToString(_index_).
+            1. Let _prop_ be ! ToString(_index_).
             1. Let _cookedValue_ be the String value _cookedStrings_[_index_].
             1. Call _template_.[[DefineOwnProperty]](_prop_, PropertyDescriptor{[[Value]]: _cookedValue_, [[Enumerable]]: *true*, [[Writable]]: *false*, [[Configurable]]: *false*}).
             1. Let _rawValue_ be the String value _rawStrings_[_index_].
@@ -13851,7 +13848,7 @@ a = b + c
               1. Let _nextValue_ be IteratorValue(_next_).
               1. If _nextValue_ is an abrupt completion, set _iteratorRecord_.[[done]] to *true*.
               1. ReturnIfAbrupt(_nextValue_).
-              1. Let _status_ be CreateDataProperty(_A_, ToString(_n_), _nextValue_).
+              1. Let _status_ be CreateDataProperty(_A_, ! ToString(_n_), _nextValue_).
               1. Assert: _status_ is *true*.
               1. Increment _n_ by 1.
           1. If |DestructuringAssignmentTarget| is neither an |ObjectLiteral| nor an |ArrayLiteral|, then
@@ -14498,10 +14495,9 @@ eval("1;var a;")
         1. For each element _d_ in _declarations_ do
           1. For each element _dn_ of the BoundNames of _d_ do
             1. If IsConstantDeclaration of _d_ is *true*, then
-              1. Let _status_ be _envRec_.CreateImmutableBinding(_dn_, *true*).
+              1. Let _status_ be ! _envRec_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
-              1. Let _status_ be _envRec_.CreateMutableBinding(_dn_, *false*).
-            1. Assert: _status_ is never an abrupt completion.
+              1. Let _status_ be ! _envRec_.CreateMutableBinding(_dn_, *false*).
           1. If _d_ is a |GeneratorDeclaration| production or a |FunctionDeclaration| production, then
             1. Let _fn_ be the sole element of the BoundNames of _d_.
             1. Let _fo_ be the result of performing InstantiateFunctionObject for _d_ with argument _env_.
@@ -15139,7 +15135,7 @@ eval("1;var a;")
             1. Let _nextValue_ be IteratorValue(_next_).
             1. If _nextValue_ is an abrupt completion, set _iteratorRecord_.[[done]] to *true*.
             1. ReturnIfAbrupt(_nextValue_).
-            1. Let _status_ be CreateDataProperty(_A_, ToString(_n_), _nextValue_).
+            1. Let _status_ be CreateDataProperty(_A_, ! ToString(_n_), _nextValue_).
             1. Assert: _status_ is *true*.
             1. Increment _n_ by 1.
         </emu-alg>
@@ -15158,7 +15154,7 @@ eval("1;var a;")
             1. Let _nextValue_ be IteratorValue(_next_).
             1. If _nextValue_ is an abrupt completion, set _iteratorRecord_.[[done]] to *true*.
             1. ReturnIfAbrupt(_nextValue_).
-            1. Let _status_ be CreateDataProperty(_A_, ToString(_n_), _nextValue_).
+            1. Let _status_ be CreateDataProperty(_A_, ! ToString(_n_), _nextValue_).
             1. Assert: _status_ is *true*.
             1. Increment _n_ by 1.
         </emu-alg>
@@ -15784,8 +15780,7 @@ eval("1;var a;")
             1. Let _thisIterationEnv_ be NewDeclarativeEnvironment(_outer_).
             1. Let _thisIterationEnvRec_ be _thisIterationEnv_'s EnvironmentRecord.
             1. For each element _bn_ of _perIterationBindings_ do,
-              1. Let _status_ be _thisIterationEnvRec_.CreateMutableBinding(_bn_, *false*).
-              1. Assert: _status_ is never an abrupt completion.
+              1. Let _status_ be ! _thisIterationEnvRec_.CreateMutableBinding(_bn_, *false*).
               1. Let _lastValue_ be ? _lastIterationEnvRec_.GetBindingValue(_bn_, *true*).
               1. Perform _thisIterationEnvRec_.InitializeBinding(_bn_, _lastValue_).
             1. Set the running execution context's LexicalEnvironment to _thisIterationEnv_.
@@ -16073,8 +16068,7 @@ eval("1;var a;")
             1. Let _TDZ_ be NewDeclarativeEnvironment(_oldEnv_).
             1. Let _TDZEnvRec_ be _TDZ_'s EnvironmentRecord.
             1. For each string _name_ in _TDZnames_, do
-              1. Let _status_ be _TDZEnvRec_.CreateMutableBinding(_name_, *false*).
-              1. Assert: _status_ is never an abrupt completion.
+              1. Let _status_ be ! _TDZEnvRec_.CreateMutableBinding(_name_, *false*).
             1. Set the running execution context's LexicalEnvironment to _TDZ_.
           1. Let _exprRef_ be the result of evaluating the production that is _expr_.
           1. Set the running execution context's LexicalEnvironment to _oldEnv_.
@@ -24067,7 +24061,7 @@ new Function("a,b", "c", "return a+b+c")
             1. Let _s_ be `"-"`.
             1. Let _x_ be -_x_.
           1. If _x_ &ge; 10<sup>21</sup>, then
-            1. Let _m_ be ToString(_x_).
+            1. Let _m_ be ! ToString(_x_).
           1. Else _x_ &lt; 10<sup>21</sup>,
             1. Let _n_ be an integer for which the exact mathematical value of _n_ &divide; 10<sup>f</sup> - _x_ is as close to zero as possible. If there are two such _n_, pick the larger _n_.
             1. If _n_ = 0, let _m_ be the String `"0"`. Otherwise, let _m_ be the String consisting of the digits of the decimal representation of _n_ (in order, with no leading zeroes).
@@ -24105,7 +24099,7 @@ new Function("a,b", "c", "return a+b+c")
         <p>Return a String containing this Number value represented either in decimal exponential notation with one digit before the significand's decimal point and <emu-eqn>_precision_-1</emu-eqn> digits after the significand's decimal point or in decimal fixed notation with _precision_ significant digits. If _precision_ is *undefined*, call ToString (<emu-xref href="#sec-tostring"></emu-xref>) instead. Specifically, perform the following steps:</p>
         <emu-alg>
           1. Let _x_ be ? thisNumberValue(*this* value).
-          1. If _precision_ is *undefined*, return ToString(_x_).
+          1. If _precision_ is *undefined*, return ! ToString(_x_).
           1. Let _p_ be ? ToInteger(_precision_).
           1. If _x_ is *NaN*, return the String `"NaN"`.
           1. Let _s_ be the empty String.
@@ -24155,7 +24149,7 @@ new Function("a,b", "c", "return a+b+c")
           1. Else if _radix_ is *undefined*, let _radixNumber_ be 10.
           1. Else let _radixNumber_ be ? ToInteger(_radix_).
           1. If _radixNumber_ &lt; 2 or _radixNumber_ &gt; 36, throw a *RangeError* exception.
-          1. If _radixNumber_ = 10, return ToString(_x_).
+          1. If _radixNumber_ = 10, return ! ToString(_x_).
           1. Return the String representation of this Number value using the radix specified by _radixNumber_. Letters `a`-`z` are used for digits with values 10 through 35. The precise algorithm is implementation-dependent, however the algorithm should be a generalization of that specified in <emu-xref href="#sec-tostring-applied-to-the-number-type"></emu-xref>.
         </emu-alg>
         <p>The `toString` function is not generic; it throws a *TypeError* exception if its *this* value is not a Number or a Number object. Therefore, it cannot be transferred to other kinds of objects for use as a method.</p>
@@ -26448,7 +26442,7 @@ Date.parse(x.toLocaleString())
           1. Let _stringElements_ be a new List.
           1. Let _nextIndex_ be 0.
           1. Repeat
-            1. Let _nextKey_ be ToString(_nextIndex_).
+            1. Let _nextKey_ be ! ToString(_nextIndex_).
             1. Let _nextSeg_ be ? ToString(? Get(_raw_, _nextKey_)).
             1. Append in order the code unit elements of _nextSeg_ to the end of _stringElements_.
             1. If _nextIndex_ + 1 = _literalSegments_, then
@@ -27001,14 +26995,14 @@ Date.parse(x.toLocaleString())
               1. If _e_ = _p_, let _q_ be _q_+1.
               1. Else _e_ &ne; _p_,
                 1. Let _T_ be a String value equal to the substring of _S_ consisting of the code units at indices _p_ (inclusive) through _q_ (exclusive).
-                1. Perform CreateDataProperty(_A_, ToString(_lengthA_), _T_).
+                1. Perform CreateDataProperty(_A_, ! ToString(_lengthA_), _T_).
                 1. Assert: The above call will never result in an abrupt completion.
                 1. Increment _lengthA_ by 1.
                 1. If _lengthA_ = _lim_, return _A_.
                 1. Let _p_ be _e_.
                 1. Let _q_ be _p_.
           1. Let _T_ be a String value equal to the substring of _S_ consisting of the code units at indices _p_ (inclusive) through _s_ (exclusive).
-          1. Perform CreateDataProperty(_A_, ToString(_lengthA_), _T_).
+          1. Perform CreateDataProperty(_A_, ! ToString(_lengthA_), _T_).
           1. Assert: The above call will never result in an abrupt completion.
           1. Return _A_.
         </emu-alg>
@@ -28991,7 +28985,7 @@ Date.parse(x.toLocaleString())
               1. Else, _fullUnicode_ is *false*,
                 1. Assert: _captureI_ is a List of code units.
                 1. Let _capturedValue_ be a string consisting of the code units of _captureI_.
-              1. Perform CreateDataProperty(_A_, ToString(_i_) , _capturedValue_).
+              1. Perform CreateDataProperty(_A_, ! ToString(_i_) , _capturedValue_).
             1. Return _A_.
           </emu-alg>
         </emu-clause>
@@ -29089,7 +29083,7 @@ Date.parse(x.toLocaleString())
                 1. Else, return _A_.
               1. Else _result_ is not *null*,
                 1. Let _matchStr_ be ? ToString(? Get(_result_, `"0"`)).
-                1. Let _status_ be CreateDataProperty(_A_, ToString(_n_), _matchStr_).
+                1. Let _status_ be CreateDataProperty(_A_, ! ToString(_n_), _matchStr_).
                 1. Assert: _status_ is *true*.
                 1. If _matchStr_ is the empty String, then
                   1. Let _thisIndex_ be ? ToLength(? Get(_rx_, `"lastIndex"`)).
@@ -29159,7 +29153,7 @@ Date.parse(x.toLocaleString())
             1. Let _n_ be 1.
             1. Let _captures_ be an empty List.
             1. Repeat while _n_ &le; _nCaptures_
-              1. Let _capN_ be ? Get(_result_, ToString(_n_)).
+              1. Let _capN_ be ? Get(_result_, ! ToString(_n_)).
               1. If _capN_ is not *undefined*, then
                 1. Let _capN_ be ? ToString(_capN_).
               1. Append _capN_ as the last element of _captures_.
@@ -29267,7 +29261,7 @@ Date.parse(x.toLocaleString())
               1. Else _e_ &ne; _p_,
                 1. Let _T_ be a String value equal to the substring of _S_ consisting of the elements at indices _p_ (inclusive) through _q_ (exclusive).
                 1. Assert: The following call will never result in an abrupt completion.
-                1. Perform CreateDataProperty(_A_, ToString(_lengthA_), _T_).
+                1. Perform CreateDataProperty(_A_, ! ToString(_lengthA_), _T_).
                 1. Let _lengthA_ be _lengthA_ +1.
                 1. If _lengthA_ = _lim_, return _A_.
                 1. Let _p_ be _e_.
@@ -29275,15 +29269,15 @@ Date.parse(x.toLocaleString())
                 1. Let _numberOfCaptures_ be max(_numberOfCaptures_-1, 0).
                 1. Let _i_ be 1.
                 1. Repeat, while _i_ &le; _numberOfCaptures_.
-                  1. Let _nextCapture_ be ? Get(_z_, ToString(_i_)).
-                  1. Perform CreateDataProperty(_A_, ToString(_lengthA_), _nextCapture_).
+                  1. Let _nextCapture_ be ? Get(_z_, ! ToString(_i_)).
+                  1. Perform CreateDataProperty(_A_, ! ToString(_lengthA_), _nextCapture_).
                   1. Let _i_ be _i_ +1.
                   1. Let _lengthA_ be _lengthA_ +1.
                   1. If _lengthA_ = _lim_, return _A_.
                 1. Let _q_ be _p_.
           1. Let _T_ be a String value equal to the substring of _S_ consisting of the elements at indices _p_ (inclusive) through _size_ (exclusive).
           1. Assert: The following call will never result in an abrupt completion.
-          1. Perform CreateDataProperty(_A_, ToString(_lengthA_), _T_ ).
+          1. Perform CreateDataProperty(_A_, ! ToString(_lengthA_), _T_ ).
           1. Return _A_.
         </emu-alg>
         <p>The value of the `name` property of this function is `"[Symbol.split]"`.</p>
@@ -29434,7 +29428,7 @@ Date.parse(x.toLocaleString())
           1. Let _k_ be 0.
           1. Let _items_ be a zero-origined List containing the argument items in order.
           1. Repeat, while _k_ &lt; _numberOfArgs_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _itemK_ be _items_[_k_].
             1. Let _defineStatus_ be CreateDataProperty(_array_, _Pk_, _itemK_).
             1. Assert: _defineStatus_ is *true*.
@@ -29471,7 +29465,7 @@ Date.parse(x.toLocaleString())
             1. Let _iterator_ be ? GetIterator(_items_, _usingIterator_).
             1. Let _k_ be 0.
             1. Repeat
-              1. Let _Pk_ be ToString(_k_).
+              1. Let _Pk_ be ! ToString(_k_).
               1. Let _next_ be ? IteratorStep(_iterator_).
               1. If _next_ is *false*, then
                 1. Perform ? Set(_A_, `"length"`, _k_, *true*).
@@ -29494,7 +29488,7 @@ Date.parse(x.toLocaleString())
             1. Let _A_ be ? ArrayCreate(_len_).
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kValue_ be ? Get(_arrayLike_, _Pk_).
             1. If _mapping_ is *true*, then
               1. Let _mappedValue_ be ? Call(_mapfn_, _T_, &laquo; _kValue_, _k_ &raquo;).
@@ -29534,7 +29528,7 @@ Date.parse(x.toLocaleString())
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
             1. Let _kValue_ be _items_[_k_].
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Perform ? CreateDataPropertyOrThrow(_A_,_Pk_, _kValue_).
             1. Increase _k_ by 1.
           1. Perform ? Set(_A_, `"length"`, _len_, *true*).
@@ -29597,16 +29591,16 @@ Date.parse(x.toLocaleString())
               1. Let _len_ be ? ToLength(? Get(_E_, `"length"`)).
               1. If _n_ + _len_ &gt; 2<sup>53</sup>-1, throw a *TypeError* exception.
               1. Repeat, while _k_ &lt; _len_
-                1. Let _P_ be ToString(_k_).
+                1. Let _P_ be ! ToString(_k_).
                 1. Let _exists_ be ? HasProperty(_E_, _P_).
                 1. If _exists_ is *true*, then
                   1. Let _subElement_ be ? Get(_E_, _P_).
-                  1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ToString(_n_), _subElement_).
+                  1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ! ToString(_n_), _subElement_).
                 1. Increase _n_ by 1.
                 1. Increase _k_ by 1.
             1. Else _E_ is added as a single item rather than spread,
               1. If _n_&ge;2<sup>53</sup>-1, throw a *TypeError* exception.
-              1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ToString(_n_), _E_).
+              1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ! ToString(_n_), _E_).
               1. Increase _n_ by 1.
           1. Perform ? Set(_A_, `"length"`, _n_, *true*).
           1. Return _A_.
@@ -29663,8 +29657,8 @@ Date.parse(x.toLocaleString())
           1. Else,
             1. Let _direction_ be 1.
           1. Repeat, while _count_ &gt; 0
-            1. Let _fromKey_ be ToString(_from_).
-            1. Let _toKey_ be ToString(_to_).
+            1. Let _fromKey_ be ! ToString(_from_).
+            1. Let _toKey_ be ! ToString(_to_).
             1. Let _fromPresent_ be ? HasProperty(_O_, _fromKey_).
             1. If _fromPresent_ is *true*, then
               1. Let _fromVal_ be ? Get(_O_, _fromKey_).
@@ -29710,7 +29704,7 @@ Date.parse(x.toLocaleString())
           1. If _thisArg_ was supplied, let _T_ be _thisArg_; else let _T_ be *undefined*.
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
             1. If _kPresent_ is *true*, then
               1. Let _kValue_ be ? Get(_O_, _Pk_).
@@ -29741,7 +29735,7 @@ Date.parse(x.toLocaleString())
           1. If _end_ is *undefined*, let _relativeEnd_ be _len_; else let _relativeEnd_ be ? ToInteger(_end_).
           1. If _relativeEnd_ &lt; 0, let _final_ be max((_len_ + _relativeEnd_),0); else let _final_ be min(_relativeEnd_, _len_).
           1. Repeat, while _k_ &lt; _final_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Perform ? Set(_O_, _Pk_, _value_, *true*).
             1. Increase _k_ by 1.
           1. Return _O_.
@@ -29772,13 +29766,13 @@ Date.parse(x.toLocaleString())
           1. Let _k_ be 0.
           1. Let _to_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
             1. If _kPresent_ is *true*, then
               1. Let _kValue_ be ? Get(_O_, _Pk_).
               1. Let _selected_ be ToBoolean(? Call(_callbackfn_, _T_, &laquo; _kValue_, _k_, _O_ &raquo;)).
               1. If _selected_ is *true*, then
-                1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ToString(_to_), _kValue_).
+                1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ! ToString(_to_), _kValue_).
                 1. Increase _to_ by 1.
             1. Increase _k_ by 1.
           1. Return _A_.
@@ -29808,7 +29802,7 @@ Date.parse(x.toLocaleString())
           1. If _thisArg_ was supplied, let _T_ be _thisArg_; else let _T_ be *undefined*.
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kValue_ be ? Get(_O_, _Pk_).
             1. Let _testResult_ be ToBoolean(? Call(_predicate_, _T_, &laquo; _kValue_, _k_, _O_ &raquo;)).
             1. If _testResult_ is *true*, return _kValue_.
@@ -29839,7 +29833,7 @@ Date.parse(x.toLocaleString())
           1. If _thisArg_ was supplied, let _T_ be _thisArg_; else let _T_ be *undefined*.
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kValue_ be ? Get(_O_, _Pk_).
             1. Let _testResult_ be ToBoolean(? Call(_predicate_, _T_, &laquo; _kValue_, _k_, _O_ &raquo;)).
             1. If _testResult_ is *true*, return _k_.
@@ -29869,7 +29863,7 @@ Date.parse(x.toLocaleString())
           1. If _thisArg_ was supplied, let _T_ be _thisArg_; else let _T_ be *undefined*.
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
             1. If _kPresent_ is *true*, then
               1. Let _kValue_ be ? Get(_O_, _Pk_).
@@ -29905,7 +29899,7 @@ Date.parse(x.toLocaleString())
             1. Let _k_ be _len_ + _n_.
             1. If _k_ < 0, let _k_ be 0.
           1. Repeat, while _k_ < _len_
-            1. Let _elementK_ be the result of ? Get(_O_, ToString(_k_)).
+            1. Let _elementK_ be the result of ? Get(_O_, ! ToString(_k_)).
             1. If SameValueZero(_searchElement_, _elementK_) is *true*, return *true*.
             1. Increase _k_ by 1.
           1. Return *false*.
@@ -29942,9 +29936,9 @@ Date.parse(x.toLocaleString())
             1. Let _k_ be _len_ + _n_.
             1. If _k_ &lt; 0, let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _kPresent_ be ? HasProperty(_O_, ToString(_k_)).
+            1. Let _kPresent_ be ? HasProperty(_O_, ! ToString(_k_)).
             1. If _kPresent_ is *true*, then
-              1. Let _elementK_ be ? Get(_O_, ToString(_k_)).
+              1. Let _elementK_ be ? Get(_O_, ! ToString(_k_)).
               1. Let _same_ be the result of performing Strict Equality Comparison _searchElement_ === _elementK_.
               1. If _same_ is *true*, return _k_.
             1. Increase _k_ by 1.
@@ -29974,7 +29968,7 @@ Date.parse(x.toLocaleString())
           1. Let _k_ be `1`.
           1. Repeat, while _k_ &lt; _len_
             1. Let _S_ be the String value produced by concatenating _R_ and _sep_.
-            1. Let _element_ be ? Get(_O_, ToString(_k_)).
+            1. Let _element_ be ? Get(_O_, ! ToString(_k_)).
             1. If _element_ is *undefined* or *null*, let _next_ be the empty String; otherwise, let _next_ be ? ToString(_element_).
             1. Let _R_ be a String value produced by concatenating _S_ and _next_.
             1. Increase _k_ by 1.
@@ -30012,9 +30006,9 @@ Date.parse(x.toLocaleString())
           1. Else _n_ &lt; 0,
             1. Let _k_ be _len_ + _n_.
           1. Repeat, while _k_ &ge; 0
-            1. Let _kPresent_ be ? HasProperty(_O_, ToString(_k_)).
+            1. Let _kPresent_ be ? HasProperty(_O_, ! ToString(_k_)).
             1. If _kPresent_ is *true*, then
-              1. Let _elementK_ be ? Get(_O_, ToString(_k_)).
+              1. Let _elementK_ be ? Get(_O_, ! ToString(_k_)).
               1. Let _same_ be the result of performing Strict Equality Comparison _searchElement_ === _elementK_.
               1. If _same_ is *true*, return _k_.
             1. Decrease _k_ by 1.
@@ -30045,7 +30039,7 @@ Date.parse(x.toLocaleString())
           1. Let _A_ be ? ArraySpeciesCreate(_O_, _len_).
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
             1. If _kPresent_ is *true*, then
               1. Let _kValue_ be ? Get(_O_, _Pk_).
@@ -30075,7 +30069,7 @@ Date.parse(x.toLocaleString())
             1. Return *undefined*.
           1. Else _len_ &gt; 0,
             1. Let _newLen_ be _len_-1.
-            1. Let _indx_ be ToString(_newLen_).
+            1. Let _indx_ be ! ToString(_newLen_).
             1. Let _element_ be ? Get(_O_, _indx_).
             1. Perform ? DeletePropertyOrThrow(_O_, _indx_).
             1. Perform ? Set(_O_, `"length"`, _newLen_, *true*).
@@ -30101,7 +30095,7 @@ Date.parse(x.toLocaleString())
           1. If _len_ + _argCount_ &gt; 2<sup>53</sup>-1, throw a *TypeError* exception.
           1. Repeat, while _items_ is not empty
             1. Remove the first element from _items_ and let _E_ be the value of the element.
-            1. Perform ? Set(_O_, ToString(_len_), _E_, *true*).
+            1. Perform ? Set(_O_, ! ToString(_len_), _E_, *true*).
             1. Let _len_ be _len_+1.
           1. Perform ? Set(_O_, `"length"`, _len_, *true*).
           1. Return _len_.
@@ -30133,14 +30127,14 @@ Date.parse(x.toLocaleString())
           1. Else _initialValue_ is not present,
             1. Let _kPresent_ be *false*.
             1. Repeat, while _kPresent_ is *false* and _k_ &lt; _len_
-              1. Let _Pk_ be ToString(_k_).
+              1. Let _Pk_ be ! ToString(_k_).
               1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
               1. If _kPresent_ is *true*, then
                 1. Let _accumulator_ be ? Get(_O_, _Pk_).
               1. Increase _k_ by 1.
             1. If _kPresent_ is *false*, throw a *TypeError* exception.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
             1. If _kPresent_ is *true*, then
               1. Let _kValue_ be ? Get(_O_, _Pk_).
@@ -30175,14 +30169,14 @@ Date.parse(x.toLocaleString())
           1. Else _initialValue_ is not present,
             1. Let _kPresent_ be *false*.
             1. Repeat, while _kPresent_ is *false* and _k_ &ge; 0
-              1. Let _Pk_ be ToString(_k_).
+              1. Let _Pk_ be ! ToString(_k_).
               1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
               1. If _kPresent_ is *true*, then
                 1. Let _accumulator_ be ? Get(_O_, _Pk_).
               1. Decrease _k_ by 1.
             1. If _kPresent_ is *false*, throw a *TypeError* exception.
           1. Repeat, while _k_ &ge; 0
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
             1. If _kPresent_ is *true*, then
               1. Let _kValue_ be ? Get(_O_, _Pk_).
@@ -30210,8 +30204,8 @@ Date.parse(x.toLocaleString())
           1. Let _lower_ be 0.
           1. Repeat, while _lower_ &ne; _middle_
             1. Let _upper_ be _len_- _lower_ -1.
-            1. Let _upperP_ be ToString(_upper_).
-            1. Let _lowerP_ be ToString(_lower_).
+            1. Let _upperP_ be ! ToString(_upper_).
+            1. Let _lowerP_ be ! ToString(_lower_).
             1. Let _lowerExists_ be ? HasProperty(_O_, _lowerP_).
             1. If _lowerExists_ is *true*, then
               1. Let _lowerValue_ be ? Get(_O_, _lowerP_).
@@ -30253,8 +30247,8 @@ Date.parse(x.toLocaleString())
           1. Let _first_ be ? Get(_O_, `"0"`).
           1. Let _k_ be 1.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _from_ be ToString(_k_).
-            1. Let _to_ be ToString(_k_-1).
+            1. Let _from_ be ! ToString(_k_).
+            1. Let _to_ be ! ToString(_k_-1).
             1. Let _fromPresent_ be ? HasProperty(_O_, _from_).
             1. If _fromPresent_ is *true*, then
               1. Let _fromVal_ be ? Get(_O_, _from_).
@@ -30262,7 +30256,7 @@ Date.parse(x.toLocaleString())
             1. Else _fromPresent_ is *false*,
               1. Perform ? DeletePropertyOrThrow(_O_, _to_).
             1. Increase _k_ by 1.
-          1. Perform ? DeletePropertyOrThrow(_O_, ToString(_len_-1)).
+          1. Perform ? DeletePropertyOrThrow(_O_, ! ToString(_len_-1)).
           1. Perform ? Set(_O_, `"length"`, _len_-1, *true*).
           1. Return _first_.
         </emu-alg>
@@ -30289,11 +30283,11 @@ Date.parse(x.toLocaleString())
           1. Let _A_ be ? ArraySpeciesCreate(_O_, _count_).
           1. Let _n_ be 0.
           1. Repeat, while _k_ &lt; _final_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
             1. If _kPresent_ is *true*, then
               1. Let _kValue_ be ? Get(_O_, _Pk_).
-              1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ToString(_n_), _kValue_ ).
+              1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ! ToString(_n_), _kValue_ ).
             1. Increase _k_ by 1.
             1. Increase _n_ by 1.
           1. Perform ? Set(_A_, `"length"`, _n_, *true*).
@@ -30325,7 +30319,7 @@ Date.parse(x.toLocaleString())
           1. If _thisArg_ was supplied, let _T_ be _thisArg_; else let _T_ be *undefined*.
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kPresent_ be ? HasProperty(_O_, _Pk_).
             1. If _kPresent_ is *true*, then
               1. Let _kValue_ be ? Get(_O_, _Pk_).
@@ -30352,7 +30346,7 @@ Date.parse(x.toLocaleString())
         <p>Within this specification of the `sort` method, an object, _obj_, is said to be <em>sparse</em> if the following algorithm returns *true*:</p>
         <emu-alg>
           1. For each integer _i_ in the range 0&le;_i_&lt; _len_
-            1. Let _elem_ be _obj_.[[GetOwnProperty]](ToString(_i_)).
+            1. Let _elem_ be _obj_.[[GetOwnProperty]](! ToString(_i_)).
             1. If _elem_ is *undefined*, return *true*.
           1. Return *false*.
         </emu-alg>
@@ -30498,11 +30492,11 @@ Date.parse(x.toLocaleString())
           1. Let _A_ be ? ArraySpeciesCreate(_O_, _actualDeleteCount_).
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _actualDeleteCount_
-            1. Let _from_ be ToString(_actualStart_+_k_).
+            1. Let _from_ be ! ToString(_actualStart_+_k_).
             1. Let _fromPresent_ be ? HasProperty(_O_, _from_).
             1. If _fromPresent_ is *true*, then
               1. Let _fromValue_ be ? Get(_O_, _from_).
-              1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ToString(_k_), _fromValue_).
+              1. Let _status_ be ? CreateDataPropertyOrThrow(_A_, ! ToString(_k_), _fromValue_).
             1. Increment _k_ by 1.
           1. Perform ? Set(_A_, `"length"`, _actualDeleteCount_, *true*).
           1. Let _items_ be a List whose elements are, in left to right order, the portion of the actual argument list starting with the third argument. The list is empty if fewer than three arguments were passed.
@@ -30510,8 +30504,8 @@ Date.parse(x.toLocaleString())
           1. If _itemCount_ &lt; _actualDeleteCount_, then
             1. Let _k_ be _actualStart_.
             1. Repeat, while _k_ &lt; (_len_ - _actualDeleteCount_)
-              1. Let _from_ be ToString(_k_+_actualDeleteCount_).
-              1. Let _to_ be ToString(_k_+_itemCount_).
+              1. Let _from_ be ! ToString(_k_+_actualDeleteCount_).
+              1. Let _to_ be ! ToString(_k_+_itemCount_).
               1. Let _fromPresent_ be ? HasProperty(_O_, _from_).
               1. If _fromPresent_ is *true*, then
                 1. Let _fromValue_ be ? Get(_O_, _from_).
@@ -30521,13 +30515,13 @@ Date.parse(x.toLocaleString())
               1. Increase _k_ by 1.
             1. Let _k_ be _len_.
             1. Repeat, while _k_ &gt; (_len_ - _actualDeleteCount_ + _itemCount_)
-              1. Perform ? DeletePropertyOrThrow(_O_, ToString(_k_-1)).
+              1. Perform ? DeletePropertyOrThrow(_O_, ! ToString(_k_-1)).
               1. Decrease _k_ by 1.
           1. Else if _itemCount_ &gt; _actualDeleteCount_, then
             1. Let _k_ be (_len_ - _actualDeleteCount_).
             1. Repeat, while _k_ &gt; _actualStart_
-              1. Let _from_ be ToString(_k_ + _actualDeleteCount_ - 1).
-              1. Let _to_ be ToString(_k_ + _itemCount_ - 1).
+              1. Let _from_ be ! ToString(_k_ + _actualDeleteCount_ - 1).
+              1. Let _to_ be ! ToString(_k_ + _itemCount_ - 1).
               1. Let _fromPresent_ be ? HasProperty(_O_, _from_).
               1. If _fromPresent_ is *true*, then
                 1. Let _fromValue_ be ? Get(_O_, _from_).
@@ -30538,7 +30532,7 @@ Date.parse(x.toLocaleString())
           1. Let _k_ be _actualStart_.
           1. Repeat, while _items_ is not empty
             1. Remove the first element from _items_ and let _E_ be the value of that element.
-            1. Perform ? Set(_O_, ToString(_k_), _E_, *true*).
+            1. Perform ? Set(_O_, ! ToString(_k_), _E_, *true*).
             1. Increase _k_ by 1.
           1. Perform ? Set(_O_, `"length"`, _len_ - _actualDeleteCount_ + _itemCount_, *true*).
           1. Return _A_.
@@ -30574,7 +30568,7 @@ Date.parse(x.toLocaleString())
           1. Let _k_ be `1`.
           1. Repeat, while _k_ &lt; _len_
             1. Let _S_ be a String value produced by concatenating _R_ and _separator_.
-            1. Let _nextElement_ be ? Get(_array_, ToString(_k_)).
+            1. Let _nextElement_ be ? Get(_array_, ! ToString(_k_)).
             1. If _nextElement_ is *undefined* or *null*, then
               1. Let _R_ be the empty String.
             1. Else,
@@ -30621,8 +30615,8 @@ Date.parse(x.toLocaleString())
             1. If _len_+ _argCount_ &gt; 2<sup>53</sup>-1, throw a *TypeError* exception.
             1. Let _k_ be _len_.
             1. Repeat, while _k_ &gt; 0,
-              1. Let _from_ be ToString(_k_-1).
-              1. Let _to_ be ToString(_k_+_argCount_ -1).
+              1. Let _from_ be ! ToString(_k_-1).
+              1. Let _to_ be ! ToString(_k_+_argCount_ -1).
               1. Let _fromPresent_ be ? HasProperty(_O_, _from_).
               1. If _fromPresent_ is *true*, then
                 1. Let _fromValue_ be ? Get(_O_, _from_).
@@ -30634,7 +30628,7 @@ Date.parse(x.toLocaleString())
             1. Let _items_ be a List whose elements are, in left to right order, the arguments that were passed to this function invocation.
             1. Repeat, while _items_ is not empty
               1. Remove the first element from _items_ and let _E_ be the value of that element.
-              1. Perform ? Set(_O_, ToString(_j_), _E_, *true*).
+              1. Perform ? Set(_O_, ! ToString(_j_), _E_, *true*).
               1. Increase _j_ by 1.
           1. Perform ? Set(_O_, `"length"`, _len_+_argCount_, *true*).
           1. Return _len_+_argCount_.
@@ -30747,7 +30741,7 @@ Date.parse(x.toLocaleString())
               1. Return CreateIterResultObject(*undefined*, *true*).
             1. Set the value of the [[ArrayIteratorNextIndex]] internal slot of _O_ to _index_+1.
             1. If _itemKind_ is `"key"`, return CreateIterResultObject(_index_, *false*).
-            1. Let _elementKey_ be ToString(_index_).
+            1. Let _elementKey_ be ! ToString(_index_).
             1. Let _elementValue_ be ? Get(_a_, _elementKey_).
             1. If _itemKind_ is `"value"`, let _result_ be _elementValue_.
             1. Else,
@@ -31109,7 +31103,7 @@ Date.parse(x.toLocaleString())
               1. Let _targetObj_ be ? TypedArrayCreate(_C_, &laquo;_len_&raquo;).
               1. Let _k_ be 0.
               1. Repeat, while _k_ &lt; _len_
-                1. Let _Pk_ be ToString(_k_).
+                1. Let _Pk_ be ! ToString(_k_).
                 1. Let _kValue_ be the first element of _values_ and remove that element from _values_.
                 1. If _mapping_ is *true*, then
                   1. Let _mappedValue_ be ? Call(_mapfn_, _T_, &laquo; _kValue_, _k_ &raquo;).
@@ -31124,7 +31118,7 @@ Date.parse(x.toLocaleString())
             1. Let _targetObj_ be ? TypedArrayCreate(_C_, &laquo;_len_&raquo;).
             1. Let _k_ be 0.
             1. Repeat, while _k_ &lt; _len_
-              1. Let _Pk_ be ToString(_k_).
+              1. Let _Pk_ be ! ToString(_k_).
               1. Let _kValue_ be ? Get(_arrayLike_, _Pk_).
               1. If _mapping_ is *true*, then
                 1. Let _mappedValue_ be ? Call(_mapfn_, _T_, &laquo; _kValue_, _k_ &raquo;).
@@ -31149,7 +31143,7 @@ Date.parse(x.toLocaleString())
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
             1. Let _kValue_ be _items_[_k_].
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _status_ be ? Set(_newObj_, _Pk_, _kValue_, *true*).
             1. Increase _k_ by 1.
           1. Return _newObj_.
@@ -31300,7 +31294,7 @@ Date.parse(x.toLocaleString())
           1. Let _k_ be 0.
           1. Let _captured_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kValue_ be ? Get(_O_, _Pk_).
             1. Let _selected_ be ToBoolean(? Call(_callbackfn_, _T_, &laquo; _kValue_, _k_, _O_ &raquo;)).
             1. If _selected_ is *true*, then
@@ -31310,8 +31304,7 @@ Date.parse(x.toLocaleString())
           1. Let _A_ be ? TypedArraySpeciesCreate(_O_, &laquo;_captured_&raquo;).
           1. Let _n_ be 0.
           1. For each element _e_ of _kept_
-            1. Let _status_ be Set(_A_, ToString(_n_), _e_, *true* ).
-            1. Assert: _status_ is not an abrupt completion.
+            1. Let _status_ be ! Set(_A_, ! ToString(_n_), _e_, *true* ).
             1. Increment _n_ by 1.
           1. Return _A_.
         </emu-alg>
@@ -31418,7 +31411,7 @@ Date.parse(x.toLocaleString())
           1. Let _A_ be ? TypedArraySpeciesCreate(_O_, &laquo;_len_&raquo;).
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_
-            1. Let _Pk_ be ToString(_k_).
+            1. Let _Pk_ be ! ToString(_k_).
             1. Let _kValue_ be ? Get(_O_, _Pk_).
             1. Let _mappedValue_ be ? Call(_callbackfn_, _T_, &laquo; _kValue_, _k_, _O_ &raquo;).
             1. Let _status_ be ? Set(_A_, _Pk_, _mappedValue_, *true* ).
@@ -31485,7 +31478,7 @@ Date.parse(x.toLocaleString())
             1. Let _k_ be 0.
             1. Let _limit_ be _targetByteIndex_ + _targetElementSize_ &times; _srcLength_.
             1. Repeat, while _targetByteIndex_ &lt; _limit_
-              1. Let _Pk_ be ToString(_k_).
+              1. Let _Pk_ be ! ToString(_k_).
               1. Let _kNumber_ be ? ToNumber(? Get(_src_, _Pk_)).
               1. If IsDetachedBuffer(_targetBuffer_) is *true*, throw a *TypeError* exception.
               1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, _targetType_, _kNumber_).
@@ -31568,9 +31561,9 @@ Date.parse(x.toLocaleString())
           1. If SameValue(_srcType_, _targetType_) is *false*, then
             1. Let _n_ be 0.
             1. Repeat, while _k_ &lt; _final_
-              1. Let _Pk_ be ToString(_k_).
+              1. Let _Pk_ be ! ToString(_k_).
               1. Let _kValue_ be ? Get(_O_, _Pk_).
-              1. Let _status_ be ? Set(_A_, ToString(_n_), _kValue_, *true* ).
+              1. Let _status_ be ? Set(_A_, ! ToString(_n_), _kValue_, *true* ).
               1. Increase _k_ by 1.
               1. Increase _n_ by 1.
           1. Else if _count_ &gt; 0, then
@@ -33624,11 +33617,11 @@ Date.parse(x.toLocaleString())
               1. Set _I_ to 0.
               1. Let _len_ be ? ToLength(? Get(_val_, `"length"`)).
               1. Repeat while _I_ &lt; _len_,
-                1. Let _newElement_ be ? InternalizeJSONProperty(_val_, ToString(_I_)).
+                1. Let _newElement_ be ? InternalizeJSONProperty(_val_, ! ToString(_I_)).
                 1. If _newElement_ is *undefined*, then
-                  1. Let _status_ be ? _val_.[[Delete]](ToString(_I_)).
+                  1. Let _status_ be ? _val_.[[Delete]](! ToString(_I_)).
                 1. Else,
-                  1. Let _status_ be ? CreateDataProperty(_val_, ToString(_I_), _newElement_).
+                  1. Let _status_ be ? CreateDataProperty(_val_, ! ToString(_I_), _newElement_).
                   1. NOTE This algorithm intentionally does not throw an exception if status is *false*.
                 1. Add 1 to _I_.
             1. Else,
@@ -33669,10 +33662,10 @@ Date.parse(x.toLocaleString())
               1. Let _len_ be ? ToLength(? Get(_replacer_, `"length"`)).
               1. Let _k_ be 0.
               1. Repeat while _k_&lt;_len_.
-                1. Let _v_ be ? Get(_replacer_, ToString(_k_)).
+                1. Let _v_ be ? Get(_replacer_, ! ToString(_k_)).
                 1. Let _item_ be *undefined*.
                 1. If Type(_v_) is String, let _item_ be _v_.
-                1. Else if Type(_v_) is Number, let _item_ be ToString(_v_).
+                1. Else if Type(_v_) is Number, let _item_ be ! ToString(_v_).
                 1. Else if Type(_v_) is Object, then
                   1. If _v_ has a [[StringData]] or [[NumberData]] internal slot, let _item_ be ? ToString(_v_).
                 1. If _item_ is not *undefined* and _item_ is not currently an element of _PropertyList_, then
@@ -33757,7 +33750,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           1. If _value_ is *false*, return `"false"`.
           1. If Type(_value_) is String, return QuoteJSONString(_value_).
           1. If Type(_value_) is Number, then
-            1. If _value_ is finite, return ToString(_value_).
+            1. If _value_ is finite, return ! ToString(_value_).
             1. Else, return `"null"`.
           1. If Type(_value_) is Object, and IsCallable(_value_) is *false*, then
             1. Let _isArray_ be ? IsArray(_value_).
@@ -33889,7 +33882,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           1. Let _len_ be ? ToLength(? Get(_value_, `"length"`)).
           1. Let _index_ be 0.
           1. Repeat while _index_ &lt; _len_
-            1. Let _strP_ be ? SerializeJSONProperty(ToString(_index_), _value_).
+            1. Let _strP_ be ? SerializeJSONProperty(! ToString(_index_), _value_).
             1. If _strP_ is *undefined*, then
               1. Append `"null"` to _partial_.
             1. Else,
@@ -36638,8 +36631,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
               1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _func_ and _F_ is not an element of BoundNames of _argumentsList_, then
                 1. NOTE A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName, the name of a formal parameter, or another |FunctionDeclaration|.
                 1. If _instantiatedVarNames_ does not contain _F_, then
-                  1. Let _status_ be _varEnvRec_.CreateMutableBinding(_F_).
-                  1. Assert: _status_ is never an abrupt completion.
+                  1. Let _status_ be ! _varEnvRec_.CreateMutableBinding(_F_).
                   1. Perform _varEnvRec_.InitializeBinding(_F_, *undefined*).
                   1. Append _F_ to _instantiatedVarNames_.
                 1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
@@ -36647,10 +36639,8 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                   1. Let _fenvRec_ be _fenv_'s EnvironmentRecord.
                   1. Let _benv_ be the running execution context's LexicalEnvironment.
                   1. Let _benvRec_ be _benv_'s EnvironmentRecord.
-                  1. Let _fobj_ be _benvRec_.GetBindingValue(_F_, *false*).
-                  1. Assert: _fobj_ is never an abrupt completion.
-                  1. Let _status_ be _fenvRec_.SetMutableBinding(_F_, _fobj_, *false*).
-                  1. Assert: _status_ is never an abrupt completion.
+                  1. Let _fobj_ be ! _benvRec_.GetBindingValue(_F_, *false*).
+                  1. Let _status_ be ! _fenvRec_.SetMutableBinding(_F_, _fobj_, *false*).
                   1. Return NormalCompletion(~empty~).
         </emu-alg>
       </emu-annex>
@@ -36676,8 +36666,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                     1. Let _genvRec_ be _genv_'s EnvironmentRecord.
                     1. Let _benv_ be the running execution context’s LexicalEnvironment.
                     1. Let _benvRec_ be _benv_'s EnvironmentRecord.
-                    1. Let _fobj_ be _benvRec_.GetBindingValue(_F_, *false*).
-                    1. Assert: _fobj_ is never an abrupt completion.
+                    1. Let _fobj_ be ! _benvRec_.GetBindingValue(_F_, *false*).
                     1. Let _status_ be ? _genvRec_.SetMutableBinding(_F_, _fobj_, *false*).
                     1. Return NormalCompletion(~empty~).
         </emu-alg>
@@ -36726,8 +36715,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                     1. Let _genvRec_ be _genv_'s EnvironmentRecord.
                     1. Let _benv_ be the running execution context’s LexicalEnvironment.
                     1. Let _benvRec_ be _benv_'s EnvironmentRecord.
-                    1. Let _fobj_ be _benvRec_.GetBindingValue(_F_, *false*).
-                    1. Assert: _fobj_ is never an abrupt completion.
+                    1. Let _fobj_ be ! _benvRec_.GetBindingValue(_F_, *false*).
                     1. Let _status_ be ? _genvRec_.SetMutableBinding(_F_, _fobj_, *false*).
                     1. Return NormalCompletion(~empty~).
         </emu-alg>
