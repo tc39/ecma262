@@ -6857,7 +6857,9 @@ for (let protoName of Reflect.enumerate(proto)) {
           1. If _thisMode_ is ~strict~, let _thisValue_ be _thisArgument_.
           1. Else,
             1. If _thisArgument_ is *null* or *undefined*, then
-              1. Let _thisValue_ be _calleeRealm_.[[globalEnv]].[[GlobalThisValue]].
+              1. Let _globalEnv_ be _calleeRealm_.[[globalEnv]].
+              1. Let _globalEnvRec_ be _globalEnv_'s EnvironmentRecord.
+              1. Let _thisValue_ be _globalEnvRec_.[[GlobalThisValue]].
             1. Else,
               1. Let _thisValue_ be ToObject(_thisArgument_).
               1. Assert: _thisValue_ is not an abrupt completion.
@@ -7117,7 +7119,7 @@ for (let protoName of Reflect.enumerate(proto)) {
             1. Let _ao_ be CreateUnmappedArgumentsObject(_argumentsList_).
           1. Else,
             1. NOTE mapped argument object is only provided for non-strict functions that don't have a rest parameter, any parameter default value initializers, or any destructured parameters .
-            1. Let _ao_ be CreateMappedArgumentsObject(_func_, _formals_, _argumentsList_, _env_).
+            1. Let _ao_ be CreateMappedArgumentsObject(_func_, _formals_, _argumentsList_, _envRec_).
           1. If _strict_ is *true*, then
             1. Let _status_ be _envRec_.CreateImmutableBinding(`"arguments"`).
           1. Else,
@@ -14490,20 +14492,22 @@ eval("1;var a;")
       <emu-note>
         <p>When a |Block| or |CaseBlock| production is evaluated a new declarative Environment Record is created and bindings for each block scoped variable, constant, function, generator function, or class declared in the block are instantiated in the Environment Record.</p>
       </emu-note>
-      <p>BlockDeclarationInstantiation is performed as follows using arguments _code_ and _env_. _code_ is the grammar production corresponding to the body of the block. _env_ is the declarative Environment Record in which bindings are to be created.</p>
+      <p>BlockDeclarationInstantiation is performed as follows using arguments _code_ and _env_. _code_ is the grammar production corresponding to the body of the block. _env_ is the Lexical Environment in which bindings are to be created.</p>
       <emu-alg>
+        1. Let _envRec_ be _env_'s EnvironmentRecord.
+        1. Assert: _envRec_ is a declarative Environment Record.
         1. Let _declarations_ be the LexicallyScopedDeclarations of _code_.
         1. For each element _d_ in _declarations_ do
           1. For each element _dn_ of the BoundNames of _d_ do
             1. If IsConstantDeclaration of _d_ is *true*, then
-              1. Let _status_ be _env_.CreateImmutableBinding(_dn_, *true*).
+              1. Let _status_ be _envRec_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
-              1. Let _status_ be _env_.CreateMutableBinding(_dn_, *false*).
+              1. Let _status_ be _envRec_.CreateMutableBinding(_dn_, *false*).
             1. Assert: _status_ is never an abrupt completion.
           1. If _d_ is a |GeneratorDeclaration| production or a |FunctionDeclaration| production, then
             1. Let _fn_ be the sole element of the BoundNames of _d_.
             1. Let _fo_ be the result of performing InstantiateFunctionObject for _d_ with argument _env_.
-            1. Perform _env_.InitializeBinding(_fn_, _fo_).
+            1. Perform _envRec_.InitializeBinding(_fn_, _fo_).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -15726,13 +15730,14 @@ eval("1;var a;")
         <emu-alg>
           1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
           1. Let _loopEnv_ be NewDeclarativeEnvironment(_oldEnv_).
+          1. Let _loopEnvRec_ be _loopEnv_'s EnvironmentRecord.
           1. Let _isConst_ be the result of performing IsConstantDeclaration of |LexicalDeclaration|.
           1. Let _boundNames_ be the BoundNames of |LexicalDeclaration|.
           1. For each element _dn_ of _boundNames_ do
             1. If _isConst_ is *true*, then
-              1. Perform _loopEnv_.CreateImmutableBinding(_dn_, *true*).
+              1. Perform _loopEnvRec_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
-              1. Perform _loopEnv_.CreateMutableBinding(_dn_, *false*).
+              1. Perform _loopEnvRec_.CreateMutableBinding(_dn_, *false*).
               1. Assert: The above call to CreateMutableBinding will never return an abrupt completion.
           1. Set the running execution context's LexicalEnvironment to _loopEnv_.
           1. Let _forDcl_ be the result of evaluating |LexicalDeclaration|.
@@ -15775,14 +15780,16 @@ eval("1;var a;")
         <emu-alg>
           1. If _perIterationBindings_ has any elements, then
             1. Let _lastIterationEnv_ be the running execution context's LexicalEnvironment.
+            1. Let _lastIterationEnvRec_ be _lastIterationEnv_'s EnvironmentRecord.
             1. Let _outer_ be _lastIterationEnv_'s outer environment reference.
             1. Assert: _outer_ is not *null*.
             1. Let _thisIterationEnv_ be NewDeclarativeEnvironment(_outer_).
+            1. Let _thisIterationEnvRec_ be _thisIterationEnv_'s EnvironmentRecord.
             1. For each element _bn_ of _perIterationBindings_ do,
-              1. Let _status_ be _thisIterationEnv_.CreateMutableBinding(_bn_, *false*).
+              1. Let _status_ be _thisIterationEnvRec_.CreateMutableBinding(_bn_, *false*).
               1. Assert: _status_ is never an abrupt completion.
-              1. Let _lastValue_ be ? _lastIterationEnv_.GetBindingValue(_bn_, *true*).
-              1. Perform _thisIterationEnv_.InitializeBinding(_bn_, _lastValue_).
+              1. Let _lastValue_ be ? _lastIterationEnvRec_.GetBindingValue(_bn_, *true*).
+              1. Perform _thisIterationEnvRec_.InitializeBinding(_bn_, _lastValue_).
             1. Set the running execution context's LexicalEnvironment to _thisIterationEnv_.
           1. Return *undefined*.
         </emu-alg>
@@ -16009,11 +16016,13 @@ eval("1;var a;")
         <p>With argument _environment_.</p>
         <emu-grammar>ForDeclaration : LetOrConst ForBinding</emu-grammar>
         <emu-alg>
+          1. Let _envRec_ be _environment_'s EnvironmentRecord.
+          1. Assert: _envRec_ is a declarative Environment Record.
           1. For each element _name_ of the BoundNames of |ForBinding| do
             1. If IsConstantDeclaration of |LetOrConst| is *true*, then
-              1. Perform _environment_.CreateImmutableBinding(_name_, *true*).
+              1. Perform _envRec_.CreateImmutableBinding(_name_, *true*).
             1. Else,
-              1. Perform _environment_.CreateMutableBinding(_name_).
+              1. Perform _envRec_.CreateMutableBinding(_name_).
               1. Assert: The above call to CreateMutableBinding will never return an abrupt completion.
         </emu-alg>
       </emu-clause>
@@ -16064,8 +16073,9 @@ eval("1;var a;")
           1. If _TDZnames_ is not an empty List, then
             1. Assert: _TDZnames_ has no duplicate entries.
             1. Let _TDZ_ be NewDeclarativeEnvironment(_oldEnv_).
+            1. Let _TDZEnvRec_ be _TDZ_'s EnvironmentRecord.
             1. For each string _name_ in _TDZnames_, do
-              1. Let _status_ be _TDZ_.CreateMutableBinding(_name_, *false*).
+              1. Let _status_ be _TDZEnvRec_.CreateMutableBinding(_name_, *false*).
               1. Assert: _status_ is never an abrupt completion.
             1. Set the running execution context's LexicalEnvironment to _TDZ_.
           1. Let _exprRef_ be the result of evaluating the production that is _expr_.
@@ -17285,8 +17295,9 @@ eval("1;var a;")
       <emu-alg>
         1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
         1. Let _catchEnv_ be NewDeclarativeEnvironment(_oldEnv_).
+        1. Let _catchEnvRec_ be _catchEnv_'s EnvironmentRecord.
         1. For each element _argName_ of the BoundNames of |CatchParameter|, do
-          1. Perform _catchEnv_.CreateMutableBinding(_argName_).
+          1. Perform _catchEnvRec_.CreateMutableBinding(_argName_).
           1. Assert: The above call to CreateMutableBinding will never return an abrupt completion.
         1. Set the running execution context's LexicalEnvironment to _catchEnv_.
         1. Let _status_ be the result of performing BindingInitialization for |CatchParameter| passing _thrownValue_ and _catchEnv_ as arguments.
@@ -36664,10 +36675,12 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                   1. Append _F_ to _instantiatedVarNames_.
                 1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                   1. Let _fenv_ be the running execution context's VariableEnvironment.
+                  1. Let _fenvRec_ be _fenv_'s EnvironmentRecord.
                   1. Let _benv_ be the running execution context's LexicalEnvironment.
-                  1. Let _fobj_ be _benv_.GetBindingValue(_F_, *false*).
+                  1. Let _benvRec_ be _benv_'s EnvironmentRecord.
+                  1. Let _fobj_ be _benvRec_.GetBindingValue(_F_, *false*).
                   1. Assert: _fobj_ is never an abrupt completion.
-                  1. Let _status_ be _fenv_.SetMutableBinding(_F_, _fobj_, *false*).
+                  1. Let _status_ be _fenvRec_.SetMutableBinding(_F_, _fobj_, *false*).
                   1. Assert: _status_ is never an abrupt completion.
                   1. Return NormalCompletion(~empty~).
         </emu-alg>
@@ -36691,11 +36704,13 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                     1. Append _F_ to _declaredFunctionOrVarNames_.
                   3. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                     1. Let _genv_ be the running execution context’s VariableEnvironment.
-                    2. Let _benv_ be the running execution context’s LexicalEnvironment.
-                    3. Let _fobj_ be _benv_.GetBindingValue(_F_, *false*).
-                    4. Assert: _fobj_ is never an abrupt completion.
-                    5. Let _status_ be ? _genv_.SetMutableBinding(_F_, _fobj_, *false*).
-                    7. Return NormalCompletion(~empty~).
+                    1. Let _genvRec_ be _genv_'s EnvironmentRecord.
+                    1. Let _benv_ be the running execution context’s LexicalEnvironment.
+                    1. Let _benvRec_ be _benv_'s EnvironmentRecord.
+                    1. Let _fobj_ be _benvRec_.GetBindingValue(_F_, *false*).
+                    1. Assert: _fobj_ is never an abrupt completion.
+                    1. Let _status_ be ? _genvRec_.SetMutableBinding(_F_, _fobj_, *false*).
+                    1. Return NormalCompletion(~empty~).
         </emu-alg>
       </emu-annex>
       <emu-annex id="sec-web-compat-evaldeclarationinstantiation">
@@ -36739,11 +36754,13 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                     1. Append _F_ to _declaredFunctionOrVarNames_.
                   2. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                     1. Let _genv_ be the running execution context’s VariableEnvironment.
-                    2. Let _benv_ be the running execution context’s LexicalEnvironment.
-                    3. Let _fobj_ be _benv_.GetBindingValue(_F_, *false*).
-                    4. Assert: _fobj_ is never an abrupt completion.
-                    5. Let _status_ be ? _genv_.SetMutableBinding(_F_, _fobj_, *false*).
-                    7. Return NormalCompletion(~empty~).
+                    1. Let _genvRec_ be _genv_'s EnvironmentRecord.
+                    1. Let _benv_ be the running execution context’s LexicalEnvironment.
+                    1. Let _benvRec_ be _benv_'s EnvironmentRecord.
+                    1. Let _fobj_ be _benvRec_.GetBindingValue(_F_, *false*).
+                    1. Assert: _fobj_ is never an abrupt completion.
+                    1. Let _status_ be ? _genvRec_.SetMutableBinding(_F_, _fobj_, *false*).
+                    1. Return NormalCompletion(~empty~).
         </emu-alg>
       </emu-annex>
     </emu-annex>
