@@ -35838,42 +35838,13 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
       <h2>Syntax</h2>
       <emu-grammar>
         Term[U] ::
-          [~U] ExtendedTerm
           [+U] Assertion[U]
           [+U] Atom[U]
           [+U] Atom[U] Quantifier
-
-        ExtendedTerm ::
-          Assertion
-          AtomNoBrace Quantifier
-          Atom
-          QuantifiableAssertion Quantifier
-
-        AtomNoBrace ::
-          PatternCharacterNoBrace
-          `.`
-          `\` AtomEscape
-          CharacterClass
-          `(` Disjunction `)`
-          `(` `?` `:` Disjunction `)`
-
-        Atom[U] ::
-          PatternCharacter
-          `.`
-          `\` AtomEscape[?U]
-          CharacterClass[?U]
-          `(` Disjunction[?U] `)`
-          `(` `?` `:` Disjunction[?U] `)`
-
-        PatternCharacterNoBrace ::
-          SourceCharacter but not one of `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `]` `{` `}` `|`
-
-        PatternCharacter ::
-          SourceCharacter but not one of `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `]` `|`
-
-        QuantifiableAssertion ::
-          `(` `?` `=` Disjunction `)`
-          `(` `?` `!` Disjunction `)`
+          [~U] QuantifiableAssertion Quantifier
+          [~U] Assertion
+          [~U] ExtendedAtom Quantifier
+          [~U] ExtendedAtom
 
         Assertion[U] ::
           `^`
@@ -35883,6 +35854,27 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           [+U] `(` `?` `=` Disjunction[U] `)`
           [+U] `(` `?` `!` Disjunction[U] `)`
           [~U] QuantifiableAssertion
+
+        QuantifiableAssertion ::
+          `(` `?` `=` Disjunction `)`
+          `(` `?` `!` Disjunction `)`
+
+        ExtendedAtom ::
+          `.`
+          `\` AtomEscape
+          CharacterClass
+          `(` Disjunction `)`
+          `(` `?` `:` Disjunction `)`
+          InvalidBracedQuantifier
+          ExtendedPatternCharacter
+
+        InvalidBracedQuantifier ::
+          `{` DecimalDigits `}`
+          `{` DecimalDigits `,` `}`
+          `{` DecimalDigits `,` DecimalDigits `}`
+
+        ExtendedPatternCharacter ::
+          SourceCharacter but not one of `^` `$` `.` `*` `+` `?` `(` `)` `[` `|`
 
         AtomEscape[U] ::
           [+U] DecimalEscape
@@ -35922,27 +35914,31 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           ClassAtomNoDash[?U]
 
         ClassAtomNoDash[U] ::
-          SourceCharacter but not one of `\` or `]` or `-`
           `\` ClassEscape[?U]
+          SourceCharacter but not one of `\` or `]` or `-`
 
         ClassAtomInRange ::
           `-`
           ClassAtomNoDashInRange
 
         ClassAtomNoDashInRange ::
+          `\` ClassEscape
           SourceCharacter but not one of `\` or `]` or `-`
-          `\` ClassEscape but only if ClassEscape evaluates to a CharSet with exactly one character
-          `\` IdentityEscape
 
         ClassEscape[U] ::
+          `b`
           [+U] DecimalEscape
           [+U] CharacterEscape[U]
           [+U] CharacterClassEscape
           [+U] `-`
-          [~U] DecimalEscape
-          `b`
+          [~U] DecimalEscape but only if the integer value of DecimalEscape is 0
           [~U] CharacterClassEscape
+          [~U] `c` ClassControlLetter
           [~U] CharacterEscape
+
+        ClassControlLetter ::
+          DecimalDigit
+          `_`
       </emu-grammar>
       <emu-note>
         <p>When the same left hand sides occurs with both [+U] and [\~U] guards it is to control the disambiguation priority.</p>
@@ -35952,25 +35948,88 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
       <emu-annex id="sec-regular-expression-patterns-semantics">
         <h1>Pattern Semantics</h1>
         <p>The semantics of <emu-xref href="#sec-pattern-semantics"></emu-xref> is extended as follows:</p>
-        <p>Within <emu-xref href="#sec-term"></emu-xref> reference to &ldquo;<emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> &rdquo; are to be interpreted as meaning &ldquo;<emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> &rdquo; or &ldquo;<emu-grammar>AtomNoBrace :: `(` Disjunction `)`</emu-grammar> &rdquo;.</p>
-        <p>Term (<emu-xref href="#sec-term"></emu-xref>) includes the following additional evaluation rule:</p>
+        <p>Within <emu-xref href="#sec-term"></emu-xref> reference to &ldquo;<emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> &rdquo; are to be interpreted as meaning &ldquo;<emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> &rdquo; or &ldquo;<emu-grammar>ExtendedAtom :: `(` Disjunction `)`</emu-grammar> &rdquo;.</p>
+
+        <p>Term (<emu-xref href="#sec-term"></emu-xref>) includes the following additional evaluation rules:</p>
         <p>The production <emu-grammar>Term :: QuantifiableAssertion Quantifier</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
-        <p>Atom (<emu-xref href="#sec-atom"></emu-xref>) evaluation rules for the |Atom| productions except for <emu-grammar>Atom :: PatternCharacter</emu-grammar> are also used for the |AtomNoBrace| productions, but with |AtomNoBrace| substituted for |Atom|. The following evaluation rule is also added:</p>
-        <p>The production <emu-grammar>AtomNoBrace :: PatternCharacterNoBrace</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>Term :: ExtendedAtom Quantifier</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
+        <p>The production <emu-grammar>Term :: ExtendedAtom</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
+
+        <p>Assertion (<emu-xref href="#sec-assertion"></emu-xref>) includes the following additional evaluation rule:</p>
+        <p>The production <emu-grammar>Assertion :: QuantifiableAssertion</emu-grammar> evaluates by evaluating |QuantifiableAssertion| to obtain a Matcher and returning that Matcher.</p>
+
+        <p>Assertion (<emu-xref href="#sec-assertion"></emu-xref>) evaluation rules for the <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar> and <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar> productions are also used for the |QuantifiableAssertion| productions, but with |QuantifiableAssertion| substituted for |Assertion|.</p>
+
+        <p>Atom (<emu-xref href="#sec-atom"></emu-xref>) evaluation rules for the |Atom| productions except for <emu-grammar>Atom :: PatternCharacter</emu-grammar> are also used for the |ExtendedAtom| productions, but with |ExtendedAtom| substituted for |Atom|. The following evaluation rules are also added:</p>
+        <p>The production <emu-grammar>ExtendedAtom :: InvalidBracedQuantifier</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Let _ch_ be the character represented by |PatternCharacterNoBrace|.
+          1. Throw a *SyntaxError* exception.
+        </emu-alg>
+        <p>The production <emu-grammar>ExtendedAtom :: ExtendedPatternCharacter</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _ch_ be the character represented by |ExtendedPatternCharacter|.
           1. Let _A_ be a one-element CharSet containing the character _ch_.
           1. Call CharacterSetMatcher(_A_, *false*) and return its Matcher result.
         </emu-alg>
+
         <p>CharacterEscape (<emu-xref href="#sec-characterescape"></emu-xref>) includes the following additional evaluation rule:</p>
         <p>The production <emu-grammar>CharacterEscape :: LegacyOctalEscapeSequence</emu-grammar> evaluates by evaluating the SV of the |LegacyOctalEscapeSequence| (see <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref>) and returning its character result.</p>
+
+        <p>NonemptyClassRanges (<emu-xref href="#sec-nonemptyclassranges"></emu-xref>) includes the following additional evaluation rule:</p>
+        <p>The production <emu-grammar>NonemptyClassRanges :: ClassAtomInRange `-` ClassAtomInRange ClassRanges</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Evaluate the first |ClassAtomInRange| to obtain a CharSet _A_.
+          1. Evaluate the second |ClassAtomInRange| to obtain a CharSet _B_.
+          1. Evaluate |ClassRanges| to obtain a CharSet _C_.
+          1. Call CharacterRangeOrUnion(_A_, _B_) and let _D_ be the resulting CharSet.
+          1. Return the union of CharSets _D_ and _C_.
+        </emu-alg>
+
+        <p>NonemptyClassRangesNoDash (<emu-xref href="#sec-nonemptyclassrangesnodash"></emu-xref>) includes the following additional evaluation rule:</p>
+        <p>The production <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDashInRange `-` ClassAtomInRange ClassRanges</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Evaluate |ClassAtomNoDashInRange| to obtain a CharSet _A_.
+          1. Evaluate |ClassAtomInRange| to obtain a CharSet _B_.
+          1. Evaluate |ClassRanges| to obtain a CharSet _C_.
+          1. Call CharacterRangeOrUnion(_A_, _B_) and let _D_ be the resulting CharSet.
+          1. Return the union of CharSets _D_ and _C_.
+        </emu-alg>
+
         <p>ClassAtom (<emu-xref href="#sec-classatom"></emu-xref>) includes the following additional evaluation rules:</p>
         <p>The production <emu-grammar>ClassAtomInRange :: `-`</emu-grammar> evaluates by returning the CharSet containing the one character `-`.</p>
         <p>The production <emu-grammar>ClassAtomInRange :: ClassAtomNoDashInRange</emu-grammar> evaluates by evaluating |ClassAtomNoDashInRange| to obtain a CharSet and returning that CharSet.</p>
+
         <p>ClassAtomNoDash (<emu-xref href="#sec-classatomnodash"></emu-xref>) includes the following additional evaluation rules:</p>
-        <p>The production <emu-grammar>ClassAtomNoDashInRange :: SourceCharacter but not one of `\` or `]` or `-`</emu-grammar> evaluates by returning a one-element CharSet containing the character represented by |SourceCharacter|.</p>
-        <p>The production <emu-grammar>ClassAtomNoDashInRange :: `\` ClassEscape</emu-grammar> but only if&hellip;, evaluates by evaluating |ClassEscape| to obtain a CharSet and returning that CharSet.</p>
-        <p>The production <emu-grammar>ClassAtomNoDashInRange :: `\` IdentityEscape</emu-grammar> evaluates by returning the character represented by |IdentityEscape|.</p>
+        <p>The production <emu-grammar>ClassAtomNoDash :: SourceCharacter but not one of `]` or `-`</emu-grammar> evaluates by returning a one-element CharSet containing the character represented by |SourceCharacter|.</p>
+        <p>The production <emu-grammar>ClassAtomNoDashInRange :: `\` ClassEscape</emu-grammar> evaluates by evaluating |ClassEscape| to obtain a CharSet and returning that CharSet.</p>
+        <p>The production <emu-grammar>ClassAtomNoDashInRange :: SourceCharacter but not one of `]` or `-`</emu-grammar> evaluates by returning a one-element CharSet containing the character represented by |SourceCharacter|.</p>
+
+        <p>ClassEscape (<emu-xref href="#sec-classescape"></emu-xref>) includes the following additional evaluation rules:</p>
+        <p>The production <emu-grammar>ClassEscape :: DecimalEscape but only if &hellip;</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Evaluate |DecimalEscape| to obtain an EscapeValue _E_.
+          1. Assert: _E_ is a character.
+          1. Let _ch_ be _E_'s character.
+          1. Return the one-element CharSet containing the character _ch_.
+        </emu-alg>
+        <p>The production <emu-grammar>ClassEscape :: `c` ClassControlLetter</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _ch_ be the character matched by |ClassControlLetter|.
+          1. Let _i_ be _ch_'s character value.
+          1. Let _j_ be the remainder of dividing _i_ by 32.
+          1. Return the character whose character value is _j_.
+        </emu-alg>
+
+        <emu-annex id="sec-runtime-semantics-characterrangeorunion-abstract-operation" aoid="CharacterRangeOrUnion">
+          <h1>Runtime Semantics: CharacterRangeOrUnion Abstract Operation</h1>
+          <p>The abstract operation CharacterRangeOrUnion takes two CharSet parameters _A_ and _B_ and performs the following steps:</p>
+          <emu-alg>
+            1. If _A_ does not contain exactly one character or _B_ does not contain exactly one character, then
+              1. Let _C_ be the CharSet containing the single character - U+002D (HYPEN-MINUS).
+              1. Return the union of CharSets _A_, _B_ and _C_.
+            1. Return CharacterRange(_A_, _B_).
+          </emu-alg>
+        </emu-annex>
       </emu-annex>
     </emu-annex>
   </emu-annex>
