@@ -21,5 +21,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 |🚀| [Encapsulated private state for objects](https://github.com/wycats/javascript-private-state) | Yehuda Katz & Allen Wirfs-Brock | 0
 | | [Error.isError](https://github.com/ljharb/proposal-is-error) | Jordan Harband | 0
 | | [64-Bit Integer Operations](https://gist.github.com/BrendanEich/4294d5c212a6d2254703) | Brendan Eich | 0
+| | [Function Expression Decorators](https://goo.gl/8MmCMG) | Igor Minar | 0
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
