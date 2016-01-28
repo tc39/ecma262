@@ -17,6 +17,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
 | | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
 | | [Object.getOwnPropertyDescriptors](https://github.com/ljharb/proposal-object-getownpropertydescriptors) | Jordan Harband & Andrea Giammarchi | 2
+| | [Shared memory and atomics](https://github.com/lars-t-hansen/ecmascript_sharedmem) | Lars T Hansen | 2
 | | [ArrayBuffer.transfer](https://gist.github.com/lukewagner/2735af7eea411e18cf20) | Luke Wagneer & Allen Wirfs-Brock | 1
 |🚀| [Additional export-from Statements](https://github.com/leebyron/ecmascript-more-export-from)| Lee Byron | 1
 |🚀|[Class and Property Decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) | Yehuda Katz and Jonathan Turner | 1 |
@@ -25,7 +26,6 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [String.prototype.{trimLeft,trimRight}](https://github.com/sebmarkbage/ecmascript-string-left-right-trim) | Sebastian Markbage | 1
 | | [Class Property Declarations](https://github.com/jeffmo/es-class-fields-and-static-properties)| Jeff Morrison| 1
 | | [String#matchAll](https://github.com/tc39/String.prototype.matchAll) | Jordan Harband | 1
-|🚀| [Shared memory and atomics](https://github.com/lars-t-hansen/ecmascript_sharedmem) | Lars T Hansen | 1
 |🚀|[Callable class constructors](https://github.com/tc39/ecma262/blob/master/workingdocs/callconstructor.md) | Yehuda Katz and Allen Wirfs-Brock | 1
 | | [System.global](https://github.com/tc39/proposal-global) | Jordan Harband | 1
 
