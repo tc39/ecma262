@@ -1295,17 +1295,6 @@
             </tr>
             <tr>
               <td>
-                [[Enumerate]]
-              </td>
-              <td>
-                ()<b>&rarr;</b>Object
-              </td>
-              <td>
-                Return an iterator object that produces the keys of the string-keyed enumerable properties of the object.
-              </td>
-            </tr>
-            <tr>
-              <td>
                 [[OwnPropertyKeys]]
               </td>
               <td>
@@ -1502,12 +1491,6 @@
           </li>
           <li>
             If P was previously observed to be a non-configurable own data or accessor property of the target, [[Delete]] must return false.
-          </li>
-        </ul>
-        <h2>[[Enumerate]] ( )</h2>
-        <ul>
-          <li>
-            The Type of the return value must be Object.
           </li>
         </ul>
         <h2>[[OwnPropertyKeys]] ( )</h2>
@@ -4397,8 +4380,7 @@
             1. Let _desc_ be ? _O_.[[GetOwnProperty]](_key_).
             1. If _desc_ is not *undefined*, then
               1. If _desc_.[[Enumerable]] is *true*, append _key_ to _names_.
-        1. If _O_.[[Enumerate]] is the ordinary object [[Enumerate]] internal method (<emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots-enumerate"></emu-xref>), then
-          1. Order the elements of _names_ so they are in the same relative order as would be produced by the Iterator that would be returned if the [[Enumerate]] internal method was invoked on _O_.
+        1. Order the elements of _names_ so they are in the same relative order as would be produced by the Iterator that would be returned if the EnumerateObjectProperties internal method was invoked with _O_.
         1. Return _names_.
       </emu-alg>
       <emu-note>
@@ -6558,39 +6540,6 @@
       </emu-clause>
     </emu-clause>
 
-    <!-- es6num="9.1.11" -->
-    <emu-clause id="sec-ordinary-object-internal-methods-and-internal-slots-enumerate">
-      <h1>[[Enumerate]] ()</h1>
-      <p>When the [[Enumerate]] internal method of _O_ is called the following steps are taken:</p>
-      <emu-alg>
-        1. Return an Iterator object (<emu-xref href="#sec-iterator-interface"></emu-xref>) whose `next` method iterates over all the String-valued keys of enumerable properties of _O_. The Iterator object must inherit from %IteratorPrototype% (<emu-xref href="#sec-%iteratorprototype%-object"></emu-xref>). The mechanics and order of enumerating the properties is not specified but must conform to the rules specified below.
-      </emu-alg>
-      <p>The iterator's `next` method processes object properties to determine whether the property key should be returned as an iterator value. Returned property keys do not include keys that are Symbols. Properties of the target object may be deleted during enumeration. A property that is deleted before it is processed by the iterator's `next` method is ignored. If new properties are added to the target object during enumeration, the newly added properties are not guaranteed to be processed in the active enumeration. A property name will be returned by the iterator's `next` method at most once in any enumeration.</p>
-      <p>Enumerating the properties of the target object includes enumerating properties of its prototype, and the prototype of the prototype, and so on, recursively; but a property of a prototype is not processed if it has the same name as a property that has already been processed by the iterator's `next` method. The values of [[Enumerable]] attributes are not considered when determining if a property of a prototype object has already been processed. The enumerable property names of prototype objects must be obtained as if by invoking the prototype object's [[Enumerate]] internal method. [[Enumerate]] must obtain the own property keys of the target object as if by calling its [[OwnPropertyKeys]] internal method. Property attributes of the target object must be obtained as if by calling its [[GetOwnProperty]] internal method.</p>
-      <emu-note>
-        <p>The following is an informative definition of an ECMAScript generator function that conforms to these rules:</p>
-        <pre><code class="javascript">
-function* enumerate(obj) {
-  let visited = new Set;
-  for (let key of Reflect.ownKeys(obj)) {
-    if (typeof key === "string") {
-    let desc = Reflect.getOwnPropertyDescriptor(obj, key);
-    if (desc) {
-      visited.add(key);
-      if (desc.enumerable) yield key;
-    }
-  }
-}
-let proto = Reflect.getPrototypeOf(obj)
-if (proto === null) return;
-for (let protoName of Reflect.enumerate(proto)) {
-  if (!visited.has(protoName)) yield protoName;
-  }
-}
-        </code></pre>
-      </emu-note>
-    </emu-clause>
-
     <!-- es6num="9.1.12" -->
     <emu-clause id="sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys">
       <h1>[[OwnPropertyKeys]] ( )</h1>
@@ -8128,16 +8077,6 @@ for (let protoName of Reflect.enumerate(proto)) {
         </emu-alg>
       </emu-clause>
 
-      <!-- es6num="9.4.6.11" -->
-      <emu-clause id="sec-module-namespace-exotic-objects-enumerate">
-        <h1>[[Enumerate]] ()</h1>
-        <p>When the [[Enumerate]] internal method of a module namespace exotic object _O_ is called the following steps are taken:</p>
-        <emu-alg>
-          1. Let _exports_ be the value of _O_'s [[Exports]] internal slot.
-          1. Return CreateListIterator(_exports_).
-        </emu-alg>
-      </emu-clause>
-
       <!-- es6num="9.4.6.12" -->
       <emu-clause id="sec-module-namespace-exotic-objects-ownpropertykeys">
         <h1>[[OwnPropertyKeys]] ( )</h1>
@@ -8279,14 +8218,6 @@ for (let protoName of Reflect.enumerate(proto)) {
           </td>
           <td>
             `defineProperty`
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[Enumerate]]
-          </td>
-          <td>
-            `enumerate`
           </td>
         </tr>
         <tr>
@@ -8692,32 +8623,6 @@ for (let protoName of Reflect.enumerate(proto)) {
           </li>
           <li>
             A property cannot be reported as deleted, if it exists as a non-configurable own property of the target object.
-          </li>
-        </ul>
-      </emu-note>
-    </emu-clause>
-
-    <!-- es6num="9.5.11" -->
-    <emu-clause id="sec-proxy-object-internal-methods-and-internal-slots-enumerate">
-      <h1>[[Enumerate]] ()</h1>
-      <p>When the [[Enumerate]] internal method of a Proxy exotic object _O_ is called the following steps are taken:</p>
-      <emu-alg>
-        1. Let _handler_ be the value of the [[ProxyHandler]] internal slot of _O_.
-        1. If _handler_ is *null*, throw a *TypeError* exception.
-        1. Assert: Type(_handler_) is Object.
-        1. Let _target_ be the value of the [[ProxyTarget]] internal slot of _O_.
-        1. Let _trap_ be ? GetMethod(_handler_, `"enumerate"`).
-        1. If _trap_ is *undefined*, then
-          1. Return ? _target_.[[Enumerate]]().
-        1. Let _trapResult_ be ? Call(_trap_, _handler_, &laquo; _target_ &raquo;).
-        1. If Type(_trapResult_) is not Object, throw a *TypeError* exception.
-        1. Return _trapResult_.
-      </emu-alg>
-      <emu-note>
-        <p>[[Enumerate]] for proxy objects enforces the following invariants:</p>
-        <ul>
-          <li>
-            The result of [[Enumerate]] must be an Object.
           </li>
         </ul>
       </emu-note>
@@ -16143,7 +16048,7 @@ eval("1;var a;")
             1. If _exprValue_.[[value]] is *null* or *undefined*, then
               1. Return Completion{[[type]]: ~break~, [[value]]: ~empty~, [[target]]: ~empty~}.
             1. Let _obj_ be ToObject(_exprValue_).
-            1. Return ? _obj_.[[Enumerate]]().
+            1. Return ? EnumerateObjectProperties(_obj_).
           1. Else,
             1. Assert: _iterationKind_ is ~iterate~.
             1. Return ? GetIterator(_exprValue_).
@@ -16213,6 +16118,40 @@ eval("1;var a;")
           1. Let _bindingId_ be StringValue of |BindingIdentifier|.
           1. Return ? ResolveBinding(_bindingId_).
         </emu-alg>
+      </emu-clause>
+
+      <!-- es6num="9.1.11" -->
+      <emu-clause id="sec-enumerate-object-properties" aoid="EnumerateObjectProperties">
+        <h1>EnumerateObjectProperties (_O_)</h1>
+        <p>When the abstract operation EnumerateObjectProperties is called with argument _O_, the following steps are taken:</p>
+        <emu-alg>
+          1. Assert: Type(_O_) is Object.
+          1. Return an Iterator object (<emu-xref href="#sec-iterator-interface"></emu-xref>) whose `next` method iterates over all the String-valued keys of enumerable properties of _O_. The Iterator object must inherit from %IteratorPrototype% (<emu-xref href="#sec-%iteratorprototype%-object"></emu-xref>). The mechanics and order of enumerating the properties is not specified but must conform to the rules specified below.
+        </emu-alg>
+        <p>The iterator's `next` method processes object properties to determine whether the property key should be returned as an iterator value. Returned property keys do not include keys that are Symbols. Properties of the target object may be deleted during enumeration. A property that is deleted before it is processed by the iterator's `next` method is ignored. If new properties are added to the target object during enumeration, the newly added properties are not guaranteed to be processed in the active enumeration. A property name will be returned by the iterator's `next` method at most once in any enumeration.</p>
+        <p>Enumerating the properties of the target object includes enumerating properties of its prototype, and the prototype of the prototype, and so on, recursively; but a property of a prototype is not processed if it has the same name as a property that has already been processed by the iterator's `next` method. The values of [[Enumerable]] attributes are not considered when determining if a property of a prototype object has already been processed. The enumerable property names of prototype objects must be obtained as if by invoking EnumerateObjectProperties passing the prototype object as the argument. EnumerateObjectProperties must obtain the own property keys of the target object as if by calling its [[OwnPropertyKeys]] internal method. Property attributes of the target object must be obtained as if by calling its [[GetOwnProperty]] internal method.</p>
+        <emu-note>
+          <p>The following is an informative definition of an ECMAScript generator function that conforms to these rules:</p>
+          <pre><code class="javascript">
+  function* EnumerateObjectProperties(obj) {
+    let visited = new Set;
+    for (let key of Reflect.ownKeys(obj)) {
+      if (typeof key === "string") {
+        let desc = Reflect.getOwnPropertyDescriptor(obj, key);
+        if (desc) {
+          visited.add(key);
+          if (desc.enumerable) yield key;
+        }
+      }
+    }
+    let proto = Reflect.getPrototypeOf(obj)
+    if (proto === null) return;
+    for (let protoName of EnumerateObjectProperties(proto)) {
+      if (!visited.has(protoName)) yield protoName;
+    }
+  }
+          </code></pre>
+        </emu-note>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -35153,16 +35092,6 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
       </emu-alg>
     </emu-clause>
 
-    <!-- es6num="26.1.5" -->
-    <emu-clause id="sec-reflect.enumerate">
-      <h1>Reflect.enumerate ( _target_ )</h1>
-      <p>When the `enumerate` function is called with argument _target_ the following steps are taken:</p>
-      <emu-alg>
-        1. If Type(_target_) is not Object, throw a *TypeError* exception.
-        1. Return ? _target_.[[Enumerate]]().
-      </emu-alg>
-    </emu-clause>
-
     <!-- es6num="26.1.6" -->
     <emu-clause id="sec-reflect.get">
       <h1>Reflect.get ( _target_, _propertyKey_ [ , _receiver_ ])</h1>
@@ -35346,8 +35275,9 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
       <p>When the @@iterator method is called with no arguments, the following steps are taken:</p>
       <emu-alg>
         1. Let _N_ be the *this* value.
-        1. If Type(_N_) is not Object, throw a *TypeError* exception.
-        1. Return ? _N_.[[Enumerate]]().
+        1. If _N_ is not a module namespace exotic object, throw a *TypeError* exception.
+        1. Let _exports_ be the value of _N_'s [[Exports]] internal slot.
+        1. Return ! CreateListIterator(_N_).
       </emu-alg>
       <p>The value of the `name` property of this function is `"[Symbol.iterator]"`.</p>
     </emu-clause>
