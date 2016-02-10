@@ -9,8 +9,8 @@ declare -r PRIVATE_KEY_FILE_NAME='github_deploy_key'
 # Decrypt the file containing the private key
 
 openssl aes-256-cbc \
-    -K  $encrypted_XXXXXXXXXXXX_key \
-    -iv $encrypted_XXXXXXXXXXXX_iv \
+    -K  $encrypted_b49adccc8109_key \
+    -iv $encrypted_b49adccc8109_iv \
     -in "${PRIVATE_KEY_FILE_NAME}.enc" \
     -out ~/.ssh/$PRIVATE_KEY_FILE_NAME -d
 
@@ -27,7 +27,7 @@ echo "  IdentityFile ~/.ssh/$PRIVATE_KEY_FILE_NAME" >> ~/.ssh/config
 cd ..
 
 $(npm bin)/update-branch --commands "npm run build" \
-                         --commit-message "Hey GitHub, this content is for you! [skip ci]" \
+                         --commit-message "Update gh-pages [skip ci]" \
                          --directory "out" \
                          --distribution-branch "gh-pages" \
                          --source-branch "master"
