@@ -7,8 +7,8 @@ declare -r PRIVATE_KEY_FILE_NAME='github_deploy_key'
 # Decrypt the file containing the private key
 
 openssl aes-256-cbc \
-    -K  $encrypted_b49adccc8109_key \
-    -iv $encrypted_b49adccc8109_iv \
+    -K  $encrypted_1e2182e20f4c_key \
+    -iv $encrypted_1e2182e20f4c_iv \
     -in "$(dirname "$BASH_SOURCE")/${PRIVATE_KEY_FILE_NAME}.enc" \
     -out ~/.ssh/$PRIVATE_KEY_FILE_NAME -d
 
