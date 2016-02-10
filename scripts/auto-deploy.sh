@@ -1,7 +1,5 @@
 #!/bin/bash
 
-cd "$(dirname "$BASH_SOURCE")"
-
 declare -r PRIVATE_KEY_FILE_NAME='github_deploy_key'
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -11,7 +9,7 @@ declare -r PRIVATE_KEY_FILE_NAME='github_deploy_key'
 openssl aes-256-cbc \
     -K  $encrypted_b49adccc8109_key \
     -iv $encrypted_b49adccc8109_iv \
-    -in "${PRIVATE_KEY_FILE_NAME}.enc" \
+    -in "$(dirname "$BASH_SOURCE")/${PRIVATE_KEY_FILE_NAME}.enc" \
     -out ~/.ssh/$PRIVATE_KEY_FILE_NAME -d
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -24,7 +22,7 @@ echo "  IdentityFile ~/.ssh/$PRIVATE_KEY_FILE_NAME" >> ~/.ssh/config
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-cd ..
+# Update the content from the `gh-pages` branch
 
 $(npm bin)/update-branch --commands "npm run build" \
                          --commit-message "Update gh-pages [skip ci]" \
