@@ -4393,7 +4393,7 @@
         1. Assert: _obj_ is a callable object.
         1. If _obj_ has a [[Realm]] internal slot, then
           1. Return _obj_'s [[Realm]] internal slot.
-        1. If _obj_ is a Bound Function exotic object, then
+        1. If _obj_ is a Bound Function object, then
           1. Let _target_ be _obj_'s [[BoundTargetFunction]] internal slot.
           1. Return ? GetFunctionRealm(_target_).
         1. If _obj_ is a Proxy exotic object, then
@@ -7177,116 +7177,117 @@
     </emu-clause>
   </emu-clause>
 
+  <!-- es6num="9.4.1" -->
+  <emu-clause id="sec-bound-function-objects">
+    <h1>Bound Function Objects</h1>
+    <p>A <dfn>bound function</dfn> is an object that wraps another function object. A bound function is callable (it has a [[Call]] internal method and may have a [[Construct]] internal method). Calling a bound function generally results in a call of its wrapped function.</p>
+    <p>Bound function objects do not have the internal slots of ECMAScript function objects defined in <emu-xref href="#table-27"></emu-xref>. Instead they have the internal slots defined in <emu-xref href="#table-28"></emu-xref>.</p>
+    <emu-table id="table-28" caption="Internal Slots of Bound Function Objects">
+      <table>
+        <tbody>
+        <tr>
+          <th>
+            Internal Slot
+          </th>
+          <th>
+            Type
+          </th>
+          <th>
+            Description
+          </th>
+        </tr>
+        <tr>
+          <td>
+            [[BoundTargetFunction]]
+          </td>
+          <td>
+            Callable Object
+          </td>
+          <td>
+            The wrapped function object.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[BoundThis]]
+          </td>
+          <td>
+            Any
+          </td>
+          <td>
+            The value that is always passed as the *this* value when calling the wrapped function.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[BoundArguments]]
+          </td>
+          <td>
+            List of Any
+          </td>
+          <td>
+            A list of values whose elements are used as the first arguments to any call to the wrapped function.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </emu-table>
+    <p>Bound function objects provide all of the essential internal methods as specified in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>. However, they use the following definitions for the essential internal methods of function objects.</p>
+
+    <!-- es6num="9.4.1.1" -->
+    <emu-clause id="sec-bound-function-objects-call-thisargument-argumentslist">
+      <h1>[[Call]] ( _thisArgument_, _argumentsList_)</h1>
+      <p>When the [[Call]] internal method of a bound function object, _F_, which was created using the bind function is called with parameters _thisArgument_ and _argumentsList_, a List of ECMAScript language values, the following steps are taken:</p>
+      <emu-alg>
+        1. Let _target_ be the value of _F_'s [[BoundTargetFunction]] internal slot.
+        1. Let _boundThis_ be the value of _F_'s [[BoundThis]] internal slot.
+        1. Let _boundArgs_ be the value of _F_'s [[BoundArguments]] internal slot.
+        1. Let _args_ be a new list containing the same values as the list _boundArgs_ in the same order followed by the same values as the list _argumentsList_ in the same order.
+        1. Return ? Call(_target_, _boundThis_, _args_).
+      </emu-alg>
+    </emu-clause>
+
+    <!-- es6num="9.4.1.2" -->
+    <emu-clause id="sec-bound-function-objects-construct-argumentslist-newtarget">
+      <h1>[[Construct]] (_argumentsList_, _newTarget_)</h1>
+      <p>When the [[Construct]] internal method of a bound function object, _F_ that was created using the bind function is called with a list of arguments _argumentsList_ and _newTarget_, the following steps are taken:</p>
+      <emu-alg>
+        1. Let _target_ be the value of _F_'s [[BoundTargetFunction]] internal slot.
+        1. Assert: _target_ has a [[Construct]] internal method.
+        1. Let _boundArgs_ be the value of _F_'s [[BoundArguments]] internal slot.
+        1. Let _args_ be a new list containing the same values as the list _boundArgs_ in the same order followed by the same values as the list _argumentsList_ in the same order.
+        1. If SameValue(_F_, _newTarget_) is *true*, let _newTarget_ be _target_.
+        1. Return ? Construct(_target_, _args_, _newTarget_).
+      </emu-alg>
+    </emu-clause>
+
+    <!-- es6num="9.4.1.3" -->
+    <emu-clause id="sec-boundfunctioncreate" aoid="BoundFunctionCreate">
+      <h1>BoundFunctionCreate (_targetFunction_, _boundThis_, _boundArgs_)</h1>
+      <p>The abstract operation BoundFunctionCreate with arguments _targetFunction_, _boundThis_ and _boundArgs_ is used to specify the creation of new Bound Function objects. It performs the following steps:</p>
+      <emu-alg>
+        1. Assert: Type(_targetFunction_) is Object.
+        1. Let _proto_ be ? _targetFunction_.[[GetPrototypeOf]]().
+        1. Let _obj_ be a newly created object.
+        1. Set _obj_'s essential internal methods to the default ordinary object definitions specified in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>.
+        1. Set the [[Call]] internal method of _obj_ as described in <emu-xref href="#sec-bound-function-objects-call-thisargument-argumentslist"></emu-xref>.
+        1. If _targetFunction_ has a [[Construct]] internal method, then
+          1. Set the [[Construct]] internal method of _obj_ as described in <emu-xref href="#sec-bound-function-objects-construct-argumentslist-newtarget"></emu-xref>.
+        1. Set the [[Prototype]] internal slot of _obj_ to _proto_.
+        1. Set the [[Extensible]] internal slot of _obj_ to *true*.
+        1. Set the [[BoundTargetFunction]] internal slot of _obj_ to _targetFunction_.
+        1. Set the [[BoundThis]] internal slot of _obj_ to the value of _boundThis_.
+        1. Set the [[BoundArguments]] internal slot of _obj_ to _boundArgs_.
+        1. Return _obj_.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+
   <!-- es6num="9.4" -->
   <emu-clause id="sec-built-in-exotic-object-internal-methods-and-slots">
     <h1>Built-in Exotic Object Internal Methods and Slots</h1>
     <p>This specification defines several kinds of built-in exotic objects. These objects generally behave similar to ordinary objects except for a few specific situations. The following exotic objects use the ordinary object internal methods except where it is explicitly specified otherwise below:</p>
-
-    <!-- es6num="9.4.1" -->
-    <emu-clause id="sec-bound-function-exotic-objects">
-      <h1>Bound Function Exotic Objects</h1>
-      <p>A <dfn>bound function</dfn> is an exotic object that wraps another function object. A bound function is callable (it has a [[Call]] internal method and may have a [[Construct]] internal method). Calling a bound function generally results in a call of its wrapped function.</p>
-      <p>Bound function objects do not have the internal slots of ECMAScript function objects defined in <emu-xref href="#table-27"></emu-xref>. Instead they have the internal slots defined in <emu-xref href="#table-28"></emu-xref>.</p>
-      <emu-table id="table-28" caption="Internal Slots of Exotic Bound Function Objects">
-        <table>
-          <tbody>
-          <tr>
-            <th>
-              Internal Slot
-            </th>
-            <th>
-              Type
-            </th>
-            <th>
-              Description
-            </th>
-          </tr>
-          <tr>
-            <td>
-              [[BoundTargetFunction]]
-            </td>
-            <td>
-              Callable Object
-            </td>
-            <td>
-              The wrapped function object.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[BoundThis]]
-            </td>
-            <td>
-              Any
-            </td>
-            <td>
-              The value that is always passed as the *this* value when calling the wrapped function.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              [[BoundArguments]]
-            </td>
-            <td>
-              List of Any
-            </td>
-            <td>
-              A list of values whose elements are used as the first arguments to any call to the wrapped function.
-            </td>
-          </tr>
-          </tbody>
-        </table>
-      </emu-table>
-      <p>Bound function objects provide all of the essential internal methods as specified in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>. However, they use the following definitions for the essential internal methods of function objects.</p>
-
-      <!-- es6num="9.4.1.1" -->
-      <emu-clause id="sec-bound-function-exotic-objects-call-thisargument-argumentslist">
-        <h1>[[Call]] ( _thisArgument_, _argumentsList_)</h1>
-        <p>When the [[Call]] internal method of an exotic bound function object, _F_, which was created using the bind function is called with parameters _thisArgument_ and _argumentsList_, a List of ECMAScript language values, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _target_ be the value of _F_'s [[BoundTargetFunction]] internal slot.
-          1. Let _boundThis_ be the value of _F_'s [[BoundThis]] internal slot.
-          1. Let _boundArgs_ be the value of _F_'s [[BoundArguments]] internal slot.
-          1. Let _args_ be a new list containing the same values as the list _boundArgs_ in the same order followed by the same values as the list _argumentsList_ in the same order.
-          1. Return ? Call(_target_, _boundThis_, _args_).
-        </emu-alg>
-      </emu-clause>
-
-      <!-- es6num="9.4.1.2" -->
-      <emu-clause id="sec-bound-function-exotic-objects-construct-argumentslist-newtarget">
-        <h1>[[Construct]] (_argumentsList_, _newTarget_)</h1>
-        <p>When the [[Construct]] internal method of an exotic bound function object, _F_ that was created using the bind function is called with a list of arguments _argumentsList_ and _newTarget_, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _target_ be the value of _F_'s [[BoundTargetFunction]] internal slot.
-          1. Assert: _target_ has a [[Construct]] internal method.
-          1. Let _boundArgs_ be the value of _F_'s [[BoundArguments]] internal slot.
-          1. Let _args_ be a new list containing the same values as the list _boundArgs_ in the same order followed by the same values as the list _argumentsList_ in the same order.
-          1. If SameValue(_F_, _newTarget_) is *true*, let _newTarget_ be _target_.
-          1. Return ? Construct(_target_, _args_, _newTarget_).
-        </emu-alg>
-      </emu-clause>
-
-      <!-- es6num="9.4.1.3" -->
-      <emu-clause id="sec-boundfunctioncreate" aoid="BoundFunctionCreate">
-        <h1>BoundFunctionCreate (_targetFunction_, _boundThis_, _boundArgs_)</h1>
-        <p>The abstract operation BoundFunctionCreate with arguments _targetFunction_, _boundThis_ and _boundArgs_ is used to specify the creation of new Bound Function exotic objects. It performs the following steps:</p>
-        <emu-alg>
-          1. Assert: Type(_targetFunction_) is Object.
-          1. Let _proto_ be ? _targetFunction_.[[GetPrototypeOf]]().
-          1. Let _obj_ be a newly created object.
-          1. Set _obj_'s essential internal methods to the default ordinary object definitions specified in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>.
-          1. Set the [[Call]] internal method of _obj_ as described in <emu-xref href="#sec-bound-function-exotic-objects-call-thisargument-argumentslist"></emu-xref>.
-          1. If _targetFunction_ has a [[Construct]] internal method, then
-            1. Set the [[Construct]] internal method of _obj_ as described in <emu-xref href="#sec-bound-function-exotic-objects-construct-argumentslist-newtarget"></emu-xref>.
-          1. Set the [[Prototype]] internal slot of _obj_ to _proto_.
-          1. Set the [[Extensible]] internal slot of _obj_ to *true*.
-          1. Set the [[BoundTargetFunction]] internal slot of _obj_ to _targetFunction_.
-          1. Set the [[BoundThis]] internal slot of _obj_ to the value of _boundThis_.
-          1. Set the [[BoundArguments]] internal slot of _obj_ to _boundArgs_.
-          1. Return _obj_.
-        </emu-alg>
-      </emu-clause>
-    </emu-clause>
 
     <!-- es6num="9.4.2" -->
     <emu-clause id="sec-array-exotic-objects">
@@ -23158,7 +23159,7 @@ new Function("a,b", "c", "return a+b+c")
         <h1>Function.prototype.toString ( )</h1>
         <p>When the `toString` method is called on an object _func_, the following steps are taken:</p>
         <emu-alg>
-          1. If _func_ is a Bound Function exotic object, then
+          1. If _func_ is a Bound Function object, then
             1. Return an implementation-dependent String source code representation of _func_. The representation must conform to the rules below. It is implementation dependent whether the representation includes bound function information or information about the target function.
           1. If Type(_func_) is Object and is either a built-in function object or has an [[ECMAScriptCode]] internal slot, then
             1. Return an implementation-dependent String source code representation of _func_. The representation must conform to the rules below.
