@@ -36557,6 +36557,79 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
       <p>The first use case is interoperable with the semantics of |Block| level function declarations provided by ECMAScript 2015. Any pre-existing ECMAScript code that employs that use case will operate using the Block level function declarations semantics defined by clauses 9, 13, and 14 of this specification.</p>
       <p>ECMAScript 2015 interoperability for the second and third use cases requires the following extensions to the clause <emu-xref href="#sec-ordinary-and-exotic-objects-behaviours"></emu-xref>, clause <emu-xref href="#sec-ecmascript-language-functions-and-classes"></emu-xref>, clause <emu-xref href="#sec-eval-x"></emu-xref> and clause <emu-xref href="#sec-globaldeclarationinstantiation"></emu-xref> semantics.</p>
       <p>If an ECMAScript implementation has a mechanism for reporting diagnostic warning messages, a warning should be produced when code contains a |FunctionDeclaration| for which these compatibility semantics are applied and introduce observable differences from non-compatibility semantics. For example, if a var binding is not introduced because its introduction would create an early error, a warning message should not be produced.</p>
+      <emu-annex id="sec-web-compat-block-environment-records">
+        <h1>Block Environment Records</h1>
+        <p>A block Environment Record is a declarative Environment Record that is used to represent block scopes. Functions declared inside the block are stored in a separate Environment Record in the [[FunctionsInBlock]] internal slot in addition to in the block environment record. This helps ensure that only function Objects are assigned to outer environments for web legacy compatibility.</p>
+        <p>Block Environment Records have the additional state field listed in <emu-xref href="#table-61"></emu-xref>.</p>
+        <emu-table id="table-61" caption="Additional Fields of Block Environment Records">
+          <table>
+            <tbody>
+              <tr>
+                <th>
+                  Field Name
+                </th>
+                <th>
+                  Value
+                </th>
+                <th>
+                  Meaning
+                </th>
+              </tr>
+              <tr>
+                <td>
+                  [[FunctionsInBlock]]
+                </td>
+                <td>
+                  Declarative Environment Record
+                </td>
+                <td>
+                  Functions declared inside the block.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </emu-table>
+        <p>Block Environment Records support all of the declarative Environment Record methods listed in <emu-xref href="#table-15"></emu-xref> and have no additional methods.</p>
+      </emu-annex>
+      <emu-annex id="sec-web-compat-newblockenvironment">
+        <h1>NewBlockEnvironment (_E_)</h1>
+        <p>When the abstract operation NewBlockEnvironment is called with a Lexical Environment as argument _E_ the following steps are performed:</p>
+        <emu-alg>
+          1. Let _env_ be a new Lexical Environment.
+          1. Let _envRec_ be a new block Environment Record containing no bindings.
+          1. Let _fibRec_ be a new declarative Environment Record containing no bindings.
+          1. Set _envRec_.[[FunctionsInBlock]] to _fibRec_.
+          1. Set _env_'s EnvironmentRecord to be _envRec_.
+          1. Set the outer lexical environment reference of _env_ to _E_.
+          1. Return _env_.
+        </emu-alg>
+      </emu-annex>
+      <emu-annex id="sec-web-compat-block-runtime-semantics-evaluation">
+        <h1>Changes to Block Runtime Evaluation</h1>
+        <p>During runtime evaluation of <emu-grammar>Block : `{` StatementList `}`</emu-grammar> (<emu-xref href="#sec-block-runtime-semantics-evaluation"></emu-xref>) the following step is performed in place of step 2:</p>
+        <emu-alg>
+          1. Let _blockEnv_ be NewBlockEnvironment(_oldEnv_).
+        </emu-alg>
+        <p>During runtime evaluation of <emu-grammar>SwitchStatement : `switch` `(` Expression `)` CaseBlock</emu-grammar> (<emu-xref href="#sec-switch-statement-runtime-semantics-evaluation"></emu-xref>) the following step is performed in place of step 4:</p>
+        <emu-alg>
+          1. Let _blockEnv_ be NewBlockEnvironment(_oldEnv_).
+        </emu-alg>
+      </emu-annex>
+      <emu-annex id="sec-web-compat-blockdeclarationinstantiation">
+        <h1>Changes to BlockDeclarationInstantiation</h1>
+        <p>During BlockDeclarationInstantiation (<emu-xref href="#sec-blockdeclarationinstantiation"></emu-xref>) the following step is performed in place of step 2:</p>
+        <emu-alg>
+          1. Assert: _envRec_ is a block Environment Record.
+        </emu-alg>
+        <p>The following steps are performed after step 4.b.iii:</p>
+        <emu-alg>
+          1. If _d_ is a |FunctionDeclaration| production, then
+            1. Let _fibRec_ be the value of _envRec_.[[FunctionsInBlock]].
+            1. Assert: _fibRec_ is a declarative Environment Record.
+            1. Perform ! _fibRec_.CreateImmutableBinding(_fn_, *true*).
+            1. Perform _fibRec_.InitializeBinding(_fn_, _fo_).
+        </emu-alg>
+      </emu-annex>
       <emu-annex id="sec-web-compat-functiondeclarationinstantiation">
         <h1>Changes to FunctionDeclarationInstantiation</h1>
         <p>During FunctionDeclarationInstantiation (<emu-xref href="#sec-functiondeclarationinstantiation"></emu-xref>) the following steps are performed in place of step 29:</p>
@@ -36575,7 +36648,9 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                   1. Let _fenvRec_ be _fenv_'s EnvironmentRecord.
                   1. Let _benv_ be the running execution context's LexicalEnvironment.
                   1. Let _benvRec_ be _benv_'s EnvironmentRecord.
-                  1. Let _fobj_ be ! _benvRec_.GetBindingValue(_F_, *false*).
+                  1. Let _fibRec_ be the value of _benvRec_.[[FunctionsInBlock]].
+                  1. Let _fobj_ be ! _fibRec_.GetBindingValue(_F_, *false*).
+                  1. Assert: _fobj_ is a function Object.
                   1. Perform ! _fenvRec_.SetMutableBinding(_F_, _fobj_, *false*).
                   1. Return NormalCompletion(~empty~).
         </emu-alg>
@@ -36602,7 +36677,9 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                     1. Let _genvRec_ be _genv_'s EnvironmentRecord.
                     1. Let _benv_ be the running execution context's LexicalEnvironment.
                     1. Let _benvRec_ be _benv_'s EnvironmentRecord.
-                    1. Let _fobj_ be ! _benvRec_.GetBindingValue(_F_, *false*).
+                    1. Let _fibRec_ be the value of _benvRec_.[[FunctionsInBlock]].
+                    1. Let _fobj_ be ! _fibRec_.GetBindingValue(_F_, *false*).
+                    1. Assert: _fobj_ is a function Object.
                     1. Perform ? _genvRec_.SetMutableBinding(_F_, _fobj_, *false*).
                     1. Return NormalCompletion(~empty~).
         </emu-alg>
@@ -36649,7 +36726,9 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
                     1. Let _genvRec_ be _genv_'s EnvironmentRecord.
                     1. Let _benv_ be the running execution context's LexicalEnvironment.
                     1. Let _benvRec_ be _benv_'s EnvironmentRecord.
-                    1. Let _fobj_ be ! _benvRec_.GetBindingValue(_F_, *false*).
+                    1. Let _fibRec_ be the value of _benvRec_.[[FunctionsInBlock]].
+                    1. Let _fobj_ be ! _fibRec_.GetBindingValue(_F_, *false*).
+                    1. Assert: _fobj_ is a function Object.
                     1. Perform ? _genvRec_.SetMutableBinding(_F_, _fobj_, *false*).
                     1. Return NormalCompletion(~empty~).
         </emu-alg>
