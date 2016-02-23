@@ -27309,6 +27309,7 @@ Date.parse(x.toLocaleString())
         CharacterEscape[U] ::
           ControlEscape
           `c` ControlLetter
+          `0` [lookahead &lt;! DecimalDigit]
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?U]
           IdentityEscape[?U]
@@ -27345,7 +27346,7 @@ Date.parse(x.toLocaleString())
           [~U] SourceCharacter but not UnicodeIDContinue
 
         DecimalEscape ::
-          DecimalIntegerLiteral [lookahead &lt;! DecimalDigit]
+          NonZeroDigit DecimalDigits? [lookahead &lt;! DecimalDigit]
 
         CharacterClassEscape :: one of
           `d` `D` `s` `S` `w` `W`
@@ -27377,7 +27378,6 @@ Date.parse(x.toLocaleString())
           `\` ClassEscape[?U]
 
         ClassEscape[U] ::
-          DecimalEscape
           `b`
           [+U] `-`
           CharacterClassEscape
@@ -27451,9 +27451,6 @@ Date.parse(x.toLocaleString())
           </li>
           <li>
             An <em>AssertionTester</em> procedure is an internal closure that takes a State argument and returns a Boolean result. The assertion tester tests a specific condition (specified by the closure's already-bound arguments) against the current place in _Input_ and returns *true* if the condition matched or *false* if not.
-          </li>
-          <li>
-            An <em>EscapeValue</em> is either a character or an integer. An EscapeValue is used to denote the interpretation of a |DecimalEscape| escape sequence: a character _ch_ means that the escape sequence is interpreted as the character _ch_, while an integer _n_ means that the escape sequence is interpreted as a backreference to the _n_<sup>th</sup> set of capturing parentheses.
           </li>
         </ul>
       </emu-clause>
@@ -28078,14 +28075,8 @@ Date.parse(x.toLocaleString())
         <h1>AtomEscape</h1>
         <p>The production <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |DecimalEscape| to obtain an EscapeValue _E_.
-          1. If _E_ is a character, then
-            1. Let _ch_ be _E_'s character.
-            1. Let _A_ be a one-element CharSet containing the character _ch_.
-            1. Call CharacterSetMatcher(_A_, *false*) and return its Matcher result.
-          1. Assert: _E_ must be an integer.
-          1. Let _n_ be that integer.
-          1. If _n_=0 or _n_&gt;_NcapturingParens_, throw a *SyntaxError* exception.
+          1. Evaluate |DecimalEscape| to obtain an integer _n_.
+          1. If _n_&gt;_NcapturingParens_, throw a *SyntaxError* exception.
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _cap_ be _x_'s _captures_ List.
             1. Let _s_ be _cap_[_n_].
@@ -28117,6 +28108,13 @@ Date.parse(x.toLocaleString())
       <!-- es6num="21.2.2.10" -->
       <emu-clause id="sec-characterescape">
         <h1>CharacterEscape</h1>
+        <p>The production <emu-grammar>CharacterEscape :: `0`</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Return the character U+0000 (NULL).
+        </emu-alg>
+        <emu-note>
+          <p>`\\0` represents the &lt;NUL&gt; character and cannot be followed by a decimal digit.</p>
+        </emu-note>
         <p>The production <emu-grammar>CharacterEscape :: ControlEscape</emu-grammar> evaluates by returning the character according to <emu-xref href="#table-47"></emu-xref>.</p>
         <emu-table id="table-47" caption="ControlEscape Character Values">
           <table>
@@ -28289,15 +28287,18 @@ Date.parse(x.toLocaleString())
       <!-- es6num="21.2.2.11" -->
       <emu-clause id="sec-decimalescape">
         <h1>DecimalEscape</h1>
-        <p>The production <emu-grammar>DecimalEscape :: DecimalIntegerLiteral</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>DecimalEscape :: NonZeroDigit</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Let _i_ be the MV of |DecimalIntegerLiteral|.
-          1. If _i_ is zero, return the EscapeValue consisting of the character U+0000 (NULL).
-          1. Return the EscapeValue consisting of the integer _i_.
+          1. Return the MV of |NonZeroDigit|.
         </emu-alg>
-        <p>The definition of &ldquo;the MV of |DecimalIntegerLiteral|&rdquo; is in <emu-xref href="#sec-literals-numeric-literals"></emu-xref>.</p>
+        <p>The production <emu-grammar>DecimalEscape :: NonZeroDigit DecimalDigits</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _n_ be the number of code points in |DecimalDigits|.
+          1. Return (the MV of |NonZeroDigit| &times; 10<sup>_n_</sup>) plus the MV of |DecimalDigits|.
+        </emu-alg>
+        <p>The definitions of &ldquo;the MV of |NonZeroDigit|&rdquo; and &ldquo;the MV of |DecimalDigits|&rdquo; are in <emu-xref href="#sec-literals-numeric-literals"></emu-xref>.</p>
         <emu-note>
-          <p>If `\\` is followed by a decimal number _n_ whose first digit is not `0`, then the escape sequence is considered to be a backreference. It is an error if _n_ is greater than the total number of left capturing parentheses in the entire regular expression. `\\0` represents the &lt;NUL&gt; character and cannot be followed by a decimal digit.</p>
+          <p>If `\\` is followed by a decimal number _n_ whose first digit is not `0`, then the escape sequence is considered to be a backreference. It is an error if _n_ is greater than the total number of left capturing parentheses in the entire regular expression.</p>
         </emu-note>
       </emu-clause>
 
@@ -28650,13 +28651,6 @@ Date.parse(x.toLocaleString())
       <!-- es6num="21.2.2.19" -->
       <emu-clause id="sec-classescape">
         <h1>ClassEscape</h1>
-        <p>The production <emu-grammar>ClassEscape :: DecimalEscape</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Evaluate |DecimalEscape| to obtain an EscapeValue _E_.
-          1. If _E_ is not a character, throw a *SyntaxError* exception.
-          1. Let _ch_ be _E_'s character.
-          1. Return the one-element CharSet containing the character _ch_.
-        </emu-alg>
         <p>The production <emu-grammar>ClassEscape :: `b`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return the CharSet containing the single character &lt;BS&gt; U+0008 (BACKSPACE).
@@ -35927,6 +35921,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
         CharacterEscape[U] ::
           ControlEscape
           `c` ControlLetter
+          `0` [lookahead &lt;! DecimalDigit]
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?U]
           [~U] LegacyOctalEscapeSequence
@@ -35939,9 +35934,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
 
         ClassEscape[U] ::
           `b`
-          [+U] DecimalEscape
           [+U] `-`
-          [~U] DecimalEscape [> but only if the integer value of |DecimalEscape| is 0]
           [~U] `c` ClassControlLetter
           CharacterClassEscape
           CharacterEscape[?U]
@@ -36005,14 +35998,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           1. Return the union of CharSets _D_ and _C_.
         </emu-alg>
 
-        <p>ClassEscape (<emu-xref href="#sec-classescape"></emu-xref>) includes the following additional evaluation rules:</p>
-        <p>The production <emu-grammar>ClassEscape :: DecimalEscape [> but only if &hellip;]</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Evaluate |DecimalEscape| to obtain an EscapeValue _E_.
-          1. Assert: _E_ is a character.
-          1. Let _ch_ be _E_'s character.
-          1. Return the one-element CharSet containing the character _ch_.
-        </emu-alg>
+        <p>ClassEscape (<emu-xref href="#sec-classescape"></emu-xref>) includes the following additional evaluation rule:</p>
         <p>The production <emu-grammar>ClassEscape :: `c` ClassControlLetter</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Let _ch_ be the character matched by |ClassControlLetter|.
