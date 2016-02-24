@@ -5947,6 +5947,24 @@
     <p>In most situations only the running execution context (the top of the execution context stack) is directly manipulated by algorithms within this specification. Hence when the terms &ldquo;LexicalEnvironment&rdquo;, and &ldquo;VariableEnvironment&rdquo; are used without qualification they are in reference to those components of the running execution context.</p>
     <p>An execution context is purely a specification mechanism and need not correspond to any particular artefact of an ECMAScript implementation. It is impossible for ECMAScript code to directly access or observe an execution context.</p>
 
+    <emu-clause id="sec-createexecutioncontext" aoid="CreateExecutionContext">
+      <h1>CreateExecutionContext ( _func_,  _realm_, _scriptOrModule_ [ , _varEnv_, _lexEnv_ ] )</h1>
+      <p>The CreateExecutionContext abstract operation is used to prepare a new ECMAScript code execution context, honoring system resource limits.</p>
+
+      <emu-alg>
+        1. If the execution context stack cannot support another context due to system resource limits, throw a *RangeError* exception.
+        1. Let _cxt_ be a new ECMAScript code execution context.
+        1. Set the _cxt_'s Function to _func_.
+        1. Set the _cxt_'s Realm to _realm_.
+        1. Set the _cxt_'s ScriptOrModule to _scriptOrModule_.
+        1. If _varEnv_ was passed, then
+          1. Set the _cxt_'s VariableEnvironment to _varEnv_.
+        1. If _lexEnv_ was passed, then
+          1. Set the _cxt_'s LexicalEnvironment to _lexEnv_.
+        1. Return _cxt_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-getactivescriptormodule" aoid="GetActiveScriptOrModule">
       <h1>GetActiveScriptOrModule ()</h1>
       <p>The GetActiveScriptOrModule abstract operation is used to determine the running script or module, based on the active function object. GetActiveScriptOrModule performs the following steps:</p>
@@ -6768,14 +6786,10 @@
         <emu-alg>
           1. Assert: Type(_newTarget_) is Undefined or Object.
           1. Let _callerContext_ be the running execution context.
-          1. Let _calleeContext_ be a new ECMAScript code execution context.
-          1. Set the Function of _calleeContext_ to _F_.
           1. Let _calleeRealm_ be the value of _F_'s [[Realm]] internal slot.
-          1. Set the Realm of _calleeContext_ to _calleeRealm_.
-          1. Set the ScriptOrModule of _calleeContext_ to the value of _F_'s [[ScriptOrModule]] internal slot.
+          1. Let _scriptOrModule_ be the value of _F_'s [[ScriptOrModule]] internal slot.
           1. Let _localEnv_ be NewFunctionEnvironment(_F_, _newTarget_).
-          1. Set the LexicalEnvironment of _calleeContext_ to _localEnv_.
-          1. Set the VariableEnvironment of _calleeContext_ to _localEnv_.
+          1. Let _calleeContext_ be CreateExecutionContext(_F_, _calleeRealm_, _scriptOrModule_, _localEnv_, _localEnv_).
           1. If _callerContext_ is not already suspended, Suspend _callerContext_.
           1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
           1. NOTE Any exception objects produced after this point are associated with _calleeRealm_.
@@ -7134,11 +7148,9 @@
       <emu-alg>
         1. Let _callerContext_ be the running execution context.
         1. If _callerContext_ is not already suspended, Suspend _callerContext_.
-        1. Let _calleeContext_ be a new ECMAScript code execution context.
-        1. Set the Function of _calleeContext_ to _F_.
         1. Let _calleeRealm_ be the value of _F_'s [[Realm]] internal slot.
-        1. Set the Realm of _calleeContext_ to _calleeRealm_.
-        1. Set the ScriptOrModule of _calleeContext_ to the value of _F_'s [[ScriptOrModule]] internal slot.
+        1. Let _scriptOrModule_ be the value of _F_'s [[ScriptOrModule]] internal slot.
+        1. Let _calleeContext_ be CreateExecutionContext(_F_, _calleeRealm_, _scriptOrModule_).
         1. Perform any necessary implementation defined initialization of _calleeContext_.
         1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
         1. Let _result_ be the Completion Record that is the result of evaluating _F_ in an implementation defined manner that conforms to the specification of _F_. _thisArgument_ is the *this* value, _argumentsList_ provides the named parameters, and the NewTarget value is *undefined*.
@@ -19629,12 +19641,7 @@ eval("1;var a;")
 
       <emu-alg>
         1. Let _globalEnv_ be _scriptRecord_.[[Realm]].[[globalEnv]].
-        1. Let _scriptCxt_ be a new ECMAScript code execution context.
-        1. Set the Function of _scriptCxt_ to *null*.
-        1. Set the Realm of _scriptCxt_ to _scriptRecord_.[[Realm]].
-        1. Set the ScriptOrModule of _scriptCxt_ to _scriptRecord_.
-        1. Set the VariableEnvironment of _scriptCxt_ to _globalEnv_.
-        1. Set the LexicalEnvironment of _scriptCxt_ to _globalEnv_.
+        1. Let _scriptCxt_ by CreateExecutionContext(*null*, _scriptRecord_.[[Realm]], _scriptRecord_, _globalEnv_, _globalEnv_).
         1. Suspend the currently running execution context.
         1. Push _scriptCxt_ on to the execution context stack; _scriptCxt_ is now the running execution context.
         1. Let _result_ be GlobalDeclarationInstantiation(|ScriptBody|, _globalEnv_).
@@ -20870,13 +20877,8 @@ eval("1;var a;")
             1. For each String _required_ that is an element of _module_.[[RequestedModules]] do,
               1. Let _requiredModule_ be ? HostResolveImportedModule(_module_, _required_).
               1. Perform ? _requiredModule_.ModuleEvaluation().
-            1. Let _moduleCxt_ be a new ECMAScript code execution context.
-            1. Set the Function of _moduleCxt_ to *null*.
-            1. Set the Realm of _moduleCxt_ to _module_.[[Realm]].
-            1. Set the ScriptOrModule of _moduleCxt_ to _module_.
+            1. Let _moduleCxt_ be CreateExecutionContext(*null*, _module_.[[Realm]], _module_, _module_.[[Environment]], _module_.[[Environment]]).
             1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
-            1. Set the VariableEnvironment of _moduleCxt_ to _module_.[[Environment]].
-            1. Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].
             1. Suspend the currently running execution context.
             1. Push _moduleCxt_ on to the execution context stack; _moduleCxt_ is now the running execution context.
             1. Let _result_ be the result of evaluating _module_.[[ECMAScriptCode]].
@@ -21754,12 +21756,8 @@ eval("1;var a;")
             1. Let _varEnv_ be _evalRealm_.[[globalEnv]].
           1. If _strictEval_ is *true*, let _varEnv_ be _lexEnv_.
           1. If _ctx_ is not already suspended, Suspend _ctx_.
-          1. Let _evalCxt_ be a new ECMAScript code execution context.
-          1. Set the _evalCxt_'s Function to *null*.
-          1. Set the _evalCxt_'s Realm to _evalRealm_.
-          1. Set the _evalCxt_'s ScriptOrModule to _ctx_'s ScriptOrModule.
-          1. Set the _evalCxt_'s VariableEnvironment to _varEnv_.
-          1. Set the _evalCxt_'s LexicalEnvironment to _lexEnv_.
+          1. Let _scriptOrModule_ be _ctx_'s ScriptOrModule.
+          1. Let _evalCxt_ be CreateExecutionContext(*null*, _evalRealm_, _scriptOrModule_, _varEnv_, _lexEnv_).
           1. Push _evalCxt_ on to the execution context stack; _evalCxt_ is now the running execution context.
           1. Let _result_ be EvalDeclarationInstantiation(_body_, _varEnv_, _lexEnv_, _strictEval_).
           1. If _result_.[[type]] is ~normal~, then
