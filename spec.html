@@ -6237,6 +6237,7 @@
     <p>All ordinary objects have an internal slot called [[Prototype]]. The value of this internal slot is either *null* or an object and is used for implementing inheritance. Data properties of the [[Prototype]] object are inherited (are visible as properties of the child object) for the purposes of get access, but not for set access. Accessor properties are inherited for both get access and set access.</p>
     <p>Every ordinary object has a Boolean-valued [[Extensible]] internal slot that controls whether or not properties may be added to the object. If the value of the [[Extensible]] internal slot is *false* then additional properties may not be added to the object. In addition, if [[Extensible]] is *false* the value of the [[Prototype]] internal slot of the object may not be modified. Once the value of an object's [[Extensible]] internal slot has been set to *false* it may not be subsequently changed to *true*.</p>
     <p>In the following algorithm descriptions, assume _O_ is an ordinary object, _P_ is a property key value, _V_ is any ECMAScript language value, and _Desc_ is a Property Descriptor record.</p>
+    <p>Each ordinary object internal method delegates to a similarly-named abstract operation. If such an abstract operation depends on another internal method, then the internal method is invoked on _O_ rather than calling the similarly-named abstract operation directly. These semantics ensure that exotic objects have their overridden internal methods invoked when ordinary object internal methods are applied to them.</p>
 
     <!-- es6num="9.1.1" -->
     <emu-clause id="sec-ordinary-object-internal-methods-and-internal-slots-getprototypeof">
@@ -6446,7 +6447,7 @@
         <p>When the abstract operation OrdinaryHasProperty is called with Object _O_ and with property key _P_, the following steps are taken:</p>
         <emu-alg>
           1. Assert: IsPropertyKey(_P_) is *true*.
-          1. Let _hasOwn_ be OrdinaryGetOwnProperty(_O_, _P_).
+          1. Let _hasOwn_ be ? _O_.[[GetOwnProperty]](_P_).
           1. If _hasOwn_ is not *undefined*, return *true*.
           1. Let _parent_ be ? _O_.[[GetPrototypeOf]]().
           1. If _parent_ is not *null*, then
@@ -7441,36 +7442,16 @@
           1. Assert: IsPropertyKey(_P_) is *true*.
           1. Let _desc_ be OrdinaryGetOwnProperty(_S_, _P_).
           1. If _desc_ is not *undefined*, return _desc_.
-          1. Return StringGetIndexProperty(_S_, _P_).
-        </emu-alg>
-
-        <!-- es6num="9.4.3.1.1" -->
-        <emu-clause id="sec-stringgetindexproperty" aoid="StringGetIndexProperty">
-          <h1>StringGetIndexProperty (_S_, _P_)</h1>
-          <p>When the abstract operation StringGetIndexProperty is called with an exotic String object _S_ and with property key _P_, the following steps are taken:</p>
-          <emu-alg>
-            1. If Type(_P_) is not String, return *undefined*.
-            1. Let _index_ be ! CanonicalNumericIndexString(_P_).
-            1. If _index_ is *undefined*, return *undefined*.
-            1. If IsInteger(_index_) is *false*, return *undefined*.
-            1. If _index_ = -0, return *undefined*.
-            1. Let _str_ be the String value of the [[StringData]] internal slot of _S_.
-            1. Let _len_ be the number of elements in _str_.
-            1. If _index_ &lt; 0 or _len_ &le; _index_, return *undefined*.
-            1. Let _resultStr_ be a String value of length 1, containing one code unit from _str_, specifically the code unit at index _index_.
-            1. Return a PropertyDescriptor{ [[Value]]: _resultStr_, [[Enumerable]]: *true*, [[Writable]]: *false*, [[Configurable]]: *false* }.
-          </emu-alg>
-        </emu-clause>
-      </emu-clause>
-
-      <!-- es6num="9.4.3.2" -->
-      <emu-clause id="sec-string-exotic-objects-hasproperty-p">
-        <h1>[[HasProperty]](_P_)</h1>
-        <p>When the [[HasProperty]] internal method of an exotic String object _S_ is called with property key _P_, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _elementDesc_ be StringGetIndexProperty(_S_, _P_).
-          1. If _elementDesc_ is not *undefined*, return *true*.
-          1. Return ? OrdinaryHasProperty(_S_, _P_).
+          1. If Type(_P_) is not String, return *undefined*.
+          1. Let _index_ be ! CanonicalNumericIndexString(_P_).
+          1. If _index_ is *undefined*, return *undefined*.
+          1. If IsInteger(_index_) is *false*, return *undefined*.
+          1. If _index_ = -0, return *undefined*.
+          1. Let _str_ be the String value of the [[StringData]] internal slot of _S_.
+          1. Let _len_ be the number of elements in _str_.
+          1. If _index_ &lt; 0 or _len_ &le; _index_, return *undefined*.
+          1. Let _resultStr_ be a String value of length 1, containing one code unit from _str_, specifically the code unit at index _index_.
+          1. Return a PropertyDescriptor{ [[Value]]: _resultStr_, [[Enumerable]]: *true*, [[Writable]]: *false*, [[Configurable]]: *false* }.
         </emu-alg>
       </emu-clause>
 
@@ -7608,6 +7589,19 @@
             1. Assert: _setStatus_ is *true* because formal parameters mapped by argument objects are always writable.
           1. Return ? OrdinarySet(_args_, _P_, _V_, _Receiver_).
         </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-arguments-exotic-objects-hasproperty">
+        <h1>[[HasProperty]] ( _P_ )</h1>
+        <p>The [[HasProperty]] internal method of an arguments exotic object when called with property key _P_, performs the following steps:</p>
+        <emu-alg>
+          1. Let _args_ be the arguments object.
+          1. If _P_ is `"caller"`, then
+            1. Let _desc_ be ! OrdinaryGetOwnProperty(_args_, _P_).
+            1. If IsDataDescriptor(_desc_) is *true*, return *true*.
+          1. Return ? OrdinaryHasProperty(_args_, _P_).
+        </emu-alg>
+        <p>If an implementation does not provide a built-in caller property for argument exotic objects then step 2 of this algorithm must be skipped.</p>
       </emu-clause>
 
       <!-- es6num="9.4.4.5" -->
