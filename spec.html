@@ -27300,12 +27300,13 @@ Date.parse(x.toLocaleString())
 
         AtomEscape[U] ::
           DecimalEscape
-          CharacterEscape[?U]
           CharacterClassEscape
+          CharacterEscape[?U]
 
         CharacterEscape[U] ::
           ControlEscape
           `c` ControlLetter
+          `0` [lookahead &lt;! DecimalDigit]
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?U]
           IdentityEscape[?U]
@@ -27342,7 +27343,7 @@ Date.parse(x.toLocaleString())
           [~U] SourceCharacter but not UnicodeIDContinue
 
         DecimalEscape ::
-          DecimalIntegerLiteral [lookahead &lt;! DecimalDigit]
+          NonZeroDigit DecimalDigits? [lookahead &lt;! DecimalDigit]
 
         CharacterClassEscape :: one of
           `d` `D` `s` `S` `w` `W`
@@ -27374,11 +27375,10 @@ Date.parse(x.toLocaleString())
           `\` ClassEscape[?U]
 
         ClassEscape[U] ::
-          DecimalEscape
           `b`
           [+U] `-`
-          CharacterEscape[?U]
           CharacterClassEscape
+          CharacterEscape[?U]
       </emu-grammar>
 
       <!-- es6num="21.2.1.1" -->
@@ -27448,9 +27448,6 @@ Date.parse(x.toLocaleString())
           </li>
           <li>
             An <em>AssertionTester</em> procedure is an internal closure that takes a State argument and returns a Boolean result. The assertion tester tests a specific condition (specified by the closure's already-bound arguments) against the current place in _Input_ and returns *true* if the condition matched or *false* if not.
-          </li>
-          <li>
-            An <em>EscapeValue</em> is either a character or an integer. An EscapeValue is used to denote the interpretation of a |DecimalEscape| escape sequence: a character _ch_ means that the escape sequence is interpreted as the character _ch_, while an integer _n_ means that the escape sequence is interpreted as a backreference to the _n_<sup>th</sup> set of capturing parentheses.
           </li>
         </ul>
       </emu-clause>
@@ -28075,14 +28072,8 @@ Date.parse(x.toLocaleString())
         <h1>AtomEscape</h1>
         <p>The production <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |DecimalEscape| to obtain an EscapeValue _E_.
-          1. If _E_ is a character, then
-            1. Let _ch_ be _E_'s character.
-            1. Let _A_ be a one-element CharSet containing the character _ch_.
-            1. Call CharacterSetMatcher(_A_, *false*) and return its Matcher result.
-          1. Assert: _E_ must be an integer.
-          1. Let _n_ be that integer.
-          1. If _n_=0 or _n_&gt;_NcapturingParens_, throw a *SyntaxError* exception.
+          1. Evaluate |DecimalEscape| to obtain an integer _n_.
+          1. If _n_&gt;_NcapturingParens_, throw a *SyntaxError* exception.
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _cap_ be _x_'s _captures_ List.
             1. Let _s_ be _cap_[_n_].
@@ -28107,13 +28098,20 @@ Date.parse(x.toLocaleString())
           1. Call CharacterSetMatcher(_A_, *false*) and return its Matcher result.
         </emu-alg>
         <emu-note>
-          <p>An escape sequence of the form `\\` followed by a nonzero decimal number _n_ matches the result of the _n_th set of capturing parentheses (see 0). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_th one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
+          <p>An escape sequence of the form `\\` followed by a nonzero decimal number _n_ matches the result of the _n_th set of capturing parentheses (<emu-xref href="#sec-notation"></emu-xref>). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_th one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
         </emu-note>
       </emu-clause>
 
       <!-- es6num="21.2.2.10" -->
       <emu-clause id="sec-characterescape">
         <h1>CharacterEscape</h1>
+        <p>The production <emu-grammar>CharacterEscape :: `0`</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Return the character U+0000 (NULL).
+        </emu-alg>
+        <emu-note>
+          <p>`\\0` represents the &lt;NUL&gt; character and cannot be followed by a decimal digit.</p>
+        </emu-note>
         <p>The production <emu-grammar>CharacterEscape :: ControlEscape</emu-grammar> evaluates by returning the character according to <emu-xref href="#table-47"></emu-xref>.</p>
         <emu-table id="table-47" caption="ControlEscape Character Values">
           <table>
@@ -28286,15 +28284,18 @@ Date.parse(x.toLocaleString())
       <!-- es6num="21.2.2.11" -->
       <emu-clause id="sec-decimalescape">
         <h1>DecimalEscape</h1>
-        <p>The production <emu-grammar>DecimalEscape :: DecimalIntegerLiteral</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>DecimalEscape :: NonZeroDigit</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Let _i_ be the MV of |DecimalIntegerLiteral|.
-          1. If _i_ is zero, return the EscapeValue consisting of the character U+0000 (NULL).
-          1. Return the EscapeValue consisting of the integer _i_.
+          1. Return the MV of |NonZeroDigit|.
         </emu-alg>
-        <p>The definition of &ldquo;the MV of |DecimalIntegerLiteral|&rdquo; is in <emu-xref href="#sec-literals-numeric-literals"></emu-xref>.</p>
+        <p>The production <emu-grammar>DecimalEscape :: NonZeroDigit DecimalDigits</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _n_ be the number of code points in |DecimalDigits|.
+          1. Return (the MV of |NonZeroDigit| &times; 10<sup>_n_</sup>) plus the MV of |DecimalDigits|.
+        </emu-alg>
+        <p>The definitions of &ldquo;the MV of |NonZeroDigit|&rdquo; and &ldquo;the MV of |DecimalDigits|&rdquo; are in <emu-xref href="#sec-literals-numeric-literals"></emu-xref>.</p>
         <emu-note>
-          <p>If `\\` is followed by a decimal number _n_ whose first digit is not `0`, then the escape sequence is considered to be a backreference. It is an error if _n_ is greater than the total number of left capturing parentheses in the entire regular expression. `\\0` represents the &lt;NUL&gt; character and cannot be followed by a decimal digit.</p>
+          <p>If `\\` is followed by a decimal number _n_ whose first digit is not `0`, then the escape sequence is considered to be a backreference. It is an error if _n_ is greater than the total number of left capturing parentheses in the entire regular expression.</p>
         </emu-note>
       </emu-clause>
 
@@ -28647,13 +28648,6 @@ Date.parse(x.toLocaleString())
       <!-- es6num="21.2.2.19" -->
       <emu-clause id="sec-classescape">
         <h1>ClassEscape</h1>
-        <p>The production <emu-grammar>ClassEscape :: DecimalEscape</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Evaluate |DecimalEscape| to obtain an EscapeValue _E_.
-          1. If _E_ is not a character, throw a *SyntaxError* exception.
-          1. Let _ch_ be _E_'s character.
-          1. Return the one-element CharSet containing the character _ch_.
-        </emu-alg>
         <p>The production <emu-grammar>ClassEscape :: `b`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return the CharSet containing the single character &lt;BS&gt; U+0008 (BACKSPACE).
@@ -35901,15 +35895,14 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
 
         AtomEscape[U] ::
           [+U] DecimalEscape
-          [+U] CharacterEscape[U]
-          [+U] CharacterClassEscape
           [~U] DecimalEscape but only if the integer value of DecimalEscape is &lt;= _NcapturingParens_
-          [~U] CharacterClassEscape
-          [~U] CharacterEscape
+          CharacterClassEscape
+          CharacterEscape[?U]
 
         CharacterEscape[U] ::
           ControlEscape
           `c` ControlLetter
+          `0` [lookahead &lt;! DecimalDigit]
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?U]
           [~U] LegacyOctalEscapeSequence
@@ -35920,44 +35913,12 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           [+U] `/`
           [~U] SourceCharacter but not `c`
 
-        NonemptyClassRanges[U] ::
-          ClassAtom[?U]
-          ClassAtom[?U] NonemptyClassRangesNoDash[?U]
-          [+U] ClassAtom[U] `-` ClassAtom[U] ClassRanges[U]
-          [~U] ClassAtomInRange `-` ClassAtomInRange ClassRanges
-
-        NonemptyClassRangesNoDash[U] ::
-          ClassAtom[?U]
-          ClassAtomNoDash[?U] NonemptyClassRangesNoDash[?U]
-          [+U] ClassAtomNoDash[U] `-` ClassAtom[U] ClassRanges[U]
-          [~U] ClassAtomNoDashInRange `-` ClassAtomInRange ClassRanges
-
-        ClassAtom[U] ::
-          `-`
-          ClassAtomNoDash[?U]
-
-        ClassAtomNoDash[U] ::
-          `\` ClassEscape[?U]
-          SourceCharacter but not one of `]` or `-`
-
-        ClassAtomInRange ::
-          `-`
-          ClassAtomNoDashInRange
-
-        ClassAtomNoDashInRange ::
-          `\` ClassEscape
-          SourceCharacter but not one of `]` or `-`
-
         ClassEscape[U] ::
           `b`
-          [+U] DecimalEscape
-          [+U] CharacterEscape[U]
-          [+U] CharacterClassEscape
           [+U] `-`
-          [~U] DecimalEscape but only if the integer value of DecimalEscape is 0
-          [~U] CharacterClassEscape
           [~U] `c` ClassControlLetter
-          [~U] CharacterEscape
+          CharacterClassEscape
+          CharacterEscape[?U]
 
         ClassControlLetter ::
           DecimalDigit
@@ -35998,58 +35959,44 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
         <p>CharacterEscape (<emu-xref href="#sec-characterescape"></emu-xref>) includes the following additional evaluation rule:</p>
         <p>The production <emu-grammar>CharacterEscape :: LegacyOctalEscapeSequence</emu-grammar> evaluates by evaluating the SV of the |LegacyOctalEscapeSequence| (see <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref>) and returning its character result.</p>
 
-        <p>NonemptyClassRanges (<emu-xref href="#sec-nonemptyclassranges"></emu-xref>) includes the following additional evaluation rule:</p>
-        <p>The production <emu-grammar>NonemptyClassRanges :: ClassAtomInRange `-` ClassAtomInRange ClassRanges</emu-grammar> evaluates as follows:</p>
+        <p>NonemptyClassRanges (<emu-xref href="#sec-nonemptyclassranges"></emu-xref>) modifies the following evaluation rule:</p>
+        <p>The production <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate the first |ClassAtomInRange| to obtain a CharSet _A_.
-          1. Evaluate the second |ClassAtomInRange| to obtain a CharSet _B_.
+          1. Evaluate the first |ClassAtom| to obtain a CharSet _A_.
+          1. Evaluate the second |ClassAtom| to obtain a CharSet _B_.
           1. Evaluate |ClassRanges| to obtain a CharSet _C_.
           1. Call CharacterRangeOrUnion(_A_, _B_) and let _D_ be the resulting CharSet.
           1. Return the union of CharSets _D_ and _C_.
         </emu-alg>
 
-        <p>NonemptyClassRangesNoDash (<emu-xref href="#sec-nonemptyclassrangesnodash"></emu-xref>) includes the following additional evaluation rule:</p>
-        <p>The production <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDashInRange `-` ClassAtomInRange ClassRanges</emu-grammar> evaluates as follows:</p>
+        <p>NonemptyClassRangesNoDash (<emu-xref href="#sec-nonemptyclassrangesnodash"></emu-xref>) modifies the following evaluation rule:</p>
+        <p>The production <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |ClassAtomNoDashInRange| to obtain a CharSet _A_.
-          1. Evaluate |ClassAtomInRange| to obtain a CharSet _B_.
+          1. Evaluate |ClassAtomNoDash| to obtain a CharSet _A_.
+          1. Evaluate |ClassAtom| to obtain a CharSet _B_.
           1. Evaluate |ClassRanges| to obtain a CharSet _C_.
           1. Call CharacterRangeOrUnion(_A_, _B_) and let _D_ be the resulting CharSet.
           1. Return the union of CharSets _D_ and _C_.
         </emu-alg>
 
-        <p>ClassAtom (<emu-xref href="#sec-classatom"></emu-xref>) includes the following additional evaluation rules:</p>
-        <p>The production <emu-grammar>ClassAtomInRange :: `-`</emu-grammar> evaluates by returning the CharSet containing the one character `-`.</p>
-        <p>The production <emu-grammar>ClassAtomInRange :: ClassAtomNoDashInRange</emu-grammar> evaluates by evaluating |ClassAtomNoDashInRange| to obtain a CharSet and returning that CharSet.</p>
-
-        <p>ClassAtomNoDash (<emu-xref href="#sec-classatomnodash"></emu-xref>) includes the following additional evaluation rules:</p>
-        <p>The production <emu-grammar>ClassAtomNoDash :: SourceCharacter but not one of `]` or `-`</emu-grammar> evaluates by returning a one-element CharSet containing the character represented by |SourceCharacter|.</p>
-        <p>The production <emu-grammar>ClassAtomNoDashInRange :: `\` ClassEscape</emu-grammar> evaluates by evaluating |ClassEscape| to obtain a CharSet and returning that CharSet.</p>
-        <p>The production <emu-grammar>ClassAtomNoDashInRange :: SourceCharacter but not one of `]` or `-`</emu-grammar> evaluates by returning a one-element CharSet containing the character represented by |SourceCharacter|.</p>
-
-        <p>ClassEscape (<emu-xref href="#sec-classescape"></emu-xref>) includes the following additional evaluation rules:</p>
-        <p>The production <emu-grammar>ClassEscape :: DecimalEscape but only if &hellip;</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Evaluate |DecimalEscape| to obtain an EscapeValue _E_.
-          1. Assert: _E_ is a character.
-          1. Let _ch_ be _E_'s character.
-          1. Return the one-element CharSet containing the character _ch_.
-        </emu-alg>
+        <p>ClassEscape (<emu-xref href="#sec-classescape"></emu-xref>) includes the following additional evaluation rule:</p>
         <p>The production <emu-grammar>ClassEscape :: `c` ClassControlLetter</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Let _ch_ be the character matched by |ClassControlLetter|.
           1. Let _i_ be _ch_'s character value.
           1. Let _j_ be the remainder of dividing _i_ by 32.
-          1. Return the character whose character value is _j_.
+          1. Let _d_ be the character whose character value is _j_.
+          1. Return the CharSet containing the single character _d_.
         </emu-alg>
 
         <emu-annex id="sec-runtime-semantics-characterrangeorunion-abstract-operation" aoid="CharacterRangeOrUnion">
           <h1>Runtime Semantics: CharacterRangeOrUnion Abstract Operation</h1>
           <p>The abstract operation CharacterRangeOrUnion takes two CharSet parameters _A_ and _B_ and performs the following steps:</p>
           <emu-alg>
-            1. If _A_ does not contain exactly one character or _B_ does not contain exactly one character, then
-              1. Let _C_ be the CharSet containing the single character - U+002D (HYPHEN-MINUS).
-              1. Return the union of CharSets _A_, _B_ and _C_.
+            1. If _Unicode_ is *false*, then
+              1. If _A_ does not contain exactly one character or _B_ does not contain exactly one character, then
+                1. Let _C_ be the CharSet containing the single character - U+002D (HYPHEN-MINUS).
+                1. Return the union of CharSets _A_, _B_ and _C_.
             1. Return CharacterRange(_A_, _B_).
           </emu-alg>
         </emu-annex>
