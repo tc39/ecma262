@@ -28,4 +28,4 @@ $(npm bin)/update-branch --commands "npm run build" \
                          --commit-message "Update gh-pages [skip ci]" \
                          --directory "out" \
                          --distribution-branch "gh-pages" \
-                         --source-branch "master"
+                         --source-branch "test-travis"
