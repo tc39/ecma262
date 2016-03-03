@@ -11861,6 +11861,7 @@ a = b + c
               1. Let _evalText_ be the first element of _argList_.
               1. If the source code matching this |CallExpression| is strict code, let _strictCaller_ be *true*. Otherwise let _strictCaller_ be *false*.
               1. Let _evalRealm_ be the current Realm Record.
+              1. Perform ? HostEnsureCanCompileStrings(_evalRealm_, _evalRealm_).
               1. Return ? PerformEval(_evalText_, _evalRealm_, _strictCaller_, *true*).
           1. If Type(_ref_) is Reference, then
             1. If IsPropertyReference(_ref_) is *true*, then
@@ -21730,9 +21731,8 @@ eval("1;var a;")
       <p>The `eval` function is the <dfn>%eval%</dfn> intrinsic object. When the `eval` function is called with one argument _x_, the following steps are taken:</p>
       <emu-alg>
         1. Let _evalRealm_ be the value of the active function object's [[Realm]] internal slot.
-        1. Let _strictCaller_ be *false*.
-        1. Let _directEval_ be *false*.
-        1. Return ? PerformEval(_x_, _evalRealm_, _strictCaller_, _directEval_).
+        1. Perform ? HostEnsureCanCompileStrings(the current Realm Record, _evalRealm_).
+        1. Return ? PerformEval(_x_, _evalRealm_, *false*, *false*).
       </emu-alg>
 
       <!-- es6num="18.2.1.1" -->
@@ -21775,6 +21775,14 @@ eval("1;var a;")
         <emu-note>
           <p>The eval code cannot instantiate variable or function bindings in the variable environment of the calling context that invoked the eval if the calling context is evaluating formal parameter initializers or if either the code of the calling context or the eval code is strict code. Instead such bindings are instantiated in a new VariableEnvironment that is only accessible to the eval code. Bindings introduced by `let`, `const`, or `class` declarations are always instantiated in a new LexicalEnvironment.</p>
         </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-hostensurecancompilestrings" aoid="HostEnsureCanCompileStrings">
+        <h1>HostEnsureCanCompileStrings( _callerRealm_, _calleeRealm_ )</h1>
+
+        <p>HostEnsureCanCompileStrings is an implementation-defined abstract operation that allows host environments to block certain ECMAScript functions which allow developers to compile strings into ECMAScript code.</p>
+
+        <p>An implementation of HostEnsureCanCompileStrings may complete normally or abruptly. Any abrupt completions will be propagated to its callers. The default implementation of HostEnsureCanCompileStrings is to do nothing.</p>
       </emu-clause>
 
       <!-- es6num="18.2.1.2" -->
@@ -22971,6 +22979,8 @@ eval("1;var a;")
         <p>When the `Function` function is called with some arguments _p1_, _p2_, &hellip; , _pn_, _body_ (where _n_ might be 0, that is, there are no &ldquo;_p_&rdquo; arguments, and where _body_ might also not be provided), the following steps are taken:</p>
         <emu-alg>
           1. Let _C_ be the active function object.
+          1. Let _calleeRealm_ be the value of _C_'s [[Realm]] internal slot.
+          1. Perform ? HostEnsureCanCompileStrings(the current Realm Record, _calleeRealm_).
           1. Let _args_ be the _argumentsList_ that was passed to this function by [[Call]] or [[Construct]].
           1. Return ? CreateDynamicFunction(_C_, NewTarget, `"normal"`, _args_).
         </emu-alg>
