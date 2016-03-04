@@ -6077,7 +6077,7 @@
             The name of a Job abstract operation
           </td>
           <td>
-            This is the abstract operation that is performed when execution of this PendingJob is initiated. Jobs are abstract operations that use NextJob rather than Return to indicate that they have completed.
+            This is the abstract operation that is performed when execution of this PendingJob is initiated.
           </td>
         </tr>
         <tr>
@@ -6182,34 +6182,6 @@
         1. Return NormalCompletion(~empty~).
       </emu-alg>
     </emu-clause>
-
-    <!-- es6num="8.4.2" -->
-    <emu-clause id="sec-nextjob-result" aoid="NextJob">
-      <h1>NextJob</h1>
-      <p>An algorithm step such as:</p>
-      <emu-alg>
-        1. NextJob _result_.
-      </emu-alg>
-      <p>is used in Job abstract operations in place of:</p>
-      <emu-alg>
-        1. Return _result_.
-      </emu-alg>
-      <p>Job abstract operations must not contain a Return step or a ReturnIfAbrupt step. The NextJob _result_ operation is equivalent to the following steps:</p>
-      <emu-alg>
-        1. If _result_ is an abrupt completion, perform HostReportErrors(&laquo; _result_.[[Value]] &raquo;).
-        1. Suspend the running execution context and remove it from the execution context stack.
-        1. Assert: The execution context stack is now empty.
-        1. Let _nextQueue_ be a non-empty Job Queue chosen in an implementation defined manner. If all Job Queues are empty, the result is implementation defined.
-        1. Let _nextPending_ be the PendingJob record at the front of _nextQueue_. Remove that record from _nextQueue_.
-        1. Let _newContext_ be a new execution context.
-        1. Set _newContext_'s Function to *null*.
-        1. Set _newContext_'s Realm to _nextPending_.[[Realm]].
-        1. Set _newContext_'s ScriptOrModule to _nextPending_.[[ScriptOrModule]].
-        1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
-        1. Perform any implementation or host environment defined job initialization using _nextPending_.
-        1. Perform the abstract operation named by _nextPending_.[[Job]] using the elements of _nextPending_.[[Arguments]] as its arguments.
-      </emu-alg>
-    </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-initializehostdefinedrealm" aoid="InitializeHostDefinedRealm">
@@ -6233,7 +6205,19 @@
           1. Perform EnqueueJob(`"ScriptJobs"`, ScriptEvaluationJob, &laquo; _sourceText_, _hostDefined_ &raquo;).
         1. Else _sourceText_ is the source code of a module,
           1. Perform EnqueueJob(`"ScriptJobs"`, TopLevelModuleEvaluationJob, &laquo; _sourceText_, _hostDefined_ &raquo;).
-      1. NextJob NormalCompletion(*undefined*).
+      1. Repeat
+        1. Suspend the running execution context and remove it from the execution context stack.
+        1. Assert: The execution context stack is now empty.
+        1. Let _nextQueue_ be a non-empty Job Queue chosen in an implementation defined manner. If all Job Queues are empty, the result is implementation defined.
+        1. Let _nextPending_ be the PendingJob record at the front of _nextQueue_. Remove that record from _nextQueue_.
+        1. Let _newContext_ be a new execution context.
+        1. Set _newContext_'s Function to *null*.
+        1. Set _newContext_'s Realm to _nextPending_.[[Realm]].
+        1. Set _newContext_'s ScriptOrModule to _nextPending_.[[ScriptOrModule]].
+        1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
+        1. Perform any implementation or host environment defined job initialization using _nextPending_.
+        1. Let _result_ be the result of performing the abstract operation named by _nextPending_.[[Job]] using the elements of _nextPending_.[[Arguments]] as its arguments.
+        1. If _result_ is an abrupt completion, perform HostReportErrors(&laquo; _result_.[[Value]] &raquo;).
     </emu-alg>
   </emu-clause>
 </emu-clause>
@@ -19735,9 +19719,9 @@ eval("1;var a;")
         1. Let _s_ be ParseScript(_sourceText_, _realm_, _hostDefined_).
         1. If _s_ is a List of errors, then
           1. Perform HostReportErrors(_s_).
-          1. NextJob NormalCompletion(*undefined*).
+          1. Return NormalCompletion(*undefined*).
         1. Let _status_ be ScriptEvaluation(_s_).
-        1. NextJob Completion(_status_).
+        1. Return Completion(_status_).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -20946,12 +20930,12 @@ eval("1;var a;")
           1. Let _m_ be ParseModule(_sourceText_, _realm_, _hostDefined_).
           1. If _m_ is a List of errors, then
             1. Perform HostReportErrors(_m_).
-            1. NextJob NormalCompletion(*undefined*).
+            1. Return NormalCompletion(*undefined*).
           1. Let _status_ be _m_.ModuleDeclarationInstantiation().
           1. If _status_ is not an abrupt completion, then
             1. Assert: all dependencies of _m_ have been transitively resolved and _m_ is ready for evaluation.
             1. Let _status_ be _m_.ModuleEvaluation().
-          1. NextJob Completion(_status_).
+          1. Return Completion(_status_).
         </emu-alg>
         <emu-note>
           <p>An implementation may parse a _sourceText_ as a |Module|, analyze it for Early Error conditions, and instantiate it prior to the execution of the TopLevelModuleEvaluationJob for that _sourceText_. An implementation may also resolve, pre-parse and pre-analyze, and pre-instantiate module dependencies of _sourceText_. However, the reporting of any errors detected by these actions must be deferred until the TopLevelModuleEvaluationJob is actually executed.</p>
@@ -34664,9 +34648,9 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           1. Else, let _handlerResult_ be Call(_handler_, *undefined*, &laquo; _argument_ &raquo;).
           1. If _handlerResult_ is an abrupt completion, then
             1. Let _status_ be Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _handlerResult_.[[Value]] &raquo;).
-            1. NextJob Completion(_status_).
+            1. Return Completion(_status_).
           1. Let _status_ be Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _handlerResult_.[[Value]] &raquo;).
-          1. NextJob Completion(_status_).
+          1. Return Completion(_status_).
         </emu-alg>
       </emu-clause>
 
@@ -34679,8 +34663,8 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           1. Let _thenCallResult_ be Call(_then_, _thenable_, &laquo; _resolvingFunctions_.[[Resolve]], _resolvingFunctions_.[[Reject]] &raquo;).
           1. If _thenCallResult_ is an abrupt completion, then
             1. Let _status_ be Call(_resolvingFunctions_.[[Reject]], *undefined*, &laquo; _thenCallResult_.[[Value]] &raquo;).
-            1. NextJob Completion(_status_).
-          1. NextJob Completion(_thenCallResult_).
+            1. Return Completion(_status_).
+          1. Return Completion(_thenCallResult_).
         </emu-alg>
         <emu-note>
           <p>This Job uses the supplied thenable and its `then` method to resolve the given promise. This process must take place as a Job to ensure that the evaluation of the `then` method occurs after evaluation of any surrounding code has completed.</p>
