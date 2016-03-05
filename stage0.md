@@ -9,7 +9,7 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [Relationships](http://wiki.ecmascript.org/doku.php?id=strawman:relationships) | Mark Miller & Waldemar Horwat | 0
 |🚀| [`String.prototype.at`](https://github.com/mathiasbynens/String.prototype.at) | Mathias Bynens & Rick Waldron | 0     |
 | | [Structured Clone](https://github.com/dslomov-chromium/ecmascript-structured-clone)       |Dmitry Lomov   |0
-| | [WeakRefs](https://github.com/tc39/proposal-weakrefs) | Dean Tribble | 0
+|🚀| [WeakRefs](https://github.com/tc39/proposal-weakrefs) | Dean Tribble | 0
 |🚀| [Set/Map.prototype.toJSON](https://github.com/DavidBruant/Map-Set.prototype.toJSON) | David Bruant ? | 0
 | | Annex B - HTML Attribute Event Handlers| Allen Wirfs-Brock | 0
 | | [Reflect.isCallable/Reflect.isConstructor](https://github.com/caitp/TC39-Proposals/blob/master/tc39-reflect-isconstructor-iscallable.md)| Caitlin Potter| 0
