@@ -22,5 +22,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [64-Bit Integer Operations](https://gist.github.com/BrendanEich/4294d5c212a6d2254703) | Brendan Eich | 0
 | | [Method Parameter Decorators](https://goo.gl/r1XT9b) | Igor Minar | 0
 | | [Function Expression Decorators](https://goo.gl/8MmCMG) | Igor Minar | 0
+| | [Zones](https://gist.github.com/mhevery/63fdcdf7c65886051d55) | Misko Hevery | 0
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
