@@ -4381,21 +4381,27 @@
       </emu-alg>
     </emu-clause>
 
-    <!-- es6num="7.3.21" -->
-    <emu-clause id="sec-enumerableownnames" aoid="EnumerableOwnNames">
-      <h1>EnumerableOwnNames (_O_)</h1>
-      <p>When the abstract operation EnumerableOwnNames is called with Object _O_, the following steps are taken:</p>
+    <emu-clause id="sec-enumerableownproperties" aoid="EnumerableOwnProperties">
+      <h1>EnumerableOwnProperties (_O_)</h1>
+      <p>When the abstract operation EnumerableOwnProperties is called with Object _O_ and String _kind_ the following steps are taken:</p>
       <emu-alg>
         1. Assert: Type(_O_) is Object.
         1. Let _ownKeys_ be ? _O_.[[OwnPropertyKeys]]().
-        1. Let _names_ be a new empty List.
+        1. Let _properties_ be a new empty List.
         1. Repeat, for each element _key_ of _ownKeys_ in List order
           1. If Type(_key_) is String, then
             1. Let _desc_ be ? _O_.[[GetOwnProperty]](_key_).
-            1. If _desc_ is not *undefined*, then
-              1. If _desc_.[[Enumerable]] is *true*, append _key_ to _names_.
-        1. Order the elements of _names_ so they are in the same relative order as would be produced by the Iterator that would be returned if the EnumerateObjectProperties internal method was invoked with _O_.
-        1. Return _names_.
+            1. If _desc_ is not *undefined* and _desc_.[[Enumerable]] is *true*, then
+              1. If _kind_ is *"key"*, append _key_ to _properties_.
+              1. Else,
+                1. Let _value_ be ? Get(_O_, _key_).
+                1. If _kind_ is *"value"*, append _value_ to _properties_.
+                1. Else,
+                  1. Assert: _kind_ is *"key+value"*.
+                  1. Let _entry_ be CreateArrayFromList(&laquo; _key_, _value_ &raquo;).
+                  1. Append _entry_ to _properties_.
+        1. Order the elements of _properties_ so they are in the same relative order as would be produced by the Iterator that would be returned if the EnumerateObjectProperties internal method was invoked with _O_.
+        1. Return _properties_.
       </emu-alg>
     </emu-clause>
 
@@ -22767,10 +22773,29 @@ eval("1;var a;")
         <p>When the `keys` function is called with argument _O_, the following steps are taken:</p>
         <emu-alg>
           1. Let _obj_ be ? ToObject(_O_).
-          1. Let _nameList_ be ? EnumerableOwnNames(_obj_).
+          1. Let _nameList_ be ? EnumerableOwnProperties(_obj_, *"key"*).
           1. Return CreateArrayFromList(_nameList_).
         </emu-alg>
-        <p>If an implementation defines a specific order of enumeration for the for-in statement, the same order must be used for the elements of the array returned in step 3.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-object.values">
+        <h1>Object.values ( _O_ )</h1>
+        <p>When the `values` function is called with argument _O_, the following steps are taken:</p>
+        <emu-alg>
+          1. Let _obj_ be ? ToObject(_O_).
+          1. Let _nameList_ be ? EnumerableOwnProperties(_obj_, *"value"*).
+          1. Return CreateArrayFromList(_nameList_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-object.entries">
+        <h1>Object.entries ( _O_ )</h1>
+        <p>When the `entries` function is called with argument _O_, the following steps are taken:</p>
+        <emu-alg>
+          1. Let _obj_ be ? ToObject(_O_).
+          1. Let _nameList_ be ? EnumerableOwnProperties(_obj_, *"key+value"*).
+          1. Return CreateArrayFromList(_nameList_).
+        </emu-alg>
       </emu-clause>
 
       <!-- es6num="19.1.2.15" -->
@@ -33510,7 +33535,7 @@ Date.parse(x.toLocaleString())
                   1. NOTE This algorithm intentionally does not throw an exception if CreateDataProperty returns *false*.
                 1. Add 1 to _I_.
             1. Else,
-              1. Let _keys_ be ? EnumerableOwnNames(_val_).
+              1. Let _keys_ be ? EnumerableOwnProperties(_val_, *"key"*).
               1. For each String _P_ in _keys_ do,
                 1. Let _newElement_ be ? InternalizeJSONProperty(_val_, _P_).
                 1. If _newElement_ is *undefined*, then
@@ -33727,7 +33752,7 @@ my_text = JSON.stringify(a); // This must throw a TypeError.
           1. If _PropertyList_ is not *undefined*, then
             1. Let _K_ be _PropertyList_.
           1. Else,
-            1. Let _K_ be ? EnumerableOwnNames(_value_).
+            1. Let _K_ be ? EnumerableOwnProperties(_value_, *"key"*).
           1. Let _partial_ be a new empty List.
           1. For each element _P_ of _K_,
             1. Let _strP_ be ? SerializeJSONProperty(_P_, _value_).
