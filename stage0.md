@@ -18,7 +18,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [Do Expressions](http://wiki.ecmascript.org/doku.php?id=strawman:do_expressions) | Andreas Rossberg | 0
 | | [RegExp](https://github.com/goyakin/es-regexp) | Gorkem Yakin, Brian Terlson, & Nozomu Katō | 0
 |🚀| [Encapsulated private state for objects](https://github.com/wycats/javascript-private-state) | Yehuda Katz & Allen Wirfs-Brock | 0
-| | [Error.isError](https://github.com/ljharb/proposal-is-error) | Jordan Harband | 0
 | | [64-Bit Integer Operations](https://gist.github.com/BrendanEich/4294d5c212a6d2254703) | Brendan Eich | 0
 | | [Method Parameter Decorators](https://goo.gl/r1XT9b) | Igor Minar | 0
 | | [Function Expression Decorators](https://goo.gl/8MmCMG) | Igor Minar | 0
