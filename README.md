@@ -9,7 +9,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 |---|------------------------------------------------------------------------------------                 |-------------- | ------|------
 | | [SIMD.JS - SIMD APIs](https://docs.google.com/presentation/d/1MY9NHrHmL7ma7C8dyNXvmYNNGgVmmxXk8ZIiQtPlfH4/edit?usp=sharing) +  [polyfill](http://tc39.github.io/ecmascript_simd/)| John McCutchan, Peter Jensen, Dan Gohman, Daniel Ehrenberg |3      |
 | | [Async Functions](https://github.com/tc39/ecmascript-asyncawait)                                |Brian Terlson    |3      |
-| | [Object.values/Object.entries](https://github.com/tc39/proposal-object-values-entries) | Jordan Harband | 3
+| | [Object.values/Object.entries](https://github.com/tc39/proposal-object-values-entries) | Jordan Harband | 4
 | | [String padding](https://github.com/tc39/proposal-string-pad-start-end) | Jordan Harband & Rick Waldron | 3
 | | [Trailing commas in function parameter lists and calls](https://jeffmo.github.io/es-trailing-function-commas/) | Jeff Morrison | 3
 | | [Object.getOwnPropertyDescriptors](https://github.com/ljharb/proposal-object-getownpropertydescriptors) | Jordan Harband & Andrea Giammarchi | 3
