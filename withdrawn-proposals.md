@@ -6,3 +6,12 @@ Withdrawn proposals are proposals that at one point were presented to the commit
 |----------|----------|-----------|
 |[Callable class constructors](https://github.com/tc39/ecma262/blob/master/workingdocs/callconstructor.md) | Yehuda Katz and Allen Wirfs-Brock | Can be solved with decorators |
 | [Error.isError](https://github.com/ljharb/proposal-is-error) | Jordan Harband | Withdrawn in favor of a proposal to standardize Error stack traces |
+
+# Rejected proposals
+
+Rejected proposals are proposals that were presented to the committee but were subsequently rejected.
+
+| Proposal | Champion | Date | Rationale |
+|----------|----------|------|-----------|
+| [Set/Map.prototype.toJSON](https://github.com/DavidBruant/Map-Set.prototype.toJSON) | Jordan Harband / David Bruant | March 2016 | better solved by a custom `replacer` function
+
