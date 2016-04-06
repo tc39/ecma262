@@ -27,6 +27,8 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [String#matchAll](https://github.com/tc39/String.prototype.matchAll) | Jordan Harband | 1
 | | [System.global](https://github.com/tc39/proposal-global) | Jordan Harband | 1
 | | [Asynchronous Iterators](https://github.com/tc39/proposal-async-iteration) | Kevin Smith | 1
+| | [WeakRefs](https://github.com/tc39/proposal-weakrefs) | Dean Tribble | 1
+
 
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
