@@ -5867,7 +5867,7 @@
   <!-- es6num="8.3" -->
   <emu-clause id="sec-execution-contexts">
     <h1>Execution Contexts</h1>
-    <p>An <dfn>execution context</dfn> is a specification device that is used to track the runtime evaluation of code by an ECMAScript implementation. At any point in time, there is at most one execution context that is actually executing code. This is known as the <dfn id="running-execution-context">running execution context</dfn>.</p>
+    <p>An <dfn>execution context</dfn> is a specification device that is used to track the runtime evaluation of code by an ECMAScript implementation. At any point in time, there is at most one execution context per agent that is actually executing code. This is known as the agent's <dfn id="running-execution-context">running execution context</dfn>.  All references to the running execution context in this specification denote the running execution context of the surrounding agent.</p>
     <p>The <dfn id="execution-context-stack">execution context stack</dfn> is used to track execution contexts. The running execution context is always the top element of this stack. A new execution context is created whenever control is transferred from the executable code associated with the currently running execution context to executable code that is not associated with that execution context. The newly created execution context is pushed onto the stack and becomes the running execution context.</p>
     <p>An execution context contains whatever implementation specific state is necessary to track the execution progress of its associated code. Each execution context has at least the state components listed in <emu-xref href="#table-22"></emu-xref>.</p>
     <emu-table id="table-22" caption="State Components for All Execution Contexts">
@@ -6135,6 +6135,7 @@
       </table>
     </emu-table>
     <p>A Job Queue is a FIFO queue of PendingJob records. Each Job Queue has a name and the full set of available Job Queues are defined by an ECMAScript implementation. Every ECMAScript implementation has at least the Job Queues defined in <emu-xref href="#table-26"></emu-xref>.</p>
+    <p>Each agent has its own set of named Job Queues.  All references to a named job queue in this specification denote the named job queue of the surrounding agent.</p>
     <emu-table id="table-26" caption="Required Job Queues">
       <table>
         <tbody>
@@ -6235,6 +6236,63 @@
         1. If _result_ is an abrupt completion, perform HostReportErrors(&laquo; _result_.[[Value]] &raquo;).
     </emu-alg>
   </emu-clause>
+
+  <emu-clause id="sec-agents">
+    <h1>Agents</h1>
+
+    <p> An <dfn id="agent">agent</dfn> comprises a set of ECMAScript execution contexts, an execution context stack, a running execution context, a set of named job queues, an <dfn id="agent-record">Agent Record</dfn>, and an <dfn id="executing-thread">executing thread</dfn>.  Except for the executing thread, the constituents of an agent belong exclusively to that agent. </p>
+
+    <p> An agent's executing thread executes the jobs in the agent's job queues on the agent's execution contexts independently of other agents, except that an executing thread may be used as the executing thread by multiple agents if none of the agents sharing the thread have an Agent Record whose [[CanBlock]] property that is ~true~. </p>
+
+    <emu-note>
+      <p> Some web browsers share an executing thread across the documents of a browser window, for example. </p>
+    </emu-note>
+
+    <p> While an agent's executing thread executes the jobs in the agent's job queues, the agent is the <dfn id="surrounding-agent">surrounding agent</dfn> for the code in those jobs.  The code uses the surrounding agent to access the specification level execution objects held within the agent: the running execution context, the execution context stack, the named job queues, and the Agent Record's fields. </p>
+
+    <emu-table id="table-agent-record" caption="Agent Record Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th> Field name </th>
+            <th> Value </th>
+            <th> Meaning </th>
+          </tr>
+          <tr>
+            <td> [[LittleEndian]] </td>
+            <td> Boolean </td>
+            <td> The default value computed for the <em>isLittleEndian</em> parameter when it is needed by the algorithms GetValueFromBuffer and SetValueInBuffer.  The choice is implementation dependent and should be the alternative that is most efficient for the implementation. Constant. </td>
+          </tr>
+          <tr>
+            <td> [[CanBlock]] </td>
+            <td> Boolean </td>
+            <td> Determines whether the agent can block or not.  Constant. </td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+
+    <p> An agent is a specification mechanism and need not correspond to any particular artefact of an ECMAScript implementation. </p>
+
+  </emu-clause>
+
+  <emu-clause id="sec-forward-progress">
+    <h1>Forward Progress</h1>
+
+    <p>For an agent to <em>make forward progress</em> is for it to perform an evaluation step according to this specification.</p>
+
+    <p>An agent becomes <em>blocked</em> when its running execution context waits synchronously and indefinitely for an external event.  Only agents whose Agent Record's [[CanBlock]] property is ~true~ can become blocked in this sense.  An <em>unblocked</em> agent is one that is not blocked. </p>
+
+    <emu-note>
+      <p> The shared memory proposal introduces a memory for blocking in the Atomics.wait method. </p>
+    </emu-note>
+
+    <p>Implementations must ensure that every unblocked agent with a dedicated executing thread eventually makes forward progress.</p>
+
+    <p>Implementations must ensure that, in a set of agents that share an executing thread, one agent eventually makes forward progress.</p>
+
+  </emu-clause>
+
 </emu-clause>
 
 <!-- es6num="9" -->
@@ -32940,7 +32998,7 @@ Date.parse(x.toLocaleString())
           1. Let _block_ be _arrayBuffer_'s [[ArrayBufferData]] internal slot.
           1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for Element Type _type_.
           1. Let _rawValue_ be a List of _elementSize_ containing, in order, the _elementSize_ sequence of bytes starting with _block_[_byteIndex_].
-          1. If _isLittleEndian_ is not present, set _isLittleEndian_ to either *true* or *false*. The choice is implementation dependent and should be the alternative that is most efficient for the implementation. An implementation must use the same value each time this step is executed and the same value must be used for the corresponding step in the SetValueInBuffer abstract operation.
+          1. If _isLittleEndian_ is not present, set _isLittleEndian_ to the value of the [[LittleEndian]] internal slot of the surrounding agent's Agent Record.
           1. If _isLittleEndian_ is *false*, reverse the order of the elements of _rawValue_.
           1. If _type_ is `"Float32"`, then
             1. Let _value_ be the byte elements of _rawValue_ concatenated and interpreted as a little-endian bit string encoding of an IEEE 754-2008 binary32 value.
@@ -32969,7 +33027,7 @@ Date.parse(x.toLocaleString())
           1. Assert: Type(_value_) is Number.
           1. Let _block_ be _arrayBuffer_'s [[ArrayBufferData]] internal slot.
           1. Assert: _block_ is not *undefined*.
-          1. If _isLittleEndian_ is not present, set _isLittleEndian_ to either *true* or *false*. The choice is implementation dependent and should be the alternative that is most efficient for the implementation. An implementation must use the same value each time this step is executed and the same value must be used for the corresponding step in the GetValueFromBuffer abstract operation.
+          1. If _isLittleEndian_ is not present, set _isLittleEndian_ to the value of the [[LittleEndian]] internal slot of the surrounding agent's Agent Record.
           1. If _type_ is `"Float32"`, then
             1. Set _rawBytes_ to a List containing the 4 bytes that are the result of converting _value_ to IEEE 754-2008 binary32 format using &ldquo;Round to nearest, ties to even&rdquo; rounding mode. If _isLittleEndian_ is *false*, the bytes are arranged in big endian order. Otherwise, the bytes are arranged in little endian order. If _value_ is *NaN*, _rawValue_ may be set to any implementation chosen IEEE 754-2008 binary64 format Not-a-Number encoding. An implementation must always choose the same encoding for each implementation distinguishable *NaN* value.
           1. Else, if _type_ is `"Float64"`, then
