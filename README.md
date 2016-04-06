@@ -14,6 +14,7 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [Trailing commas in function parameter lists and calls](https://jeffmo.github.io/es-trailing-function-commas/) | Jeff Morrison | 3
 | | [Object.getOwnPropertyDescriptors](https://github.com/ljharb/proposal-object-getownpropertydescriptors) | Jordan Harband & Andrea Giammarchi | 3
 | | [`Function.prototype.toString` revision](https://github.com/tc39/Function-prototype-toString-revision) | Michael Ficarra | 3
+| | [Asynchronous Iterators](https://github.com/tc39/proposal-async-iteration) | Kevin Smith | 2
 | | [function.sent metaproperty](https://github.com/allenwb/ESideas/blob/master/Generator%20metaproperty.md) |  Allen Wirfs-Brock |2      |
 | | [Rest/Spread Properties](https://github.com/sebmarkbage/ecmascript-rest-spread) | Sebastian Markbage | 2
 | | [Shared memory and atomics](https://github.com/tc39/ecmascript_sharedmem) | Lars T Hansen | 2
@@ -26,7 +27,6 @@ Proposals follow [this process document](https://tc39.github.io/process-document
 | | [String.prototype.{trimLeft,trimRight}](https://github.com/sebmarkbage/ecmascript-string-left-right-trim) | Sebastian Markbage | 1
 | | [Class Property Declarations](https://github.com/jeffmo/es-class-fields-and-static-properties)| Jeff Morrison| 1
 | | [String#matchAll](https://github.com/tc39/String.prototype.matchAll) | Jordan Harband | 1
-| | [Asynchronous Iterators](https://github.com/tc39/proposal-async-iteration) | Kevin Smith | 1
 | | [Private Fields](https://github.com/zenparsing/es-private-fields) | Kevin Smith | 1
 | | [WeakRefs](https://github.com/tc39/proposal-weakrefs) | Dean Tribble | 1
 | | [Frozen Realms](https://github.com/FUDCo/frozen-realms) | Mark S. Miller, Chip Morningstar, Caridy Patiño | 1
