@@ -30983,7 +30983,24 @@ Date.parse(x.toLocaleString())
             1. Let _mapping_ be *true*.
           1. Else, let _mapping_ be *false*.
           1. If _thisArg_ was supplied, let _T_ be _thisArg_; else let _T_ be *undefined*.
-          1. Let _arrayLike_ be ? IterableToArrayLike(_source_).
+          1. Let _usingIterator_ be ? GetMethod(_source_, @@iterator).
+          1. If _usingIterator_ is not *undefined*, then
+            1. Let _values_ be ? IterableToList(_source_, _usingIterator_).
+            1. Let _len_ be the number of elements in _values_.
+            1. Let _targetObj_ be ? TypedArrayCreate(_C_, &laquo;_len_&raquo;).
+            1. Let _k_ be 0.
+            1. Repeat, while _k_ &lt; _len_
+              1. Let _Pk_ be ! ToString(_k_).
+              1. Let _kValue_ be the first element of _values_ and remove that element from _values_.
+              1. If _mapping_ is *true*, then
+                1. Let _mappedValue_ be ? Call(_mapfn_, _T_, &laquo; _kValue_, _k_ &raquo;).
+              1. Else, let _mappedValue_ be _kValue_.
+              1. Perform ? Set(_targetObj_, _Pk_, _mappedValue_, *true*).
+              1. Increase _k_ by 1.
+            1. Assert: _values_ is now an empty List.
+            1. Return _targetObj_.
+          1. NOTE: _source_ is not an Iterable so assume it is already an array-like object.
+          1. Let _arrayLike_ be ! ToObject(_source_).
           1. Let _len_ be ? ToLength(? Get(_arrayLike_, `"length"`)).
           1. Let _targetObj_ be ? TypedArrayCreate(_C_, &laquo; _len_ &raquo;).
           1. Let _k_ be 0.
@@ -30998,23 +31015,19 @@ Date.parse(x.toLocaleString())
           1. Return _targetObj_.
         </emu-alg>
 
-        <emu-clause id="sec-iterabletoarraylike" aoid="IterableToArrayLike">
-          <h1>Runtime Semantics: IterableToArrayLike( _items_ )</h1>
-          <p>The abstract operation IterableToArrayLike performs the following steps:</p>
+        <emu-clause id="sec-iterabletolist" aoid="IterableToList">
+          <h1>Runtime Semantics: IterableToList( _items_, _method_ )</h1>
+          <p>The abstract operation IterableToList performs the following steps:</p>
           <emu-alg>
-            1. Let _usingIterator_ be ? GetMethod(_items_, @@iterator).
-            1. If _usingIterator_ is not *undefined*, then
-              1. Let _iterator_ be ? GetIterator(_items_, _usingIterator_).
-              1. Let _values_ be a new empty List.
-              1. Let _next_ be *true*.
-              1. Repeat, while _next_ is not *false*
-                1. Let _next_ be ? IteratorStep(_iterator_).
-                1. If _next_ is not *false*, then
-                  1. Let _nextValue_ be ? IteratorValue(_next_).
-                  1. Append _nextValue_ to the end of the List _values_.
-              1. Return CreateArrayFromList(_values_).
-            1. NOTE: _items_ is not an Iterable so assume it is already an array-like object.
-            1. Return ! ToObject(_items_).
+            1. Let _iterator_ be ? GetIterator(_items_, _method_).
+            1. Let _values_ be a new empty List.
+            1. Let _next_ be *true*.
+            1. Repeat, while _next_ is not *false*
+              1. Let _next_ be ? IteratorStep(_iterator_).
+              1. If _next_ is not *false*, then
+                1. Let _nextValue_ be ? IteratorValue(_next_).
+                1. Append _nextValue_ to the end of the List _values_.
+            1. Return _values_.
           </emu-alg>
         </emu-clause>
       </emu-clause>
@@ -31711,7 +31724,21 @@ Date.parse(x.toLocaleString())
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
           1. Let _constructorName_ be the String value of the Constructor Name value specified in <emu-xref href="#table-49"></emu-xref> for this <var>TypedArray</var> constructor.
           1. Let _O_ be ? AllocateTypedArray(_constructorName_, NewTarget, <code>"%<var>TypedArray</var>Prototype%"</code>).
-          1. Let _arrayLike_ be ? IterableToArrayLike(_object_).
+          1. Let _usingIterator_ be ? GetMethod(_object_, @@iterator).
+          1. If _usingIterator_ is not *undefined*, then
+            1. Let _values_ be ? IterableToList(_object_, _usingIterator_).
+            1. Let _len_ be the number of elements in _values_.
+            1. Perform ? AllocateTypedArrayBuffer(_O_, _len_).
+            1. Let _k_ be 0.
+            1. Repeat, while _k_ &lt; _len_
+              1. Let _Pk_ be ! ToString(_k_).
+              1. Let _kValue_ be the first element of _values_ and remove that element from _values_.
+              1. Perform ? Set(_O_, _Pk_, _kValue_, *true*).
+              1. Increase _k_ by 1.
+            1. Assert: _values_ is now an empty List.
+            1. Return _O_.
+          1. NOTE: _object_ is not an Iterable so assume it is already an array-like object.
+          1. Let _arrayLike_ be _object_.
           1. Let _len_ be ? ToLength(? Get(_arrayLike_, `"length"`)).
           1. Perform ? AllocateTypedArrayBuffer(_O_, _len_).
           1. Let _k_ be 0.
