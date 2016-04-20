@@ -19,6 +19,6 @@ Stage 0 proposals have been presented to the committee and not rejected definiti
 | | [Method Parameter Decorators](https://goo.gl/r1XT9b) | Igor Minar | 0
 | | [Function Expression Decorators](https://goo.gl/8MmCMG) | Igor Minar | 0
 |🚀| [Zones](https://github.com/domenic/zones) ([spec](https://domenic.github.io/zones/)) | Domenic Denicola & Miško Hevery | 0
-| | Updates to Tail Calls to include an explicit syntactic opt-in | Brian Terlson & Eric Faust | 0
+| | [Updates to Tail Calls to include an explicit syntactic opt-in](https://github.com/tc39/proposal-ptc-syntax) | Brian Terlson & Eric Faust | 0
 
 🚀 means the champion thinks it's ready to advance but has not yet presented to the committee.
