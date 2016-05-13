@@ -2,11 +2,12 @@ ECMAScript
 ====
 
 ## Current Proposals
-Proposals follow [this process document](https://tc39.github.io/process-document/).
 
-The list of active proposals has moved [here](https://github.com/tc39/proposals).
+Proposals follow [the TC39 process](https://tc39.github.io/process-document/) and are tracked in the [proposals repository](https://github.com/tc39/proposals).
 
-See also the [stage 0 proposals](https://github.com/tc39/proposals/blob/master/stage-0-proposals.md).
+* [Stage 1 and Above Proposals](https://github.com/tc39/proposals)
+* [Stage 0 Proposals](https://github.com/tc39/proposals/blob/master/stage-0-proposals.md)
+* [Inactive Proposals](https://github.com/tc39/proposals/blob/master/inactive-proposals.md)
 
 ### Contributing New Proposals
 
