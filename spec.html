@@ -3777,6 +3777,22 @@
       </emu-alg>
       <p>A <em>canonical numeric string</em> is any String value for which the CanonicalNumericIndexString abstract operation does not return *undefined*.</p>
     </emu-clause>
+
+    <!-- es6num="7.1.17" -->
+    <emu-clause id="sec-toindex" aoid="ToIndex">
+      <h1>ToIndex ( _value_ )</h1>
+      <p>The abstract operation ToIndex returns _value_ argument converted to a numeric value if it is a valid integer index value. This abstract:</p>
+      <emu-alg>
+        1. If _value_ is *undefined*, then
+          1. Let _index_ be *0*.
+        1. Else,
+          1. Let _integerIndex_ be ? ToInteger(_value_).
+          1. If _integerIndex_ < 0, throw a *RangeError* exception.
+          1. Let _index_ be ! ToLength(_integerIndex_).
+          1. If SameValueZero(_integerIndex_, _index_) is *false*, throw a *RangeError* exception.
+        1. Return _index_.
+      </emu-alg>
+    </emu-clause>
   </emu-clause>
 
   <!-- es6num="7.2" -->
@@ -31685,10 +31701,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Assert: Type(_length_) is not Object.
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
-          1. If _length_ is *undefined*, throw a *TypeError* exception.
-          1. Let _numberLength_ be ? ToNumber(_length_).
-          1. Let _elementLength_ be ToLength(_numberLength_).
-          1. If SameValueZero(_numberLength_, _elementLength_) is *false*, throw a *RangeError* exception.
+          1. Let _elementLength_ be ? ToIndex(_length_).
           1. Let _constructorName_ be the String value of the Constructor Name value specified in <emu-xref href="#table-49"></emu-xref> for this <var>TypedArray</var> constructor.
           1. Return ? AllocateTypedArray(_constructorName_, NewTarget, <code>"%<var>TypedArray</var>Prototype%"</code>, _elementLength_).
         </emu-alg>
@@ -31819,7 +31832,7 @@ THH:mm:ss.sss
       <emu-clause id="sec-typedarray-buffer-byteoffset-length">
         <h1>_TypedArray_ ( _buffer_ [ , _byteOffset_ [ , _length_ ] ] )</h1>
         <p>This description applies only if the _TypedArray_ function is called with at least one argument and the Type of the first argument is Object and that object has an [[ArrayBufferData]] internal slot.</p>
-        <p>_TypedArray_ called with arguments _buffer_, _byteOffset_, and _length_ performs the following steps:</p>
+        <p>_TypedArray_ called with at least one argument _buffer_ performs the following steps:</p>
         <emu-alg>
           1. Assert: Type(_buffer_) is Object and _buffer_ has an [[ArrayBufferData]] internal slot.
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
@@ -31827,18 +31840,16 @@ THH:mm:ss.sss
           1. Let _O_ be ? AllocateTypedArray(_constructorName_, NewTarget, <code>"%<var>TypedArray</var>Prototype%"</code>).
           1. Let _constructorName_ be the String value of _O_'s [[TypedArrayName]] internal slot.
           1. Let _elementSize_ be the Number value of the Element Size value in <emu-xref href="#table-49"></emu-xref> for _constructorName_.
-          1. Let _offset_ be ? ToInteger(_byteOffset_).
-          1. If _offset_ &lt; 0, throw a *RangeError* exception.
-          1. If _offset_ is *-0*, let _offset_ be *+0*.
+          1. Let _offset_ be ? ToIndex(_byteOffset_).
           1. If _offset_ modulo _elementSize_ &ne; 0, throw a *RangeError* exception.
           1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
           1. Let _bufferByteLength_ be the value of _buffer_'s [[ArrayBufferByteLength]] internal slot.
-          1. If _length_ is *undefined*, then
+          1. If _length_ is either not present or *undefined*, then
             1. If _bufferByteLength_ modulo _elementSize_ &ne; 0, throw a *RangeError* exception.
             1. Let _newByteLength_ be _bufferByteLength_ - _offset_.
             1. If _newByteLength_ &lt; 0, throw a *RangeError* exception.
           1. Else,
-            1. Let _newLength_ be ? ToLength(_length_).
+            1. Let _newLength_ be ? ToIndex(_length_).
             1. Let _newByteLength_ be _newLength_ &times; _elementSize_.
             1. If _offset_+_newByteLength_ &gt; _bufferByteLength_, throw a *RangeError* exception.
           1. Set _O_'s [[ViewedArrayBuffer]] internal slot to _buffer_.
@@ -33086,13 +33097,11 @@ THH:mm:ss.sss
 
       <!-- es6num="24.1.2.1" -->
       <emu-clause id="sec-arraybuffer-length">
-        <h1>ArrayBuffer ( _length_ )</h1>
-        <p>ArrayBuffer called with argument _length_ performs the following steps:</p>
+        <h1>ArrayBuffer ( [ _length_ ] )</h1>
+        <p>When the `ArrayBuffer` function is called with optional argument _length_, the following steps are taken:</p>
         <emu-alg>
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
-          1. Let _numberLength_ be ? ToNumber(_length_).
-          1. Let _byteLength_ be ToLength(_numberLength_).
-          1. If SameValueZero(_numberLength_, _byteLength_) is *false*, throw a *RangeError* exception.
+          1. Let _byteLength_ be ? ToIndex(_length_).
           1. Return ? AllocateArrayBuffer(NewTarget, _byteLength_).
         </emu-alg>
       </emu-clause>
@@ -33223,9 +33232,7 @@ THH:mm:ss.sss
           1. If Type(_view_) is not Object, throw a *TypeError* exception.
           1. If _view_ does not have a [[DataView]] internal slot, throw a *TypeError* exception.
           1. Assert: _view_ has a [[ViewedArrayBuffer]] internal slot.
-          1. Let _numberIndex_ be ? ToNumber(_requestIndex_).
-          1. Let _getIndex_ be ToInteger(_numberIndex_).
-          1. If _numberIndex_ &ne; _getIndex_ or _getIndex_ &lt; 0, throw a *RangeError* exception.
+          1. Let _getIndex_ be ? ToIndex(_requestIndex_).
           1. Let _isLittleEndian_ be ToBoolean(_isLittleEndian_).
           1. Let _buffer_ be the value of _view_'s [[ViewedArrayBuffer]] internal slot.
           1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
@@ -33246,9 +33253,7 @@ THH:mm:ss.sss
           1. If Type(_view_) is not Object, throw a *TypeError* exception.
           1. If _view_ does not have a [[DataView]] internal slot, throw a *TypeError* exception.
           1. Assert: _view_ has a [[ViewedArrayBuffer]] internal slot.
-          1. Let _numberIndex_ be ? ToNumber(_requestIndex_).
-          1. Let _getIndex_ be ToInteger(_numberIndex_).
-          1. If _numberIndex_ &ne; _getIndex_ or _getIndex_ &lt; 0, throw a *RangeError* exception.
+          1. Let _getIndex_ be ? ToIndex(_requestIndex_).
           1. Let _numberValue_ be ? ToNumber(_value_).
           1. Let _isLittleEndian_ be ToBoolean(_isLittleEndian_).
           1. Let _buffer_ be the value of _view_'s [[ViewedArrayBuffer]] internal slot.
@@ -33271,22 +33276,20 @@ THH:mm:ss.sss
 
       <!-- es6num="24.2.2.1" -->
       <emu-clause id="sec-dataview-buffer-byteoffset-bytelength">
-        <h1>DataView (_buffer_, _byteOffset_, _byteLength_ )</h1>
-        <p>`DataView` called with arguments _buffer_, _byteOffset_, and _byteLength_ performs the following steps:</p>
+        <h1>DataView ( _buffer_ [ , _byteOffset_ [ , _byteLength_  ] ] )</h1>
+        <p>When the `DataView` is called with at least one argument _buffer_, the following steps are taken:</p>
         <emu-alg>
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
           1. If Type(_buffer_) is not Object, throw a *TypeError* exception.
           1. If _buffer_ does not have an [[ArrayBufferData]] internal slot, throw a *TypeError* exception.
-          1. Let _numberOffset_ be ? ToNumber(_byteOffset_).
-          1. Let _offset_ be ToInteger(_numberOffset_).
-          1. If _numberOffset_ &ne; _offset_ or _offset_ &lt; 0, throw a *RangeError* exception.
+          1. Let _offset_ be ? ToIndex(_byteOffset_).
           1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
           1. Let _bufferByteLength_ be the value of _buffer_'s [[ArrayBufferByteLength]] internal slot.
           1. If _offset_ &gt; _bufferByteLength_, throw a *RangeError* exception.
-          1. If _byteLength_ is *undefined*, then
+          1. If _byteLength_ is either not present or *undefined*, then
             1. Let _viewByteLength_ be _bufferByteLength_ - _offset_.
           1. Else,
-            1. Let _viewByteLength_ be ? ToLength(_byteLength_).
+            1. Let _viewByteLength_ be ? ToIndex(_byteLength_).
             1. If _offset_+_viewByteLength_ &gt; _bufferByteLength_, throw a *RangeError* exception.
           1. Let _O_ be ? OrdinaryCreateFromConstructor(NewTarget, `"%DataViewPrototype%"`, &laquo; [[DataView]], [[ViewedArrayBuffer]], [[ByteLength]], [[ByteOffset]] &raquo;).
           1. Set _O_'s [[DataView]] internal slot to *true*.
