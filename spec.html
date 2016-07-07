@@ -21759,41 +21759,29 @@
       <emu-grammar>
         ExportDeclaration :
           `export` `*` FromClause `;`
-          `export` ExportClause FromClause `;`
-          `export` ExportClause `;`
+          `export` ExportClause[~Local] FromClause `;`
+          `export` ExportClause[+Local] `;`
           `export` VariableStatement[~Yield, ~Await]
           `export` Declaration[~Yield, ~Await]
           `export` `default` HoistableDeclaration[~Yield, ~Await, +Default]
           `export` `default` ClassDeclaration[~Yield, ~Await, +Default]
           `export` `default` [lookahead &lt;! {`function`, `async` [no |LineTerminator| here] `function`, `class`}] AssignmentExpression[+In, ~Yield, ~Await] `;`
 
-        ExportClause :
+        ExportClause[Local] :
           `{` `}`
-          `{` ExportsList `}`
-          `{` ExportsList `,` `}`
+          `{` ExportsList[?Local] `}`
+          `{` ExportsList[?Local] `,` `}`
 
-        ExportsList :
-          ExportSpecifier
-          ExportsList `,` ExportSpecifier
+        ExportsList[Local] :
+          ExportSpecifier[?Local]
+          ExportsList[?Local] `,` ExportSpecifier[?Local]
 
-        ExportSpecifier :
-          IdentifierName
-          IdentifierName `as` IdentifierName
+        ExportSpecifier[Local] :
+          [+Local] IdentifierReference
+          [+Local] IdentifierReference `as` IdentifierName
+          [~Local] IdentifierName
+          [~Local] IdentifierName `as` IdentifierName
       </emu-grammar>
-
-      <!-- es6num="15.2.3.1" -->
-      <emu-clause id="sec-exports-static-semantics-early-errors">
-        <h1>Static Semantics: Early Errors</h1>
-        <emu-grammar>ExportDeclaration : `export` ExportClause `;`</emu-grammar>
-        <ul>
-          <li>
-            For each |IdentifierName| _n_ in ReferencedBindings of |ExportClause|: It is a Syntax Error if StringValue of _n_ is a |ReservedWord| or if the StringValue of _n_ is one of: `"implements"`, `"interface"`, `"let"`, `"package"`, `"private"`, `"protected"`, `"public"`, or `"static"`.
-          </li>
-        </ul>
-        <emu-note>
-          <p>The above rule means that each ReferencedBindings of |ExportClause| is treated as an |IdentifierReference|.</p>
-        </emu-note>
-      </emu-clause>
 
       <!-- es6num="15.2.3.2" -->
       <emu-clause id="sec-exports-static-semantics-boundnames">
@@ -21878,6 +21866,13 @@
           1. Append to _names_ the elements of the ExportedBindings of |ExportSpecifier|.
           1. Return _names_.
         </emu-alg>
+        <emu-grammar>
+          ExportSpecifier : IdentifierReference
+
+          ExportSpecifier : IdentifierReference `as` IdentifierName
+        <emu-alg>
+          1. Return a List containing the StringValue of |IdentifierReference|.
+        </emu-alg>
         <emu-grammar>ExportSpecifier : IdentifierName</emu-grammar>
         <emu-alg>
           1. Return a List containing the StringValue of |IdentifierName|.
@@ -21932,7 +21927,15 @@
           1. Append to _names_ the elements of the ExportedNames of |ExportSpecifier|.
           1. Return _names_.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName</emu-grammar>
+        <emu-grammar>ExportSpecifier : IdentifierReference</emu-grammar>
+        <emu-alg>
+          1. Return a List containing the StringValue of |IdentifierReference|.
+        </emu-alg>
+        <emu-grammar>
+          ExportSpecifier : IdentifierReference `as` IdentifierName
+
+          ExportSpecifier : IdentifierName
+        </emu-grammar>
         <emu-alg>
           1. Return a List containing the StringValue of |IdentifierName|.
         </emu-alg>
@@ -22013,28 +22016,27 @@
           1. Append to _specs_ the elements of the ExportEntriesForModule of |ExportSpecifier| with argument _module_.
           1. Return _specs_.
         </emu-alg>
+        <emu-grammar>ExportSpecifier : IdentifierReference</emu-grammar>
+        <emu-alg>
+          1. Let _sourceName_ be the StringValue of |IdentifierReference|.
+          1. Return a new List containing the Record {[[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _sourceName_, [[ExportName]]: _sourceName_ }.
+        </emu-alg>
         <emu-grammar>ExportSpecifier : IdentifierName</emu-grammar>
         <emu-alg>
           1. Let _sourceName_ be the StringValue of |IdentifierName|.
-          1. If _module_ is *null*, then
-            1. Let _localName_ be _sourceName_.
-            1. Let _importName_ be *null*.
-          1. Else,
-            1. Let _localName_ be *null*.
-            1. Let _importName_ be _sourceName_.
-          1. Return a new List containing the Record {[[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_, [[ExportName]]: _sourceName_ }.
+          1. Return a new List containing the Record {[[ModuleRequest]]: _module_, [[ImportName]]: _sourceName_, [[LocalName]]: *null*, [[ExportName]]: _sourceName_ }.
+        </emu-alg>
+        <emu-grammar>ExportSpecifier : IdentifierReference `as` IdentifierName</emu-grammar>
+        <emu-alg>
+          1. Let _localName_ be the StringValue of |IdentifierReference|.
+          1. Let _exportName_ be the StringValue of |IdentifierName|.
+          1. Return a new List containing the Record {[[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _localName_, [[ExportName]]: _exportName_ }.
         </emu-alg>
         <emu-grammar>ExportSpecifier : IdentifierName `as` IdentifierName</emu-grammar>
         <emu-alg>
-          1. Let _sourceName_ be the StringValue of the first |IdentifierName|.
+          1. Let _importName_ be the StringValue of the first |IdentifierName|.
           1. Let _exportName_ be the StringValue of the second |IdentifierName|.
-          1. If _module_ is *null*, then
-            1. Let _localName_ be _sourceName_.
-            1. Let _importName_ be *null*.
-          1. Else,
-            1. Let _localName_ be *null*.
-            1. Let _importName_ be _sourceName_.
-          1. Return a new List containing the Record {[[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_, [[ExportName]]: _exportName_ }.
+          1. Return a new List containing the Record {[[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: *null*, [[ExportName]]: _exportName_ }.
         </emu-alg>
       </emu-clause>
 
@@ -22112,29 +22114,6 @@
         </emu-grammar>
         <emu-alg>
           1. Return a new empty List.
-        </emu-alg>
-      </emu-clause>
-
-      <!-- es6num="15.2.3.10" -->
-      <emu-clause id="sec-static-semantics-referencedbindings">
-        <h1>Static Semantics: ReferencedBindings</h1>
-        <emu-grammar>ExportClause : `{` `}`</emu-grammar>
-        <emu-alg>
-          1. Return a new empty List.
-        </emu-alg>
-        <emu-grammar>ExportsList : ExportsList `,` ExportSpecifier</emu-grammar>
-        <emu-alg>
-          1. Let _names_ be the ReferencedBindings of |ExportsList|.
-          1. Append to _names_ the elements of the ReferencedBindings of |ExportSpecifier|.
-          1. Return _names_.
-        </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName</emu-grammar>
-        <emu-alg>
-          1. Return a List containing the |IdentifierName|.
-        </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName `as` IdentifierName</emu-grammar>
-        <emu-alg>
-          1. Return a List containing the first |IdentifierName|.
         </emu-alg>
       </emu-clause>
 
