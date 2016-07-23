@@ -4791,13 +4791,23 @@
         <!-- es6num="8.1.1.1.6" -->
         <emu-clause id="sec-declarative-environment-records-getbindingvalue-n-s">
           <h1>GetBindingValue (_N_, _S_)</h1>
-          <p>The concrete Environment Record method GetBindingValue for declarative Environment Records simply returns the value of its bound identifier whose name is the value of the argument _N_. If the binding exists but is uninitialized a *ReferenceError* is thrown, regardless of the value of _S_.</p>
+          <p>The concrete Environment Record method GetBindingValue for declarative Environment Records returns the value of its bound identifier whose name is the value of the argument _N_. However, if the binding is an indirect binding the value of the target binding is returned. If the binding exists but is uninitialized a *ReferenceError* is thrown, regardless of the value of _S_.</p>
           <emu-alg>
             1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
             1. Assert: _envRec_ has a binding for _N_.
+            1. If the binding for _N_ is an indirect binding, then
+              1. Assert: _S_ is *true*.
+              1. Let _M_ and _N2_ be the indirection values provided when this binding for _N_ was created.
+              1. Let _targetEnv_ be _M_.[[Environment]].
+              1. If _targetEnv_ is *undefined*, throw a *ReferenceError* exception.
+              1. Let _targetER_ be _targetEnv_'s EnvironmentRecord.
+              1. Return ? _targetER_.GetBindingValue(_N2_, *true*).
             1. If the binding for _N_ in _envRec_ is an uninitialized binding, throw a *ReferenceError* exception.
             1. Return the value currently bound to _N_ in _envRec_.
           </emu-alg>
+          <emu-note>
+            <p>Since indirect bindings can be created only in a |Module|, _S_ must be *true* if _N_ is an indirect binding, because a |Module| is always strict mode code.</p>
+          </emu-note>
         </emu-clause>
 
         <!-- es6num="8.1.1.1.7" -->
@@ -4837,6 +4847,20 @@
           <p>Declarative Environment Records always return *undefined* as their WithBaseObject.</p>
           <emu-alg>
             1. Return *undefined*.
+          </emu-alg>
+        </emu-clause>
+
+        <!-- es6num="8.1.1.1.11" -->
+        <emu-clause id="sec-declarative-environment-records-createimportbinding-n-m-n2">
+          <h1>CreateImportBinding (_N_, _M_, _N2_)</h1>
+          <p>The concrete Environment Record method CreateImportBinding for declarative Environment Records creates a new initialized immutable indirect binding for the name _N_. A binding must not already exist in this Environment Record for _N_. _M_ is a Module Record, and _N2_ is the name of a binding that exists in M's module Environment Record. Accesses to the value of the new binding will indirectly access the bound value of the target binding.</p>
+          <emu-alg>
+            1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
+            1. Assert: _envRec_ does not already have a binding for _N_.
+            1. Assert: _M_ is a Module Record.
+            1. Assert: When _M_.[[Environment]] is instantiated it will have a direct binding for _N2_.
+            1. Create an immutable indirect binding in _envRec_ for _N_ that references _M_ and _N2_ as its target binding and record that the binding is initialized.
+            1. Return NormalCompletion(~empty~).
           </emu-alg>
         </emu-clause>
       </emu-clause>
@@ -5562,14 +5586,6 @@
             </tr>
             <tr>
               <td>
-                CreateImportBinding(N, M, N2)
-              </td>
-              <td>
-                Create an immutable indirect binding in a module Environment Record. The String value _N_ is the text of the bound name. _M_ is a Module Record, and _N2_ is a binding that exists in M's module Environment Record.
-              </td>
-            </tr>
-            <tr>
-              <td>
                 GetThisBinding()
               </td>
               <td>
@@ -5580,28 +5596,6 @@
           </table>
         </emu-table>
         <p>The behaviour of the additional concrete specification methods for module Environment Records are defined by the following algorithms:</p>
-
-        <!-- es6num="8.1.1.5.1" -->
-        <emu-clause id="sec-module-environment-records-getbindingvalue-n-s">
-          <h1>GetBindingValue (_N_, _S_)</h1>
-          <p>The concrete Environment Record method GetBindingValue for module Environment Records returns the value of its bound identifier whose name is the value of the argument _N_. However, if the binding is an indirect binding the value of the target binding is returned. If the binding exists but is uninitialized a *ReferenceError* is thrown.</p>
-          <emu-alg>
-            1. Assert: _S_ is *true*.
-            1. Let _envRec_ be the module Environment Record for which the method was invoked.
-            1. Assert: _envRec_ has a binding for _N_.
-            1. If the binding for _N_ is an indirect binding, then
-              1. Let _M_ and _N2_ be the indirection values provided when this binding for _N_ was created.
-              1. Let _targetEnv_ be _M_.[[Environment]].
-              1. If _targetEnv_ is *undefined*, throw a *ReferenceError* exception.
-              1. Let _targetER_ be _targetEnv_'s EnvironmentRecord.
-              1. Return ? _targetER_.GetBindingValue(_N2_, *true*).
-            1. If the binding for _N_ in _envRec_ is an uninitialized binding, throw a *ReferenceError* exception.
-            1. Return the value currently bound to _N_ in _envRec_.
-          </emu-alg>
-          <emu-note>
-            <p>_S_ will always be *true* because a |Module| is always strict mode code.</p>
-          </emu-note>
-        </emu-clause>
 
         <!-- es6num="8.1.1.5.2" -->
         <emu-clause id="sec-module-environment-records-deletebinding-n">
@@ -5629,20 +5623,6 @@
           <h1>GetThisBinding ()</h1>
           <emu-alg>
             1. Return *undefined*.
-          </emu-alg>
-        </emu-clause>
-
-        <!-- es6num="8.1.1.5.5" -->
-        <emu-clause id="sec-createimportbinding">
-          <h1>CreateImportBinding (_N_, _M_, _N2_)</h1>
-          <p>The concrete Environment Record method CreateImportBinding for module Environment Records creates a new initialized immutable indirect binding for the name _N_. A binding must not already exist in this Environment Record for _N_. _M_ is a Module Record, and _N2_ is the name of a binding that exists in M's module Environment Record. Accesses to the value of the new binding will indirectly access the bound value of the target binding.</p>
-          <emu-alg>
-            1. Let _envRec_ be the module Environment Record for which the method was invoked.
-            1. Assert: _envRec_ does not already have a binding for _N_.
-            1. Assert: _M_ is a Module Record.
-            1. Assert: When _M_.[[Environment]] is instantiated it will have a direct binding for _N2_.
-            1. Create an immutable indirect binding in _envRec_ for _N_ that references _M_ and _N2_ as its target binding and record that the binding is initialized.
-            1. Return NormalCompletion(~empty~).
           </emu-alg>
         </emu-clause>
       </emu-clause>
