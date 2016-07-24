@@ -6065,6 +6065,37 @@
         1. Return _currentRealm_.[[GlobalObject]].
       </emu-alg>
     </emu-clause>
+
+    <!-- es6num="8.3.6" -->
+    <emu-clause id="sec-createlexicalbindings" aoid="CreateLexicalBindings">
+      <h1>CreateLexicalBindings ( _declarations_ , _env_ , _scriptOrModule_ )</h1>
+      <p>The abstract operation CreateLexicalBindings creates bindings on the EnvironmentRecord of the Lexical Environment _env_ based on a List of lexically scoped _declarations_. The _scriptOrModule_ parameter identifies the Module Record or Script Record from which the associated code originates, or *null* if there is no originating script or module.</p>
+      <emu-alg>
+        1. Let _envRec_ be _env_'s EnvironmentRecord.
+        1. Assert: _envRec_ is a declarative Environment Record.
+        1. For each element _d_ in _declarations_, do
+          1. If _d_ is an |ImportDeclaration|, then
+            1. Assert: _scriptOrModule_ is an instance of a concrete subclass of Module Record.
+            1. Let _module_ be _scriptOrModule_.
+            1. For each ImportEntry Record _entry_ in the ImportEntries of _d_, do
+              1. Let _importedModule_ be ! HostResolveImportedModule(_module_, _entry_.[[ModuleRequest]]).
+              1. NOTE: The above call cannot fail because imported module requests are a subset of _module_.[[RequestedModules]], which were previously resolved in ParseModule.
+              1. If _entry_.[[ImportName]] is `"*"`, then
+                1. Let _namespace_ be ? GetModuleNamespace(_importedModule_).
+                1. Perform ! _envRec_.CreateImmutableBinding(_entry_.[[LocalName]], *true*).
+                1. Call _envRec_.InitializeBinding(_entry_.[[LocalName]], _namespace_).
+              1. Else,
+                1. Let _resolution_ be ? _importedModule_.ResolveExport(_entry_.[[ImportName]], &laquo; &raquo;, &laquo; &raquo;).
+                1. If _resolution_ is *null* or _resolution_ is `"ambiguous"`, throw a *SyntaxError* exception.
+                1. Call _envRec_.CreateImportBinding(_entry_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+          1. Else, for each element _dn_ of the BoundNames of _d_ do
+            1. If IsConstantDeclaration of _d_ is *true*, then
+              1. Perform ! _envRec_.CreateImmutableBinding(_dn_, *true*).
+            1. Else,
+              1. Perform ! _envRec_.CreateMutableBinding(_dn_, *false*).
+        1. Return NormalCompletion(~empty~).
+      </emu-alg>
+    </emu-clause>
   </emu-clause>
 
   <!-- es6num="8.4" -->
