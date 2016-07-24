@@ -6096,6 +6096,31 @@
         1. Return NormalCompletion(~empty~).
       </emu-alg>
     </emu-clause>
+
+    <!-- es6num="8.3.7" -->
+    <emu-clause id="sec-evaluaterequestedmodules" aoid="EvaluateRequestedModules">
+      <h1>EvaluateRequestedModules ( _body_ , _scriptOrModule_ )</h1>
+      <p>The abstract operation EvaluateRequestedModules gathers the ModuleRequests of _body_, resolves those requests using HostResolveImportedModule, and ensures that each requested module has been instantiated and evaluated.</p>
+      <p>The _scriptOrModule_ parameter identifies the Module Record or Script Record from which the _body_ originates, or *null* if there is no originating script or module. The _scriptOrModule_ parameter must be an instance of a concrete subclass of Module Record if there are any modules to evaluate.</p>
+      <emu-alg>
+        1. Let _modules_ be a new empty List.
+        1. For each String _request_ of the ModuleRequests of _body_, do
+          1. Assert: _scriptOrModule_ is an instance of a concrete subclass of Module Record.
+          1. Let _m_ be ! HostResolveImportedModule(_scriptOrModule_, _request_).
+          1. If _m_ is not an element of _modules_, append _m_ to _modules_.
+        1. If _modules_ is empty, return NormalCompletion(*false*).
+        1. For each element _m_ of _modules_, do
+          1. Perform ? _m_.ModuleDeclarationInstantiation().
+          1. NOTE _m_.ModuleDeclarationInstantiation() may have been performed already, but it is idempotent, and a prerequisite for calling _m_.ModuleEvaluation().
+        1. For each element _m_ of _modules_, do
+          1. Perform ? _m_.ModuleEvaluation().
+          1. NOTE This is a separate loop so that any errors from ModuleDeclarationInstantiation occur before any ModuleEvaluation calls.
+        1. Return NormalCompletion(*true*).
+      </emu-alg>
+      <emu-note>
+        The ModuleRequests of _body_ contain only those |ModuleSpecifier| strings from |ImportDeclaration|s and |ExportDeclaration|s contained directly within _body_, and not any strings nested within blocks contained by _body_.
+      </emu-note>
+    </emu-clause>
   </emu-clause>
 
   <!-- es6num="8.4" -->
@@ -14548,6 +14573,7 @@
         1. Let _blockEnv_ be NewDeclarativeEnvironment(_oldEnv_).
         1. Perform BlockDeclarationInstantiation(|StatementList|, _blockEnv_).
         1. Set the running execution context's LexicalEnvironment to _blockEnv_.
+        1. Perform ? EvaluateRequestedModules(|StatementList|, GetActiveScriptOrModule()).
         1. Let _blockValue_ be the result of evaluating |StatementList|.
         1. Set the running execution context's LexicalEnvironment to _oldEnv_.
         1. Return _blockValue_.
@@ -16913,6 +16939,7 @@
       </emu-alg>
       <emu-grammar>CaseClause : `case` Expression `:` StatementList</emu-grammar>
       <emu-alg>
+        1. Perform ? EvaluateRequestedModules(|StatementList|, GetActiveScriptOrModule()).
         1. Return the result of evaluating |StatementList|.
       </emu-alg>
       <emu-grammar>DefaultClause : `default` `:`</emu-grammar>
@@ -16921,6 +16948,7 @@
       </emu-alg>
       <emu-grammar>DefaultClause : `default` `:` StatementList</emu-grammar>
       <emu-alg>
+        1. Perform ? EvaluateRequestedModules(|StatementList|, GetActiveScriptOrModule()).
         1. Return the result of evaluating |StatementList|.
       </emu-alg>
     </emu-clause>
@@ -17881,6 +17909,7 @@
       <emu-see-also-para op="EvaluateBody"></emu-see-also-para>
       <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
       <emu-alg>
+        1. Perform ? EvaluateRequestedModules(|FunctionStatementList|, _functionObject_.[[ScriptOrModule]]).
         1. Return the result of evaluating |FunctionStatementList|.
       </emu-alg>
     </emu-clause>
@@ -20867,10 +20896,8 @@
             1. Assert: _module_.[[Realm]] is not *undefined*.
             1. If _module_.[[Evaluated]] is *true*, return *undefined*.
             1. Set _module_.[[Evaluated]] to *true*.
-            1. For each String _required_ that is an element of _module_.[[RequestedModules]] do,
-              1. Let _requiredModule_ be ! HostResolveImportedModule(_module_, _required_).
-              1. NOTE: ModuleDeclarationInstantiation must be completed prior to invoking this method, so every requested module is guaranteed to resolve successfully.
-              1. Perform ? _requiredModule_.ModuleEvaluation().
+            1. Let _code_ be _module_.[[ECMAScriptCode]].
+            1. Perform ? EvaluateRequestedModules(_code_, _module_).
             1. Let _moduleCxt_ be a new ECMAScript code execution context.
             1. Set the Function of _moduleCxt_ to *null*.
             1. Set the Realm of _moduleCxt_ to _module_.[[Realm]].
@@ -20880,7 +20907,7 @@
             1. Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].
             1. Suspend the currently running execution context.
             1. Push _moduleCxt_ on to the execution context stack; _moduleCxt_ is now the running execution context.
-            1. Let _result_ be the result of evaluating _module_.[[ECMAScriptCode]].
+            1. Let _result_ be the result of evaluating _code_.
             1. Suspend _moduleCxt_ and remove it from the execution context stack.
             1. Resume the context that is now on the top of the execution context stack as the running execution context.
             1. Return Completion(_result_).
