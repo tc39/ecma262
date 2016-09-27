@@ -19460,7 +19460,7 @@
       <emu-grammar>ScriptBody : StatementList</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if |StatementList| Contains `super` unless the source code containing `super` is eval code that is being processed by a direct eval that is contained in function code that is not the function code of an |ArrowFunction|.
+          It is a Syntax Error if |StatementList| Contains `super` unless the source code containing `super` is eval code that is being processed by a direct eval. Additional early error rules for `super` within direct eval are defined in <emu-xref href="#sec-performeval"></emu-xref>.
         </li>
         <li>
           It is a Syntax Error if |StatementList| Contains |NewTarget| unless the source code containing |NewTarget| is eval code that is being processed by a direct eval that is contained in function code that is not the function code of an |ArrowFunction|.
@@ -21747,7 +21747,13 @@
         <emu-alg>
           1. Assert: If _direct_ is *false*, then _strictCaller_ is also *false*.
           1. If Type(_x_) is not String, return _x_.
-          1. Let _script_ be the ECMAScript code that is the result of parsing _x_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, for the goal symbol |Script|. If the parse fails, throw a *SyntaxError* exception. If any early errors are detected, throw a *SyntaxError* or a *ReferenceError* exception, depending on the type of the error (but see also clause <emu-xref href="#sec-error-handling-and-language-extensions"></emu-xref>). Parsing and early error detection may be interweaved in an implementation dependent manner.
+          1. Let _thisEnvRec_ be ! GetThisEnvironment().
+          1. Let _inMethod_ be *false*.
+          1. Let _inConstructor_ be *false*.
+          1. If _thisEnvRec_ has a [[HomeObject]] field, then
+            1. Let _inMethod_ be *true*.
+            1. If _thisEnvRec_.[[FunctionObject]] has a [[Construct]] field, let _inConstructor_ be *true*.
+          1. Let _script_ be the ECMAScript code that is the result of parsing _x_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, for the goal symbol |Script|. If _inMethod_ is *false*, additional early error rules from <emu-xref href="#sec-performeval-rules-outside-methods"></emu-xref> are applied. If _inConstructor_ is *false*, additional early error rules from <emu-xref href="#sec-performeval-rules-outside-constructors"></emu-xref> are applied. If the parse fails, throw a *SyntaxError* exception. If any early errors are detected, throw a *SyntaxError* or a *ReferenceError* exception, depending on the type of the error (but see also clause <emu-xref href="#sec-error-handling-and-language-extensions"></emu-xref>). Parsing and early error detection may be interweaved in an implementation dependent manner.
           1. If _script_ Contains |ScriptBody| is *false*, return *undefined*.
           1. Let _body_ be the |ScriptBody| of _script_.
           1. If _strictCaller_ is *true*, let _strictEval_ be *true*.
@@ -21780,6 +21786,22 @@
         <emu-note>
           <p>The eval code cannot instantiate variable or function bindings in the variable environment of the calling context that invoked the eval if the calling context is evaluating formal parameter initializers or if either the code of the calling context or the eval code is strict mode code. Instead such bindings are instantiated in a new VariableEnvironment that is only accessible to the eval code. Bindings introduced by `let`, `const`, or `class` declarations are always instantiated in a new LexicalEnvironment.</p>
         </emu-note>
+
+        <emu-clause id="sec-performeval-rules-outside-methods">
+          <h1>Additional Early Error Rules for Eval Outside Methods</h1>
+          <emu-grammar>ScriptBody : StatementList</emu-grammar>
+          <ul>
+            <li>It is a Syntax Error if |StatementList| contains `super`.</li>
+          </ul>
+        </emu-clause>
+
+        <emu-clause id="sec-performeval-rules-outside-constructors">
+          <h1>Additional Early Error Rules for Eval Outside Constructors</h1>
+          <emu-grammar>ScriptBody : StatementList</emu-grammar>
+          <ul>
+            <li>It is a Syntax Error if |StatementList| contains |SuperCall|.</li>
+          </ul>
+        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-hostensurecancompilestrings" aoid="HostEnsureCanCompileStrings">
