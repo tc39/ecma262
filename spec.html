@@ -6136,135 +6136,41 @@
   <!-- es6num="8.4" -->
   <emu-clause id="sec-jobs-and-job-queues">
     <h1>Jobs and Job Queues</h1>
-    <p>A Job is an abstract operation that initiates an ECMAScript computation when no other ECMAScript computation is currently in progress. A Job abstract operation may be defined to accept an arbitrary set of job parameters.</p>
-    <p>Execution of a Job can be initiated only when there is no running execution context and the execution context stack is empty. A PendingJob is a request for the future execution of a Job. A PendingJob is an internal Record whose fields are specified in <emu-xref href="#table-25"></emu-xref>. Once execution of a Job is initiated, the Job always executes to completion. No other Job may be initiated until the currently running Job completes. However, the currently running Job or external events may cause the enqueuing of additional PendingJobs that may be initiated sometime after completion of the currently running Job.</p>
-    <emu-table id="table-25" caption="PendingJob Record Fields">
-      <table>
-        <tbody>
-        <tr>
-          <th>
-            Field Name
-          </th>
-          <th>
-            Value
-          </th>
-          <th>
-            Meaning
-          </th>
-        </tr>
-        <tr>
-          <td>
-            [[Job]]
-          </td>
-          <td>
-            The name of a Job abstract operation
-          </td>
-          <td>
-            This is the abstract operation that is performed when execution of this PendingJob is initiated.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[Arguments]]
-          </td>
-          <td>
-            A List
-          </td>
-          <td>
-            The List of argument values that are to be passed to [[Job]] when it is activated.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[Realm]]
-          </td>
-          <td>
-            A Realm Record
-          </td>
-          <td>
-            The Realm Record for the initial execution context when this PendingJob is initiated.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[ScriptOrModule]]
-          </td>
-          <td>
-            A Script Record or Module Record
-          </td>
-          <td>
-            The script or module for the initial execution context when this PendingJob is initiated.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[HostDefined]]
-          </td>
-          <td>
-            Any, default value is *undefined*.
-          </td>
-          <td>
-            Field reserved for use by host environments that need to associate additional information with a pending Job.
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </emu-table>
-    <p>A Job Queue is a FIFO queue of PendingJob records. Each Job Queue has a name and the full set of available Job Queues are defined by an ECMAScript implementation. Every ECMAScript implementation has at least the Job Queues defined in <emu-xref href="#table-26"></emu-xref>.</p>
     <p>Each agent has its own set of named Job Queues.  All references to a named job queue in this specification denote the named job queue of the surrounding agent.</p>
-    <emu-table id="table-26" caption="Required Job Queues">
-      <table>
-        <tbody>
-        <tr>
-          <th>
-            Name
-          </th>
-          <th>
-            Purpose
-          </th>
-        </tr>
-        <tr>
-          <td>
-            ScriptJobs
-          </td>
-          <td>
-            Jobs that validate and evaluate ECMAScript |Script| and |Module| source text. See clauses 10 and 15.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            PromiseJobs
-          </td>
-          <td>
-            Jobs that are responses to the settlement of a Promise (see <emu-xref href="#sec-promise-objects"></emu-xref>).
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </emu-table>
-    <p>A request for the future execution of a Job is made by enqueueing, on a Job Queue, a PendingJob record that includes a Job abstract operation name and any necessary argument values. When there is no running execution context and the execution context stack is empty, the ECMAScript implementation removes the first PendingJob from a Job Queue and uses the information contained in it to create an execution context and starts execution of the associated Job abstract operation.</p>
-    <p>The PendingJob records from a single Job Queue are always initiated in FIFO order. This specification does not define the order in which multiple Job Queues are serviced. An ECMAScript implementation may interweave the FIFO evaluation of the PendingJob records of a Job Queue with the evaluation of the PendingJob records of one or more other Job Queues. An implementation must define what occurs when there are no running execution context and all Job Queues are empty.</p>
-    <emu-note>
-      <p>Typically an ECMAScript implementation will have its Job Queues pre-initialized with at least one PendingJob and one of those Jobs will be the first to be executed. An implementation might choose to free all resources and terminate if the current Job completes and all Job Queues are empty. Alternatively, it might choose to wait for a some implementation specific agent or mechanism to enqueue new PendingJob requests.</p>
-    </emu-note>
-    <p>The following abstract operations are used to create and manage Jobs and Job Queues:</p>
 
-    <!-- es6num="8.4.1" -->
-    <emu-clause id="sec-enqueuejob" aoid="EnqueueJob">
-      <h1>EnqueueJob ( _queueName_, _job_, _arguments_ )</h1>
-      <p>The EnqueueJob abstract operation requires three arguments: _queueName_, _job_, and _arguments_. It performs the following steps:</p>
-      <emu-alg>
-        1. Assert: Type(_queueName_) is String and its value is the name of a Job Queue recognized by this implementation.
-        1. Assert: _job_ is the name of a Job.
-        1. Assert: _arguments_ is a List that has the same number of elements as the number of parameters required by _job_.
-        1. Let _callerContext_ be the running execution context.
-        1. Let _callerRealm_ be _callerContext_'s Realm.
-        1. Let _callerScriptOrModule_ be _callerContext_'s ScriptOrModule.
-        1. Let _pending_ be PendingJob{ [[Job]]: _job_, [[Arguments]]: _arguments_, [[Realm]]: _callerRealm_, [[ScriptOrModule]]: _callerScriptOrModule_, [[HostDefined]]: *undefined* }.
-        1. Perform any implementation or host environment defined processing of _pending_. This may include modifying the [[HostDefined]] field or any other field of _pending_.
-        1. Add _pending_ at the back of the Job Queue named by _queueName_.
-        1. Return NormalCompletion(~empty~).
-      </emu-alg>
+    <p>A <dfn>Job</dfn> is an abstract operation that initiates an ECMAScript computation when no other ECMAScript computation is currently in progress. A Job abstract operation may be defined to accept an arbitrary set of job parameters.</p>
+
+    <p>The exact normative requirements of evaluating Jobs are governed by the requirements on the HostEnqueueJob abstract operation. Here we explain the conceptual background and intuition in a non-normative fashion.</p>
+
+    <p>A <dfn>Job Queue</dfn> is a FIFO queue of PendingJob records, denoted by a String passed as the first argument to HostEnqueueJob. (The FIFO nature of a Job Queue is enforced by the requirements on HostEnqueueJob.) Each Job Queue has such a String name, and the full set of available Job Queues are defined by an ECMAScript implementation.</p>
+
+    <p>Every ECMAScript implementation has at least the Job Queue `"PromiseJobs"`, which are responses to the settlement of a Promise (see <emu-xref href="#sec-promise-objects"></emu-xref>).</p>
+
+    <p>A request for the future execution of a Job is made by performing HostEnqueueJob, giving a Job Queue name, a Job abstract operation, and any necessary argument values. At some time when there is no running execution context and the execution context stack is empty, the ECMAScript implementation will perform the given Job abstract operation and evaluate it with the given arguments.</p>
+
+    <p>The Jobs enqueued on a single Job Queue are always required to be initiated in FIFO order. This specification does not impose requirements on the order in which multiple Job Queues are serviced. An ECMAScript implementation might interweave the FIFO evaluation of the Jobs on a Job Queue with the evaluation of Jobs on one or more other Job Queues. An implementation will define what occurs when there is no running execution context and all Job Queues are empty.</p>
+
+    <emu-clause id="sec-enqueuejob" aoid="HostEnqueueJob">
+      <h1>HostEnqueueJob ( _queueName_, _job_, _arguments_ )</h1>
+
+      <p>HostEnqueueJob is an implementation defined abstract operation that schedules the abstract operation indicated by _job_ to be performed, with the arguments _arguments_, at some future time. The String _queueName_ is used to enforce certain ordering guarantees among enqueued Jobs.</p>
+
+      <p>The implementation of HostEnqueueJob must conform to the following requirements, all of which are scoped to each agent:</p>
+
+      <ul>
+        <li>At some future point in time, when there is no running execution context and the execution context stack is empty, the implementation must:
+          <ol>
+            <li>Push an execution context onto the execution context stack.</li>
+            <li>Perform any implementation-defined preparation steps.</li>
+            <li>Perform the abstract operation given by _job_, passing the arguments _arguments_.</li>
+            <li>Perform any implementation-defined cleanup steps.</li>
+            <li>Pop the previously-pushed execution context from the execution context stack.</li>
+          </ol>
+        </li>
+        <li>Only one Job may be actively undergoing evaluation at any point in time.</li>
+        <li>Once evaluation of a Job starts, it must run to completion before evaluation of any other Job starts.</li>
+        <li>The evaluation of any Jobs enqueued via previous calls to HostEnqueueJob with the same _queueName_ argument must complete before evaluation of the Job starts.</li>
+      </ul>
     </emu-clause>
   </emu-clause>
 
@@ -6285,32 +6191,6 @@
       1. Let _globalObj_ be ? SetDefaultGlobalBindings(_realm_).
       1. Create any implementation-defined global object properties on _globalObj_.
       1. Return NormalCompletion(~empty~).
-    </emu-alg>
-  </emu-clause>
-
-  <emu-clause id="sec-runjobs" aoid="RunJobs">
-    <h1>RunJobs ( )</h1>
-    <p>The abstract operation RunJobs performs the following steps:</p>
-    <emu-alg>
-      1. Perform ? InitializeHostDefinedRealm().
-      1. In an implementation-dependent manner, obtain the ECMAScript source texts (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>) and any associated host-defined values for zero or more ECMAScript scripts and/or ECMAScript modules. For each such _sourceText_ and _hostDefined_, do
-        1. If _sourceText_ is the source code of a script, then
-          1. Perform EnqueueJob(`"ScriptJobs"`, ScriptEvaluationJob, &laquo; _sourceText_, _hostDefined_ &raquo;).
-        1. Else _sourceText_ is the source code of a module,
-          1. Perform EnqueueJob(`"ScriptJobs"`, TopLevelModuleEvaluationJob, &laquo; _sourceText_, _hostDefined_ &raquo;).
-      1. Repeat,
-        1. Suspend the running execution context and remove it from the execution context stack.
-        1. Assert: The execution context stack is now empty.
-        1. Let _nextQueue_ be a non-empty Job Queue chosen in an implementation-defined manner. If all Job Queues are empty, the result is implementation-defined.
-        1. Let _nextPending_ be the PendingJob record at the front of _nextQueue_. Remove that record from _nextQueue_.
-        1. Let _newContext_ be a new execution context.
-        1. Set _newContext_'s Function to *null*.
-        1. Set _newContext_'s Realm to _nextPending_.[[Realm]].
-        1. Set _newContext_'s ScriptOrModule to _nextPending_.[[ScriptOrModule]].
-        1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
-        1. Perform any implementation or host environment defined job initialization using _nextPending_.
-        1. Let _result_ be the result of performing the abstract operation named by _nextPending_.[[Job]] using the elements of _nextPending_.[[Arguments]] as its arguments.
-        1. If _result_ is an abrupt completion, perform HostReportErrors(&laquo; _result_.[[Value]] &raquo;).
     </emu-alg>
   </emu-clause>
 
@@ -20553,21 +20433,6 @@
         <p>Unlike explicit var or function declarations, properties that are directly created on the global object result in global bindings that may be shadowed by let/const/class declarations.</p>
       </emu-note>
     </emu-clause>
-
-    <!-- es6num="15.1.9" -->
-    <emu-clause id="sec-scriptevaluationjob" aoid="ScriptEvaluationJob">
-      <h1>Runtime Semantics: ScriptEvaluationJob ( _sourceText_, _hostDefined_ )</h1>
-      <p>The job ScriptEvaluationJob with parameters _sourceText_ and _hostDefined_ parses, validates, and evaluates _sourceText_ as a |Script|.</p>
-      <emu-alg>
-        1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
-        1. Let _realm_ be the current Realm Record.
-        1. Let _s_ be ParseScript(_sourceText_, _realm_, _hostDefined_).
-        1. If _s_ is a List of errors, then
-          1. Perform HostReportErrors(_s_).
-          1. Return NormalCompletion(*undefined*).
-        1. Return ? ScriptEvaluation(_s_).
-      </emu-alg>
-    </emu-clause>
   </emu-clause>
 
   <!-- es6num="15.2" -->
@@ -21763,26 +21628,6 @@
         </emu-alg>
       </emu-clause>
 
-      <!-- es6num="15.2.1.19" -->
-      <emu-clause id="sec-toplevelmoduleevaluationjob" aoid="TopLevelModuleEvaluationJob">
-        <h1>Runtime Semantics: TopLevelModuleEvaluationJob ( _sourceText_, _hostDefined_ )</h1>
-        <p>A TopLevelModuleEvaluationJob with parameters _sourceText_ and _hostDefined_ is a job that parses, validates, and evaluates _sourceText_ as a |Module|.</p>
-        <emu-alg>
-          1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
-          1. Let _realm_ be the current Realm Record.
-          1. Let _m_ be ParseModule(_sourceText_, _realm_, _hostDefined_).
-          1. If _m_ is a List of errors, then
-            1. Perform HostReportErrors(_m_).
-            1. Return NormalCompletion(*undefined*).
-          1. Perform ? _m_.ModuleDeclarationInstantiation().
-          1. Assert: All dependencies of _m_ have been transitively resolved and _m_ is ready for evaluation.
-          1. Return ? _m_.ModuleEvaluation().
-        </emu-alg>
-        <emu-note>
-          <p>An implementation may parse a _sourceText_ as a |Module|, analyse it for Early Error conditions, and instantiate it prior to the execution of the TopLevelModuleEvaluationJob for that _sourceText_. An implementation may also resolve, pre-parse and pre-analyse, and pre-instantiate module dependencies of _sourceText_. However, the reporting of any errors detected by these actions must be deferred until the TopLevelModuleEvaluationJob is actually executed.</p>
-        </emu-note>
-      </emu-clause>
-
       <!-- es6num="15.2.1.20" -->
       <emu-clause id="sec-module-semantics-runtime-semantics-evaluation">
         <h1>Runtime Semantics: Evaluation</h1>
@@ -22447,18 +22292,6 @@
     </li>
   </ul>
   <p>An implementation may define behaviour other than throwing *RangeError* for `toFixed`, `toExponential`, and `toPrecision` when the _fractionDigits_ or _precision_ argument is outside the specified range.</p>
-
-  <emu-clause id="sec-host-report-errors" aoid="HostReportErrors">
-    <h1>HostReportErrors ( _errorList_ )</h1>
-
-    <p>HostReportErrors is an implementation-defined abstract operation that allows host environments to report parsing errors, early errors, and runtime errors.</p>
-
-    <p>An implementation of HostReportErrors must complete normally in all cases. The default implementation of HostReportErrors is to unconditionally return an empty normal completion.</p>
-
-    <emu-note>
-      <p>_errorList_ will be a List of ECMAScript language values. If the errors are parsing errors or early errors, these will always be *SyntaxError* or *ReferenceError* objects. Runtime errors, however, can be any ECMAScript value.</p>
-    </emu-note>
-  </emu-clause>
 
   <!-- es6num="16.1" -->
   <emu-clause id="sec-forbidden-extensions">
@@ -35955,7 +35788,7 @@ THH:mm:ss.sss
             1. Let _thenAction_ be _then_.[[Value]].
             1. If IsCallable(_thenAction_) is *false*, then
               1. Return FulfillPromise(_promise_, _resolution_).
-            1. Perform EnqueueJob(`"PromiseJobs"`, PromiseResolveThenableJob, &laquo; _promise_, _resolution_, _thenAction_ &raquo;).
+            1. Perform HostEnqueueJob(`"PromiseJobs"`, PromiseResolveThenableJob, &laquo; _promise_, _resolution_, _thenAction_ &raquo;).
             1. Return *undefined*.
           </emu-alg>
           <p>The `length` property of a promise resolve function is 1.</p>
@@ -36048,7 +35881,7 @@ THH:mm:ss.sss
         <p>The abstract operation TriggerPromiseReactions takes a collection of PromiseReactionRecords and enqueues a new Job for each record. Each such Job processes the [[Type]] and [[Handler]] of the PromiseReactionRecord, and if the [[Handler]] is a function, calls it passing the given argument. If the [[Handler]] is *undefined*, the behaviour is determined by the [[Type]].</p>
         <emu-alg>
           1. For each _reaction_ in _reactions_, in original insertion order, do
-            1. Perform EnqueueJob(`"PromiseJobs"`, PromiseReactionJob, &laquo; _reaction_, _argument_ &raquo;).
+            1. Perform HostEnqueueJob(`"PromiseJobs"`, PromiseReactionJob, &laquo; _reaction_, _argument_ &raquo;).
           1. Return *undefined*.
         </emu-alg>
       </emu-clause>
@@ -36398,12 +36231,12 @@ THH:mm:ss.sss
               1. Append _rejectReaction_ as the last element of the List that is _promise_.[[PromiseRejectReactions]].
             1. Else if _promise_.[[PromiseState]] is `"fulfilled"`, then
               1. Let _value_ be _promise_.[[PromiseResult]].
-              1. Perform EnqueueJob(`"PromiseJobs"`, PromiseReactionJob, &laquo; _fulfillReaction_, _value_ &raquo;).
+              1. Perform HostEnqueueJob(`"PromiseJobs"`, PromiseReactionJob, &laquo; _fulfillReaction_, _value_ &raquo;).
             1. Else,
               1. Assert: The value of _promise_.[[PromiseState]] is `"rejected"`.
               1. Let _reason_ be _promise_.[[PromiseResult]].
               1. If _promise_.[[PromiseIsHandled]] is *false*, perform HostPromiseRejectionTracker(_promise_, `"handle"`).
-              1. Perform EnqueueJob(`"PromiseJobs"`, PromiseReactionJob, &laquo; _rejectReaction_, _reason_ &raquo;).
+              1. Perform HostEnqueueJob(`"PromiseJobs"`, PromiseReactionJob, &laquo; _rejectReaction_, _reason_ &raquo;).
             1. Set _promise_.[[PromiseIsHandled]] to *true*.
             1. Return _resultCapability_.[[Promise]].
           </emu-alg>
@@ -39094,6 +38927,258 @@ THH:mm:ss.sss
         1. Return ? ForIn/OfBodyEvaluation(|BindingIdentifier|, |Statement|, _keyResult_, ~enumerate~, ~varBinding~, _labelSet_).
       </emu-alg>
     </emu-annex>
+  </emu-annex>
+</emu-annex>
+
+<emu-annex id="sec-example-host-environment">
+  <h1>Example Host Environment</h1>
+
+  <p>This informative annex gives implementations of all of the host-defined abstract operations in this specification, along with supporting infrastructure and an outline for how the environment would be initialized, in order to explain how a simple command-line ECMAScript implementation could work and conform to the various requirements on the host.</p>
+
+  <emu-annex id="sec-example-host-jobs">
+    <h1>Jobs and Job Queues</h1>
+
+    <p>This implementation uses a PendingJob Record type to track all enqueued jobs. Its fields are given here:</p>
+
+    <emu-table id="table-25" caption="PendingJob Record Fields">
+      <table>
+        <thead>
+        <tr>
+          <th>
+            Field Name
+          </th>
+          <th>
+            Value
+          </th>
+          <th>
+            Meaning
+          </th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>
+            [[Job]]
+          </td>
+          <td>
+            A Job abstract operation
+          </td>
+          <td>
+            The abstract operation that is performed when execution of this PendingJob is initiated.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[Arguments]]
+          </td>
+          <td>
+            A List
+          </td>
+          <td>
+            The List of argument values that are to be passed to [[Job]] when it is activated.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[Realm]]
+          </td>
+          <td>
+            A Realm Record
+          </td>
+          <td>
+            The Realm Record for the initial execution context when this PendingJob is initiated.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[ScriptOrModule]]
+          </td>
+          <td>
+            A Script Record or Module Record
+          </td>
+          <td>
+            The script or module for the initial execution context when this PendingJob is initiated.
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </emu-table>
+
+    <p>In addition to the `"PromiseJobs"` Job Queue, this implementation also has a `"ScriptJobs"` Job Queue for validating and evaluating ECMASCript |Script| and |Module| source text. In this implementation each Job Queue has an associated List of PendingJob records.</p>
+
+    <p>This implementation's HostEnqueueJob abstract operation performs the following steps, given the arguments _queueName_, _job_, and _arguments_:</p>
+    <emu-alg>
+      1. Assert: Type(_queueName_) is String and its value is the name of a Job Queue recognized by this implementation.
+      1. Assert: _job_ is the name of a Job.
+      1. Assert: _arguments_ is a List that has the same number of elements as the number of parameters required by _job_.
+      1. Let _callerContext_ be the running execution context.
+      1. Let _callerRealm_ be _callerContext_'s Realm.
+      1. Let _pending_ be PendingJob{ [[Job]]: _job_, [[Arguments]]: _arguments_, [[Realm]]: _callerRealm_, [[ScriptOrModule]]: GetActiveScriptOrModule() }.
+      1. Add _pending_ to the List of PendingJob records associated with the Job Queue named by _queueName_.
+      1. Return NormalCompletion(~empty~).
+    </emu-alg>
+  </emu-annex>
+
+  <emu-annex id="sec-example-source-evaluation">
+    <h1>Source Text Evaluation</h1>
+
+    <p>Source text evaluation in this implementation is performed via ScriptEvaluationJob and TopLevelModuleEvaluationJob. Using Jobs to perform these evaluations is a simple way to ensure that the execution context stack is always empty when any promise jobs run, since any ScriptEvaluationJob or TopLevelModuleEvaluationJob will have run to completion.</p>
+
+    <emu-annex id="sec-scriptevaluationjob" aoid="ScriptEvaluationJob">
+      <h1>ScriptEvaluationJob ( _sourceText_ )</h1>
+      <p>A ScriptEvaluationJob with parameter _sourceText_ parses, validates, and evaluates _sourceText_ as a |Script|.</p>
+      <emu-alg>
+        1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
+        1. Let _realm_ be the current Realm Record.
+        1. Let _s_ be ParseScript(_sourceText_, _realm_, *undefined*).
+        1. If _s_ is a List of errors, then
+          1. Perform ReportErrors(_s_).
+          1. Return NormalCompletion(*undefined*).
+        1. Return ? ScriptEvaluation(_s_).
+      </emu-alg>
+    </emu-annex>
+
+    <emu-annex id="sec-toplevelmoduleevaluationjob" aoid="TopLevelModuleEvaluationJob">
+      <h1>TopLevelModuleEvaluationJob ( _sourceText_, _filename_ )</h1>
+      <p>A TopLevelModuleEvaluationJob with parameters _sourceText_ and _filename_ is a job that parses, validates, and evaluates _sourceText_ as a |Module|.</p>
+      <emu-alg>
+        1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
+        1. Let _realm_ be the current Realm Record.
+        1. Let _m_ be ParseModule(_sourceText_, _realm_, _filename_).
+        1. If _m_ is a List of errors, then
+          1. Perform ReportErrors(_m_).
+          1. Return NormalCompletion(*undefined*).
+        1. Add ModuleMap{ [[Filename]]: _filename_, [[Module]]: _m_ } to the module map.
+        1. Perform ? _m_.ModuleDeclarationInstantiation().
+        1. Assert: All dependencies of _m_ have been transitively resolved and _m_ is ready for evaluation.
+        1. Return ? _m_.ModuleEvaluation().
+      </emu-alg>
+      <emu-note>
+        <p>The implementation might parse a _sourceText_ as a |Module|, analyze it for Early Error conditions, and instantiate it prior to the execution of the TopLevelModuleEvaluationJob for that _sourceText_. It might also resolve, pre-parse and pre-analyze, and pre-instantiate module dependencies of _sourceText_. However, the reporting of any errors detected by these actions will be deferred until the TopLevelModuleEvaluationJob is actually executed.</p>
+      </emu-note>
+    </emu-annex>
+
+    <emu-annex id="sec-example-module-resolution">
+      <h1>Module Resolution</h1>
+      <p>This implementation uses the [[HostDefined]] field of Source Text Module Records to store the filename from which a module was retrieved. It also maintains a List of ModuleMap Records, known as the module map. This helps enforce the idempotency requirements of HostResolveImportedModule. ModuleMap Records have the fields described here:</p>
+
+      <emu-table id="table-example-module-map-record" caption="ModuleMap Record Fields">
+        <table>
+          <thead>
+          <tr>
+            <th>
+              Field Name
+            </th>
+            <th>
+              Value
+            </th>
+            <th>
+              Meaning
+            </th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>
+              [[Filename]]
+            </td>
+            <td>
+              A String
+            </td>
+            <td>
+              The filename from which this module was created.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              [[Module]]
+            </td>
+            <td>
+              A Source Text Module Record
+            </td>
+            <td>
+              The module record created for this module.
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </emu-table>
+
+      <p>This implementation's HostResolveImportedModule abstract operation performs the following steps, given the arguments _referencingModule_ and _specifier_:</p>
+      <emu-alg>
+        1. Let _referencingFilename_ be _referencingModule_.[[HostDefined]].
+        1. Let _realm_ be _referencingModule_.[[Realm]].
+        1. Let _filename_ be the result of resolving _specifier_ against _referencingFilename_ as a filename, according to operating system conventions.
+        1. If the module map contains a ModuleMap Record with [[Filename]] equal to _filename_, return that Record's [[Module]] field.
+        1. Let _sourceText_ be the result of using the operating system's mechanisms to read the source text of the file located at _filename_. If this fails (e.g. because the file does not exist), throw a *TypeError*.
+        1. Let _moduleRecord_ be ? ParseModule(_sourceText_, _realm_, _filename_).
+        1. Add ModuleMap{ [[Filename]]: _filename_, [[Module]]: _moduleRecord_ } to the module map.
+        1. Return _moduleRecord_.
+      </emu-alg>
+    </emu-annex>
+  </emu-annex>
+
+  <emu-annex id="sec-example-initialization">
+    <h1>Initialization and Ongoing Evaluation</h1>
+
+    <p>This implementation is initialized by being provided with a set of ECMAScript source texts for zero or more scripts, and zero or more modules; the modules must be provided alongside corresponding filenames. It then performs the following algorithm to evaluate those source texts in appropriate Jobs. If evaluation enqueues any further Jobs, such as promise-related Jobs, the call back to the implementation's HostEnqueueJob abstract operation will ensure those are executed after the ongoing evaluation of the script or module.</p>
+
+    <emu-alg>
+      1. Perform ? InitializeHostDefinedRealm().
+      1. For each supplied ECMAScript source text _sourceText_,
+        1. If _sourceText_ is the source code of a script, then
+          1. Perform ! HostEnqueueJob(`"ScriptJobs"`, ScriptEvaluationJob, &laquo; _sourceText_ &raquo;).
+        1. Else _sourceText_ is the source code of a module, obtained via the filename _filename_,
+          1. Perform ! HostEnqueueJob(`"ScriptJobs"`, TopLevelModuleEvaluationJob, &laquo; _sourceText_, _filename_ &raquo;).
+      1. Repeat,
+        1. Suspend the running execution context and remove it from the execution context stack.
+        1. Assert: The execution context stack is now empty.
+        1. Let _nextQueue_ be a non-empty Job Queue chosen by first prioritizing `"PromiseJobs"`, and then prioritizing `"ScriptJobs"`. If all Job Queues are empty, return; the ECMAScript implementation has finished all evaluation.
+        1. Let _nextPending_ be the PendingJob record at the front of _nextQueue_. Remove that record from _nextQueue_.
+        1. Let _newContext_ be a new execution context.
+        1. Set _newContext_'s Function to *null*.
+        1. Set _newContext_'s Realm to _nextPending_.[[Realm]].
+        1. Set _newContext_'s ScriptOrModule to _nextPending_.[[ScriptOrModule]].
+        1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
+        1. Let _result_ be the result of performing the abstract operation named by _nextPending_.[[Job]] using the elements of _nextPending_.[[Arguments]] as its arguments.
+        1. If _result_ is an abrupt completion, perform ReportErrors(&laquo; _result_.[[Value]] &raquo;).
+    </emu-alg>
+
+    <emu-annex id="sec-host-report-errors" aoid="ReportErrors">
+      <h1>ReportErrors ( _errorList_ )</h1>
+
+      <p>Various algorithms for this implementation require reporting of errors. This is done by passing a list of errors to the ReportErrors abstract operation, which if possible, prints them to the console:</p>
+
+      <emu-alg>
+        1. For each _error_ in _errorList_,
+          1. Let _name_ be Get(_error_, `"name"`).
+          1. If _name_ is an abrupt completion, return.
+          1. Let _message_ be Get(_error_, `"message"`).
+          1. If _message_ is an abrupt completion, return.
+          1. Print _name_.[[Value]] and _message_.[[Value]] to the console.
+      </emu-alg>
+
+      <emu-note>
+        <p>_errorList_ will be a List of ECMAScript language values. If the errors are parsing errors or early errors, these will always be *SyntaxError* or *ReferenceError* objects. Runtime errors, however, can be any ECMAScript value.</p>
+      </emu-note>
+    </emu-annex>
+  </emu-annex>
+
+  <emu-annex id="sec-example-other-host-ops">
+    <h1>Other Host-Defined Abstract Operations</h1>
+
+    <p>This implementation uses the default implementation of HostEnsureCanCompileStrings.</p>
+
+    <p>This implementation's HostPromiseRejectionTracker abstract operation performs the following steps, given the arguments _promise_ and _operation_:</p>
+
+    <emu-alg>
+      1. Let _reason_ be _promise_.[[PromiseResult]].
+      1. Let _name_ be Get(_reason_, `"name"`).
+      1. If _name_ is an abrupt completion, return.
+      1. Let _message_ be Get(_reason_, `"message"`).
+      1. If _message_ is an abrupt completion, return.
+      1. Print _operation_, _name_.[[Value]], and _message_.[[Value]] to the console.
+    </emu-alg>
   </emu-annex>
 </emu-annex>
 
