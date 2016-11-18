@@ -7588,136 +7588,41 @@
     </emu-clause>
   </emu-clause>
 
-  <emu-clause id="sec-jobs-and-job-queues">
-    <h1>Jobs and Job Queues</h1>
-    <p>A <dfn id="job">Job</dfn> is an abstract operation that initiates an ECMAScript computation when no other ECMAScript computation is currently in progress. A Job abstract operation may be defined to accept an arbitrary set of job parameters.</p>
-    <p>Execution of a Job can be initiated only when there is no running execution context and the execution context stack is empty. A PendingJob is a request for the future execution of a Job. A PendingJob is an internal Record whose fields are specified in <emu-xref href="#table-25"></emu-xref>. Once execution of a Job is initiated, the Job always executes to completion. No other Job may be initiated until the currently running Job completes. However, the currently running Job or external events may cause the enqueuing of additional PendingJobs that may be initiated sometime after completion of the currently running Job.</p>
-    <emu-table id="table-25" caption="PendingJob Record Fields">
-      <table>
-        <tbody>
-        <tr>
-          <th>
-            Field Name
-          </th>
-          <th>
-            Value
-          </th>
-          <th>
-            Meaning
-          </th>
-        </tr>
-        <tr>
-          <td>
-            [[Job]]
-          </td>
-          <td>
-            The name of a Job abstract operation
-          </td>
-          <td>
-            This is the abstract operation that is performed when execution of this PendingJob is initiated.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[Arguments]]
-          </td>
-          <td>
-            A List
-          </td>
-          <td>
-            The List of argument values that are to be passed to [[Job]] when it is activated.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[Realm]]
-          </td>
-          <td>
-            A Realm Record
-          </td>
-          <td>
-            The Realm Record for the initial execution context when this PendingJob is initiated.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[ScriptOrModule]]
-          </td>
-          <td>
-            A Script Record or Module Record
-          </td>
-          <td>
-            The script or module for the initial execution context when this PendingJob is initiated.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            [[HostDefined]]
-          </td>
-          <td>
-            Any, default value is *undefined*.
-          </td>
-          <td>
-            Field reserved for use by host environments that need to associate additional information with a pending Job.
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </emu-table>
-    <p>A <dfn id="job-queue">Job Queue</dfn> is a FIFO queue of PendingJob records. Each Job Queue has a name and the full set of available Job Queues are defined by an ECMAScript implementation. Every ECMAScript implementation has at least the Job Queues defined in <emu-xref href="#table-26"></emu-xref>.</p>
-    <p>Each agent has its own set of named Job Queues.  All references to a named job queue in this specification denote the named job queue of the surrounding agent.</p>
-    <emu-table id="table-26" caption="Required Job Queues">
-      <table>
-        <tbody>
-        <tr>
-          <th>
-            Name
-          </th>
-          <th>
-            Purpose
-          </th>
-        </tr>
-        <tr>
-          <td>
-            ScriptJobs
-          </td>
-          <td>
-            Jobs that validate and evaluate ECMAScript |Script| and |Module| source text. See clauses 10 and 15.
-          </td>
-        </tr>
-        <tr>
-          <td>
-            PromiseJobs
-          </td>
-          <td>
-            Jobs that are responses to the settlement of a Promise (see <emu-xref href="#sec-promise-objects"></emu-xref>).
-          </td>
-        </tr>
-        </tbody>
-      </table>
-    </emu-table>
-    <p>A request for the future execution of a Job is made by enqueueing, on a Job Queue, a PendingJob record that includes a Job abstract operation name and any necessary argument values. When there is no running execution context and the execution context stack is empty, the ECMAScript implementation removes the first PendingJob from a Job Queue and uses the information contained in it to create an execution context and starts execution of the associated Job abstract operation.</p>
-    <p>The PendingJob records from a single Job Queue are always initiated in FIFO order. This specification does not define the order in which multiple Job Queues are serviced. An ECMAScript implementation may interweave the FIFO evaluation of the PendingJob records of a Job Queue with the evaluation of the PendingJob records of one or more other Job Queues. An implementation must define what occurs when there are no running execution context and all Job Queues are empty.</p>
-    <emu-note>
-      <p>Typically an ECMAScript implementation will have its Job Queues pre-initialized with at least one PendingJob and one of those Jobs will be the first to be executed. An implementation might choose to free all resources and terminate if the current Job completes and all Job Queues are empty. Alternatively, it might choose to wait for a some implementation specific agent or mechanism to enqueue new PendingJob requests.</p>
-    </emu-note>
-    <p>The following abstract operations are used to create and manage Jobs and Job Queues:</p>
+  <emu-clause id="sec-jobs" oldids="sec-jobs-and-job-queues,sec-enqueuejob,sec-runjobs,job-queue">
+    <h1>Jobs and Host Operations to Enqueue Jobs</h1>
+    <p>A <dfn id="job">Job</dfn> is an abstract closure with no parameters that initiates an ECMAScript computation when no other ECMAScript computation is currently in progress.</p>
+    <p>Jobs are scheduled for execution by ECMAScript host environments. This specification describes the host hook HostEnqueuePromiseJob to schedule one kind of job; host environments may define additional abstract operations which schedule jobs. Such operations accept a Job abstract closure as the parameter and schedule it to be performed at some future time. Their implementations must conform to the following requirements:</p>
 
-    <emu-clause id="sec-enqueuejob" aoid="EnqueueJob">
-      <h1>EnqueueJob ( _queueName_, _job_, _arguments_ )</h1>
-      <p>The EnqueueJob abstract operation requires three arguments: _queueName_, _job_, and _arguments_. It performs the following steps:</p>
-      <emu-alg>
-        1. Assert: Type(_queueName_) is String and its value is the name of a Job Queue recognized by this implementation.
-        1. Assert: _job_ is the name of a Job.
-        1. Assert: _arguments_ is a List that has the same number of elements as the number of parameters required by _job_.
-        1. Let _callerContext_ be the running execution context.
-        1. Let _callerRealm_ be _callerContext_'s Realm.
-        1. Let _callerScriptOrModule_ be _callerContext_'s ScriptOrModule.
-        1. Let _pending_ be PendingJob { [[Job]]: _job_, [[Arguments]]: _arguments_, [[Realm]]: _callerRealm_, [[ScriptOrModule]]: _callerScriptOrModule_, [[HostDefined]]: *undefined* }.
-        1. Perform any implementation or host environment defined processing of _pending_. This may include modifying the [[HostDefined]] field or any other field of _pending_.
-        1. Add _pending_ at the back of the Job Queue named by _queueName_.
-        1. Return NormalCompletion(~empty~).
-      </emu-alg>
+    <ul>
+      <li>At some future point in time, when there is no running execution context and the execution context stack is empty, the implementation must:
+        <ol>
+          <li>Push an execution context onto the execution context stack.</li>
+          <li>Perform any implementation-defined preparation steps.</li>
+          <li>Call the abstract closure.</li>
+          <li>Perform any implementation-defined cleanup steps.</li>
+          <li>Pop the previously-pushed execution context from the execution context stack.</li>
+        </ol>
+      </li>
+      <li>Only one Job may be actively undergoing evaluation at any point in time.</li>
+      <li>Once evaluation of a Job starts, it must run to completion before evaluation of any other Job starts.</li>
+      <li>The abstract closure must return a normal completion, implementing its own handling of errors.</li>
+    </ul>
+
+    <emu-note>
+      <p>Host environments are not required to treat Jobs uniformly with respect to scheduling. For example, web browsers and Node.js treat Promise-handling Jobs as a higher priority than other work; future features may add Jobs that are not treated at such a high priority.</p>
+    </emu-note>
+
+    <emu-clause id="sec-hostenqueuepromisejob" aoid="HostEnqueuePromiseJob">
+      <h1>HostEnqueuePromiseJob ( _job_, _realm_ )</h1>
+
+      <p>HostEnqueuePromiseJob is a host-defined abstract operation that schedules the Job abstract closure _job_ to be performed, at some future time. The abstract closures used with this algorithm are intended to be related to the handling of Promises, or otherwise, to be scheduled with equal priority to Promise handling operations.</p>
+      <p>The _realm_ parameter is passed through to hosts with no normative requirements; it is either *null* or a Realm.</p>
+
+      <emu-note>
+        The _realm_ for PromiseResolveThenableJobs is the result of calling GetFunctionRealm on the _then_ function object. The _realm_ for PromiseReactionJobs is the result of calling GetFunctionRealm on the handler if the handler is not *undefined*. Otherwise the _realm_ is *null*. The WHATWG HTML specification, for example, uses _realm_ to check for ability to run script and to prepare to run script.
+      </emu-note>
+
+      <p>The implementation of HostEnqueuePromiseJob must conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref>. Additionally, Jobs must be scheduled in FIFO order, with Jobs running in the same order as the HostEnqueuePromiseJob invocations which scheduled them.</p>
     </emu-clause>
   </emu-clause>
 
@@ -7741,42 +7646,15 @@
     </emu-alg>
   </emu-clause>
 
-  <emu-clause id="sec-runjobs" aoid="RunJobs">
-    <h1>RunJobs ( )</h1>
-    <p>The abstract operation RunJobs performs the following steps:</p>
-    <emu-alg>
-      1. Perform ? InitializeHostDefinedRealm().
-      1. In an implementation-dependent manner, obtain the ECMAScript source texts (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>) and any associated host-defined values for zero or more ECMAScript scripts and/or ECMAScript modules. For each such _sourceText_ and _hostDefined_, do
-        1. If _sourceText_ is the source code of a script, then
-          1. Perform EnqueueJob(*"ScriptJobs"*, ScriptEvaluationJob, &laquo; _sourceText_, _hostDefined_ &raquo;).
-        1. Else,
-          1. Assert: _sourceText_ is the source code of a module.
-          1. Perform EnqueueJob(*"ScriptJobs"*, TopLevelModuleEvaluationJob, &laquo; _sourceText_, _hostDefined_ &raquo;).
-      1. Repeat,
-        1. Suspend the running execution context and remove it from the execution context stack.
-        1. Assert: The execution context stack is now empty.
-        1. Let _nextQueue_ be a non-empty Job Queue chosen in an implementation-defined manner. If all Job Queues are empty, the result is implementation-defined.
-        1. Let _nextPending_ be the PendingJob record at the front of _nextQueue_. Remove that record from _nextQueue_.
-        1. Let _newContext_ be a new execution context.
-        1. Set _newContext_'s Function to *null*.
-        1. Set _newContext_'s Realm to _nextPending_.[[Realm]].
-        1. Set _newContext_'s ScriptOrModule to _nextPending_.[[ScriptOrModule]].
-        1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
-        1. Perform any implementation or host environment defined job initialization using _nextPending_.
-        1. Let _result_ be the result of performing the abstract operation named by _nextPending_.[[Job]] using the elements of _nextPending_.[[Arguments]] as its arguments.
-        1. If _result_ is an abrupt completion, perform HostReportErrors(&laquo; _result_.[[Value]] &raquo;).
-    </emu-alg>
-  </emu-clause>
-
   <emu-clause id="sec-agents">
     <h1>Agents</h1>
 
-    <p>An <dfn id="agent">agent</dfn> comprises a set of ECMAScript execution contexts, an execution context stack, a running execution context, a set of named job queues, an <dfn id="agent-record">Agent Record</dfn>, and an <dfn id="executing-thread">executing thread</dfn>.  Except for the executing thread, the constituents of an agent belong exclusively to that agent.</p>
-    <p>An agent's executing thread executes the jobs in the agent's job queues on the agent's execution contexts independently of other agents, except that an executing thread may be used as the executing thread by multiple agents, provided none of the agents sharing the thread have an Agent Record whose [[CanBlock]] property is *true*.</p>
+    <p>An <dfn id="agent">agent</dfn> comprises a set of ECMAScript execution contexts, an execution context stack, a running execution context, an <dfn id="agent-record">Agent Record</dfn>, and an <dfn id="executing-thread">executing thread</dfn>. Except for the executing thread, the constituents of an agent belong exclusively to that agent.</p>
+    <p>An agent's executing thread executes a job on the agent's execution contexts independently of other agents, except that an executing thread may be used as the executing thread by multiple agents, provided none of the agents sharing the thread have an Agent Record whose [[CanBlock]] property is *true*.</p>
     <emu-note>
       <p>Some web browsers share a single executing thread across multiple unrelated tabs of a browser window, for example.</p>
     </emu-note>
-    <p>While an agent's executing thread executes the jobs in the agent's job queues, the agent is the <dfn id="surrounding-agent">surrounding agent</dfn> for the code in those jobs.  The code uses the surrounding agent to access the specification level execution objects held within the agent: the running execution context, the execution context stack, the named job queues, and the Agent Record's fields.</p>
+    <p>While an agent's executing thread executes jobs, the agent is the <dfn id="surrounding-agent">surrounding agent</dfn> for the code in those jobs. The code uses the surrounding agent to access the specification level execution objects held within the agent: the running execution context, the execution context stack, and the Agent Record's fields.</p>
     <emu-table id="table-agent-record" caption="Agent Record Fields">
       <table>
         <tbody>
@@ -22629,20 +22507,6 @@
         <p>Unlike explicit var or function declarations, properties that are directly created on the global object result in global bindings that may be shadowed by let/const/class declarations.</p>
       </emu-note>
     </emu-clause>
-
-    <emu-clause id="sec-scriptevaluationjob" aoid="ScriptEvaluationJob">
-      <h1>Runtime Semantics: ScriptEvaluationJob ( _sourceText_, _hostDefined_ )</h1>
-      <p>The job ScriptEvaluationJob with parameters _sourceText_ and _hostDefined_ parses, validates, and evaluates _sourceText_ as a |Script|.</p>
-      <emu-alg>
-        1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
-        1. Let _realm_ be the current Realm Record.
-        1. Let _s_ be ParseScript(_sourceText_, _realm_, _hostDefined_).
-        1. If _s_ is a List of errors, then
-          1. Perform HostReportErrors(_s_).
-          1. Return NormalCompletion(*undefined*).
-        1. Return ? ScriptEvaluation(_s_).
-      </emu-alg>
-    </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-modules">
@@ -24217,25 +24081,7 @@
         </emu-note>
       </emu-clause>
 
-      <emu-clause id="sec-toplevelmoduleevaluationjob" aoid="TopLevelModuleEvaluationJob">
-        <h1>Runtime Semantics: TopLevelModuleEvaluationJob ( _sourceText_, _hostDefined_ )</h1>
-        <p>A TopLevelModuleEvaluationJob with parameters _sourceText_ and _hostDefined_ is a job that parses, validates, and evaluates _sourceText_ as a |Module|.</p>
-        <emu-alg>
-          1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
-          1. Let _realm_ be the current Realm Record.
-          1. Let _m_ be ParseModule(_sourceText_, _realm_, _hostDefined_).
-          1. If _m_ is a List of errors, then
-            1. Perform HostReportErrors(_m_).
-            1. Return NormalCompletion(*undefined*).
-          1. Perform ? _m_.Link().
-          1. Assert: All dependencies of _m_ have been transitively resolved and _m_ is ready for evaluation.
-          1. Return ? _m_.Evaluate().
-        </emu-alg>
-        <emu-note>
-          <p>An implementation may parse a _sourceText_ as a |Module|, analyse it for Early Error conditions, and link it prior to the execution of the TopLevelModuleEvaluationJob for that _sourceText_. An implementation may also resolve, pre-parse and pre-analyse, and pre-link module dependencies of _sourceText_. However, the reporting of any errors detected by these actions must be deferred until the TopLevelModuleEvaluationJob is actually executed.</p>
-        </emu-note>
-      </emu-clause>
-
+      <!-- es6num="15.2.1.20" -->
       <emu-clause id="sec-module-semantics-runtime-semantics-evaluation">
         <h1>Runtime Semantics: Evaluation</h1>
         <emu-grammar>Module : [empty]</emu-grammar>
@@ -24883,18 +24729,7 @@
     </li>
   </ul>
 
-  <emu-clause id="sec-host-report-errors" aoid="HostReportErrors">
-    <h1>HostReportErrors ( _errorList_ )</h1>
-
-    <p>HostReportErrors is an implementation-defined abstract operation that allows host environments to report parsing errors, early errors, and runtime errors.</p>
-
-    <p>An implementation of HostReportErrors must complete normally in all cases. The default implementation of HostReportErrors is to unconditionally return an empty normal completion.</p>
-
-    <emu-note>
-      <p>_errorList_ will be a List of ECMAScript language values. If the errors are parsing errors or early errors, these will always be *SyntaxError* objects. Runtime errors, however, can be any ECMAScript value.</p>
-    </emu-note>
-  </emu-clause>
-
+  <!-- es6num="16.1" -->
   <emu-clause id="sec-forbidden-extensions">
     <h1>Forbidden Extensions</h1>
     <p>An implementation must not extend this specification in the following ways:</p>
@@ -39822,7 +39657,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-promisereaction-records">
         <h1>PromiseReaction Records</h1>
-        <p>The PromiseReaction is a Record value used to store information about how a promise should react when it becomes resolved or rejected with a given value. PromiseReaction records are created by the PerformPromiseThen abstract operation, and are used by a PromiseReactionJob.</p>
+        <p>The PromiseReaction is a Record value used to store information about how a promise should react when it becomes resolved or rejected with a given value. PromiseReaction records are created by the PerformPromiseThen abstract operation, and are used by the abstract closure returned by NewPromiseReactionJob.</p>
         <p>PromiseReaction records have the fields listed in <emu-xref href="#table-58"></emu-xref>.</p>
         <emu-table id="table-58" caption="PromiseReaction Record Fields">
           <table>
@@ -39930,7 +39765,8 @@ THH:mm:ss.sss
             1. Let _thenAction_ be _then_.[[Value]].
             1. If IsCallable(_thenAction_) is *false*, then
               1. Return FulfillPromise(_promise_, _resolution_).
-            1. Perform EnqueueJob(*"PromiseJobs"*, PromiseResolveThenableJob, &laquo; _promise_, _resolution_, _thenAction_ &raquo;).
+            1. Let _job_ be NewPromiseResolveThenableJob(_promise_, _resolution_, _thenAction_).
+            1. Perform HostEnqueuePromiseJob(_job_.[[Job]], _job_.[[Realm]]).
             1. Return *undefined*.
           </emu-alg>
           <p>The *"length"* property of a promise resolve function is 1.</p>
@@ -40019,7 +39855,8 @@ THH:mm:ss.sss
         <p>The abstract operation TriggerPromiseReactions takes a collection of PromiseReactionRecords and enqueues a new Job for each record. Each such Job processes the [[Type]] and [[Handler]] of the PromiseReactionRecord, and if the [[Handler]] is a function, calls it passing the given argument. If the [[Handler]] is *undefined*, the behaviour is determined by the [[Type]].</p>
         <emu-alg>
           1. For each _reaction_ in _reactions_, in original insertion order, do
-            1. Perform EnqueueJob(*"PromiseJobs"*, PromiseReactionJob, &laquo; _reaction_, _argument_ &raquo;).
+            1. Let _job_ be NewPromiseReactionJob(_reaction_, _argument_).
+            1. Perform HostEnqueuePromiseJob(_job_.[[Job]], _job_.[[Realm]]).
           1. Return *undefined*.
         </emu-alg>
       </emu-clause>
@@ -40051,41 +39888,52 @@ THH:mm:ss.sss
     <emu-clause id="sec-promise-jobs">
       <h1>Promise Jobs</h1>
 
-      <emu-clause id="sec-promisereactionjob" aoid="PromiseReactionJob">
-        <h1>PromiseReactionJob ( _reaction_, _argument_ )</h1>
-        <p>The job PromiseReactionJob with parameters _reaction_ and _argument_ applies the appropriate handler to the incoming value, and uses the handler's return value to resolve or reject the derived promise associated with that handler.</p>
+      <emu-clause id="sec-newpromisereactionjob" aoid="NewPromiseReactionJob" oldids="sec-promisereactionjob">
+        <h1>NewPromiseReactionJob ( _reaction_, _argument_ )</h1>
+        <p>The abstract operation NewPromiseReactionJob takes two arguments, _reaction_ and _argument_ and returns a new Job abstract closure that applies the appropriate handler to the incoming value, and uses the handler's return value to resolve or reject the derived promise associated with that handler. It performs the following steps:</p>
         <emu-alg>
-          1. Assert: _reaction_ is a PromiseReaction Record.
-          1. Let _promiseCapability_ be _reaction_.[[Capability]].
-          1. Let _type_ be _reaction_.[[Type]].
-          1. Let _handler_ be _reaction_.[[Handler]].
-          1. If _handler_ is *undefined*, then
-            1. If _type_ is ~Fulfill~, let _handlerResult_ be NormalCompletion(_argument_).
+          1. Let _job_ be a new Job abstract closure with no parameters that captures _reaction_ and _argument_ and performs the following steps when called:
+            1. Assert: _reaction_ is a PromiseReaction Record.
+            1. Let _promiseCapability_ be _reaction_.[[Capability]].
+            1. Let _type_ be _reaction_.[[Type]].
+            1. Let _handler_ be _reaction_.[[Handler]].
+            1. If _handler_ is *undefined*, then
+              1. If _type_ is ~Fulfill~, let _handlerResult_ be NormalCompletion(_argument_).
+              1. Else,
+                1. Assert: _type_ is ~Reject~.
+                1. Let _handlerResult_ be ThrowCompletion(_argument_).
+            1. Else, let _handlerResult_ be Call(_handler_, *undefined*, &laquo; _argument_ &raquo;).
+            1. If _promiseCapability_ is *undefined*, then
+              1. Assert: _handlerResult_ is not an abrupt completion.
+              1. Return NormalCompletion(~empty~).
+            1. If _handlerResult_ is an abrupt completion, then
+              1. Let _status_ be Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _handlerResult_.[[Value]] &raquo;).
             1. Else,
-              1. Assert: _type_ is ~Reject~.
-              1. Let _handlerResult_ be ThrowCompletion(_argument_).
-          1. Else, let _handlerResult_ be Call(_handler_, *undefined*, &laquo; _argument_ &raquo;).
-          1. If _promiseCapability_ is *undefined*, then
-            1. Assert: _handlerResult_ is not an abrupt completion.
-            1. Return NormalCompletion(~empty~).
-          1. If _handlerResult_ is an abrupt completion, then
-            1. Let _status_ be Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _handlerResult_.[[Value]] &raquo;).
-          1. Else,
-            1. Let _status_ be Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _handlerResult_.[[Value]] &raquo;).
-          1. Return Completion(_status_).
+              1. Let _status_ be Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _handlerResult_.[[Value]] &raquo;).
+            1. Return Completion(_status_).
+          1. Let _handlerRealm_ be *null*.
+          1. If _reaction_.[[Handler]] is not *undefined*, then
+            1. Let _getHandlerRealmResult_ be GetFunctionRealm(_handler_).
+            1. If _getHandlerRealmResult_ is a normal completion, then set _handlerRealm_ to _getHandlerRealmResult_.[[Value]].
+          1. Return { [[Job]]: _job_, [[Realm]]: _handlerRealm_ }.
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-promiseresolvethenablejob" aoid="PromiseResolveThenableJob">
-        <h1>PromiseResolveThenableJob ( _promiseToResolve_, _thenable_, _then_ )</h1>
-        <p>The job PromiseResolveThenableJob with parameters _promiseToResolve_, _thenable_, and _then_ performs the following steps:</p>
+      <emu-clause id="sec-newpromiseresolvethenablejob" aoid="NewPromiseResolveThenableJob" oldids="sec-promiseresolvethenablejob">
+        <h1>NewPromiseResolveThenableJob ( _promiseToResolve_, _thenable_, _then_ )</h1>
+        <p>The abstract operation NewPromiseResolveThenableJob takes three arguments, _promiseToResolve_, _thenable_, and _then_, and performs the following steps:</p>
         <emu-alg>
-          1. Let _resolvingFunctions_ be CreateResolvingFunctions(_promiseToResolve_).
-          1. Let _thenCallResult_ be Call(_then_, _thenable_, &laquo; _resolvingFunctions_.[[Resolve]], _resolvingFunctions_.[[Reject]] &raquo;).
-          1. If _thenCallResult_ is an abrupt completion, then
-            1. Let _status_ be Call(_resolvingFunctions_.[[Reject]], *undefined*, &laquo; _thenCallResult_.[[Value]] &raquo;).
-            1. Return Completion(_status_).
-          1. Return Completion(_thenCallResult_).
+          1. Let _job_ be a new Job abstract closure with no parameters that captures _promiseToResolve_, _thenable_, and _then_ and performs the following steps when called:
+            1. Let _resolvingFunctions_ be CreateResolvingFunctions(_promiseToResolve_).
+            1. Let _thenCallResult_ be Call(_then_, _thenable_, &laquo; _resolvingFunctions_.[[Resolve]], _resolvingFunctions_.[[Reject]] &raquo;).
+            1. If _thenCallResult_ is an abrupt completion, then
+              1. Let _status_ be Call(_resolvingFunctions_.[[Reject]], *undefined*, &laquo; _thenCallResult_.[[Value]] &raquo;).
+              1. Return Completion(_status_).
+            1. Return Completion(_thenCallResult_).
+          1. Let _getThenRealmResult_ be GetFunctionRealm(_then_).
+          1. If _getThenRealmResult_ is a normal completion, then let _thenRealm_ be _getThenRealmResult_.[[Value]].
+          1. Otherwise, let _thenRealm_ be *null*.
+          1. Return { [[Job]]: _job_, [[Realm]]: _thenRealm_ }.
         </emu-alg>
         <emu-note>
           <p>This Job uses the supplied thenable and its `then` method to resolve the given promise. This process must take place as a Job to ensure that the evaluation of the `then` method occurs after evaluation of any surrounding code has completed.</p>
@@ -40563,12 +40411,14 @@ THH:mm:ss.sss
               1. Append _rejectReaction_ as the last element of the List that is _promise_.[[PromiseRejectReactions]].
             1. Else if _promise_.[[PromiseState]] is ~fulfilled~, then
               1. Let _value_ be _promise_.[[PromiseResult]].
-              1. Perform EnqueueJob(*"PromiseJobs"*, PromiseReactionJob, &laquo; _fulfillReaction_, _value_ &raquo;).
+              1. Let _fulfillJob_ be NewPromiseReactionJob(_fulfillReaction_, _value_).
+              1. Perform HostEnqueuePromiseJob(_fulfillJob_.[[Job]], _fulfillJob_.[[Realm]]).
             1. Else,
               1. Assert: The value of _promise_.[[PromiseState]] is ~rejected~.
               1. Let _reason_ be _promise_.[[PromiseResult]].
               1. If _promise_.[[PromiseIsHandled]] is *false*, perform HostPromiseRejectionTracker(_promise_, *"handle"*).
-              1. Perform EnqueueJob(*"PromiseJobs"*, PromiseReactionJob, &laquo; _rejectReaction_, _reason_ &raquo;).
+              1. Let _rejectJob_ be NewPromiseReactionJob(_rejectReaction_, _reason_).
+              1. Perform HostEnqueuePromiseJob(_rejectJob_.[[Job]], _rejectJob_.[[Realm]]).
             1. Set _promise_.[[PromiseIsHandled]] to *true*.
             1. If _resultCapability_ is *undefined*, then
               1. Return *undefined*.
