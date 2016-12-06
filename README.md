@@ -5,6 +5,7 @@ ECMAScript
 
 Proposals follow [the TC39 process](https://tc39.github.io/process-document/) and are tracked in the [proposals repository](https://github.com/tc39/proposals).
 
+* [Finished Proposals](https://github.com/tc39/proposals/blob/master/finished-proposals.md)
 * [Stage 1 and Above Proposals](https://github.com/tc39/proposals)
 * [Stage 0 Proposals](https://github.com/tc39/proposals/blob/master/stage-0-proposals.md)
 * [Inactive Proposals](https://github.com/tc39/proposals/blob/master/inactive-proposals.md)
