@@ -6300,43 +6300,101 @@
       <table>
         <tbody>
           <tr>
-            <th>
-              Field name
-            </th>
-            <th>
-              Value
-            </th>
-            <th>
-              Meaning
-            </th>
+            <th>Field name</th>
+            <th>Value</th>
+            <th>Meaning</th>
           </tr>
           <tr>
-            <td>
-              [[LittleEndian]]
-            </td>
-            <td>
-              Boolean
-            </td>
-            <td>
-              The default value computed for the <em>isLittleEndian</em> parameter when it is needed by the algorithms GetValueFromBuffer and SetValueInBuffer.  The choice is implementation dependent and should be the alternative that is most efficient for the implementation.  Once the value has been observed it cannot change.
-            </td>
+            <td>[[LittleEndian]]</td>
+            <td>Boolean</td>
+            <td>The default value computed for the <em>isLittleEndian</em> parameter when it is needed by the algorithms GetValueFromBuffer and SetValueInBuffer. The choice is implementation dependent and should be the alternative that is most efficient for the implementation.  Once the value has been observed it cannot change.</td>
           </tr>
           <tr>
-            <td>
-              [[CanBlock]]
-            </td>
-            <td>
-              Boolean
-            </td>
-            <td>
-              Determines whether the agent can block or not.
-            </td>
+            <td>[[CanBlock]]</td>
+            <td>Boolean</td>
+            <td>Determines whether the agent can block or not.</td>
+          </tr>
+          <tr>
+            <td>[[Signifier]]</td>
+            <td>A value that admits equality testing</td>
+            <td>Uniquely identifies the agent within its agent cluster.</td>
+          </tr>
+          <tr>
+            <td>[[IsLockFree1]]</td>
+            <td>Boolean</td>
+            <td>True if and only if atomic operations on one-byte values are lock-free.</td>
+          </tr>
+          <tr>
+            <td>[[IsLockFree2]]</td>
+            <td>Boolean</td>
+            <td>True if and only if atomic operations on two-byte values are lock-free.</td>
           </tr>
         </tbody>
       </table>
     </emu-table>
+
+    <p>Once the values of [[Signifier]], [[IsLockFree1]], and [[IsLockFree2]] have been observed by any agent in the agent cluster they cannot change.</p>
+
+    <emu-note>
+      <p>The values of [[IsLockFree1]] and [[IsLockFree2]] are not necessarily determined by the hardware, but may also reflect implementation choices that can vary over time and between ECMAScript implementations.</p>
+
+      <p>There is no [[IsLockFree4]] property: 4-byte atomic operations are always lock-free.</p>
+
+      <p>Formally, atomic operations are lock-free if, infinitely often, some atomic operation finishes in a finite number of program steps.  In practice, if an atomic operation is implemented with any type of lock the operation is not lock-free.  Lock-free does not imply wait-free: there is no upper bound on how many machine steps may be required to complete a lock-free atomic operation.</p>
+
+      <p>That an atomic access of size <em>n</em> is lock-free does not imply anything about the (perceived) atomicity of non-atomic accesses of size <em>n</em>, specifically, non-atomic accesses may still be performed as a sequence of several separate memory accesses.  See ReadSharedMemory and WriteSharedMemory for details.</p>
+    </emu-note>
+
     <emu-note>
       <p>An agent is a specification mechanism and need not correspond to any particular artefact of an ECMAScript implementation.</p>
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-agent-clusters">
+    <h1>Agent Clusters</h1>
+
+    <p>An <dfn>agent cluster</dfn> is a maximal set of agents that can communicate by operating on shared memory.</p>
+
+    <emu-note>
+      <p>Programs within different agents may share memory by unspecified means.  At a minimum, the backing memory for SharedArrayBuffer objects can be shared among the agents in the cluster.</p>
+
+      <p>There may be agents that can communicate by message passing that cannot share memory; they are never in the same agent cluster.</p>
+    </emu-note>
+
+    <p>Every agent belongs to exactly one agent cluster.</p>
+
+    <emu-note>
+      <p>The agents in a cluster need not all be alive at some particular point in time.  If agent <b>A</b> creates another agent <b>B</b>, after which <b>A</b> terminates and <b>B</b> creates agent <b>C</b>, the three agents are in the same cluster if <b>A</b> could share some memory with <b>B</b> and <b>B</b> could share some memory with <b>C</b>.</p>
+    </emu-note>
+
+    <p>All agents within a cluster must have the same value for the [[LittleEndian]] property in their respective Agent Records.</p>
+
+    <emu-note>
+      <p>If different agents within an agent cluster have different values of [[LittleEndian]] it becomes hard to use shared memory for multi-byte data.</p>
+    </emu-note>
+
+    <p>All agents within a cluster must have the same values for the [[IsLockFree1]] property in their respective Agent Records; similarly for the [[IsLockFree2]] property.</p>
+
+    <p>All agents within a cluster must have different values for the [[Signifier]] property in their respective Agent Records.</p>
+
+    
+
+    <p>An embedding may deactivate (stop forward progress) or activate (resume forward progress) an agent without the agent's knowledge or cooperation.  If the embedding does so, it must not leave some agents in the cluster active while other agents in the cluster are deactivated indefinitely.</p>
+
+    <emu-note>
+      <p>The purpose of the preceding restriction is to avoid a situation where an agent deadlocks or starves because another agent has been suspended.  For example, if a DOM SharedWorker shares memory with a regular worker, and the regular worker is suspended while it holds a lock (because the web page the regular worker is in is pushed into the window history), and the SharedWorker tries to acquire the lock, then the SharedWorker will be blocked until the regular worker wakes up again, if ever.  Meanwhile other workers trying to access the SharedWorker from other web pages will starve.</p>
+
+      <p>The implication of the restriction is that it will not be possible to share memory between agents that don't belong to the same suspend/wake collective within the embedding.</p>
+    </emu-note>
+
+    <p>An embedding may terminate an agent without any of the agent's cluster's other agents' prior knowledge or cooperation.  If an agent is terminated not by programmatic action of its own or of another agent in the cluster but by forces external to the cluster, then the embedding must choose one of two strategies: Either terminate all the agents in the cluster, or provide reliable APIs that allow the agents in the cluster to coordinate so that at least one remaining member of the cluster will be able to detect the termination, with the termination data containing enough information to identify the agent that was terminated.</p>
+
+    <emu-note>
+      <p>Examples of that type of termination are: operating systems or users terminating agents that are running in separate processes; the embedding itself terminating an agent that is running in-process with the other agents when per-agent resource accounting indicates that the agent is runaway.</p>
+    </emu-note>
+
+    <emu-note>
+      <p>An agent cluster is a specification mechanism and need not correspond to any particular artefact of an ECMAScript implementation.</p>
     </emu-note>
   </emu-clause>
 
@@ -6347,8 +6405,12 @@
     <emu-note>
       <p> The shared memory proposal introduces a method for blocking in the <a href="http://tc39.github.io/ecmascript_sharedmem/shmem.html#Atomics.wait">Atomics.wait</a> method. </p>
     </emu-note>
-    <p>Implementations must ensure that every unblocked agent with a dedicated executing thread eventually makes forward progress.</p>
-    <p>Implementations must ensure that, in a set of agents that share an executing thread, one agent eventually makes forward progress.</p>
+    <p>Implementations must ensure that:</p>
+    <ul>
+      <li>every unblocked agent with a dedicated executing thread eventually makes forward progress</li>
+      <li>in a set of agents that share an executing thread, one agent eventually makes forward progress</li>
+      <li>an agent does not cause another agent to become blocked except via explicit APIs that provide blocking.</li>
+    </ul>
   </emu-clause>
 
 </emu-clause>
