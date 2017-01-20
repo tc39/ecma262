@@ -2607,6 +2607,31 @@
       <p>Schema for commonly used Record field combinations may be named, and that name may be used as a prefix to a literal Record value to identify the specific kind of aggregations that is being described. For example: PropertyDescriptor{[[Value]]: 42, [[Writable]]: *false*, [[Configurable]]: *true*}.</p>
     </emu-clause>
 
+    <emu-clause id="sec-set-and-relation-specification-type">
+      <h1>The Set and Relation Specification Types</h1>
+      <p>The <dfn>Set</dfn> type is used to explain a collection of unordered elements for use in the memory model. Values of the Set type are simple collections of elements, where no element appears more than once. Elements may be added to and removed from Sets. Sets may be unioned, intersected, or subtracted from each other.</p>
+      <p>The <dfn>Relation</dfn> type is used to explain constraints on Sets. Values of the Relation type are Sets of ordered pairs of values from its value domain. For example, a Relation on events is a set of ordered pairs of events. For a Relation _R_ and two values _a_ and _b_ in the value domain of _R_, _a_ _R_ _b_ is shorthand for saying the ordered pair (_a_, _b_) is a member of _R_. A Relation is least with respect to some conditions when it is the smallest Relation that satisfies those conditions.</p>
+      <p>A <dfn>strict partial order</dfn> is a Relation value _R_ that satisfies the following conditions.</p>
+      <emu-alg>
+        1. For all _a_, _b_, and _c_ in _R_'s domain:
+          1. It is not the case _a_ _R_ _a_, and
+          1. If _a_ _R_ _b_ and _b_ _R_ _c_ then _a_ _R_ _c_.
+      </emu-alg>
+      <emu-note>
+        <p>The two properties above are called, in order, irreflexivity and transitivity.</p>
+      </emu-note>
+      <p>A <dfn>strict total order</dfn> is a Relation value _R_ that satisfies the following conditions.</p>
+      <emu-alg>
+        1. For all _a_, _b_, and _c_ in _R_'s domain:
+          1. _a_ _R_ _b_ or _b_ _R_ _a_, and
+          1. It is not the case _a_ _R_ _a_, and
+          1. If _a_ _R_ _b_ and _b_ _R_ _c_ then _a_ _R_ _c_.
+      </emu-alg>
+      <emu-note>
+        <p>The three properties above are called, in order, totality, irreflexivity, and transitivity.</p>
+      </emu-note>
+    </emu-clause>
+
     <!-- es6num="6.2.2" -->
     <emu-clause id="sec-completion-record-specification-type" aoid="Completion">
       <h1>The Completion Record Specification Type</h1>
@@ -3006,8 +3031,8 @@
       <p>The <dfn>Data Block</dfn> specification type is used to describe a distinct and mutable sequence of byte-sized (8 bit) numeric values. A Data Block value is created with a fixed number of bytes that each have the initial value 0.</p>
       <p>For notational convenience within this specification, an array-like syntax can be used to access the individual bytes of a Data Block value. This notation presents a Data Block value as a 0-origined integer indexed sequence of bytes. For example, if _db_ is a 5 byte Data Block value then _db_[2] can be used to access its 3<sup>rd</sup> byte.</p>
       <p>A data block that resides in memory that can be referenced from multiple agents concurrently is designated a <dfn>Shared Data Block</dfn>. A Shared Data Block has an identity (for the purposes of equality testing Shared Data Block values) that is <em>address-free</em>: it is tied not to the virtual addresses the block is mapped to in any process, but to the set of locations in memory that the block represents. Shared Data Blocks can also be distinguished from Data Blocks.</p>
-      <p>The semantics of Shared Data Blocks is defined using Shared Data Block events by the Atomics memory model. Abstract operations below introduce Shared Data Block events and act as the interface between evaluation semantics and the event semantics of the memory model. The events form a candidate execution, on which the memory model acts as a filter. Please consult the memory model for full semantics.</p>
-      <p>Shared Data Block events are modeled by Records, defined in the Atomics memory model. All agents in an agent cluster share the same candidate execution record in its Agent Record's [[CandidateExecution] field, which is initialized to an empty candidate execution Record.</p>
+      <p>The semantics of Shared Data Blocks is defined using Shared Data Block events by the memory model. Abstract operations below introduce Shared Data Block events and act as the interface between evaluation semantics and the event semantics of the memory model. The events form a candidate execution, on which the memory model acts as a filter. Please consult the memory model for full semantics.</p>
+      <p>Shared Data Block events are modeled by Records, defined in the memory model. All agents in an agent cluster share the same candidate execution record in its Agent Record's [[CandidateExecution] field, which is initialized to an empty candidate execution Record.</p>
       <p>The following abstract operations are used in this specification to operate upon Data Block values:</p>
 
       <!-- es6num="6.2.6.1" -->
@@ -6413,6 +6438,27 @@
     <emu-note>
       <p>An agent is a specification mechanism and need not correspond to any particular artefact of an ECMAScript implementation.</p>
     </emu-note>
+
+    <emu-clause id="sec-agentsignifier" aoid="AgentSignifier">
+      <h1>AgentSignifier( )</h1>
+      <p>The abstract operation AgentSignifier takes no arguments. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _AR_ be the Agent Record of the surrounding agent.
+        1. Return _AR_.[[Signifier]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-agentcansuspend" aoid="AgentCanSuspend">
+      <h1>AgentCanSuspend( )</h1>
+      <p>The abstract operation AgentCanSuspend takes no arguments. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _AR_ be the Agent Record of the surrounding agent.
+        1. Return _AR_.[[CanBlock]].
+      </emu-alg>
+      <emu-note>
+        <p>In some environments it may not be reasonable for a given agent to suspend. For example, in a web browser environment, it may be reasonable to disallow suspending a document's main event handling thread, while still allowing workers' event handling threads to suspend.</p>
+      </emu-note>
+    </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-agent-clusters">
@@ -34342,6 +34388,346 @@ THH:mm:ss.sss
     </emu-clause>
   </emu-clause>
 
+  <emu-clause id="sec-atomics-object">
+    <h1>The Atomics Object</h1>
+    <p>The Atomics object is the <dfn>%Atomics%</dfn> intrinsic object and the initial value of the `Atomics` property of the global object. The Atomics object is a single ordinary object.</p>
+    <p>The Atomics object provides functions that operate indivisibly (atomically) on shared memory array cells as well as functions that let agents wait for and dispatch primitive events.  When used with discipline, the Atomics functions allow multi-agent programs that communicate through shared memory to execute in a well-understood order even on parallel CPUs. The rules that govern shared-memory communication are provided by the memory model, defined below.</p>
+    <p>The value of the [[Prototype]] internal slot of the Atomics object is the intrinsic object %ObjectPrototype%.</p>
+    <p>The Atomics object does not have a [[Construct]] internal method; it is not possible to use the Atomics object as a constructor with the `new` operator.</p>
+    <p>The Atomics object does not have a [[Call]] internal method; it is not possible to invoke the Atomics object as a function.</p>
+
+    <emu-clause id="sec-abstract-operations-for-atomics">
+      <h1>Abstract Operations for Atomics</h1>
+
+      <emu-clause id="sec-validatesharedintegertypedarray" aoid="ValidateSharedIntegerTypedArray">
+        <h1>ValidateSharedIntegerTypedArray(_typedArray_ [, _onlyInt32_] )</h1>
+        <p>The abstract operation ValidateSharedIntegerTypedArray takes one argument _typedArray_ and an optional Boolean _onlyInt32_. It performs the following steps:</p>
+        <emu-alg>
+          1. If Type(_typedArray_) is not Object, throw a *TypeError* exception.
+          1. If _typedArray_ does not have a [[TypedArrayName]] internal slot, throw a *TypeError* exception.
+          1. Let _typeName_ be _typedArray_.[[TypedArrayName]].
+          1. If _onlyInt32_ is *true* then
+            1. If _typeName_ is not `"Int32Array"` then throw a *TypeError* exception.
+          1. Else,
+            1. If _typeName_ is not `"Int8Array"`, `"Uint8Array"`, `"Int16Array"`, `"Uint16Array"`, `"Int32Array"`, or `"Uint32Array"` then throw a *TypeError* exception.
+          1. If _typedArray_ does not have a [[ViewedArrayBuffer]] internal slot, throw a *TypeError* exception.
+          1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
+          1. If Type(_buffer_) is not Object, throw a *TypeError* exception.
+          1. If _buffer_ does not have an [[ArrayBufferData]] internal slot, throw a *TypeError* exception.
+          1. If IsSharedArrayBuffer(_buffer_) is *false*, throw a *TypeError* exception.
+          1. Return _buffer_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-validateatomicaccess" aoid="ValidateAtomicAccess">
+        <h1>ValidateAtomicAccess( _typedArray_, _requestIndex_ )</h1>
+        <p>The abstract operation ValidateAtomicAccess takes two arguments, _typedArray_ and _requestIndex_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: _typedArray_ is an Object that has a [[ViewedArrayBuffer]] internal slot.
+          1. Let _numberIndex_ be ? ToNumber(_requestIndex_).
+          1. Let _accessIndex_ be ToInteger(_numberIndex_).
+          1. If _numberIndex_ &ne; _accessIndex_, throw a *RangeError* exception.
+          1. Let _length_ be _typedArray_.[[ArrayLength]].
+          1. If _accessIndex_ &lt; 0 or _accessIndex_ &ge; _length_, throw a *RangeError* exception.
+          1. Return _accessIndex_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-getwaiterlist" aoid="GetWaiterList">
+        <h1>GetWaiterList( _block_, _i_ )</h1>
+        <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered list of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_.</p>
+        <p>The agent cluster has a store of WaiterList objects; the store is indexed by (_block_, _i_). WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
+        <p>Operations on a WaiterList -- adding and removing waiting agents, traversing the list of agents, suspending and waking agents on the list -- may only be performed by agents that have entered the WaiterList's critical section.</p>
+        <p>The abstract operation GetWaiterList takes two arguments, a Shared Data Block _block and a nonnegative integer _i_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: _block_ is a Shared Data Block.
+          1. Assert: _i_ and _i_+3 are valid byte offsets within the memory of _block_.
+          1. Assert: _i_ is divisible by 4.
+          1. Return the WaiterList that is referenced by the pair (_block_, _i_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-entercriticalsection" aoid="EnterCriticalSection">
+        <h1>EnterCriticalSection( _WL_ )</h1>
+        <p>The abstract operation EnterCriticalSection takes one argument, a WaiterList _WL_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: The calling agent is not in the critical section for any WaiterList.
+          1. Wait until no agent is in the critical section for _WL_, then enter the critical section for _WL_ (without allowing any other agent to enter).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-leavecriticalsection" aoid="LeaveCriticalSection">
+        <h1>LeaveCriticalSection( _WL_ )</h1>
+        <p>The abstract operation LeaveCriticalSection takes one argument, a WaiterList _WL_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: The calling agent is in the critical section for _WL_.
+          1. Leave the critical section for _WL_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-addwaiter" aoid="AddWaiter">
+        <h1>AddWaiter( _WL_, _W_ )</h1>
+        <p>The abstract operation AddWaiter takes two arguments, a WaiterList _WL_ and an agent signifier _W_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: The calling agent is in the critical section for _WL_.
+          1. Assert: _W_ is not on the list of waiters in any WaiterList.
+          1. Add _W_ to the end of the list of waiters in _WL_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-removewaiter" aoid="RemoveWaiter">
+        <h1>RemoveWaiter( _WL_, _W_ )</h1>
+        <p>The abstract operation RemoveWaiter takes two arguments, a WaiterList _WL_ and an agent signifier _W_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: The calling agent is in the critical section for _WL_.
+          1. Assert: _W_ is on the list of waiters in _WL_.
+          1. Remove _W_ from the list of waiters in _WL_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-removewaiters" aoid="RemoveWaiters">
+        <h1>RemoveWaiters( _WL_, _c_ )</h1>
+        <p>The abstract operation RemoveWaiters takes two arguments, a WaiterList _WL_ and nonnegative integer _c_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: The calling agent is in the critical section for _WL_.
+          1. Let _L_ be the empty list.
+          1. Let _S_ be a reference to the list of waiters in _WL_.
+          1. While _c_ &gt; 0 and _S_ is not the empty list:
+            1. Let _W_ be the first waiter in _S_.
+            1. Add _W_ to the end of _L_.
+            1. Remove _W_ from _S_.
+            1. Subtract 1 from _c_.
+          1. Return _L_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-suspend" aoid="Suspend">
+        <h1>Suspend( _WL_, _W_, _timeout_ )</h1>
+        <p>The abstract operation Suspend takes three arguments, a WaiterList _WL_, an agent signifier _W_, and a nonnegative, non-*NaN* Number _timeout_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: The calling agent is in the critical section for _WL_.
+          1. Assert: _W_ is equal to AgentSignifier().
+          1. Assert: _W_ is on the list of waiters in _WL_.
+          1. Assert: AgentCanSuspend() is equal to true.
+          1. Perform LeaveCriticalSection(_WL_) and suspend _W_ for up to _timeout_ milliseconds, performing the combined operation in such a way that a wakeup that arrives after the critical section is exited but before the suspension takes effect is not lost.  _W_ can wake up either because the timeout expired or because it was woken explicitly by another agent calling WakeWaiter(_WL_, _W_), and not for any other reasons at all.
+          1. Perform EnterCriticalSection(_WL_).
+          1. If _W_ was woken explicitly by another agent calling WakeWaiter(_WL_, _W_), then return *true*.
+          1. Return *false*.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-wakewaiter" aoid="WakeWaiter">
+        <h1>WakeWaiter( _WL_, _W_ )</h1>
+        <p>The abstract operation WakeWaiter takes two arguments, a WaiterList _WL_ and an agent signifier _W_. It performs the following steps:</p>
+        <emu-alg>
+          1. Assert: The calling agent is in the critical section for _WL_.
+          1. Assert: _W_ is on the list of waiters in _WL_.
+          1. Wake the agent _W_.
+        </emu-alg>
+        <emu-note>
+          <p>The embedding may delay waking _W_, eg for resource management reasons, but _W_ must eventually be woken in order to guarantee forward progress.</p>
+        </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-atomicreadmodifywrite" aoid="AtomicReadModifyWrite">
+        <h1>AtomicReadModifyWrite( _typedArray_, _index_, _value_, _op_ )</h1>
+        <p>The abstract operation AtomicReadModifyWrite takes four arguments, _typedArray_, _index_, _value_, and a pure combining operation _op_. The pure combining operation _op_ takes two List of byte values arguments and returns a List of byte values. The operation atomically loads a value, combines it with another value, and stores the result of the combination. It returns the loaded value. It performs the following steps:</p>
+        <emu-alg>
+          1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
+          1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+          1. Let _v_ be ? ToInteger(_value_).
+          1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
+          1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+          1. Let _elementType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+          1. Let _offset_ be _typedArray_.[[ByteOffset]].
+          1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
+          1. Return GetModifySetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _v_, _op_).
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.add">
+      <h1>Atomics.add( _typedArray_, _index_, _value_ )</h1>
+      <p>Let `add` denote a semantic function of two List of byte values arguments that applies the addition operation to the Number values corresponding to the List of byte values arguments and returns a List of byte values corresponding to the result of that operation.</p>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Return AtomicReadModifyWrite(_typedArray_, _index_, _value_, `add`).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.and">
+      <h1>Atomics.and( _typedArray_, _index_, _value_ )</h1>
+      <p>Let `and` denote a semantic function of two List of byte values arguments that applies the bitwise-and operation element-wise to the two arguments and returns a List of byte values corresponding to the result of that operation.</p>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Return AtomicReadModifyWrite(_typedArray_, _index_, _value_, `and`).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.compareexchange">
+      <h1>Atomics.compareExchange( _typedArray_, _index_, _expectedValue_, _replacementValue_ )</h1>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
+        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _expected_ be ? ToInteger(_expectedValue_).
+        1. Let _replacement_ be ? ToInteger(_replacementValue_).
+        1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
+        1. Let _convOp_ be the conversion operation specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+        1. Let _expectedBytes_ be _convOp_ (_expected_).
+        1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+        1. Let _elementType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+        1. Let _offset_ be _typedArray_.[[ByteOffset]].
+        1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
+        1. Let `compareExchange` denote a semantic function of two List of byte values arguments that returns the second argument if the first argument is element-wise equal to _expectedBytes_.
+        1. Return GetModifySetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _replacement_, `compareExchange`).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.exchange">
+      <h1>Atomics.exchange( _typedArray_, _index_, _value_ )</h1>
+      <p>Let `second` denote a semantic function of two List of byte values arguments that returns its second argument.</p>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Return AtomicReadModifyWrite(_typedArray_, _index_, _value_, `second`).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.islockfree">
+      <h1>Atomics.isLockFree( _size_ )</h1>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Let _n_ be ? ToInteger(_size_).
+        1. Let _AR_ be the Agent Record of the surrounding agent.
+        1. If _n_ equals 1 then return _AR_.[[IsLockFree1]].
+        1. If _n_ equals 2 then return _AR_.[[IsLockFree2]].
+        1. If _n_ equals 4 then return *true*.
+        1. Return *false*.
+      </emu-alg>
+      <emu-note>
+        <p>`Atomics.isLockFree`() is an optimization primitive. The intuition is that if the atomic step of an atomic primitive (`compareExchange`, `load`, `store`, `add`, `sub`, `and`, `or`, `xor`, or `exchange`) on a datum of size _n_ bytes will be performed without the calling agent acquiring a lock outside the _n_ bytes comprising the datum, then `Atomics.isLockFree`(_n_) will return *true*. High-performance algorithms will use Atomics.isLockFree to determine whether to use locks or atomic operations in critical sections. If an atomic primitive is not lock-free then it is often more efficient for an algorithm to provide its own locking.</p>
+        <p>`Atomics.isLockFree`(4) always returns *true* as that can be supported on all known relevant hardware. Being able to assume this will generally simplify programs.</p>
+      </emu-note>
+    </emu-clause>
+    <emu-clause id="sec-atomics.load">
+      <h1>Atomics.load( _typedArray_, _index_ )</h1>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
+        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
+        1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+        1. Let _elementType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+        1. Let _offset_ be _typedArray_.[[ByteOffset]].
+        1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
+        1. Return GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, `"SeqCst"`).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.or">
+      <h1>Atomics.or( _typedArray_, _index_, _value_ )</h1>
+      <p>Let `or` denote a semantic function of two List of byte values arguments that applies the bitwise-or operation element-wise to the two arguments and returns a List of byte values corresponding to the result of that operation.</p>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Return AtomicReadModifyWrite(_typedArray_, _index_, _value_, `or`).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.store">
+      <h1>Atomics.store( _typedArray_, _index_, _value_ )</h1>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
+        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _v_ be ? ToInteger(_value_).
+        1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
+        1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+        1. Let _elementType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+        1. Let _offset_ be _typedArray_.[[ByteOffset]].
+        1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
+        1. Perform SetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _v_, *true*, `"SeqCst"`).
+        1. Return _v_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.sub">
+      <h1>Atomics.sub( _typedArray_, _index_, _value_ )</h1>
+      <p>Let `subtract` denote a semantic function of two List of byte values arguments that applies the subtraction operation to the Number values corresponding to the List of byte values arguments and returns a List of byte values corresponding to the result of that operation.</p>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Return AtomicReadModifyWrite(_typedArray_, _index_, _value_, `subtract`).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.wait">
+      <h1>Atomics.wait( _typedArray_, _index_, _value_, _timeout_ )</h1>
+      <p>`Atomics.wait` puts the calling agent in a wait queue and puts it to sleep until it is awoken or the sleep times out. The following steps are taken:</p>
+      <emu-alg>
+        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _v_ be ? ToInt32(_value_).
+        1. If _timeout_ is not provided or is *undefined* then let _t_ be *+&infin;*.  Otherwise:
+          1. Let _q_ be ? ToNumber(_timeout_).
+          1. If _q_ is *NaN* then let _t_ be *+&infin;*, otherwise let _t_ be max(0, _q_).
+        1. Let _B_ be AgentCanSuspend().
+        1. If _B_ is *false* then throw a *TypeError* exception.
+        1. Let _bufferVal_ be _buffer_.[[ArrayBufferData]].
+        1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
+        1. Let _offset_ be _typedArray_.[[ByteOffset]].
+        1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
+        1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
+        1. Perform EnterCriticalSection(_WL_).
+        1. Let _w_ be Atomics.load(_typedArray_, _i_).
+        1. If _v_ does not equal _w_ then
+          1. Perform LeaveCriticalSection(_WL_).
+          1. Return the string `"not-equal"`.
+        1. Let _W_ be AgentSignifier().
+        1. Perform AddWaiter(_WL_, _W_).
+        1. Let awoken be Suspend(_WL_, _W_, _t_).
+        1. Perform RemoveWaiter(_WL_, _W_).
+        1. Perform LeaveCriticalSection(_WL_).
+        1. If awoken is *true* then return the string `"ok"`.
+        1. Return the string `"timed-out"`.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-atomics.wake">
+      <h1>Atomics.wake( _typedArray_, _index_, _count_ )</h1>
+      <p>`Atomics.wake` wakes up some agents that are sleeping in the wait queue.  The following steps are taken:</p>
+      <emu-alg>
+        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. If _count_ is not provided or is *undefined* then let _c_ be *+&infin;*.  Otherwise:
+          1. Let _tmp_ be ? ToInteger(_count_).
+          1. Let _c_ be max(*+0*, _tmp_).
+        1. Let _bufferVal_ be _buffer_.[[ArrayBufferData]].
+        1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
+        1. Let _offset_ be _typedArray_.[[ByteOffset]].
+        1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
+        1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
+        1. Let _n_ be 0.
+        1. Perform EnterCriticalSection(_WL_).
+        1. Let _S_ be RemoveWaiters(_WL_, _c_).
+        1. While _S_ is not the empty list:
+          1. Let _W_ be the first agent in _S_.
+          1. Remove _W_ from the front of _S_.
+          1. Perform WakeWaiter(_WL_, _W_).
+          1. Add 1 to _n_.
+        1. Perform LeaveCriticalSection(_WL_).
+        1. Return _n_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="Atomics.xor">
+      <h1>Atomics.xor( _typedArray_, _index_, _value_ )</h1>
+      <p>Let `xor` denote a semantic function of two List of byte values arguments that applies the bitwise-xor operation element-wise to the two arguments and returns a List of byte values corresponding to the result of that operation.</p>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Return AtomicReadModifyWrite(_typedArray_, _index_, _value_, `xor`).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
   <!-- es6num="24.3" -->
   <emu-clause id="sec-json-object">
     <h1>The JSON Object</h1>
@@ -36359,6 +36745,581 @@ THH:mm:ss.sss
       <p>The initial value of the @@toStringTag property is the String value `"Module"`.</p>
       <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
     </emu-clause>
+  </emu-clause>
+</emu-clause>
+
+
+<emu-clause id="sec-memory-model">
+  <h1>Memory Model</h1>
+  <p>The memory consistency model, or <dfn>memory model</dfn>, specifies the possible orderings of Shared Data Block events, arising via accessing TypedArray instances backed by a SharedArrayBuffer and via methods on the Atomics object. When the program has no data races (defined below), the ordering of events appears as sequentially consistent, i.e., as an interleaving of actions from each agent. When the program has data races, shared memory operations may appear sequentially inconsistent. For example, programs may exhibit causality-violating behavior and other astonishments. These astonishments arise from compiler transforms and the design of CPUs (e.g., out-of-order execution and speculation). The memory model defines both the precise conditions under which a program exhibits sequentially consistent behavior as well as the possible values read from data races. To wit, there is no undefined behavior.</p>
+  <p>The memory model is defined as relational constraints on events introduced by abstract operations on SharedArrayBuffer or by methods on the Atomics object during an evaluation.</p>
+  <emu-note>
+    <p>This section provides an axiomatic model on events introduced by the abstract operations on SharedArrayBuffers. It bears stressing that the model is not expressible algorithmically, unlike the rest of this specification. The nondeterministic introduction of events by abstract operations is the interface between the operational semantics of ECMAScript evaluation and the axiomatic semantics of the memory model. The semantics of these events is defined by considering graphs of all events in an evaluation. These are neither Static Semantics nor Runtime Semantics. There is no demonstrated algorithmic implementation, but instead a set of constraints that determine if a particular event graph is allowed or disallowed.</p>
+  </emu-note>
+
+  <emu-clause id="sec-memory-model-fundamentals">
+    <h1>Memory Model Fundamentals</h1>
+    <p>Shared memory accesses (reads and writes) are divided into two groups, atomic accesses and data accesses, defined below. Atomic accesses are sequentially consistent, i.e., there is a strict total ordering of events agreed upon by all agents in an agent cluster. Non-atomic accesses do not have a strict total ordering agreed upon by all agents, i.e., unordered.</p>
+    <emu-note>
+      <p>No orderings weaker than sequentially consistent and stronger than unordered, such as release-acquire, are supported.</p>
+    </emu-note>
+    <p>A <dfn>Shared Data Block event</dfn> is either a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory Record.</p>
+
+    <emu-table id="table-readsharedmemory-fields" caption="ReadSharedMemory Event Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th>Field</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[Order]]</td>
+            <td>`"SeqCst"` or `"Unordered"`</td>
+            <td>The weakest ordering guaranteed by the memory model for the event.</td>
+          </tr>
+          <tr>
+            <td>[[NoTear]]</td>
+            <td>A Boolean</td>
+            <td>Whether this event is allowed to read from multiple write events on equal range as this event.</td>
+          </tr>
+          <tr>
+            <td>[[Block]]</td>
+            <td>A Shared Data Block</td>
+            <td>The block the event operates on.</td>
+          </tr>
+          <tr>
+            <td>[[ByteIndex]]</td>
+            <td>A nonnegative integer</td>
+            <td>The byte address of the read in [[Block]].</td>
+          </tr>
+          <tr>
+            <td>[[ElementSize]]</td>
+            <td>A nonnegative integer</td>
+            <td>The size of the read.</td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+
+    <emu-table id="table-writesharedmemory-fields" caption="WriteSharedMemory Event Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th>Field</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[Order]]</td>
+            <td>`"SeqCst"`, `"Unordered"`, or `"Init"`</td>
+            <td>The weakest ordering guaranteed by the memory model for the event.</td>
+          </tr>
+          <tr>
+            <td>[[NoTear]]</td>
+            <td>A Boolean</td>
+            <td>Whether this event is allowed to be read from multiple read events with equal range as this event.</td>
+          </tr>
+          <tr>
+            <td>[[Block]]</td>
+            <td>A Shared Data Block</td>
+            <td>The block the event operates on.</td>
+          </tr>
+          <tr>
+            <td>[[ByteIndex]]</td>
+            <td>A nonnegative integer</td>
+            <td>The byte address of the write in [[Block]].</td>
+          </tr>
+          <tr>
+            <td>[[ElementSize]]</td>
+            <td>A nonnegative integer</td>
+            <td>The size of the write.</td>
+          </tr>
+          <tr>
+            <td>[[Payload]]</td>
+            <td>A List</td>
+            <td>The List of byte values to be read by other events.</td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+
+    <emu-table id="table-rmwsharedmemory-fields" caption="ReadModifyWriteSharedMemory Event Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th>Field</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[Order]]</td>
+            <td>`"SeqCst"`</td>
+            <td>Read-modify-write events are always sequentially consistent.</td>
+          </tr>
+          <tr>
+            <td>[[NoTear]]</td>
+            <td>*true*</td>
+            <td>Read-modify-write events cannot tear.</td>
+          </tr>
+          <tr>
+            <td>[[Block]]</td>
+            <td>A Shared Data Block</td>
+            <td>The block the event operates on.</td>
+          </tr>
+          <tr>
+            <td>[[ByteIndex]]</td>
+            <td>A nonnegative integer</td>
+            <td>The byte address of the read-modify-write in [[Block]].</td>
+          </tr>
+          <tr>
+            <td>[[ElementSize]]</td>
+            <td>A nonnegative integer</td>
+            <td>The size of the read-modify-write.</td>
+          </tr>
+          <tr>
+            <td>[[Payload]]</td>
+            <td>A List</td>
+            <td>The List of byte values to be passed to [[ModifyOp]].</td>
+          </tr>
+          <tr>
+            <td>[[ModifyOp]]</td>
+            <td>A semantic function</td>
+            <td>A pure semantic function that returns a modified List of byte values from a read List of byte values and [[Payload]].</td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+
+    <p>These events are introduced by abstract operations or by methods on the Atomics object.</p>
+    <p>In addition to Shared Data Block events, there are host-specific events.</p>
+    <p>Let the <dfn>range</dfn> of a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory event be the Set of contiguous integers from its _byteIndex_ to _byteIndex_+_elementSize_-1. Two events' ranges are equal when the events have the same _block_, and the ranges are element-wise equal. Two events' ranges are overlapping when the events have the same _block_, the ranges are not equal and their intersection is non-empty. Two events' ranges are disjoint when the events do not have the same _block_ or their ranges are neither equal nor overlapping.</p>
+    <emu-note>
+      <p>Examples of host-specific synchronizing events that should be accounted for are: sending a SharedArrayBuffer from one agent to another (e.g., by `postMessage` in a browser), starting and stopping agents, and communicating within the agent cluster via channels other than shared memory. It is assumed those events are appended to agent-order during evaluation like the other SharedArrayBuffer events.</p>
+    </emu-note>
+    <p>Shared Data Block events are ordered within candidate executions by the relations defined below.</p>
+  </emu-clause>
+
+  <emu-clause id="sec-agent-event-records">
+    <h1>Agent Events Records</h1>
+    <p>An <dfn>Agent Events Record</dfn> is a Record with the following fields.</p>
+    <emu-table id="table-agent-events-records" caption="Agent Events Record Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th>Field</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[AgentSignifier]]</td>
+            <td>A value that admits equality testing</td>
+            <td>The agent whose evaluation resulted in this ordering.</td>
+          </tr>
+          <tr>
+            <td>[[EventList]]</td>
+            <td>A List of events</td>
+            <td>Events are appended to the list during evaluation.</td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+  </emu-clause>
+
+  <emu-clause id="sec-chosen-value-records">
+    <h1>Chosen Value Records</h1>
+    <p>A <dfn>Chosen Value Record</dfn> is a Record with the following fields.</p>
+    <emu-table id="table-chosen-value-records" caption="Chosen Value Record Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th>Field</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[Event]]</td>
+            <td>A Shared Data Block event</td>
+            <td>The ReadSharedMemory or ReadModifyWriteSharedMemory event that was introduced for this chosen value.</td>
+          </tr>
+          <tr>
+            <td>[[ChosenValue]]</td>
+            <td>A List of byte values</td>
+            <td>The bytes that were nondeterministically chosen during evaluation.</td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+  </emu-clause>
+
+  <emu-clause id="sec-candidate-executions">
+    <h1>Candidate Executions</h1>
+    <p>A <dfn>candidate execution</dfn> of the evaluation of an agent cluster is a Record with the following fields.</p>
+    <emu-table id="table-candidate-execution-records" caption="Candidate Execution Record Fields">
+      <table>
+        <tbody>
+          <tr>
+            <th>Field</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[EventLists]]</td>
+            <td>A List of Agent Events Records.</td>
+            <td>Maps an agent to Lists of events appended during the evaluation.</td>
+          </tr>
+          <tr>
+            <td>[[ChosenValues]]</td>
+            <td>A List of Chosen Value Records.</td>
+            <td>Maps ReadSharedMemory or ReadModifyWriteSharedMemory events to the List of byte values chosen during the evaluation.</td>
+          </tr>
+          <tr>
+            <td>[[AgentOrder]]</td>
+            <td>An agent-order Relation.</td>
+            <td>Defined below.</td>
+          </tr>
+          <tr>
+            <td>[[ReadsBytesFrom]]</td>
+            <td>A reads-bytes-from semantic function.</td>
+            <td>Defined below.</td>
+          </tr>
+          <tr>
+            <td>[[ReadsFrom]]</td>
+            <td>A reads-from Relation.</td>
+            <td>Defined below.</td>
+          </tr>
+          <tr>
+            <td>[[HostSynchronizesWith]]</td>
+            <td>A host-synchronizes-with Relation.</td>
+            <td>Defined below.</td>
+          </tr>
+          <tr>
+            <td>[[SynchronizesWith]]</td>
+            <td>A synchronizes-with Relation.</td>
+            <td>Defined below.</td>
+          </tr>
+          <tr>
+            <td>[[HappensBefore]]</td>
+            <td>A happens-before Relation.</td>
+            <td>Defined below.</td>
+          </tr>
+        </tbody>
+      </table>
+    </emu-table>
+
+    <p>An <dfn>empty candidate execution</dfn> is a candidate execution Record whose fields are empty Lists and Relations.</p>
+  </emu-clause>
+
+  <emu-clause id="sec-abstract-operations-for-the-memory-model">
+    <h1>Abstract Operations for the Memory Model</h1>
+    <emu-clause id="sec-event-set" aoid="EventSet">
+      <h1>EventSet( _execution_ )</h1>
+      <p>The abstract operation EventSet takes one argument, a candidate execution _execution_. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _events_ be an empty Set.
+        1. For each element _eventList_ in _execution_.[[EventLists]]:
+          1. For each event _E_ in _eventList_:
+            1. Add _E_ to _events_.
+        1. Return _events_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-sharedatablockeventset" aoid="SharedDataBlockEventSet">
+      <h1>SharedDataBlockEventSet( _execution_ )</h1>
+      <p>The abstract operation SharedDataBlockEventSet takes one argument, a candidate execution _execution_. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _events_ be an empty Set.
+        1. For each element _E_ in EventSet(_execution_):
+          1. If _E_ is a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory event then add _E_ to _events_.
+        1. Return _events_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-hosteventset" aoid="HostEventSet">
+      <h1>HostEventSet( _execution_ )</h1>
+      <p>The abstract operation HostEventSet takes one argument, a candidate execution _execution_. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _events_ be an empty Set.
+        1. For each element _E_ in EventSet(_execution_):
+          1. If _E_ is not in SharedDataBlockEventSet(_execution_) then add _E_ to _events_.
+        1. Return _events_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-composewriteeventbytes" aoid="ComposeWriteEventBytes">
+      <h1>ComposeWriteEventBytes( _execution_, _block_, _byteIndex_ _Ws_ )</h1>
+      <p>The abstract operation ComposeWriteEventBytes takes four arguments, a candidate execution _execution_, a Shared Data Block _block_, a nonnegative integer _byteIndex_, and a List _Ws_ of WriteSharedMemory or ReadModifyWriteSharedMemory events. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _byteLocation_ be _byteIndex_.
+        1. Let _bytesRead_ be an empty List.
+        1. For each element _W_ of _Ws_ in List order:
+          1. Assert: _W_ has _byteLocation_ in its range.
+          1. Let _payloadIndex_ be _byteLocation_ - _W_.[[ByteIndex]].
+          1. If _W_ is a WriteSharedMemory event then
+            1. Let _byte_ be _W_.[[Payload]][_payloadIndex_].
+          1. Else,
+            1. Assert: _W_ is a ReadModifyWriteSharedMemory event.
+            1. Let _bytesRead_ be ValueOfReadEvent(_execution_, _W_).
+            1. Let _bytesModified_ be _W_.[[ModifyOp]](_bytesRead_, _W_.[[Payload]]).
+            1. Let _byte_ be _bytesModified_[_payloadIndex_].
+          1. Append _byte_ to _bytesRead_.
+          1. Increment _byteLocation_ by 1.
+        1. Return _bytesRead_.
+      </emu-alg>
+      <emu-note>
+        <p>The semantic function [[ModifyOp]] is given by the function properties on the Atomics object that introduce ReadModifyWriteSharedMemory events.</p>
+      </emu-note>
+      <emu-note>
+        <p>This abstract operation composes a List of write events into a List of byte values. It is used in the event semantics of ReadSharedMemory and ReadModifyWriteSharedMemory events.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-valueofreadevent" aoid="ValueOfReadEvent">
+      <h1>ValueOfReadEvent( _execution_, _R_ )</h1>
+      <p>The abstract operation ValueOfReadEvent takes two arguments, a candidate execution _execution_ and a ReadSharedMemory or ReadModifyWriteSharedMemory event _R_. It performs the following steps:</p>
+      <emu-alg>
+        1. Assert: _R_ is a ReadSharedMemory or ReadModifyWriteSharedMemory event.
+        1. Let reads-bytes-from be _execution_.[[ReadsBytesFrom]].
+        1. Let _Ws_ be reads-bytes-from(_R_).
+        1. Assert: _Ws_ is a List of WriteSharedMemory or ReadModifyWriteSharedMemory events with length equal to _R_.[[ElementSize]].
+        1. Return ComposeWriteEventBytes(_execution_, _R_.[[Block]], _R_.[[ByteIndex]], _Ws_).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-relations-of-candidate-executions">
+    <h1>Relations of Candidate Executions</h1>
+    <emu-clause id="sec-agent-order" aoid="agent-order">
+      <h1>agent-order</h1>
+      <p>For a candidate execution _execution_, a Relation that satisfies the following conditions.</p>
+      <emu-alg>
+        1. For each pair of events _E_ and _D_ in EventSet(_execution_):
+          1. For each element _eventList_ in _execution_.[[EventLists]]:
+            1. If _E_ and _D_ are in _eventList_ and _E_ is before _D_ in List order of _eventList_ then _E_ is agent-order before _D_.
+      </emu-alg>
+
+      <emu-note>
+        <p>Each agent introduces events in a per-agent strict total order during the evaluation. This is the union of those strict total orders.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-reads-bytes-from" aoid="reads-bytes-from">
+      <h1>reads-bytes-from</h1>
+      <p>For a candidate execution _execution_, _execution_.[[ReadsBytesFrom]] is a semantic function from events in SharedDataBlockEventSet(_execution_) to Lists of events in SharedDataBlockEventSet(_execution_) that satisfies the following conditions.</p>
+
+      <emu-alg>
+        1. Let reads-bytes-from be _execution_.[[ReadsBytesFrom]].
+        1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ in SharedDataBlockEventSet(_execution_):
+          1. There is a List of length equal to _R_.[[ElementSize]] of WriteSharedMemory or ReadModifyWriteSharedMemory events _Ws_ such that reads-bytes-from(_R_) is _Ws_.
+          1. Let _byteLocation_ be _R_.[[ByteIndex]].
+          1. For each element _W_ of _Ws_ in List order:
+            1. _W_ has _byteLocation_ in its range.
+            1. _W_ is not _R_.
+            1. Increment _byteLocation_ by 1.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-reads-from" aoid="reads-from">
+      <h1>reads-from</h1>
+      <p>For a candidate execution _execution_, _execution_.[[ReadsFrom]] is the least Relation that satisfies the following conditions.</p>
+
+      <emu-alg>
+        1. Let reads-from be _execution_.[[ReadsFrom]].
+        1. Let reads-bytes-from be _execution_.[[ReadsBytesFrom]].
+        1. For each pair of events _R_ and _W_ in SharedDataBlockEventSet(_execution_):
+          1. Let _Ws_ be reads-bytes-from(_R_).
+          1. Assert: _Ws_ is a List of WriteSharedMemory or ReadModifyWriteSharedMemory events.
+          1. If _Ws_ contains _W_ then _R_ reads-from _W_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-host-synchronizes-with" aoid="host-synchronizes-with">
+      <h1>host-synchronizes-with</h1>
+      <p>For a candidate execution _execution_, a host-provided strict partial order on host-specific events in HostEventSet(_execution_) that satisfies the following conditions.</p>
+      <emu-alg>
+        1. There is no cycle in the union of host-synchronizes-with and agent-order.
+      </emu-alg>
+
+      <emu-note>
+        <p>For two host-specific events _E_ and _D_, _E_ host-synchronizes-with _D_ implies _E_ happens-before _D_.</p>
+      </emu-note>
+      <emu-note>
+        <p>The host-synchronizes-with relation allows the host to provide additional synchronization mechanisms, such as `postMessage` between HTML workers.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-synchronizes-with" aoid="synchronizes-with">
+      <h1>synchronizes-with</h1>
+      <p>For a candidate execution _execution_, _execution_.[[SynchronizesWith]] is the least Relation that satisfies the following conditions.</p>
+
+      <emu-alg>
+        1. Let synchronizes-with be _execution_.[[SynchronizesWith]].
+        1. Let reads-from be _execution_.[[ReadsFrom]].
+        1. Let host-synchronizes-with be _execution_.[[HostSynchronizesWith]].
+        1. For each pair of events _R_ and _W_ in SharedDataBlockEventSet(_execution_) such that _R_.[[Order]] is `"SeqCst"` and _R_ reads-from _W_:
+          1. Assert: _R_ is a ReadSharedMemory or ReadModifyWriteSharedMemory event.
+          1. Assert: _W_ is a WriteSharedMemory or ReadModifyWriteSharedMemory event.
+          1. If _W_.[[Order]] is `"SeqCst"` and _R_ and _W_ have equal ranges then _W_ synchronizes-with _R_.
+          1. Otherwise, if _W_ has _order_ `"Init"` then
+            1. Let _allInitReads_ be *true*.
+            1. For each event _V_ such that _R_ reads-from _V_:
+              1. If _V_.[[Order]] is not `"Init"` then set _allInitReads_ to *false*.
+            1. If _allInitReads_ is *true* then _W_ synchronizes-with _R_.
+        1. For each pair of events _E_ and _D_ in HostEventSet(_execution_):
+          1. If _E_ host-synchronizes-with _D_ then _E_ synchronizes-with _D_.
+      </emu-alg>
+
+      <emu-note>
+        <p>Owing to convention, write events synchronizes-with read events, instead of read events synchronizes-with write events.</p>
+      </emu-note>
+
+      <emu-note>
+        <p>Not all `"SeqCst"` events related by reads-from are related by synchronizes-with. Only events that also have equal ranges are related by synchronizes-with.</p>
+      </emu-note>
+
+      <emu-note>
+        <p>For an event _R_ and a event _W_ such _W_ synchronizes-with _R_, _R_ may reads-from other writes than _W_.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-happens-before" aoid="happens-before">
+      <h1>happens-before</h1>
+      <p>For a candidate execution _execution_, _execution_.[[HappensBefore]] is the least Relation that satisfies the following conditions.</p>
+
+      <emu-alg>
+        1. Let happens-before be _execution_.[[HappensBefore]].
+        1. Let agent-order be _execution_.[[AgentOrder]].
+        1. Let synchronizes-with be _execution_.[[SynchronizesWith]].
+        1. For each pair of events _E_ and _D_ in EventSet(_execution_):
+          1. If _E_ is agent-order before _D_ then _E_ happens-before _D_.
+          1. If _E_ synchronizes-with _D_ then _E_ happens-before _D_.
+          1. If _E_ and _D_ are in SharedDataBlockEventSet(_execution_), _E_.[[Order]] is `"Init"`, and _E_ and _D_ have overlapping ranges then:
+            1. Assert: _D_.[[Order]] is not `"Init"`.
+            1. _E_ happens-before _D_.
+          1. If there is an event _F_ such that _E_ happens-before _F_ and _F_ happens-before _D_ then _E_ happens-before _D_.
+      </emu-alg>
+
+      <emu-note>
+        <p>Because happens-before is a superset of agent-order, candidate executions are consistent with the single-thread evaluation semantics of ECMA262.</p>
+      </emu-note>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-valid-executions">
+    <h1>Properties of Valid Executions</h1>
+    <emu-clause id="sec-valid-chosen-reads">
+      <h1>Valid Chosen Reads</h1>
+      <p>A candidate execution _execution_ has valid chosen reads if the following conditions hold.</p>
+      <emu-alg>
+        1. For each ReadSharedMemory and ReadModifyWriteSharedMemory event _R_ in SharedDataBlockEventSet(_execution_):
+          1. Let _chosenValue_ be the element of _execution_.[[ChosenValues]] whose [[Event]] field is _R_.
+          1. _chosenValue_ is equal to ValueOfReadEvent(_execution_, _R_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-coherent-reads">
+      <h1>Coherent Reads</h1>
+      <p>A candidate execution _execution_ has coherent reads if the following conditions hold.</p>
+      <emu-alg>
+        1. Let happens-before be _execution_.[[HappensBefore]].
+        1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ in SharedDataBlockEventSet(_execution_):
+          1. Let _Ws_ be the List of events reads-bytes-from(_R_).
+          1. Let _byteLocation_ be _R_.[[ByteIndex]].
+          1. For each element _W_ of _Ws_ in List order:
+            1. It is not the case that _R_ happens-before _W_, and
+            1. There is no WriteSharedMemory or ReadModifyWriteSharedMemory event _V_ that has _byteLocation_ in its range such that _W_ happens-before _V_ and _V_ happens-before _R_.
+            1. Increment _byteLocation_ by 1.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-tear-free-aligned-reads">
+      <h1>Tear Free Reads</h1>
+      <p>A candidate execution _execution_ has tear free reads if the following conditions hold.</p>
+      <emu-alg>
+        1. Let reads-from be _execution_.[[ReadsFrom]].
+        1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ in SharedDataBlockEventSet(_execution_):
+          1. If _R_.[[NoTear]] is *true* then
+            1. Assert: the remainder of _R_.[[ByteIndex]] ÷ _R_.[[ElementSize]] is *0*.
+            1. For each event _W_ such that _R_ reads-from _W_ and _W_.[[NoTear]] is *true*:
+              1. If _R_ and _W_ have equal ranges then there is no _V_ such that _V_ and _W_ have equal range, _V_.[[NoTear]] is *true*, _W_ is not _V_, and _R_ reads-from _V_.
+      </emu-alg>
+
+      <emu-note>
+        <p>An event's [[NoTear]] field is *true* when that event was introduced via accessing an integer TypedArray, and *false* when introduced via accessing a floating point TypedArray or DataView.</p>
+        <p>Intuitively, this requirement says when a memory range is accessed in an aligned fashion via an integer TypedArray, a single write event on that range must "win" when in a data race with other write events with equal ranges. More precisely, this requirement says an aligned read event cannot read a value composed of bytes from multiple, different write events all with equal ranges. It is possible, however, for an aligned read event to read from multiple write events with overlapping ranges. See Access Atomicity below.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-memory-order" aoid="memory-order">
+      <h1>Sequentially Consistent Atomics</h1>
+      <p>For a candidate execution _execution_, memory-order is a strict total order of all events in EventSet(_execution_) that satisfies the following conditions.</p>
+      <emu-alg>
+        1. Let happens-before be _execution_.[[HappensBefore]].
+        1. Let synchronizes-with be _execution_.[[SynchronizesWith]].
+        1. For each pair of events _E_ and _D_ in EventSet(_execution_):
+          1. If _E_ happens-before _D_ then _E_ is memory-order before _D_.
+          1. If _E_ and _D_ are in SharedDataBlockEventSet(_execution_) and _E_ synchronizes-with _D_ then
+            1. Assert: _D_.[[Order]] is `"SeqCst"`.
+            1. There is no WriteSharedMemory or ReadModifyWriteSharedMemory event _W_ in SharedDataBlockEventSet(_execution_) with equal range as _D_ such that _E_ is memory-order before _W_ and _W_ is memory-order before _D_.
+            1. NOTE: This clause additionally constrains `"SeqCst"` events on equal ranges.
+        1. For each WriteSharedMemory or ReadModifyWriteSharedMemory event _W_ in SharedDataBlockEventSet(_execution_):
+          1. If _W_.[[Order]] is `"SeqCst"` then it is not the case there is an infinite number of ReadSharedMemory or ReadModifyWriteSharedMemory events in SharedDataBlockEventSet(_execution_) with equal range that is memory-order before _W_.
+          1. NOTE: This clause together with the forward progress guarantee on agents ensure the liveness condition that `"SeqCst"` writes become visible to `"SeqCst"` reads with equal range in finite time.
+      </emu-alg>
+      <p>A candidate execution has sequentially consistent atomics if a memory-order exists.</p>
+      <emu-note>
+        <p>While memory-order includes all events in EventSet(_execution_), those that are not constrained by happens-before or synchronizes-with are allowed to occur anywhere in the order.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-valid-executions">
+      <h1>Valid Executions</h1>
+      <p>A candidate execution _execution_ is a valid execution (or simply an execution) if the following conditions hold.</p>
+      <emu-alg>
+        1. The host provides a host-synchronizes-with Relation for _execution_.[[HostSynchronizesWith]], and
+        1. _execution_.[[HappensBefore]] is a strict partial order, and
+        1. _execution_ has valid chosen reads, and
+        1. _execution_ has coherent reads, and
+        1. _execution_ has tear free reads, and
+        1. _execution_ has sequentially consistent atomics.
+      </emu-alg>
+      <p>All programs have at least one valid execution.</p>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-races">
+    <h1>Races</h1>
+    <p>For a candidate execution _execution_, two events _E_ and _D_ in SharedDataBlockEventSet(_execution_) are in a race if the following conditions hold.</p>
+    <emu-alg>
+      1. Let happens-before be _execution_.[[HappensBefore]].
+      1. Let reads-from be _execution_.[[ReadsFrom]].
+      1. _E_ is not _D_, and
+      1. It is not the case that _E_ happens-before _D_ or _D_ happens-before _E_, and
+      1. If _E_ and _D_ are both WriteSharedMemory or ReadModifyWriteSharedMemory events then
+        1. _E_ and _D_ do not have disjoint ranges.
+      1. Else,
+        1. _E_ reads-from _D_ or _D_ reads-from _E_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-data-races">
+    <h1>Data Races</h1>
+    <p>For an execution _execution_, two events _E_ and _D_ in SharedDataBlockEventSet(_execution_) are in a data race if the following conditions hold.</p>
+    <emu-alg>
+      1. _E_ and _D_ are in a race in _execution_, and
+      1. At least one of _E_ or _D_ does not have [[Order]] `"SeqCst"` or _E_ and _D_ have overlapping ranges.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-data-race-freedom">
+    <h1>Data Race Freedom</h1>
+    <p>An execution _execution_ is data race free if there are no two events in SharedDataBlockEventSet(_execution_) that are in a data race.</p>
+    <p>A program is data race free if all its executions are data race free.</p>
+  </emu-clause>
+
+  <emu-clause id="sec-sequential-consistency-for-data-race-free-programs">
+    <h1>Sequential Consistency for Data Race Free Programs (informative)</h1>
+    <p>The memory model guarantees sequential consistency of all events for data race free programs.</p>
   </emu-clause>
 </emu-clause>
 
