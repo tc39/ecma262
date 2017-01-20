@@ -26762,44 +26762,43 @@
 
       <!-- es6num="20.3.1.7" -->
       <emu-clause id="sec-local-time-zone-adjustment">
-        <h1>Local Time Zone Adjustment</h1>
-        <p>An implementation of ECMAScript is expected to determine the local time zone adjustment. The local time zone adjustment is a value <dfn>LocalTZA</dfn> measured in milliseconds which when added to UTC represents the local <em>standard</em> time. Daylight saving time is <em>not</em> reflected by LocalTZA.</p>
+        <h1>LocalTimeZoneAdjustment ( _t_, _isUTC_ )</h1>
+        <p>An implementation of ECMAScript is expected to determine the local time zone adjustment with respect to UTC using the best available information on time zones.</p>
+        <p>When _isUTC_ is true, <dfn>LocalTZA( _t_, true )</dfn> is the offset of the local time zone from UTC measured in milliseconds at time represented by time value _t_ (UTC). When it is added to _t_ (UTC), it yields the local time.</p>
+        <p>When _isUTC_ is false, <dfn>LocalTZA( _t_, false )</dfn> is the offset of the local time zone from UTC measured in milliseconds at local time represented by time value <dfn><emu-eqn>_t_<sub>local</sub> = _t_</emu-eqn></dfn>. When it is subtracted from the local time <emu-eqn>_t_<sub>local</sub>, it yields the corresponding UTC.</p>
+        <p>When <emu-eqn>_t_<sub>local</sub></emu-eqn> represents wall time repeating multiple times at a negative time zone transition (e.g. when the daylight savings time ends or the time zone adjustment is increased) or skipped wall time at a positive time zone transitions (e.g. when the daylight savings time starts or the time zone adjustment is decreased), <emu-eqn>_t_<sub>local</sub></emu-eqn> must be interpreted with the time zone adjustment after the transition.</p>
         <emu-note>
           <p>It is recommended that implementations use the time zone information of the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a>.</p>
+          <p>1:30 AM on November 5, 2017 in America/New_York is repeated twice (fall backward), but it must be interpreted as 1:30 AM UTC-05 instead of 1:30 AM UTC-04. LocalTZA(TimeClip(MakeDate(MakeDay(2017, 10, 5), MakeTime(1, 30, 0, 0))), false) is <emu-eqn>-5 &times; msPerHour</emu-eqn>.</p>
+          <p>2:30 AM on March 12, 2017 in America/New_York does not exist, but it must be interpreted as 2:30 AM UTC-04. LocalTZA(TimeClip(MakeDate(MakeDay(2017, 2, 12), MakeTime(2, 30, 0, 0))), false) is <emu-eqn>-4 &times; msPerHour</emu-eqn>.</p>.
         </emu-note>
       </emu-clause>
 
       <!-- es6num="20.3.1.8" -->
-      <emu-clause id="sec-daylight-saving-time-adjustment">
-        <h1>Daylight Saving Time Adjustment</h1>
-        <p>An implementation-dependent algorithm using best available information on time zones to determine the local daylight saving time adjustment DaylightSavingTA(_t_), measured in milliseconds. An implementation of ECMAScript is expected to make its best effort to determine the local daylight saving time adjustment.</p>
-        <emu-note>
-          <p>It is recommended that implementations use the time zone information of the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a>.</p>
-        </emu-note>
-      </emu-clause>
-
-      <!-- es6num="20.3.1.9" -->
       <emu-clause id="sec-localtime" aoid="LocalTime">
         <h1>LocalTime ( _t_ )</h1>
         <p>The abstract operation LocalTime with argument _t_ converts _t_ from UTC to local time by performing the following steps:</p>
         <emu-alg>
-          1. Return _t_ + LocalTZA + DaylightSavingTA(_t_).
+          1. Return _t_ + LocalTZA(_t_, true).
         </emu-alg>
+        <emu-note>
+          <p>Two different time values (_t_ (UTC)) are converted to the same local time <emu-eqn>t<sub>local</sub></emu-eqn> at a negative time zone transition when there are repeated times (e.g. the daylight savings time ends or the time zone adjustment is decreased.).</p>
+        </emu-note>
       </emu-clause>
 
-      <!-- es6num="20.3.1.10" -->
+      <!-- es6num="20.3.1.9" -->
       <emu-clause id="sec-utc-t" aoid="UTC">
         <h1>UTC ( _t_ )</h1>
         <p>The abstract operation UTC with argument _t_ converts _t_ from local time to UTC. It performs the following steps:</p>
         <emu-alg>
-          1. Return _t_ - LocalTZA - DaylightSavingTA(_t_ - LocalTZA).
+          1. Return _t_ - LocalTZA( _t_ , false)
         </emu-alg>
         <emu-note>
-          <p><emu-eqn>UTC(LocalTime(_t_))</emu-eqn> is not necessarily always equal to _t_.</p>
+          <p><emu-eqn>UTC(LocalTime(_t_))</emu-eqn> is not necessarily always equal to _t_. <emu-eqn>LocalTime(UTC(_t_<sub>local</sub>))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_<sub>local</sub></emu-eqn>, either.</p>
         </emu-note>
       </emu-clause>
 
-      <!-- es6num="20.3.1.11" -->
+      <!-- es6num="20.3.1.10" -->
       <emu-clause id="sec-hours-minutes-second-and-milliseconds">
         <h1>Hours, Minutes, Second, and Milliseconds</h1>
         <p>The following abstract operations are useful in decomposing time values:</p>
@@ -26816,7 +26815,7 @@
         <emu-eqn id="eqn-msPerHour" aoid="msPerHour">msPerHour = 3600000 = msPerMinute &times; MinutesPerHour</emu-eqn>
       </emu-clause>
 
-      <!-- es6num="20.3.1.12" -->
+      <!-- es6num="20.3.1.11" -->
       <emu-clause id="sec-maketime" aoid="MakeTime">
         <h1>MakeTime ( _hour_, _min_, _sec_, _ms_ )</h1>
         <p>The abstract operation MakeTime calculates a number of milliseconds from its four arguments, which must be ECMAScript Number values. This operator functions as follows:</p>
@@ -26831,7 +26830,7 @@
         </emu-alg>
       </emu-clause>
 
-      <!-- es6num="20.3.1.13" -->
+      <!-- es6num="20.3.1.12" -->
       <emu-clause id="sec-makeday" aoid="MakeDay">
         <h1>MakeDay ( _year_, _month_, _date_ )</h1>
         <p>The abstract operation MakeDay calculates a number of days from its three arguments, which must be ECMAScript Number values. This operator functions as follows:</p>
@@ -26847,7 +26846,7 @@
         </emu-alg>
       </emu-clause>
 
-      <!-- es6num="20.3.1.14" -->
+      <!-- es6num="20.3.1.13" -->
       <emu-clause id="sec-makedate" aoid="MakeDate">
         <h1>MakeDate ( _day_, _time_ )</h1>
         <p>The abstract operation MakeDate calculates a number of milliseconds from its two arguments, which must be ECMAScript Number values. This operator functions as follows:</p>
@@ -26857,7 +26856,7 @@
         </emu-alg>
       </emu-clause>
 
-      <!-- es6num="20.3.1.15" -->
+      <!-- es6num="20.3.1.14" -->
       <emu-clause id="sec-timeclip" aoid="TimeClip">
         <h1>TimeClip ( _time_ )</h1>
         <p>The abstract operation TimeClip calculates a number of milliseconds from its argument, which must be an ECMAScript Number value. This operator functions as follows:</p>
@@ -26873,7 +26872,7 @@
         </emu-note>
       </emu-clause>
 
-      <!-- es6num="20.3.1.16" -->
+      <!-- es6num="20.3.1.15" -->
       <emu-clause id="sec-date-time-string-format">
         <h1>Date Time String Format</h1>
         <p>ECMAScript defines a string interchange format for date-times based upon a simplification of the ISO 8601 Extended Format. The format is as follows: `YYYY-MM-DDTHH:mm:ss.sssZ`</p>
@@ -27001,7 +27000,7 @@ THH:mm:ss.sss
           <p>There exists no international standard that specifies abbreviations for civil time zones like CET, EST, etc. and sometimes the same abbreviation is even used for two very different time zones. For this reason, ISO 8601 and this format specifies numeric representations of date and time.</p>
         </emu-note>
 
-        <!-- es6num="20.3.1.16.1" -->
+        <!-- es6num="20.3.1.15.1" -->
         <emu-clause id="sec-extended-years">
           <h1>Extended Years</h1>
           <p>ECMAScript requires the ability to specify 6 digit years (extended years); approximately 285,426 years, either forward or backward, from 01 January, 1970 UTC. To represent years before 0 or after 9999, ISO 8601 permits the expansion of the year representation, but only by prior agreement between the sender and the receiver. In the simplified ECMAScript format such an expanded year representation shall have 2 extra year digits and is always prefixed with a + or - sign. The year 0 is considered positive and hence prefixed with a + sign.</p>
