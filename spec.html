@@ -9519,7 +9519,7 @@
     <emu-note>
       <p>This standard specifies specific code point additions: U+0024 (DOLLAR SIGN) and U+005F (LOW LINE) are permitted anywhere in an |IdentifierName|, and the code points U+200C (ZERO WIDTH NON-JOINER) and U+200D (ZERO WIDTH JOINER) are permitted anywhere after the first code point of an |IdentifierName|.</p>
     </emu-note>
-    <p>Unicode escape sequences are permitted in an |IdentifierName|, where they contribute a single Unicode code point to the |IdentifierName|. The code point is expressed by the |HexDigits| of the |UnicodeEscapeSequence| (see <emu-xref href="#sec-literals-string-literals"></emu-xref>). The `\\` preceding the |UnicodeEscapeSequence| and the `u` and `{ }` code units, if they appear, do not contribute code points to the |IdentifierName|. A |UnicodeEscapeSequence| cannot be used to put a code point into an |IdentifierName| that would otherwise be illegal. In other words, if a `\\` |UnicodeEscapeSequence| sequence were replaced by the |SourceCharacter| it contributes, the result must still be a valid |IdentifierName| that has the exact same sequence of |SourceCharacter| elements as the original |IdentifierName|. All interpretations of |IdentifierName| within this specification are based upon their actual code points regardless of whether or not an escape sequence was used to contribute any particular code point.</p>
+    <p>Unicode escape sequences are permitted in an |IdentifierName|, where they contribute a single Unicode code point to the |IdentifierName|. The code point is expressed by the |CodePoint| of the |UnicodeEscapeSequence| (see <emu-xref href="#sec-literals-string-literals"></emu-xref>). The `\\` preceding the |UnicodeEscapeSequence| and the `u` and `{ }` code units, if they appear, do not contribute code points to the |IdentifierName|. A |UnicodeEscapeSequence| cannot be used to put a code point into an |IdentifierName| that would otherwise be illegal. In other words, if a `\\` |UnicodeEscapeSequence| sequence were replaced by the |SourceCharacter| it contributes, the result must still be a valid |IdentifierName| that has the exact same sequence of |SourceCharacter| elements as the original |IdentifierName|. All interpretations of |IdentifierName| within this specification are based upon their actual code points regardless of whether or not an escape sequence was used to contribute any particular code point.</p>
     <p>Two |IdentifierName|s that are canonically equivalent according to the Unicode standard are <em>not</em> equal unless, after replacement of each |UnicodeEscapeSequence|, they are represented by the exact same sequence of code points.</p>
     <h2>Syntax</h2>
     <emu-grammar>
@@ -10013,7 +10013,7 @@
 
         UnicodeEscapeSequence ::
           `u` Hex4Digits
-          `u{` HexDigits `}`
+          `u{` CodePoint `}`
 
         Hex4Digits ::
           HexDigit HexDigit HexDigit HexDigit
@@ -10022,17 +10022,6 @@
       <emu-note>
         <p>A line terminator code point cannot appear in a string literal, except as part of a |LineContinuation| to produce the empty code points sequence. The proper way to cause a line terminator code point to be part of the String value of a string literal is to use an escape sequence such as `\\n` or `\\u000A`.</p>
       </emu-note>
-
-      <!-- es6num="11.8.4.1" -->
-      <emu-clause id="sec-string-literals-static-semantics-early-errors">
-        <h1>Static Semantics: Early Errors</h1>
-        <emu-grammar>UnicodeEscapeSequence :: `u{` HexDigits `}`</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if the MV of |HexDigits| &gt; 0x10FFFF.
-          </li>
-        </ul>
-      </emu-clause>
 
       <!-- es6num="11.8.4.2" -->
       <emu-clause id="sec-string-literals-static-semantics-stringvalue">
@@ -10069,13 +10058,13 @@
             The SV of <emu-grammar>DoubleStringCharacters :: DoubleStringCharacter</emu-grammar> is a sequence of one or two code units that is the SV of |DoubleStringCharacter|.
           </li>
           <li>
-            The SV of <emu-grammar>DoubleStringCharacters :: DoubleStringCharacter DoubleStringCharacters</emu-grammar> is a sequence of one or two code units that is the SV of |DoubleStringCharacter| followed by all the code units in the SV of |DoubleStringCharacters| in order.
+            The SV of <emu-grammar>DoubleStringCharacters :: DoubleStringCharacter DoubleStringCharacters</emu-grammar> is a sequence of one or two code units that is the SV of |DoubleStringCharacter| followed by the code units of the SV of |DoubleStringCharacters| in order.
           </li>
           <li>
             The SV of <emu-grammar>SingleStringCharacters :: SingleStringCharacter</emu-grammar> is a sequence of one or two code units that is the SV of |SingleStringCharacter|.
           </li>
           <li>
-            The SV of <emu-grammar>SingleStringCharacters :: SingleStringCharacter SingleStringCharacters</emu-grammar> is a sequence of one or two code units that is the SV of |SingleStringCharacter| followed by all the code units in the SV of |SingleStringCharacters| in order.
+            The SV of <emu-grammar>SingleStringCharacters :: SingleStringCharacter SingleStringCharacters</emu-grammar> is a sequence of one or two code units that is the SV of |SingleStringCharacter| followed by the code units of the SV of |SingleStringCharacters| in order.
           </li>
           <li>
             The SV of <emu-grammar>DoubleStringCharacter :: SourceCharacter but not one of `"` or `\` or LineTerminator</emu-grammar> is the UTF16Encoding of the code point value of |SourceCharacter|.
@@ -10274,7 +10263,7 @@
             The SV of <emu-grammar>Hex4Digits :: HexDigit HexDigit HexDigit HexDigit</emu-grammar> is the code unit value that is (0x1000 times the MV of the first |HexDigit|) plus (0x100 times the MV of the second |HexDigit|) plus (0x10 times the MV of the third |HexDigit|) plus the MV of the fourth |HexDigit|.
           </li>
           <li>
-            The SV of <emu-grammar>UnicodeEscapeSequence :: `u{` HexDigits `}`</emu-grammar> is the UTF16Encoding of the MV of |HexDigits|.
+            The SV of <emu-grammar>UnicodeEscapeSequence :: `u{` CodePoint `}`</emu-grammar> is the UTF16Encoding of the MV of |CodePoint|.
           </li>
         </ul>
       </emu-clause>
@@ -10396,9 +10385,29 @@
         TemplateCharacter ::
           `$` [lookahead != `{` ]
           `\` EscapeSequence
+          `\` NotEscapeSequence
           LineContinuation
           LineTerminatorSequence
           SourceCharacter but not one of ``` or `\` or `$` or LineTerminator
+
+        NotEscapeSequence ::
+          `0` DecimalDigit
+          DecimalDigit but not `0`
+          `x` [lookahead &lt;! HexDigit]
+          `x` HexDigit [lookahead &lt;! HexDigit]
+          `u` [lookahead &lt;! HexDigit] [lookahead != `{`]
+          `u` HexDigit [lookahead &lt;! HexDigit]
+          `u` HexDigit HexDigit [lookahead &lt;! HexDigit]
+          `u` HexDigit HexDigit HexDigit [lookahead &lt;! HexDigit]
+          `u` `{` [lookahead &lt;! HexDigit]
+          `u` `{` NotCodePoint
+          `u` `{` CodePoint [lookahead != `}`]
+
+        NotCodePoint ::
+          HexDigits [&gt; but not if MV of HexDigits &le; 0x10FFFF ]
+
+        CodePoint ::
+          HexDigits [&gt; but not if MV of HexDigits &gt; 0x10FFFF ]
       </emu-grammar>
       <p>A conforming implementation must not use the extended definition of |EscapeSequence| described in <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref> when parsing a |TemplateCharacter|.</p>
       <emu-note>
@@ -10438,7 +10447,7 @@
             The TV of <emu-grammar>TemplateCharacters :: TemplateCharacter</emu-grammar> is the TV of |TemplateCharacter|.
           </li>
           <li>
-            The TV of <emu-grammar>TemplateCharacters :: TemplateCharacter TemplateCharacters</emu-grammar> is a sequence consisting of the code units in the TV of |TemplateCharacter| followed by all the code units in the TV of |TemplateCharacters| in order.
+            The TV of <emu-grammar>TemplateCharacters :: TemplateCharacter TemplateCharacters</emu-grammar> is *undefined* if either the TV of |TemplateCharacter| is *undefined* or the TV of |TemplateCharacters| is *undefined*. Otherwise, it is a sequence consisting of the code units of the TV of |TemplateCharacter| followed by the code units of the TV of |TemplateCharacters|.
           </li>
           <li>
             The TV of <emu-grammar>TemplateCharacter :: SourceCharacter but not one of ``` or `\` or `$` or LineTerminator</emu-grammar> is the UTF16Encoding of the code point value of |SourceCharacter|.
@@ -10448,6 +10457,9 @@
           </li>
           <li>
             The TV of <emu-grammar>TemplateCharacter :: `\` EscapeSequence</emu-grammar> is the SV of |EscapeSequence|.
+          </li>
+          <li>
+            The TV of <emu-grammar>TemplateCharacter :: `\` NotEscapeSequence</emu-grammar> is *undefined*.
           </li>
           <li>
             The TV of <emu-grammar>TemplateCharacter :: LineContinuation</emu-grammar> is the TV of |LineContinuation|.
@@ -10474,7 +10486,7 @@
             The TRV of <emu-grammar>TemplateCharacters :: TemplateCharacter</emu-grammar> is the TRV of |TemplateCharacter|.
           </li>
           <li>
-            The TRV of <emu-grammar>TemplateCharacters :: TemplateCharacter TemplateCharacters</emu-grammar> is a sequence consisting of the code units in the TRV of |TemplateCharacter| followed by all the code units in the TRV of |TemplateCharacters|, in order.
+            The TRV of <emu-grammar>TemplateCharacters :: TemplateCharacter TemplateCharacters</emu-grammar> is a sequence consisting of the code units of the TRV of |TemplateCharacter| followed by the code units of the TRV of |TemplateCharacters|.
           </li>
           <li>
             The TRV of <emu-grammar>TemplateCharacter :: SourceCharacter but not one of ``` or `\` or `$` or LineTerminator</emu-grammar> is the UTF16Encoding of the code point value of |SourceCharacter|.
@@ -10484,6 +10496,9 @@
           </li>
           <li>
             The TRV of <emu-grammar>TemplateCharacter :: `\` EscapeSequence</emu-grammar> is the sequence consisting of the code unit value 0x005C followed by the code units of TRV of |EscapeSequence|.
+          </li>
+          <li>
+            The TRV of <emu-grammar>TemplateCharacter :: `\` NotEscapeSequence</emu-grammar> is the sequence consisting of the code unit value 0x005C followed by the code units of TRV of |NotEscapeSequence|.
           </li>
           <li>
             The TRV of <emu-grammar>TemplateCharacter :: LineContinuation</emu-grammar> is the TRV of |LineContinuation|.
@@ -10504,6 +10519,39 @@
             The TRV of <emu-grammar>EscapeSequence :: UnicodeEscapeSequence</emu-grammar> is the TRV of the |UnicodeEscapeSequence|.
           </li>
           <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `0` DecimalDigit</emu-grammar> is the sequence consisting of the code unit value 0x0030 (DIGIT ZERO) followed by the code units of the TRV of |DecimalDigit|.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `x` [lookahead &lt;! HexDigit]</emu-grammar> is the code unit value 0x0078.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `x` HexDigit [lookahead &lt;! HexDigit]</emu-grammar> is the sequence consisting of the code unit value 0x0078 followed by the code units of the TRV of |HexDigit|.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` [lookahead &lt;! { HexDigit, `{` }]</emu-grammar> is the code unit value 0x0075.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit [lookahead &lt;! { HexDigit, `{` }]</emu-grammar> is the sequence consisting of the code unit value 0x0075 followed by the code units of the TRV of |HexDigit|.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit HexDigit [lookahead &lt;! { HexDigit, `{` }]</emu-grammar> is the sequence consisting of the code unit value 0x0075 followed by the code units of the TRV of the first |HexDigit| followed by the code units of the TRV of the second |HexDigit|.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit HexDigit HexDigit [lookahead &lt;! { HexDigit, `{` }]</emu-grammar> is the sequence consisting of the code unit value 0x0075 followed by the code units of the TRV of the first |HexDigit| followed by the code units of the TRV of the second |HexDigit| followed by the code units of the TRV of the third |HexDigit|.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` [lookahead &lt;! HexDigit]</emu-grammar> is the sequence consisting of the code unit value 0x0075 followed by the code unit value 0x007B.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` NotCodePoint</emu-grammar> is the sequence consisting of the code unit value 0x0075 followed by the code unit value 0x007B followed by the code units of the TRV of |NotCodePoint|.
+          </li>
+          <li>
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` CodePoint [lookahead &lt;! `}`]</emu-grammar> is the sequence consisting of the code unit value 0x0075 followed by the code unit value 0x007B followed by the code units of the TRV of |CodePoint|.
+          </li>
+          <li>
+            The TRV of <emu-grammar>DecimalDigit :: one of `0` `1` `2` `3` `4` `5` `6` `7` `8` `9`</emu-grammar> is the SV of the |SourceCharacter| that is that single code point.
+          </li>
+          <li>
             The TRV of <emu-grammar>CharacterEscapeSequence :: SingleEscapeCharacter</emu-grammar> is the TRV of the |SingleEscapeCharacter|.
           </li>
           <li>
@@ -10519,7 +10567,7 @@
             The TRV of <emu-grammar>UnicodeEscapeSequence :: `u` Hex4Digits</emu-grammar> is the sequence consisting of code unit value 0x0075 followed by TRV of |Hex4Digits|.
           </li>
           <li>
-            The TRV of <emu-grammar>UnicodeEscapeSequence :: `u{` HexDigits `}`</emu-grammar> is the sequence consisting of code unit value 0x0075 followed by code unit value 0x007B followed by TRV of |HexDigits| followed by code unit value 0x007D.
+            The TRV of <emu-grammar>UnicodeEscapeSequence :: `u{` CodePoint `}`</emu-grammar> is the sequence consisting of code unit value 0x0075 followed by code unit value 0x007B followed by TRV of |CodePoint| followed by code unit value 0x007D.
           </li>
           <li>
             The TRV of <emu-grammar>Hex4Digits :: HexDigit HexDigit HexDigit HexDigit</emu-grammar> is the sequence consisting of the TRV of the first |HexDigit| followed by the TRV of the second |HexDigit| followed by the TRV of the third |HexDigit| followed by the TRV of the fourth |HexDigit|.
@@ -11543,18 +11591,62 @@
       <h1>Template Literals</h1>
       <h2>Syntax</h2>
       <emu-grammar>
-        TemplateLiteral[Yield, Await] :
+        TemplateLiteral[Yield, Await, Tagged] :
           NoSubstitutionTemplate
-          TemplateHead Expression[+In, ?Yield, ?Await] TemplateSpans[?Yield, ?Await]
+          SubstitutionTemplate[?Yield, ?Await, ?Tagged]
 
-        TemplateSpans[Yield, Await] :
+        SubstitutionTemplate[Yield, Await, Tagged] :
+          TemplateHead Expression[+In, ?Yield, ?Await] TemplateSpans[?Yield, ?Await, ?Tagged]
+
+        TemplateSpans[Yield, Await, Tagged] :
           TemplateTail
-          TemplateMiddleList[?Yield, ?Await] TemplateTail
+          TemplateMiddleList[?Yield, ?Await, ?Tagged] TemplateTail
 
-        TemplateMiddleList[Yield, Await] :
+        TemplateMiddleList[Yield, Await, Tagged] :
           TemplateMiddle Expression[+In, ?Yield, ?Await]
-          TemplateMiddleList[?Yield, ?Await] TemplateMiddle Expression[+In, ?Yield, ?Await]
+          TemplateMiddleList[?Yield, ?Await, ?Tagged] TemplateMiddle Expression[+In, ?Yield, ?Await]
       </emu-grammar>
+
+      <emu-clause id="sec-static-semantics-template-early-errors">
+        <h1>Static Semantics: Early Errors</h1>
+        <emu-grammar>
+          TemplateLiteral[Yield, Await, Tagged] : NoSubstitutionTemplate
+        </emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the Tagged parameter was not set and |NoSubstitutionTemplate| Contains |NotEscapeSequence|.
+          </li>
+        </ul>
+
+        <emu-grammar>
+          SubstitutionTemplate[Yield, Await, Tagged] : TemplateHead Expression[In, ?Yield] TemplateSpans[?Yield, ?Tagged]
+        </emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the Tagged parameter was not set and |TemplateHead| Contains |NotEscapeSequence|.
+          </li>
+        </ul>
+
+        <emu-grammar>
+          TemplateSpans[Yield, Await, Tagged] : TemplateTail
+        </emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the Tagged parameter was not set and |TemplateTail| Contains |NotEscapeSequence|.
+          </li>
+        </ul>
+
+        <emu-grammar>
+          TemplateMiddleList[Yield, Await, Tagged] :
+            TemplateMiddle Expression[+In, ?Yield, ?Await]
+            TemplateMiddleList[?Yield, ?Await, ?Tagged] TemplateMiddle Expression[+In, ?Yield, ?Await]
+        </emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the Tagged parameter was not set and |TemplateMiddle| Contains |NotEscapeSequence|.
+          </li>
+        </ul>
+      </emu-clause>
 
       <!-- es6num="12.2.9.1" -->
       <emu-clause id="sec-static-semantics-templatestrings">
@@ -11568,7 +11660,7 @@
             1. Let _string_ be the TRV of |NoSubstitutionTemplate|.
           1. Return a List containing the single element, _string_.
         </emu-alg>
-        <emu-grammar>TemplateLiteral : TemplateHead Expression TemplateSpans</emu-grammar>
+        <emu-grammar>SubstitutionTemplate : TemplateHead Expression TemplateSpans</emu-grammar>
         <emu-alg>
           1. If _raw_ is *false*, then
             1. Let _head_ be the TV of |TemplateHead|.
@@ -11830,7 +11922,7 @@
         PrimaryExpression[?Yield, ?Await]
         MemberExpression[?Yield, ?Await] `[` Expression[+In, ?Yield, ?Await] `]`
         MemberExpression[?Yield, ?Await] `.` IdentifierName
-        MemberExpression[?Yield, ?Await] TemplateLiteral[?Yield, ?Await]
+        MemberExpression[?Yield, ?Await] TemplateLiteral[?Yield, ?Await, Tagged]
         SuperProperty[?Yield, ?Await]
         MetaProperty
         `new` MemberExpression[?Yield, ?Await] Arguments[?Yield, ?Await]
@@ -11855,7 +11947,7 @@
         CallExpression[?Yield, ?Await] Arguments[?Yield, ?Await]
         CallExpression[?Yield, ?Await] `[` Expression[+In, ?Yield, ?Await] `]`
         CallExpression[?Yield, ?Await] `.` IdentifierName
-        CallExpression[?Yield, ?Await] TemplateLiteral[?Yield, ?Await]
+        CallExpression[?Yield, ?Await] TemplateLiteral[?Yield, ?Await, Tagged]
 
       SuperCall[Yield, Await] :
         `super` Arguments[?Yield, ?Await]
@@ -28278,7 +28370,7 @@ THH:mm:ss.sss
           [+U] `u` TrailSurrogate
           [+U] `u` NonSurrogate
           [~U] `u` Hex4Digits
-          [+U] `u{` HexDigits `}`
+          [+U] `u{` CodePoint `}`
       </emu-grammar>
       <p>Each `\\u` |TrailSurrogate| for which the choice of associated `u` |LeadSurrogate| is ambiguous shall be associated with the nearest possible `u` |LeadSurrogate| that would otherwise have no corresponding `\\u` |TrailSurrogate|.</p>
       <emu-grammar>
@@ -28334,17 +28426,6 @@ THH:mm:ss.sss
           CharacterClassEscape
           CharacterEscape[?U]
       </emu-grammar>
-
-      <!-- es6num="21.2.1.1" -->
-      <emu-clause id="sec-patterns-static-semantics-early-errors">
-        <h1>Static Semantics: Early Errors</h1>
-        <emu-grammar>RegExpUnicodeEscapeSequence :: `u{` HexDigits `}`</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if the MV of |HexDigits| &gt; 0x10FFFF.
-          </li>
-        </ul>
-      </emu-clause>
     </emu-clause>
 
     <!-- es6num="21.2.2" -->
@@ -29245,9 +29326,9 @@ THH:mm:ss.sss
         <emu-alg>
           1. Return the character whose code is the SV of |Hex4Digits|.
         </emu-alg>
-        <p>The production <emu-grammar>RegExpUnicodeEscapeSequence :: `u{` HexDigits `}`</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>RegExpUnicodeEscapeSequence :: `u{` CodePoint `}`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the character whose code is the MV of |HexDigits|.
+          1. Return the character whose code is the MV of |CodePoint|.
         </emu-alg>
         <p>The production <emu-grammar>LeadSurrogate :: Hex4Digits</emu-grammar> evaluates as follows:</p>
         <emu-alg>
