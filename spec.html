@@ -16412,32 +16412,32 @@
         <emu-grammar>IterationStatement : `for` `(` LeftHandSideExpression `in` Expression `)` Statement</emu-grammar>
         <emu-alg>
           1. Let _keyResult_ be ? ForIn/OfHeadEvaluation(&laquo; &raquo;, |Expression|, ~enumerate~).
-          1. Return ? ForIn/OfBodyEvaluation(|LeftHandSideExpression|, |Statement|, _keyResult_, ~assignment~, _labelSet_).
+          1. Return ? ForIn/OfBodyEvaluation(|LeftHandSideExpression|, |Statement|, _keyResult_, ~enumerate~, ~assignment~, _labelSet_).
         </emu-alg>
         <emu-grammar>IterationStatement : `for` `(` `var` ForBinding `in` Expression `)` Statement</emu-grammar>
         <emu-alg>
           1. Let _keyResult_ be ? ForIn/OfHeadEvaluation(&laquo; &raquo;, |Expression|, ~enumerate~).
-          1. Return ? ForIn/OfBodyEvaluation(|ForBinding|, |Statement|, _keyResult_, ~varBinding~, _labelSet_).
+          1. Return ? ForIn/OfBodyEvaluation(|ForBinding|, |Statement|, _keyResult_, ~enumerate~, ~varBinding~, _labelSet_).
         </emu-alg>
         <emu-grammar>IterationStatement : `for` `(` ForDeclaration `in` Expression `)` Statement</emu-grammar>
         <emu-alg>
           1. Let _keyResult_ be the result of performing ? ForIn/OfHeadEvaluation(BoundNames of |ForDeclaration|, |Expression|, ~enumerate~).
-          1. Return ? ForIn/OfBodyEvaluation(|ForDeclaration|, |Statement|, _keyResult_, ~lexicalBinding~, _labelSet_).
+          1. Return ? ForIn/OfBodyEvaluation(|ForDeclaration|, |Statement|, _keyResult_, ~enumerate~, ~lexicalBinding~, _labelSet_).
         </emu-alg>
         <emu-grammar>IterationStatement : `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement</emu-grammar>
         <emu-alg>
           1. Let _keyResult_ be the result of performing ? ForIn/OfHeadEvaluation(&laquo; &raquo;, |AssignmentExpression|, ~iterate~).
-          1. Return ? ForIn/OfBodyEvaluation(|LeftHandSideExpression|, |Statement|, _keyResult_, ~assignment~, _labelSet_).
+          1. Return ? ForIn/OfBodyEvaluation(|LeftHandSideExpression|, |Statement|, _keyResult_, ~iterate~, ~assignment~, _labelSet_).
         </emu-alg>
         <emu-grammar>IterationStatement : `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement</emu-grammar>
         <emu-alg>
           1. Let _keyResult_ be the result of performing ? ForIn/OfHeadEvaluation(&laquo; &raquo;, |AssignmentExpression|, ~iterate~).
-          1. Return ? ForIn/OfBodyEvaluation(|ForBinding|, |Statement|, _keyResult_, ~varBinding~, _labelSet_).
+          1. Return ? ForIn/OfBodyEvaluation(|ForBinding|, |Statement|, _keyResult_, ~iterate~, ~varBinding~, _labelSet_).
         </emu-alg>
         <emu-grammar>IterationStatement : `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement</emu-grammar>
         <emu-alg>
           1. Let _keyResult_ be the result of performing ? ForIn/OfHeadEvaluation(BoundNames of |ForDeclaration|, |AssignmentExpression|, ~iterate~).
-          1. Return ? ForIn/OfBodyEvaluation(|ForDeclaration|, |Statement|, _keyResult_, ~lexicalBinding~, _labelSet_).
+          1. Return ? ForIn/OfBodyEvaluation(|ForDeclaration|, |Statement|, _keyResult_, ~iterate~, ~lexicalBinding~, _labelSet_).
         </emu-alg>
         <emu-note>
           <p>This section is extended by Annex <emu-xref href="#sec-initializers-in-forin-statement-heads"></emu-xref>.</p>
@@ -16473,8 +16473,8 @@
 
       <!-- es6num="13.7.5.13" -->
       <emu-clause id="sec-runtime-semantics-forin-div-ofbodyevaluation-lhs-stmt-iterator-lhskind-labelset" aoid="ForIn/OfBodyEvaluation">
-        <h1>Runtime Semantics: ForIn/OfBodyEvaluation ( _lhs_, _stmt_, _iterator_, _lhsKind_, _labelSet_ )</h1>
-        <p>The abstract operation ForIn/OfBodyEvaluation is called with arguments _lhs_, _stmt_, _iterator_, _lhsKind_, and _labelSet_. The value of _lhsKind_ is either ~assignment~, ~varBinding~ or ~lexicalBinding~.</p>
+        <h1>Runtime Semantics: ForIn/OfBodyEvaluation ( _lhs_, _stmt_, _iterator_, _iterationKind_, _lhsKind_, _labelSet_ )</h1>
+        <p>The abstract operation ForIn/OfBodyEvaluation is called with arguments _lhs_, _stmt_, _iterator_, _iterationKind_, _lhsKind_, and _labelSet_. The value of _iterationKind_ is either ~enumerate~ or ~iterate~. The value of _lhsKind_ is either ~assignment~, ~varBinding~ or ~lexicalBinding~.</p>
         <emu-alg>
           1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
           1. Let _V_ be *undefined*.
@@ -16518,10 +16518,19 @@
                 1. Let _status_ be the result of performing BindingInitialization for _lhs_ passing _nextValue_ and _iterationEnv_ as arguments.
             1. If _status_ is an abrupt completion, then
               1. Set the running execution context's LexicalEnvironment to _oldEnv_.
-              1. Return ? IteratorClose(_iterator_, _status_).
+              1. If _iterationKind_ is ~enumerate~, then
+                1. Return _status_.
+              1. Else,
+                1. Assert: _iterationKind_ is ~iterate~.
+                1. Return ? IteratorClose(_iterator_, _status_).
             1. Let _result_ be the result of evaluating _stmt_.
             1. Set the running execution context's LexicalEnvironment to _oldEnv_.
-            1. If LoopContinues(_result_, _labelSet_) is *false*, return ? IteratorClose(_iterator_, UpdateEmpty(_result_, _V_)).
+            1. If LoopContinues(_result_, _labelSet_) is *false*, then
+              1. If _iterationKind_ is ~enumerate~, then
+                1. Return Completion(UpdateEmpty(_result_, _V_)).
+              1. Else,
+                1. Assert: _iterationKind_ is ~iterate~.
+                1. Return ? IteratorClose(_iterator_, UpdateEmpty(_result_, _V_)).
             1. If _result_.[[Value]] is not ~empty~, let _V_ be _result_.[[Value]].
         </emu-alg>
       </emu-clause>
@@ -20066,9 +20075,6 @@
           LabelledItem : FunctionDeclaration
 
           IterationStatement :
-            `for` `(` LeftHandSideExpression `in` Expression `)` Statement
-            `for` `(` `var` ForBinding `in` Expression `)` Statement
-            `for` `(` ForDeclaration `in` Expression `)` Statement
             `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
             `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
             `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement
@@ -20093,6 +20099,9 @@
             `for` `(` Expression? `;` Expression? `;` Expression? `)` Statement
             `for` `(` `var` VariableDeclarationList `;` Expression? `;` Expression? `)` Statement
             `for` `(` LexicalDeclaration Expression? `;` Expression? `)` Statement
+            `for` `(` LeftHandSideExpression `in` Expression `)` Statement
+            `for` `(` `var` ForBinding `in` Expression `)` Statement
+            `for` `(` ForDeclaration `in` Expression `)` Statement
 
           WithStatement : `with` `(` Expression `)` Statement
         </emu-grammar>
@@ -39024,7 +39033,7 @@ THH:mm:ss.sss
           1. If _hasNameProperty_ is *false*, perform SetFunctionName(_value_, _bindingId_).
         1. Perform ? PutValue(_lhs_, _value_).
         1. Let _keyResult_ be ? ForIn/OfHeadEvaluation(&laquo; &raquo;, |Expression|, ~enumerate~).
-        1. Return ? ForIn/OfBodyEvaluation(|BindingIdentifier|, |Statement|, _keyResult_, ~varBinding~, _labelSet_).
+        1. Return ? ForIn/OfBodyEvaluation(|BindingIdentifier|, |Statement|, _keyResult_, ~enumerate~, ~varBinding~, _labelSet_).
       </emu-alg>
     </emu-annex>
   </emu-annex>
