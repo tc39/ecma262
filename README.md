@@ -1,6 +1,14 @@
 ECMAScript
 ====
 
+## This repo
+
+This repository contains the source for the current draft of ECMA-262,
+the ECMAScript® Language Specification.
+
+This source is processed to obtain a human-readable version,
+which you can view [here](https://tc39.github.io/ecma262/).
+
 ## Current Proposals
 
 Proposals follow [the TC39 process](https://tc39.github.io/process-document/) and are tracked in the [proposals repository](https://github.com/tc39/proposals).
