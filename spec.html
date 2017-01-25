@@ -37367,24 +37367,24 @@ THH:mm:ss.sss
       <p>For architectures with memory models no weaker than those of ARM or Power, non-atomic stores and loads may be compiled to bare stores and loads on the target architecture. Atomic stores and loads may be compiled down to instructions that guarantee sequential consistency. If no such instructions exist, memory barriers are to be employed, such as placing barriers on both sides of a bare store or load. Read-modify-write operations may be compiled to read-modify-write instructions on the target architectrue, such as <code>LOCK</code>-prefixed instructions on x86, load-exclusive/store-exclusive instructions on ARM, and load-link/store-conditional instructions on Power.</p>
       <p>Specifically, the memory model is intended to allow code generation as follows.</p>
       <ul>
-        <li>Every atomic operation in the program is assumed to be necessary.
-        <li>Atomic operations are never rearranged with each other or with non-atomic operations.
-        <li>Functions are always assumed to perform atomic operations.
-        <li>Atomic operations are never implemented as read-modify-write operations on larger data, but as non-lock-free atomics if the platform does not have atomic operations of the appropriate size. (We already assume that every platform has normal memory access operations of every interesting size.)
+        <li>Every atomic operation in the program is assumed to be necessary.</li>
+        <li>Atomic operations are never rearranged with each other or with non-atomic operations.</li>
+        <li>Functions are always assumed to perform atomic operations.</li>
+        <li>Atomic operations are never implemented as read-modify-write operations on larger data, but as non-lock-free atomics if the platform does not have atomic operations of the appropriate size. (We already assume that every platform has normal memory access operations of every interesting size.)</li>
       </ul>
       <p>Naive code generation uses these patterns:</p>
       <ul>
-        <li>Regular loads and stores compile to single load and store instructions.
-        <li>Lock-free atomic loads and stores compile to a full (sequentially consistent) fence, a regular load or store, and a full fence.
-        <li>Lock-free atomic read-modify-write accesses compile to a full fence, an atomic read-modify-write instruction sequence, and a full fence.
-        <li>Non-lock-free atomics compile to a spinlock acquire, a full fence, a series of non-atomic load and store instructions, a full fence, and a spinlock release.
+        <li>Regular loads and stores compile to single load and store instructions.</li>
+        <li>Lock-free atomic loads and stores compile to a full (sequentially consistent) fence, a regular load or store, and a full fence.</li>
+        <li>Lock-free atomic read-modify-write accesses compile to a full fence, an atomic read-modify-write instruction sequence, and a full fence.</li>
+        <li>Non-lock-free atomics compile to a spinlock acquire, a full fence, a series of non-atomic load and store instructions, a full fence, and a spinlock release.</li>
       </ul>
       <p>That mapping is correct so long as an atomic operation on an address range does not race with a non-atomic write or with an atomic operation of different size. However, that is all we need: the memory model effectively demotes the atomic operations involved in a race to non-atomic status. On the other hand, the naive mapping is quite strong: it allows atomic operations to be used as sequentially consistent fences, which the memory model does not actually guarantee.</p>
       <p>A number of local improvements to those basic patterns are also intended to be legal:</p>
       <ul>
-        <li>There are obvious platform-dependent improvements that remove redundant fences.  For example, on x86 the fences around lock-free atomic loads and stores can always be omitted except for the fence following a store, and no fence is needed for lock-free read-modify-write instructions, as these all use LOCK-prefixed instructions. On many platforms there are fences of several strengths, and weaker fences can be used in certain contexts without destroying sequential consistency.
-        <li>Most modern platforms support lock-free atomics for all the data sizes required by ECMAScript atomics. Should non-lock-free atomics be needed, the fences surrounding the body of the atomic operation can usually be folded into the lock and unlock steps. The simplest solution for non-lock-free atomics is to have a single lock word per SharedArrayBuffer.
-        <li>There are also more complicated platform-dependent local improvements, requiring some code analysis. For example, two back-to-back fences often have the same effect as a single fence, so if code is generated for two atomic operations in sequence, only a single fence need separate them.  On x86, even a single fence separating atomic stores can be omitted, as the fence following a store is only needed to separate the store from a subsequent load.
+        <li>There are obvious platform-dependent improvements that remove redundant fences.  For example, on x86 the fences around lock-free atomic loads and stores can always be omitted except for the fence following a store, and no fence is needed for lock-free read-modify-write instructions, as these all use LOCK-prefixed instructions. On many platforms there are fences of several strengths, and weaker fences can be used in certain contexts without destroying sequential consistency.</li>
+        <li>Most modern platforms support lock-free atomics for all the data sizes required by ECMAScript atomics. Should non-lock-free atomics be needed, the fences surrounding the body of the atomic operation can usually be folded into the lock and unlock steps. The simplest solution for non-lock-free atomics is to have a single lock word per SharedArrayBuffer.</li>
+        <li>There are also more complicated platform-dependent local improvements, requiring some code analysis. For example, two back-to-back fences often have the same effect as a single fence, so if code is generated for two atomic operations in sequence, only a single fence need separate them.  On x86, even a single fence separating atomic stores can be omitted, as the fence following a store is only needed to separate the store from a subsequent load.</li>
       </ul>
     </emu-note>
   </emu-clause>
