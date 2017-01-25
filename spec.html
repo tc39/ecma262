@@ -37327,55 +37327,58 @@ THH:mm:ss.sss
     <p>The memory model guarantees sequential consistency of all events for data race free programs.</p>
   </emu-clause>
 
-  <emu-note>
-    <p>The following are guidelines for ECMAScript programmers working with shared memory.</p>
-    <p>We recommend programs be kept data race free, i.e., make it so that it is impossible for there to be concurrent non-atomic operations on the same memory location. Data race free programs have interleaving semantics where each step in the evaluation semantics of each agent are interleaved with each other. For data race free programs, it is not necessary to understand the details of the memory model. The details are unlikely to build intuition that will help one to better write ECMAScript.</p>
-    <p>More generally, even if a program is not data race free it may have predictable behavior, so long as atomic operations are not involved in any data races and the operations that race all have the same access size. The simplest way to arrange for atomics not to be involved in races is to ensure that different memory cells are used by atomic and non-atomic operations and that atomic accesses of different sizes are not used to access the same cells at the same time. Effectively, the program should treat shared memory as strongly typed as much as possible. One still cannot depend on the ordering and timing of non-atomic accesses that race, but if memory is treated as strongly typed the racing accesses will not "tear" (bits of their values will not be mixed).</p>
-  </emu-note>
+  <emu-clause id="sec-shared-memory-guidelines">
+    <h1>Shared Memory Guidelines</h1>
+    <emu-note>
+      <p>The following are guidelines for ECMAScript programmers working with shared memory.</p>
+      <p>We recommend programs be kept data race free, i.e., make it so that it is impossible for there to be concurrent non-atomic operations on the same memory location. Data race free programs have interleaving semantics where each step in the evaluation semantics of each agent are interleaved with each other. For data race free programs, it is not necessary to understand the details of the memory model. The details are unlikely to build intuition that will help one to better write ECMAScript.</p>
+      <p>More generally, even if a program is not data race free it may have predictable behavior, so long as atomic operations are not involved in any data races and the operations that race all have the same access size. The simplest way to arrange for atomics not to be involved in races is to ensure that different memory cells are used by atomic and non-atomic operations and that atomic accesses of different sizes are not used to access the same cells at the same time. Effectively, the program should treat shared memory as strongly typed as much as possible. One still cannot depend on the ordering and timing of non-atomic accesses that race, but if memory is treated as strongly typed the racing accesses will not "tear" (bits of their values will not be mixed).</p>
+    </emu-note>
 
-  <emu-note>
-    <p>The following are guidelines for ECMAScript implementers writing compiler transformations for programs using shared memory.</p>
-    <p>It is desirable to allow most program transformations that are valid in a single-agent setting in a multi-agent setting, to ensure that the performance of each agent in a multi-agent program is as good as it would be in a single-agent setting. Frequently these transformations are hard to judge. We outline some rules about program transformations that are intended to be taken as normative (in that they are implied by the memory model or stronger than what the memory model implies) but which are likely not exhaustive. These rules are intended to apply to program transformations that precede the introductions of the events that make up the agent-order.</p>
-    <p>Let an <dfn>agent-order slice</dfn> be the subset of the agent-order pertaining to a single agent.</p>
-    <p>Let <dfn>possible read values</dfn> of a read event be the set of all values of ValueOfReadEvent for that event across all valid executions.</p>
-    <p>Any transformation of an agent-order slice that is valid in the absence of shared memory is valid in the presence of shared memory, with the following exceptions.</p>
-    <ul>
-      <li><em>Atomics are carved in stone</em>: Program transformations must not cause the <code>"SeqCst"</code> events in an agent-order slice to be reordered with its <code>"Unordered"</code> operations, nor its <code>"SeqCst"</code> operations to be reordered with each other, nor may a program transformation remove a <code>"SeqCst"</code> operation from the agent-order.
-        <p>(In practice, the prohibition on reorderings forces a compiler to assume that every <code>"SeqCst"</code> operation is a synchronization and included in the final memory-order, which it would usually have to assume anyway in the absence of inter-agent program analysis. It also forces the compiler to assume that every call where the callee's effects on the memory-order are unknown may contain <code>"SeqCst"</code> operations.)</p></li>
-      <li><em>Reads must be stable</em>: Any given shared memory read must only observe a single value in an execution.
-        <p>(For example, if what is semantically a single read in the program is executed multiple times then the program is subsequently allowed to observe only one of the values read. A transformation known as rematerialization can violate this rule.)</p></li>
-      <li><em>Writes must be stable</em>: All observable writes to shared memory must follow from program semantics in an execution.
-        <p>(For example, a transformation may not introduce certain observable writes, such as by using read-modify-write operations on a larger location to write a smaller datum, writing a value to memory that the program could not have written, or writing a just-read value back to the location it was read from, if that location could have been overwritten by another agent after the read.)</p></li>
-      <li><em>Possible read values must be nonempty</em>: Program transformations cannot cause the possible read values of a shared memory read to become empty.<p>(Counterintuitively, this rule in effect restricts transformations on writes, because writes have force in memory model insofar as to be read by read events. For example, writes may be moved and coalesced and sometimes reordered between two <code>"SeqCst"</code> operations, but the transformation may not remove every write that updates a location; some write must be preserved.)</p></li>
-    </ul>
-    <p>Examples of transformations that remain valid are: merging multiple non-atomic reads from the same location, reordering non-atomic reads, introducing speculative non-atomic reads, merging multiple non-atomic writes to the same location, reordering non-atomic writes to different locations, and hoisting non-atomic reads out of loops even if that affects termination. Note in general that aliased TypedArrays make it hard to prove that locations are different.</p>
-  </emu-note>
+    <emu-note>
+      <p>The following are guidelines for ECMAScript implementers writing compiler transformations for programs using shared memory.</p>
+      <p>It is desirable to allow most program transformations that are valid in a single-agent setting in a multi-agent setting, to ensure that the performance of each agent in a multi-agent program is as good as it would be in a single-agent setting. Frequently these transformations are hard to judge. We outline some rules about program transformations that are intended to be taken as normative (in that they are implied by the memory model or stronger than what the memory model implies) but which are likely not exhaustive. These rules are intended to apply to program transformations that precede the introductions of the events that make up the agent-order.</p>
+      <p>Let an <dfn>agent-order slice</dfn> be the subset of the agent-order pertaining to a single agent.</p>
+      <p>Let <dfn>possible read values</dfn> of a read event be the set of all values of ValueOfReadEvent for that event across all valid executions.</p>
+      <p>Any transformation of an agent-order slice that is valid in the absence of shared memory is valid in the presence of shared memory, with the following exceptions.</p>
+      <ul>
+        <li><em>Atomics are carved in stone</em>: Program transformations must not cause the <code>"SeqCst"</code> events in an agent-order slice to be reordered with its <code>"Unordered"</code> operations, nor its <code>"SeqCst"</code> operations to be reordered with each other, nor may a program transformation remove a <code>"SeqCst"</code> operation from the agent-order.
+          <p>(In practice, the prohibition on reorderings forces a compiler to assume that every <code>"SeqCst"</code> operation is a synchronization and included in the final memory-order, which it would usually have to assume anyway in the absence of inter-agent program analysis. It also forces the compiler to assume that every call where the callee's effects on the memory-order are unknown may contain <code>"SeqCst"</code> operations.)</p></li>
+        <li><em>Reads must be stable</em>: Any given shared memory read must only observe a single value in an execution.
+          <p>(For example, if what is semantically a single read in the program is executed multiple times then the program is subsequently allowed to observe only one of the values read. A transformation known as rematerialization can violate this rule.)</p></li>
+        <li><em>Writes must be stable</em>: All observable writes to shared memory must follow from program semantics in an execution.
+          <p>(For example, a transformation may not introduce certain observable writes, such as by using read-modify-write operations on a larger location to write a smaller datum, writing a value to memory that the program could not have written, or writing a just-read value back to the location it was read from, if that location could have been overwritten by another agent after the read.)</p></li>
+        <li><em>Possible read values must be nonempty</em>: Program transformations cannot cause the possible read values of a shared memory read to become empty.<p>(Counterintuitively, this rule in effect restricts transformations on writes, because writes have force in memory model insofar as to be read by read events. For example, writes may be moved and coalesced and sometimes reordered between two <code>"SeqCst"</code> operations, but the transformation may not remove every write that updates a location; some write must be preserved.)</p></li>
+      </ul>
+      <p>Examples of transformations that remain valid are: merging multiple non-atomic reads from the same location, reordering non-atomic reads, introducing speculative non-atomic reads, merging multiple non-atomic writes to the same location, reordering non-atomic writes to different locations, and hoisting non-atomic reads out of loops even if that affects termination. Note in general that aliased TypedArrays make it hard to prove that locations are different.</p>
+    </emu-note>
 
-  <emu-note>
-    <p>The following are guidelines for ECMAScript implementers generating machine code for shared memory accesses.</p>
-    <p>For architectures with memory models no weaker than those of ARM or Power, non-atomic stores and loads may be compiled to bare stores and loads on the target architecture. Atomic stores and loads may be compiled down to instructions that guarantee sequential consistency. If no such instructions exist, memory barriers are to be employed, such as placing barriers on both sides of a bare store or load. Read-modify-write operations may be compiled to read-modify-write instructions on the target architectrue, such as <code>LOCK</code>-prefixed instructions on x86, load-exclusive/store-exclusive instructions on ARM, and load-link/store-conditional instructions on Power.</p>
-    <p>Specifically, the memory model is intended to allow code generation as follows.</p>
-    <ul>
-      <li>Every atomic operation in the program is assumed to be necessary.
-      <li>Atomic operations are never rearranged with each other or with non-atomic operations.
-      <li>Functions are always assumed to perform atomic operations.
-      <li>Atomic operations are never implemented as read-modify-write operations on larger data, but as non-lock-free atomics if the platform does not have atomic operations of the appropriate size. (We already assume that every platform has normal memory access operations of every interesting size.)
-    </ul>
-    <p>Naive code generation uses these patterns:</p>
-    <ul>
-      <li>Regular loads and stores compile to single load and store instructions.
-      <li>Lock-free atomic loads and stores compile to a full (sequentially consistent) fence, a regular load or store, and a full fence.
-      <li>Lock-free atomic read-modify-write accesses compile to a full fence, an atomic read-modify-write instruction sequence, and a full fence.
-      <li>Non-lock-free atomics compile to a spinlock acquire, a full fence, a series of non-atomic load and store instructions, a full fence, and a spinlock release.
-    </ul>
-    <p>That mapping is correct so long as an atomic operation on an address range does not race with a non-atomic write or with an atomic operation of different size. However, that is all we need: the memory model effectively demotes the atomic operations involved in a race to non-atomic status. On the other hand, the naive mapping is quite strong: it allows atomic operations to be used as sequentially consistent fences, which the memory model does not actually guarantee.</p>
-    <p>A number of local improvements to those basic patterns are also intended to be legal:</p>
-    <ul>
-      <li>There are obvious platform-dependent improvements that remove redundant fences.  For example, on x86 the fences around lock-free atomic loads and stores can always be omitted except for the fence following a store, and no fence is needed for lock-free read-modify-write instructions, as these all use LOCK-prefixed instructions. On many platforms there are fences of several strengths, and weaker fences can be used in certain contexts without destroying sequential consistency.
-      <li>Most modern platforms support lock-free atomics for all the data sizes required by ECMAScript atomics. Should non-lock-free atomics be needed, the fences surrounding the body of the atomic operation can usually be folded into the lock and unlock steps. The simplest solution for non-lock-free atomics is to have a single lock word per SharedArrayBuffer.
-      <li>There are also more complicated platform-dependent local improvements, requiring some code analysis. For example, two back-to-back fences often have the same effect as a single fence, so if code is generated for two atomic operations in sequence, only a single fence need separate them.  On x86, even a single fence separating atomic stores can be omitted, as the fence following a store is only needed to separate the store from a subsequent load.
-    </ul>
-  </emu-note>
+    <emu-note>
+      <p>The following are guidelines for ECMAScript implementers generating machine code for shared memory accesses.</p>
+      <p>For architectures with memory models no weaker than those of ARM or Power, non-atomic stores and loads may be compiled to bare stores and loads on the target architecture. Atomic stores and loads may be compiled down to instructions that guarantee sequential consistency. If no such instructions exist, memory barriers are to be employed, such as placing barriers on both sides of a bare store or load. Read-modify-write operations may be compiled to read-modify-write instructions on the target architectrue, such as <code>LOCK</code>-prefixed instructions on x86, load-exclusive/store-exclusive instructions on ARM, and load-link/store-conditional instructions on Power.</p>
+      <p>Specifically, the memory model is intended to allow code generation as follows.</p>
+      <ul>
+        <li>Every atomic operation in the program is assumed to be necessary.
+        <li>Atomic operations are never rearranged with each other or with non-atomic operations.
+        <li>Functions are always assumed to perform atomic operations.
+        <li>Atomic operations are never implemented as read-modify-write operations on larger data, but as non-lock-free atomics if the platform does not have atomic operations of the appropriate size. (We already assume that every platform has normal memory access operations of every interesting size.)
+      </ul>
+      <p>Naive code generation uses these patterns:</p>
+      <ul>
+        <li>Regular loads and stores compile to single load and store instructions.
+        <li>Lock-free atomic loads and stores compile to a full (sequentially consistent) fence, a regular load or store, and a full fence.
+        <li>Lock-free atomic read-modify-write accesses compile to a full fence, an atomic read-modify-write instruction sequence, and a full fence.
+        <li>Non-lock-free atomics compile to a spinlock acquire, a full fence, a series of non-atomic load and store instructions, a full fence, and a spinlock release.
+      </ul>
+      <p>That mapping is correct so long as an atomic operation on an address range does not race with a non-atomic write or with an atomic operation of different size. However, that is all we need: the memory model effectively demotes the atomic operations involved in a race to non-atomic status. On the other hand, the naive mapping is quite strong: it allows atomic operations to be used as sequentially consistent fences, which the memory model does not actually guarantee.</p>
+      <p>A number of local improvements to those basic patterns are also intended to be legal:</p>
+      <ul>
+        <li>There are obvious platform-dependent improvements that remove redundant fences.  For example, on x86 the fences around lock-free atomic loads and stores can always be omitted except for the fence following a store, and no fence is needed for lock-free read-modify-write instructions, as these all use LOCK-prefixed instructions. On many platforms there are fences of several strengths, and weaker fences can be used in certain contexts without destroying sequential consistency.
+        <li>Most modern platforms support lock-free atomics for all the data sizes required by ECMAScript atomics. Should non-lock-free atomics be needed, the fences surrounding the body of the atomic operation can usually be folded into the lock and unlock steps. The simplest solution for non-lock-free atomics is to have a single lock word per SharedArrayBuffer.
+        <li>There are also more complicated platform-dependent local improvements, requiring some code analysis. For example, two back-to-back fences often have the same effect as a single fence, so if code is generated for two atomic operations in sequence, only a single fence need separate them.  On x86, even a single fence separating atomic stores can be omitted, as the fence following a store is only needed to separate the store from a subsequent load.
+      </ul>
+    </emu-note>
+  </emu-clause>
 </emu-clause>
 
 <!-- es6num="A" -->
