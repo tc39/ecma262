@@ -439,6 +439,7 @@
       <h1>The Syntactic Grammar</h1>
       <p>The <em>syntactic grammar</em> for ECMAScript is given in clauses 11, 12, 13, 14, and 15. This grammar has ECMAScript tokens defined by the lexical grammar as its terminal symbols (<emu-xref href="#sec-lexical-and-regexp-grammars"></emu-xref>). It defines a set of productions, starting from two alternative goal symbols |Script| and |Module|, that describe how sequences of tokens form syntactically correct independent components of ECMAScript programs.</p>
       <p>When a stream of code points is to be parsed as an ECMAScript |Script| or |Module|, it is first converted to a stream of input elements by repeated application of the lexical grammar; this stream of input elements is then parsed by a single application of the syntactic grammar. The input stream is syntactically in error if the tokens in the stream of input elements cannot be parsed as a single instance of the goal nonterminal (|Script| or |Module|), with no tokens left over.</p>
+      <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn>Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol.</p>
       <p>Productions of the syntactic grammar are distinguished by having just one colon &ldquo;<b>:</b>&rdquo; as punctuation.</p>
       <p>The syntactic grammar as presented in clauses 12, 13, 14 and 15 is not a complete account of which token sequences are accepted as a correct ECMAScript |Script| or |Module|. Certain additional token sequences are also accepted, namely, those that would be described by the grammar if only semicolons were added to the sequence in certain places (such as before line terminator characters). Furthermore, certain token sequences that are described by the grammar are not considered acceptable if a line terminator character appears in certain &ldquo;awkward&rdquo; places.</p>
       <p>In certain cases in order to avoid ambiguities the syntactic grammar uses generalized productions that permit token sequences that do not form a valid ECMAScript |Script| or |Module|. For example, this technique is used for object literals and object destructuring patterns. In such cases a more restrictive <em>supplemental grammar</em> is provided that further restricts the acceptable token sequences. In certain contexts, when explicitly specified, the input elements corresponding to such a production are parsed again using a goal symbol of a supplemental grammar. The input stream is syntactically in error if the tokens in the stream of input elements parsed by a cover grammar cannot be parsed as a single instance of the corresponding supplemental goal symbol, with no tokens left over.</p>
@@ -724,10 +725,10 @@
     <p>Static Semantic Rules have names and typically are defined using an algorithm. Named Static Semantic Rules are associated with grammar productions and a production that has multiple alternative definitions will typically have for each alternative a distinct algorithm for each applicable named static semantic rule.</p>
     <p>Unless otherwise specified every grammar production alternative in this specification implicitly has a definition for a static semantic rule named Contains which takes an argument named _symbol_ whose value is a terminal or nonterminal of the grammar that includes the associated production. The default definition of Contains is:</p>
     <emu-alg>
-      1. For each terminal and nonterminal grammar symbol, _sym_, in the definition of this production do
-        1. If _sym_ is the same grammar symbol as _symbol_, return *true*.
-        1. If _sym_ is a nonterminal, then
-          1. Let _contained_ be the result of _sym_ Contains _symbol_.
+      1. For each child node _child_ of this Parse Node, do
+        1. If _child_ is an instance of _symbol_, return *true*.
+        1. If _child_ is an instance of a nonterminal, then
+          1. Let _contained_ be the result of _child_ Contains _symbol_.
           1. If _contained_ is *true*, return *true*.
       1. Return *false*.
     </emu-alg>
@@ -7193,7 +7194,7 @@
     <!-- es6num="9.2.4" -->
     <emu-clause id="sec-functioninitialize" aoid="FunctionInitialize">
       <h1>FunctionInitialize ( _F_, _kind_, _ParameterList_, _Body_, _Scope_ )</h1>
-      <p>The abstract operation FunctionInitialize requires the arguments: a function object _F_, _kind_ which is one of (Normal, Method, Arrow), a parameter list production specified by _ParameterList_, a body production specified by _Body_, a Lexical Environment specified by _Scope_. FunctionInitialize performs the following steps:</p>
+      <p>The abstract operation FunctionInitialize requires the arguments: a function object _F_, _kind_ which is one of (Normal, Method, Arrow), a parameter list Parse Node specified by _ParameterList_, a body Parse Node specified by _Body_, a Lexical Environment specified by _Scope_. FunctionInitialize performs the following steps:</p>
       <emu-alg>
         1. Assert: _F_ is an extensible object that does not have a `length` own property.
         1. Let _len_ be the ExpectedArgumentCount of _ParameterList_.
@@ -7213,7 +7214,7 @@
     <!-- es6num="9.2.5" -->
     <emu-clause id="sec-functioncreate" aoid="FunctionCreate">
       <h1>FunctionCreate ( _kind_, _ParameterList_, _Body_, _Scope_, _Strict_ [ , _prototype_ ] )</h1>
-      <p>The abstract operation FunctionCreate requires the arguments: _kind_ which is one of (Normal, Method, Arrow), a parameter list production specified by _ParameterList_, a body production specified by _Body_, a Lexical Environment specified by _Scope_, a Boolean flag _Strict_, and optionally, an object _prototype_. FunctionCreate performs the following steps:</p>
+      <p>The abstract operation FunctionCreate requires the arguments: _kind_ which is one of (Normal, Method, Arrow), a parameter list Parse Node specified by _ParameterList_, a body Parse Node specified by _Body_, a Lexical Environment specified by _Scope_, a Boolean flag _Strict_, and optionally, an object _prototype_. FunctionCreate performs the following steps:</p>
       <emu-alg>
         1. If the _prototype_ argument was not passed, then
           1. Let _prototype_ be the intrinsic object %FunctionPrototype%.
@@ -7227,7 +7228,7 @@
     <!-- es6num="9.2.6" -->
     <emu-clause id="sec-generatorfunctioncreate" aoid="GeneratorFunctionCreate">
       <h1>GeneratorFunctionCreate ( _kind_, _ParameterList_, _Body_, _Scope_, _Strict_ )</h1>
-      <p>The abstract operation GeneratorFunctionCreate requires the arguments: _kind_ which is one of (Normal, Method), a parameter list production specified by _ParameterList_, a body production specified by _Body_, a Lexical Environment specified by _Scope_, and a Boolean flag _Strict_. GeneratorFunctionCreate performs the following steps:</p>
+      <p>The abstract operation GeneratorFunctionCreate requires the arguments: _kind_ which is one of (Normal, Method), a parameter list Parse Node specified by _ParameterList_, a body Parse Node specified by _Body_, a Lexical Environment specified by _Scope_, and a Boolean flag _Strict_. GeneratorFunctionCreate performs the following steps:</p>
       <emu-alg>
         1. Let _functionPrototype_ be the intrinsic object %Generator%.
         1. Let _F_ be FunctionAllocate(_functionPrototype_, _Strict_, `"generator"`).
@@ -7426,7 +7427,7 @@
               1. Perform ! _lexEnvRec_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
               1. Perform ! _lexEnvRec_.CreateMutableBinding(_dn_, *false*).
-        1. For each parsed grammar phrase _f_ in _functionsToInitialize_, do
+        1. For each Parse Node _f_ in _functionsToInitialize_, do
           1. Let _fn_ be the sole element of the BoundNames of _f_.
           1. Let _fo_ be the result of performing InstantiateFunctionObject for _f_ with argument _lexEnv_.
           1. Perform ! _varEnvRec_.SetMutableBinding(_fn_, _fo_, *false*).
@@ -7963,7 +7964,7 @@
       <!-- es6num="9.4.4.7" -->
       <emu-clause id="sec-createmappedargumentsobject" aoid="CreateMappedArgumentsObject">
         <h1>CreateMappedArgumentsObject ( _func_, _formals_, _argumentsList_, _env_ )</h1>
-        <p>The abstract operation CreateMappedArgumentsObject is called with object _func_, parsed grammar phrase _formals_, List _argumentsList_, and Environment Record _env_. The following steps are performed:</p>
+        <p>The abstract operation CreateMappedArgumentsObject is called with object _func_, Parse Node _formals_, List _argumentsList_, and Environment Record _env_. The following steps are performed:</p>
         <emu-alg>
           1. Assert: _formals_ does not contain a rest parameter, any binding patterns, or any initializers. It may contain duplicate identifiers.
           1. Let _len_ be the number of elements in _argumentsList_.
@@ -10990,7 +10991,7 @@
         <p>The result of evaluating an |IdentifierReference| is always a value of type Reference.</p>
       </emu-note>
       <emu-note>
-        <p>In non-strict code, the keyword `yield` may be used as an identifier. Evaluating the |IdentifierReference| production resolves the binding of `yield` as if it was an |Identifier|. Early Error restriction ensures that such an evaluation only can occur for non-strict code.</p>
+        <p>In non-strict code, the keyword `yield` may be used as an identifier. Evaluating the |IdentifierReference| resolves the binding of `yield` as if it was an |Identifier|. Early Error restriction ensures that such an evaluation only can occur for non-strict code.</p>
       </emu-note>
     </emu-clause>
   </emu-clause>
@@ -11024,7 +11025,7 @@
         `(` Expression[+In, ?Yield, ?Await] `,` `...` BindingPattern[?Yield, ?Await] `)`
     </emu-grammar>
     <h2>Supplemental Syntax</h2>
-    <p>When processing the production
+    <p>When processing an instance of the production
       <br>
       <emu-grammar>PrimaryExpression[Yield, Await] : CoverParenthesizedExpressionAndArrowParameterList[?Yield, ?Await]</emu-grammar>
       <br>
@@ -11707,7 +11708,7 @@
       <!-- es6num="12.2.9.3" -->
       <emu-clause id="sec-gettemplateobject" aoid="GetTemplateObject">
         <h1>Runtime Semantics: GetTemplateObject ( _templateLiteral_ )</h1>
-        <p>The abstract operation GetTemplateObject is called with a grammar production, _templateLiteral_, as an argument. It performs the following steps:</p>
+        <p>The abstract operation GetTemplateObject is called with a Parse Node, _templateLiteral_, as an argument. It performs the following steps:</p>
         <emu-alg>
           1. Let _rawStrings_ be TemplateStrings of _templateLiteral_ with argument *true*.
           1. Let _realm_ be the current Realm Record.
@@ -11943,7 +11944,7 @@
         CallExpression[?Yield, ?Await]
     </emu-grammar>
     <h2>Supplemental Syntax</h2>
-    <p>When processing the production <emu-grammar>CallExpression : CoverCallExpressionAndAsyncArrowHead</emu-grammar> the interpretation of |CoverCallExpressionAndAsyncArrowHead| is refined using the following grammar:</p>
+    <p>When processing an instance of the production <emu-grammar>CallExpression : CoverCallExpressionAndAsyncArrowHead</emu-grammar> the interpretation of |CoverCallExpressionAndAsyncArrowHead| is refined using the following grammar:</p>
     <emu-grammar>
       CallMemberExpression[Yield, Await] :
         MemberExpression[?Yield, ?Await] Arguments[?Yield, ?Await]
@@ -12154,7 +12155,7 @@
           1. Let _propertyNameValue_ be ? GetValue(_propertyNameReference_).
           1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
           1. Let _propertyKey_ be ? ToPropertyKey(_propertyNameValue_).
-          1. If the code matched by the syntactic production that is being evaluated is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. If the code matched by this |MemberExpression| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
           1. Return a value of type Reference whose base value component is _bv_, whose referenced name component is _propertyKey_, and whose strict reference flag is _strict_.
         </emu-alg>
         <emu-grammar>MemberExpression : MemberExpression `.` IdentifierName</emu-grammar>
@@ -12163,7 +12164,7 @@
           1. Let _baseValue_ be ? GetValue(_baseReference_).
           1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
           1. Let _propertyNameString_ be StringValue of |IdentifierName|.
-          1. If the code matched by the syntactic production that is being evaluated is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. If the code matched by this |MemberExpression| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
           1. Return a value of type Reference whose base value component is _bv_, whose referenced name component is _propertyNameString_, and whose strict reference flag is _strict_.
         </emu-alg>
         <emu-grammar>CallExpression : CallExpression `[` Expression `]`</emu-grammar>
@@ -12191,12 +12192,12 @@
 
         <!-- es6num="12.3.3.1.1" -->
         <emu-clause id="sec-evaluatenew" aoid="EvaluateNew">
-          <h1>Runtime Semantics: EvaluateNew ( _constructProduction_, _arguments_ )</h1>
-          <p>The abstract operation EvaluateNew with arguments _constructProduction_, and _arguments_ performs the following steps:</p>
+          <h1>Runtime Semantics: EvaluateNew ( _constructExpr_, _arguments_ )</h1>
+          <p>The abstract operation EvaluateNew with arguments _constructExpr_, and _arguments_ performs the following steps:</p>
           <emu-alg>
-            1. Assert: _constructProduction_ is either a |NewExpression| or a |MemberExpression|.
-            1. Assert: _arguments_ is either ~empty~ or an |Arguments| production.
-            1. Let _ref_ be the result of evaluating _constructProduction_.
+            1. Assert: _constructExpr_ is either a |NewExpression| or a |MemberExpression|.
+            1. Assert: _arguments_ is either ~empty~ or an |Arguments|.
+            1. Let _ref_ be the result of evaluating _constructExpr_.
             1. Let _constructor_ be ? GetValue(_ref_).
             1. If _arguments_ is ~empty~, let _argList_ be a new empty List.
             1. Else,
@@ -12257,7 +12258,7 @@
       <!-- es6num="12.3.4.2" -->
       <emu-clause id="sec-evaluatecall" aoid="EvaluateCall">
         <h1>Runtime Semantics: EvaluateCall( _ref_, _arguments_, _tailPosition_ )</h1>
-        <p>The abstract operation EvaluateCall takes as arguments a value _ref_, a syntactic grammar production _arguments_, and a Boolean argument _tailPosition_. It performs the following steps:</p>
+        <p>The abstract operation EvaluateCall takes as arguments a value _ref_, a Parse Node _arguments_, and a Boolean argument _tailPosition_. It performs the following steps:</p>
         <emu-alg>
           1. Let _func_ be ? GetValue(_ref_).
           1. If Type(_ref_) is Reference, then
@@ -12275,7 +12276,7 @@
       <!-- es6num="12.3.4.3" -->
       <emu-clause id="sec-evaluatedirectcall" aoid="EvaluateDirectCall">
         <h1>Runtime Semantics: EvaluateDirectCall( _func_, _thisValue_, _arguments_, _tailPosition_ )</h1>
-        <p>The abstract operation EvaluateDirectCall takes as arguments a value _func_, a value _thisValue_, a syntactic grammar production _arguments_, and a Boolean argument _tailPosition_. It performs the following steps:</p>
+        <p>The abstract operation EvaluateDirectCall takes as arguments a value _func_, a value _thisValue_, a Parse Node _arguments_, and a Boolean argument _tailPosition_. It performs the following steps:</p>
         <emu-alg>
           1. Let _argList_ be ? ArgumentListEvaluation(_arguments_).
           1. If Type(_func_) is not Object, throw a *TypeError* exception.
@@ -12301,13 +12302,13 @@
           1. Let _propertyNameReference_ be the result of evaluating |Expression|.
           1. Let _propertyNameValue_ be ? GetValue(_propertyNameReference_).
           1. Let _propertyKey_ be ? ToPropertyKey(_propertyNameValue_).
-          1. If the code matched by the syntactic production that is being evaluated is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. If the code matched by this |SuperProperty| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
           1. Return ? MakeSuperPropertyReference(_propertyKey_, _strict_).
         </emu-alg>
         <emu-grammar>SuperProperty : `super` `.` IdentifierName</emu-grammar>
         <emu-alg>
           1. Let _propertyKey_ be StringValue of |IdentifierName|.
-          1. If the code matched by the syntactic production that is being evaluated is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. If the code matched by this |SuperProperty| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
           1. Return ? MakeSuperPropertyReference(_propertyKey_, _strict_).
         </emu-alg>
         <emu-grammar>SuperCall : `super` Arguments</emu-grammar>
@@ -13953,7 +13954,7 @@
     <emu-clause id="sec-destructuring-assignment">
       <h1>Destructuring Assignment</h1>
       <h2>Supplemental Syntax</h2>
-      <p>In certain circumstances when processing the production <emu-grammar>AssignmentExpression : LeftHandSideExpression `=` AssignmentExpression</emu-grammar> the following grammar is used to refine the interpretation of |LeftHandSideExpression|.</p>
+      <p>In certain circumstances when processing an instance of the production <emu-grammar>AssignmentExpression : LeftHandSideExpression `=` AssignmentExpression</emu-grammar> the following grammar is used to refine the interpretation of |LeftHandSideExpression|.</p>
       <emu-grammar>
         AssignmentPattern[Yield, Await] :
           ObjectAssignmentPattern[?Yield, ?Await]
@@ -14845,9 +14846,9 @@
     <emu-clause id="sec-blockdeclarationinstantiation" aoid="BlockDeclarationInstantiation">
       <h1>Runtime Semantics: BlockDeclarationInstantiation( _code_, _env_ )</h1>
       <emu-note>
-        <p>When a |Block| or |CaseBlock| production is evaluated a new declarative Environment Record is created and bindings for each block scoped variable, constant, function, or class declared in the block are instantiated in the Environment Record.</p>
+        <p>When a |Block| or |CaseBlock| is evaluated a new declarative Environment Record is created and bindings for each block scoped variable, constant, function, or class declared in the block are instantiated in the Environment Record.</p>
       </emu-note>
-      <p>BlockDeclarationInstantiation is performed as follows using arguments _code_ and _env_. _code_ is the grammar production corresponding to the body of the block. _env_ is the Lexical Environment in which bindings are to be created.</p>
+      <p>BlockDeclarationInstantiation is performed as follows using arguments _code_ and _env_. _code_ is the Parse Node corresponding to the body of the block. _env_ is the Lexical Environment in which bindings are to be created.</p>
       <!--
         WARNING: If you add, remove, rename, or repurpose any variable names
                  within this algorithm, you may need to update
@@ -14914,7 +14915,7 @@
         <emu-grammar>LexicalBinding : BindingIdentifier Initializer?</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if |Initializer| is not present and IsConstantDeclaration of the |LexicalDeclaration| containing this production is *true*.
+            It is a Syntax Error if |Initializer| is not present and IsConstantDeclaration of the |LexicalDeclaration| containing this |LexicalBinding| is *true*.
           </li>
         </ul>
       </emu-clause>
@@ -16179,7 +16180,7 @@
             It is a Syntax Error if IsValidSimpleAssignmentTarget of |LeftHandSideExpression| is *false*.
           </li>
           <li>
-            It is a Syntax Error if the |LeftHandSideExpression| is <emu-grammar>CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `)`</emu-grammar> and |Expression| derives a production that would produce a Syntax Error according to these rules if that production were substituted for |LeftHandSideExpression|. This rule is recursively applied.
+            It is a Syntax Error if the |LeftHandSideExpression| is <emu-grammar>CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `)`</emu-grammar> and |Expression| derives a phrase that would produce a Syntax Error according to these rules if that phrase were substituted for |LeftHandSideExpression|. This rule is recursively applied.
           </li>
         </ul>
         <emu-note>
@@ -16591,7 +16592,7 @@
       </emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if this production is not nested, directly or indirectly (but not crossing function boundaries), within an |IterationStatement|.
+          It is a Syntax Error if this |ContinueStatement| is not nested, directly or indirectly (but not crossing function boundaries), within an |IterationStatement|.
         </li>
       </ul>
     </emu-clause>
@@ -16643,7 +16644,7 @@
       <emu-grammar>BreakStatement : `break` `;`</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if this production is not nested, directly or indirectly (but not crossing function boundaries), within an |IterationStatement| or a |SwitchStatement|.
+          It is a Syntax Error if this |BreakStatement| is not nested, directly or indirectly (but not crossing function boundaries), within an |IterationStatement| or a |SwitchStatement|.
         </li>
       </ul>
     </emu-clause>
@@ -17765,7 +17766,7 @@
     <emu-clause id="sec-debugger-statement-runtime-semantics-evaluation">
       <h1>Runtime Semantics: Evaluation</h1>
       <emu-note>
-        <p>Evaluating the |DebuggerStatement| production may allow an implementation to cause a breakpoint when run under a debugger. If a debugger is not present or active this statement has no observable effect.</p>
+        <p>Evaluating a |DebuggerStatement| may allow an implementation to cause a breakpoint when run under a debugger. If a debugger is not present or active this statement has no observable effect.</p>
       </emu-note>
       <emu-grammar>DebuggerStatement : `debugger` `;`</emu-grammar>
       <emu-alg>
@@ -17829,11 +17830,11 @@
     <!-- es6num="14.1.1" -->
     <emu-clause id="sec-directive-prologues-and-the-use-strict-directive">
       <h1>Directive Prologues and the Use Strict Directive</h1>
-      <p>A <dfn id="directive-prologue">Directive Prologue</dfn> is the longest sequence of |ExpressionStatement| productions occurring as the initial |StatementListItem| or |ModuleItem| productions of a |FunctionBody|, a |ScriptBody|, or a |ModuleBody| and where each |ExpressionStatement| in the sequence consists entirely of a |StringLiteral| token followed by a semicolon. The semicolon may appear explicitly or may be inserted by automatic semicolon insertion. A Directive Prologue may be an empty sequence.</p>
+      <p>A <dfn id="directive-prologue">Directive Prologue</dfn> is the longest sequence of |ExpressionStatement|s occurring as the initial |StatementListItem|s or |ModuleItem|s of a |FunctionBody|, a |ScriptBody|, or a |ModuleBody| and where each |ExpressionStatement| in the sequence consists entirely of a |StringLiteral| token followed by a semicolon. The semicolon may appear explicitly or may be inserted by automatic semicolon insertion. A Directive Prologue may be an empty sequence.</p>
       <p>A <dfn id="use-strict-directive">Use Strict Directive</dfn> is an |ExpressionStatement| in a Directive Prologue whose |StringLiteral| is either the exact code unit sequences `"use strict"` or `'use strict'`. A Use Strict Directive may not contain an |EscapeSequence| or |LineContinuation|.</p>
       <p>A Directive Prologue may contain more than one Use Strict Directive. However, an implementation may issue a warning if this occurs.</p>
       <emu-note>
-        <p>The |ExpressionStatement| productions of a Directive Prologue are evaluated normally during evaluation of the containing production. Implementations may define implementation specific meanings for |ExpressionStatement| productions which are not a Use Strict Directive and which occur in a Directive Prologue. If an appropriate notification mechanism exists, an implementation should issue a warning if it encounters in a Directive Prologue an |ExpressionStatement| that is not a Use Strict Directive and which does not have a meaning defined by the implementation.</p>
+        <p>The |ExpressionStatement|s of a Directive Prologue are evaluated normally during evaluation of the containing production. Implementations may define implementation specific meanings for |ExpressionStatement|s which are not a Use Strict Directive and which occur in a Directive Prologue. If an appropriate notification mechanism exists, an implementation should issue a warning if it encounters in a Directive Prologue an |ExpressionStatement| that is not a Use Strict Directive and which does not have a meaning defined by the implementation.</p>
       </emu-note>
     </emu-clause>
 
@@ -18043,11 +18044,11 @@
 
     <!-- es6num="14.1.9" -->
     <emu-clause id="sec-isanonymousfunctiondefinition" aoid="IsAnonymousFunctionDefinition">
-      <h1>Static Semantics: IsAnonymousFunctionDefinition ( _production_ )</h1>
-      <p>The abstract operation IsAnonymousFunctionDefinition determines if its argument is a function definition that does not bind a name. The argument _production_ is the result of parsing an |AssignmentExpression| or |Initializer|. The following steps are taken:</p>
+      <h1>Static Semantics: IsAnonymousFunctionDefinition ( _expr_ )</h1>
+      <p>The abstract operation IsAnonymousFunctionDefinition determines if its argument is a function definition that does not bind a name. The argument _expr_ is the result of parsing an |AssignmentExpression| or |Initializer|. The following steps are taken:</p>
       <emu-alg>
-        1. If IsFunctionDefinition of _production_ is *false*, return *false*.
-        1. Let _hasName_ be the result of HasName of _production_.
+        1. If IsFunctionDefinition of _expr_ is *false*, return *false*.
+        1. Let _hasName_ be the result of HasName of _expr_.
         1. If _hasName_ is *true*, return *false*.
         1. Return *true*.
       </emu-alg>
@@ -18722,7 +18723,7 @@
         1. ReturnIfAbrupt(_propKey_).
         1. If the function code for this |MethodDefinition| is strict mode code, let _strict_ be *true*. Otherwise let _strict_ be *false*.
         1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _formalParameterList_ be the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
+        1. Let _formalParameterList_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
         1. Let _closure_ be FunctionCreate(~Method~, _formalParameterList_, |FunctionBody|, _scope_, _strict_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_, `"get"`).
@@ -19179,7 +19180,7 @@
       <h1>Static Semantics: ConstructorMethod</h1>
       <emu-grammar>ClassElementList : ClassElement</emu-grammar>
       <emu-alg>
-        1. If |ClassElement| is the production <emu-grammar>ClassElement : `;`</emu-grammar> , return ~empty~.
+        1. If |ClassElement| is <emu-grammar>ClassElement : `;`</emu-grammar> , return ~empty~.
         1. If IsStatic of |ClassElement| is *true*, return ~empty~.
         1. If PropName of |ClassElement| is not `"constructor"`, return ~empty~.
         1. Return |ClassElement|.
@@ -19188,7 +19189,7 @@
       <emu-alg>
         1. Let _head_ be ConstructorMethod of |ClassElementList|.
         1. If _head_ is not ~empty~, return _head_.
-        1. If |ClassElement| is the production <emu-grammar>ClassElement : `;`</emu-grammar> , return ~empty~.
+        1. If |ClassElement| is <emu-grammar>ClassElement : `;`</emu-grammar> , return ~empty~.
         1. If IsStatic of |ClassElement| is *true*, return ~empty~.
         1. If PropName of |ClassElement| is not `"constructor"`, return ~empty~.
         1. Return |ClassElement|.
@@ -19213,7 +19214,7 @@
         1. Return the result of ComputedPropertyContains for |ClassBody| with argument _symbol_.
       </emu-alg>
       <emu-note>
-        <p>Static semantic rules that depend upon substructure generally do not look into class bodies except for |PropertyName| productions.</p>
+        <p>Static semantic rules that depend upon substructure generally do not look into class bodies except for |PropertyName|s.</p>
       </emu-note>
     </emu-clause>
 
@@ -19302,14 +19303,14 @@
       <h1>Static Semantics: NonConstructorMethodDefinitions</h1>
       <emu-grammar>ClassElementList : ClassElement</emu-grammar>
       <emu-alg>
-        1. If |ClassElement| is the production <emu-grammar>ClassElement : `;`</emu-grammar> , return a new empty List.
+        1. If |ClassElement| is <emu-grammar>ClassElement : `;`</emu-grammar> , return a new empty List.
         1. If IsStatic of |ClassElement| is *false* and PropName of |ClassElement| is `"constructor"`, return a new empty List.
         1. Return a List containing |ClassElement|.
       </emu-alg>
       <emu-grammar>ClassElementList : ClassElementList ClassElement</emu-grammar>
       <emu-alg>
         1. Let _list_ be NonConstructorMethodDefinitions of |ClassElementList|.
-        1. If |ClassElement| is the production <emu-grammar>ClassElement : `;`</emu-grammar> , return _list_.
+        1. If |ClassElement| is <emu-grammar>ClassElement : `;`</emu-grammar> , return _list_.
         1. If IsStatic of |ClassElement| is *false* and PropName of |ClassElement| is `"constructor"`, return _list_.
         1. Append |ClassElement| to the end of _list_.
         1. Return _list_.
@@ -19771,7 +19772,7 @@
         MemberExpression[?Yield, ?Await] Arguments[?Yield, ?Await]
     </emu-grammar>
     <h2>Supplemental Syntax</h2>
-    <p>When processing the production <emu-grammar>AsyncArrowFunction : CoverCallExpressionAndAsyncArrowHead [no LineTerminator here] `=>` AsyncConciseBody</emu-grammar> the interpretation of |CoverCallExpressionAndAsyncArrowHead| is refined using the following grammar:</p>
+    <p>When processing an instance of the production <emu-grammar>AsyncArrowFunction : CoverCallExpressionAndAsyncArrowHead [no LineTerminator here] `=>` AsyncConciseBody</emu-grammar> the interpretation of |CoverCallExpressionAndAsyncArrowHead| is refined using the following grammar:</p>
 
     <emu-grammar>
       AsyncArrowHead :
@@ -20007,17 +20008,17 @@
 
     <!-- es6num="14.6.1" -->
     <emu-clause id="sec-isintailposition" aoid="IsInTailPosition">
-      <h1>Static Semantics: IsInTailPosition( _nonterminal_ )</h1>
-      <p>The abstract operation IsInTailPosition with argument _nonterminal_ performs the following steps:</p>
+      <h1>Static Semantics: IsInTailPosition( _call_ )</h1>
+      <p>The abstract operation IsInTailPosition with argument _call_ performs the following steps:</p>
       <emu-alg>
-        1. Assert: _nonterminal_ is a parsed grammar production.
-        1. If the source code matching _nonterminal_ is non-strict code, return *false*.
-        1. If _nonterminal_ is not contained within a |FunctionBody|, |ConciseBody|, or |AsyncConciseBody|, return *false*.
-        1. Let _body_ be the |FunctionBody|, |ConciseBody|, or |AsyncConciseBody| that most closely contains _nonterminal_.
+        1. Assert: _call_ is a Parse Node.
+        1. If the source code matching _call_ is non-strict code, return *false*.
+        1. If _call_ is not contained within a |FunctionBody|, |ConciseBody|, or |AsyncConciseBody|, return *false*.
+        1. Let _body_ be the |FunctionBody|, |ConciseBody|, or |AsyncConciseBody| that most closely contains _call_.
         1. If _body_ is the |FunctionBody| of a |GeneratorBody|, return *false*.
         1. If _body_ is the |FunctionBody| of an |AsyncFunctionBody|, return *false*.
         1. If _body_ is an |AsyncConciseBody|, return *false*.
-        1. Return the result of HasProductionInTailPosition of _body_ with argument _nonterminal_.
+        1. Return the result of HasCallInTailPosition of _body_ with argument _call_.
       </emu-alg>
       <emu-note>
         <p>Tail Position calls are only defined in strict mode code because of a common non-standard language extension (see <emu-xref href="#sec-addrestrictedfunctionproperties"></emu-xref>) that enables observation of the chain of caller contexts.</p>
@@ -20025,11 +20026,11 @@
     </emu-clause>
 
     <!-- es6num="14.6.2" -->
-    <emu-clause id="sec-static-semantics-hasproductionintailposition">
-      <h1>Static Semantics: HasProductionInTailPosition</h1>
-      <p>With parameter _nonterminal_.</p>
+    <emu-clause id="sec-static-semantics-hascallintailposition">
+      <h1>Static Semantics: HasCallInTailPosition</h1>
+      <p>With parameter _call_.</p>
       <emu-note>
-        <p>_nonterminal_ is a parsed grammar production that represents a specific range of source text. When the following algorithms compare _nonterminal_ to other grammar symbols they are testing whether the same source text was matched by both symbols.</p>
+        <p>_call_ is a Parse Node that represents a specific range of source text. When the following algorithms compare _call_ to another Parse Node, it is a test of whether they represent the same source text.</p>
       </emu-note>
 
       <!-- es6num="14.6.2.1" -->
@@ -20037,13 +20038,13 @@
         <h1>Statement Rules</h1>
         <emu-grammar>ConciseBody : AssignmentExpression</emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |AssignmentExpression| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |AssignmentExpression| with argument _call_.
         </emu-alg>
         <emu-grammar>StatementList : StatementList StatementListItem</emu-grammar>
         <emu-alg>
-          1. Let _has_ be HasProductionInTailPosition of |StatementList| with argument _nonterminal_.
+          1. Let _has_ be HasCallInTailPosition of |StatementList| with argument _call_.
           1. If _has_ is *true*, return *true*.
-          1. Return HasProductionInTailPosition of |StatementListItem| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |StatementListItem| with argument _call_.
         </emu-alg>
         <emu-grammar>
           FunctionStatementList : [empty]
@@ -20080,9 +20081,9 @@
         </emu-alg>
         <emu-grammar>IfStatement : `if` `(` Expression `)` Statement `else` Statement</emu-grammar>
         <emu-alg>
-          1. Let _has_ be HasProductionInTailPosition of the first |Statement| with argument _nonterminal_.
+          1. Let _has_ be HasCallInTailPosition of the first |Statement| with argument _call_.
           1. If _has_ is *true*, return *true*.
-          1. Return HasProductionInTailPosition of the second |Statement| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of the second |Statement| with argument _call_.
         </emu-alg>
         <emu-grammar>
           IfStatement : `if` `(` Expression `)` Statement
@@ -20097,38 +20098,38 @@
           WithStatement : `with` `(` Expression `)` Statement
         </emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |Statement| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |Statement| with argument _call_.
         </emu-alg>
         <emu-grammar>
           LabelledStatement :
             LabelIdentifier `:` LabelledItem
         </emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |LabelledItem| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |LabelledItem| with argument _call_.
         </emu-alg>
         <emu-grammar>ReturnStatement : `return` Expression `;`</emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |Expression| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |Expression| with argument _call_.
         </emu-alg>
         <emu-grammar>SwitchStatement : `switch` `(` Expression `)` CaseBlock</emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |CaseBlock| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |CaseBlock| with argument _call_.
         </emu-alg>
         <emu-grammar>CaseBlock : `{` CaseClauses? DefaultClause CaseClauses? `}`</emu-grammar>
         <emu-alg>
           1. Let _has_ be *false*.
-          1. If the first |CaseClauses| is present, let _has_ be HasProductionInTailPosition of the first |CaseClauses| with argument _nonterminal_.
+          1. If the first |CaseClauses| is present, let _has_ be HasCallInTailPosition of the first |CaseClauses| with argument _call_.
           1. If _has_ is *true*, return *true*.
-          1. Let _has_ be HasProductionInTailPosition of the |DefaultClause| with argument _nonterminal_.
+          1. Let _has_ be HasCallInTailPosition of the |DefaultClause| with argument _call_.
           1. If _has_ is *true*, return *true*.
-          1. If the second |CaseClauses| is present, let _has_ be HasProductionInTailPosition of the second |CaseClauses| with argument _nonterminal_.
+          1. If the second |CaseClauses| is present, let _has_ be HasCallInTailPosition of the second |CaseClauses| with argument _call_.
           1. Return _has_.
         </emu-alg>
         <emu-grammar>CaseClauses : CaseClauses CaseClause</emu-grammar>
         <emu-alg>
-          1. Let _has_ be HasProductionInTailPosition of |CaseClauses| with argument _nonterminal_.
+          1. Let _has_ be HasCallInTailPosition of |CaseClauses| with argument _call_.
           1. If _has_ is *true*, return *true*.
-          1. Return HasProductionInTailPosition of |CaseClause| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |CaseClause| with argument _call_.
         </emu-alg>
         <emu-grammar>
           CaseClause : `case` Expression `:` StatementList?
@@ -20136,12 +20137,12 @@
           DefaultClause : `default` `:` StatementList?
         </emu-grammar>
         <emu-alg>
-          1. If |StatementList| is present, return HasProductionInTailPosition of |StatementList| with argument _nonterminal_.
+          1. If |StatementList| is present, return HasCallInTailPosition of |StatementList| with argument _call_.
           1. Return *false*.
         </emu-alg>
         <emu-grammar>TryStatement : `try` Block Catch</emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |Catch| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |Catch| with argument _call_.
         </emu-alg>
         <emu-grammar>
           TryStatement : `try` Block Finally
@@ -20149,11 +20150,11 @@
           TryStatement : `try` Block Catch Finally
         </emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |Finally| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |Finally| with argument _call_.
         </emu-alg>
         <emu-grammar>Catch : `catch` `(` CatchParameter `)` Block</emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |Block| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |Block| with argument _call_.
         </emu-alg>
       </emu-clause>
 
@@ -20258,21 +20259,21 @@
             Expression `,` AssignmentExpression
         </emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |AssignmentExpression| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |AssignmentExpression| with argument _call_.
         </emu-alg>
         <emu-grammar>ConditionalExpression : LogicalORExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
         <emu-alg>
-          1. Let _has_ be HasProductionInTailPosition of the first |AssignmentExpression| with argument _nonterminal_.
+          1. Let _has_ be HasCallInTailPosition of the first |AssignmentExpression| with argument _call_.
           1. If _has_ is *true*, return *true*.
-          1. Return HasProductionInTailPosition of the second |AssignmentExpression| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of the second |AssignmentExpression| with argument _call_.
         </emu-alg>
         <emu-grammar>LogicalANDExpression : LogicalANDExpression `&amp;&amp;` BitwiseORExpression</emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |BitwiseORExpression| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |BitwiseORExpression| with argument _call_.
         </emu-alg>
         <emu-grammar>LogicalORExpression : LogicalORExpression `||` LogicalANDExpression</emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |LogicalANDExpression| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |LogicalANDExpression| with argument _call_.
         </emu-alg>
         <emu-grammar>
           CallExpression :
@@ -20281,7 +20282,7 @@
             CallExpression TemplateLiteral
         </emu-grammar>
         <emu-alg>
-          1. If this |CallExpression| is _nonterminal_, return *true*.
+          1. If this |CallExpression| is _call_, return *true*.
           1. Return *false*.
         </emu-alg>
         <emu-grammar>
@@ -20289,20 +20290,20 @@
             MemberExpression TemplateLiteral
         </emu-grammar>
         <emu-alg>
-          1. If this |MemberExpression| is _nonterminal_, return *true*.
+          1. If this |MemberExpression| is _call_, return *true*.
           1. Return *false*.
         </emu-alg>
         <emu-grammar>PrimaryExpression : CoverParenthesizedExpressionAndArrowParameterList</emu-grammar>
         <emu-alg>
           1. Let _expr_ be CoveredParenthesizedExpression of |CoverParenthesizedExpressionAndArrowParameterList|.
-          1. Return HasProductionInTailPosition of _expr_ with argument _nonterminal_.
+          1. Return HasCallInTailPosition of _expr_ with argument _call_.
         </emu-alg>
         <emu-grammar>
           ParenthesizedExpression :
             `(` Expression `)`
         </emu-grammar>
         <emu-alg>
-          1. Return HasProductionInTailPosition of |Expression| with argument _nonterminal_.
+          1. Return HasCallInTailPosition of |Expression| with argument _call_.
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -20481,7 +20482,7 @@
               [[ECMAScriptCode]]
             </td>
             <td>
-              a parse result
+              a Parse Node
             </td>
             <td>
               The result of parsing the source text of this module using |Script| as the goal symbol.
@@ -20602,7 +20603,7 @@
               1. Perform ? _envRec_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
               1. Perform ? _envRec_.CreateMutableBinding(_dn_, *false*).
-        1. For each production _f_ in _functionsToInitialize_, do
+        1. For each Parse Node _f_ in _functionsToInitialize_, do
           1. Let _fn_ be the sole element of the BoundNames of _f_.
           1. Let _fo_ be the result of performing InstantiateFunctionObject for _f_ with argument _env_.
           1. Perform ? _envRec_.CreateGlobalFunctionBinding(_fn_, _fo_, *false*).
@@ -21148,7 +21149,7 @@
                 [[ECMAScriptCode]]
               </td>
               <td>
-                a parse result
+                a Parse Node
               </td>
               <td>
                 The result of parsing the source text of this module using |Module| as the goal symbol.
@@ -22791,7 +22792,7 @@
                 1. Perform ? _lexEnvRec_.CreateImmutableBinding(_dn_, *true*).
               1. Else,
                 1. Perform ? _lexEnvRec_.CreateMutableBinding(_dn_, *false*).
-          1. For each production _f_ in _functionsToInitialize_, do
+          1. For each Parse Node _f_ in _functionsToInitialize_, do
             1. Let _fn_ be the sole element of the BoundNames of _f_.
             1. Let _fo_ be the result of performing InstantiateFunctionObject for _f_ with argument _lexEnv_.
             1. If _varEnvRec_ is a global Environment Record, then
@@ -24246,7 +24247,7 @@
         <p>Function instances that can be used as a constructor have a `prototype` property. Whenever such a function instance is created another ordinary object is also created and is the initial value of the function's `prototype` property. Unless otherwise specified, the value of the `prototype` property is used to initialize the [[Prototype]] internal slot of the object created when that function is invoked as a constructor.</p>
         <p>This property has the attributes { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
         <emu-note>
-          <p>Function objects created using `Function.prototype.bind`, or by evaluating a |MethodDefinition| (that is not a |GeneratorMethod|) or an |ArrowFunction| grammar production do not have a `prototype` property.</p>
+          <p>Function objects created using `Function.prototype.bind`, or by evaluating a |MethodDefinition| (that is not a |GeneratorMethod|) or an |ArrowFunction| do not have a `prototype` property.</p>
         </emu-note>
       </emu-clause>
     </emu-clause>
@@ -28437,7 +28438,7 @@ THH:mm:ss.sss
             _InputLength_ is the number of characters in _Input_.
           </li>
           <li>
-            _NcapturingParens_ is the total number of left-capturing parentheses (i.e. the total number of times the <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> production is expanded) in the pattern. A left-capturing parenthesis is any `(` pattern character that is matched by the `(` terminal of the <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> production.
+            _NcapturingParens_ is the total number of left-capturing parentheses (i.e. the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> Parse Nodes) in the pattern. A left-capturing parenthesis is any `(` pattern character that is matched by the `(` terminal of the <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> production.
           </li>
           <li>
             _IgnoreCase_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains `"i"` and otherwise is *false*.
@@ -28554,8 +28555,8 @@ THH:mm:ss.sss
           1. Evaluate |Atom| to obtain a Matcher _m_.
           1. Evaluate |Quantifier| to obtain the three results: an integer _min_, an integer (or &infin;) _max_, and Boolean _greedy_.
           1. If _max_ is finite and less than _min_, throw a *SyntaxError* exception.
-          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this production expansion's |Term|. This is the total number of times the <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> production is expanded prior to this production's |Term| plus the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> productions enclosing this |Term|.
-          1. Let _parenCount_ be the number of left-capturing parentheses in the expansion of this production's |Atom|. This is the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> productions enclosed by this production's |Atom|.
+          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Term|. This is the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Term|.
+          1. Let _parenCount_ be the number of left-capturing parentheses in |Atom|. This is the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> Parse Nodes enclosed by |Atom|.
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps when evaluated:
             1. Call RepeatMatcher(_m_, _min_, _max_, _greedy_, _x_, _c_, _parenIndex_, _parenCount_) and return its result.
         </emu-alg>
@@ -29016,7 +29017,7 @@ THH:mm:ss.sss
         <p>The production <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Disjunction| to obtain a Matcher _m_.
-          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this production expansion's initial left parenthesis. This is the total number of times the <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> production is expanded prior to this production's |Atom| plus the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> productions enclosing this |Atom|.
+          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Atom|. This is the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Atom|.
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _d_ be an internal Continuation closure that takes one State argument _y_ and performs the following steps:
               1. Let _cap_ be a fresh copy of _y_'s _captures_ List.
@@ -35383,7 +35384,7 @@ THH:mm:ss.sss
   <!-- es6num="25.2" -->
   <emu-clause id="sec-generatorfunction-objects">
     <h1>GeneratorFunction Objects</h1>
-    <p>GeneratorFunction objects are functions that are usually created by evaluating |GeneratorDeclaration|, |GeneratorExpression|, and |GeneratorMethod| syntactic productions. They may also be created by calling the %GeneratorFunction% intrinsic.</p>
+    <p>GeneratorFunction objects are functions that are usually created by evaluating |GeneratorDeclaration|s, |GeneratorExpression|s, and |GeneratorMethod|s. They may also be created by calling the %GeneratorFunction% intrinsic.</p>
     <emu-figure id="figure-2" caption="Generator Objects Relationships" informative>
       <img alt="A staggering variety of boxes and arrows." src="img/figure-2.png">
     </emu-figure>
@@ -35689,7 +35690,7 @@ THH:mm:ss.sss
           1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
           1. Set the code evaluation state of _genContext_ such that when evaluation is resumed with a Completion _resumptionValue_ the following steps will be performed:
             1. Return _resumptionValue_.
-            1. NOTE: This returns to the evaluation of the |YieldExpression| production that originally called this abstract operation.
+            1. NOTE: This returns to the evaluation of the |YieldExpression| that originally called this abstract operation.
           1. Return NormalCompletion(_iterNextObj_).
           1. NOTE: This returns to the evaluation of the operation that had most previously resumed evaluation of _genContext_.
         </emu-alg>
@@ -36522,7 +36523,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-async-functions-abstract-operations-async-function-create" aoid="AsyncFunctionCreate">
         <h1>AsyncFunctionCreate ( _kind_, _parameters_, _body_, _Scope_, _Strict_ )</h1>
-        <p>The abstract operation AsyncFunctionCreate requires the arguments: _kind_ which is one of (~Normal~, ~Method~, ~Arrow~), a parameter list production specified by _parameters_, a body production specified by _body_, a Lexical Environment specified by _Scope_, and a Boolean flag _Strict_. AsyncFunctionCreate performs the following steps:</p>
+        <p>The abstract operation AsyncFunctionCreate requires the arguments: _kind_ which is one of (~Normal~, ~Method~, ~Arrow~), a parameter list Parse Node specified by _parameters_, a body Parse Node specified by _body_, a Lexical Environment specified by _Scope_, and a Boolean flag _Strict_. AsyncFunctionCreate performs the following steps:</p>
         <emu-alg>
           1. Let _functionPrototype_ be the intrinsic object %AsyncFunctionPrototype%.
           2. Let _F_ be ! FunctionAllocate(_functionPrototype_, _Strict_, `"async"`).
@@ -36574,7 +36575,7 @@ THH:mm:ss.sss
           1. Return.
         </emu-alg>
 
-        <emu-note>The return value of this abstract operation is unused. The interesting return is that of _resumptionValue_ being returned to the |AwaitExpression| production that originally called this abstract operation.</emu-note>
+        <emu-note>The return value of this abstract operation is unused. The interesting return is that of _resumptionValue_ being returned to the |AwaitExpression| that originally called this abstract operation.</emu-note>
       </emu-clause>
 
       <emu-clause id="sec-async-functions-abstract-operations-awaited-fulfilled">
@@ -37588,7 +37589,7 @@ THH:mm:ss.sss
     <emu-prodref name=LabelIdentifier></emu-prodref>
     <emu-prodref name=PrimaryExpression></emu-prodref>
     <emu-prodref name=CoverParenthesizedExpressionAndArrowParameterList></emu-prodref>
-    <p>When processing the production <emu-prodref name=PrimaryExpression a="parencover"></emu-prodref> the interpretation of |CoverParenthesizedExpressionAndArrowParameterList| is refined using the following grammar:</p>
+    <p>When processing an instance of the production <emu-prodref name=PrimaryExpression a="parencover"></emu-prodref> the interpretation of |CoverParenthesizedExpressionAndArrowParameterList| is refined using the following grammar:</p>
     <emu-prodref name=ParenthesizedExpression></emu-prodref>
     <p>&nbsp;</p>
     <emu-prodref name=Literal></emu-prodref>
@@ -37614,7 +37615,7 @@ THH:mm:ss.sss
     <emu-prodref name=NewExpression></emu-prodref>
     <emu-prodref name=CallExpression></emu-prodref>
     <emu-prodref name=CoverCallExpressionAndAsyncArrowHead></emu-prodref>
-    <p>When processing the production <emu-prodref name=CallExpression a=callcover></emu-prodref> the interpretation of |CoverCallExpressionAndAsyncArrowHead| is refined using the following grammar:</p>
+    <p>When processing an instance of the production <emu-prodref name=CallExpression a=callcover></emu-prodref> the interpretation of |CoverCallExpressionAndAsyncArrowHead| is refined using the following grammar:</p>
     <emu-prodref name=CallMemberExpression></emu-prodref>
     <p>&nbsp;</p>
 
@@ -37638,7 +37639,7 @@ THH:mm:ss.sss
     <emu-prodref name=LogicalORExpression></emu-prodref>
     <emu-prodref name=ConditionalExpression></emu-prodref>
     <emu-prodref name=AssignmentExpression></emu-prodref>
-    <p>In certain circumstances when processing the production <emu-prodref name=AssignmentExpression a=assignment></emu-prodref> the following grammar is used to refine the interpretation of |LeftHandSideExpression|:</p>
+    <p>In certain circumstances when processing an instance of the production <emu-prodref name=AssignmentExpression a=assignment></emu-prodref> the following grammar is used to refine the interpretation of |LeftHandSideExpression|:</p>
     <emu-prodref name="AssignmentPattern"></emu-prodref>
     <emu-prodref name="ObjectAssignmentPattern"></emu-prodref>
     <emu-prodref name="ArrayAssignmentPattern"></emu-prodref>
@@ -38723,7 +38724,7 @@ THH:mm:ss.sss
         </li>
       </ul>
       <emu-note>
-        <p>The early error rules for |WithStatement|, |IfStatement|, and |IterationStatement| prevent these productions from containing a labelled |FunctionDeclaration| in non-strict code.</p>
+        <p>The early error rules for |WithStatement|, |IfStatement|, and |IterationStatement| prevent these statements from containing a labelled |FunctionDeclaration| in non-strict code.</p>
       </emu-note>
     </emu-annex>
 
@@ -39078,7 +39079,7 @@ THH:mm:ss.sss
       Strict mode code may not include a |WithStatement|. The occurrence of a |WithStatement| in such a context is a *SyntaxError* (<emu-xref href="#sec-with-statement-static-semantics-early-errors"></emu-xref>).
     </li>
     <li>
-      It is a *SyntaxError* if a |TryStatement| with a |Catch| occurs within strict mode code and the |Identifier| of the |Catch| production is `eval` or `arguments` (<emu-xref href="#sec-try-statement-static-semantics-early-errors"></emu-xref>).
+      It is a *SyntaxError* if a |TryStatement| with a |Catch| occurs within strict mode code and the |Identifier| of the |Catch| is `eval` or `arguments` (<emu-xref href="#sec-try-statement-static-semantics-early-errors"></emu-xref>).
     </li>
     <li>
       It is a *SyntaxError* if the same |BindingIdentifier| appears more than once in the |FormalParameters| of a strict function. An attempt to create such a function using a `Function`, `Generator`, or `AsyncFunction` constructor is a *SyntaxError* (<emu-xref href="#sec-function-definitions-static-semantics-early-errors"></emu-xref>, <emu-xref href="#sec-createdynamicfunction"></emu-xref>).
