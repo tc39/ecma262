@@ -34563,8 +34563,12 @@ THH:mm:ss.sss
           1. Assert: _typedArray_ is an Object that has a [[ViewedArrayBuffer]] internal slot.
           1. Let _accessIndex_ be ? ToIndex(_requestIndex_).
           1. Let _length_ be _typedArray_.[[ArrayLength]].
-          1. If _accessIndex_ &lt; 0 or _accessIndex_ &ge; _length_, throw a *RangeError* exception.
-          1. Return _accessIndex_.
+          1. Assert: _accessIndex_ &ge; 0.
+          1. If _accessIndex_ &ge; _length_, throw a *RangeError* exception.
+          1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
+          1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
+          1. Let _offset_ be _typedArray_.[[ByteOffset]].
+          1. Return (_accessIndex_ &times; _elementSize_) + _offset_.
         </emu-alg>
       </emu-clause>
 
@@ -34669,13 +34673,10 @@ THH:mm:ss.sss
         <p>The abstract operation AtomicReadModifyWrite takes four arguments, _typedArray_, _index_, _value_, and a pure combining operation _op_. The pure combining operation _op_ takes two List of byte values arguments and returns a List of byte values. The operation atomically loads a value, combines it with another value, and stores the result of the combination. It returns the loaded value. It performs the following steps:</p>
         <emu-alg>
           1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
-          1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+          1. Let _indexedPosition_ be ? ValidateAtomicAccess(_typedArray_, _index_).
           1. Let _v_ be ? ToInteger(_value_).
           1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
-          1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
           1. Let _elementType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
-          1. Let _offset_ be _typedArray_.[[ByteOffset]].
-          1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
           1. Return GetModifySetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _v_, _op_).
         </emu-alg>
       </emu-clause>
@@ -34704,16 +34705,13 @@ THH:mm:ss.sss
       <p>The following steps are taken:</p>
       <emu-alg>
         1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
-        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _indexedPosition_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. Let _expected_ be ? ToInteger(_expectedValue_).
         1. Let _replacement_ be ? ToInteger(_replacementValue_).
         1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
         1. Let _elementType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
         1. Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
         1. Let _expectedBytes_ be NumberToRawBytes(_elementType_, _expected_, _isLittleEndian_).
-        1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
-        1. Let _offset_ be _typedArray_.[[ByteOffset]].
-        1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
         1. Let `compareExchange` denote a semantic function of two List of byte values arguments that returns the second argument if the first argument is element-wise equal to _expectedBytes_.
         1. Return GetModifySetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _replacement_, `compareExchange`).
       </emu-alg>
@@ -34749,12 +34747,9 @@ THH:mm:ss.sss
       <p>The following steps are taken:</p>
       <emu-alg>
         1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
-        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _indexedPosition_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
-        1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
         1. Let _elementType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
-        1. Let _offset_ be _typedArray_.[[ByteOffset]].
-        1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
         1. Return GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, `"SeqCst"`).
       </emu-alg>
     </emu-clause>
@@ -34773,13 +34768,10 @@ THH:mm:ss.sss
       <p>The following steps are taken:</p>
       <emu-alg>
         1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
-        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _indexedPosition_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. Let _v_ be ? ToInteger(_value_).
         1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
-        1. Let _elementSize_ be the Number value of the Element Size value specified in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
         1. Let _elementType_ be the String value of the Element Type value in <emu-xref href="#table-49"></emu-xref> for _arrayTypeName_.
-        1. Let _offset_ be _typedArray_.[[ByteOffset]].
-        1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
         1. Perform SetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _v_, *true*, `"SeqCst"`).
         1. Return _v_.
       </emu-alg>
@@ -34799,15 +34791,13 @@ THH:mm:ss.sss
       <p>`Atomics.wait` puts the calling agent in a wait queue and puts it to sleep until it is awoken or the sleep times out. The following steps are taken:</p>
       <emu-alg>
         1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, &laquo; `"Int32Array"` &raquo;).
-        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _indexedPosition_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. Let _v_ be ? ToInt32(_value_).
         1. Let _q_ be ? ToNumber(_timeout_).
         1. If _q_ is *NaN*, let _t_ be *+&infin;*, else let _t_ be max(_q_, 0).
         1. Let _B_ be AgentCanSuspend().
         1. If _B_ is *false*, throw a *TypeError* exception.
         1. Let _block_ be _buffer_.[[ArrayBufferData]].
-        1. Let _offset_ be _typedArray_.[[ByteOffset]].
-        1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
         1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
         1. Perform EnterCriticalSection(_WL_).
         1. Let _w_ be GetValueFromBuffer(_buffer_, _indexedPosition_, `"Int32"`, *true*, `"SeqCst"`).
@@ -34829,14 +34819,12 @@ THH:mm:ss.sss
       <p>`Atomics.wake` wakes up some agents that are sleeping in the wait queue.  The following steps are taken:</p>
       <emu-alg>
         1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, &laquo; `"Int32Array"` &raquo;).
-        1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. Let _indexedPosition_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. If _count_ is *undefined*, let _c_ be *+&infin;*.
         1. Else,
           1. Let _intCount_ be ? ToInteger(_count_).
           1. Let _c_ be max(_intCount_, 0).
         1. Let _block_ be _buffer_.[[ArrayBufferData]].
-        1. Let _offset_ be _typedArray_.[[ByteOffset]].
-        1. Let _indexedPosition_ be (_i_ &times; 4) + _offset_.
         1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
         1. Let _n_ be 0.
         1. Perform EnterCriticalSection(_WL_).
