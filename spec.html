@@ -11439,7 +11439,15 @@
         </emu-grammar>
         <emu-alg>
           1. Let _obj_ be ObjectCreate(%ObjectPrototype%).
-          1. Perform ? PropertyDefinitionEvaluation of |PropertyDefinitionList| with arguments _obj_ and *true*.
+          1. Let _fields_ be ? PropertyDefinitionEvaluation of |PropertyDefinitionList| with arguments _obj_ and *true*.
+          1. For each _field_ in _fields_,
+            1. Let _propName_ be _field_.[[Name]].
+            1. Let _propValueRef_ be the result of evaluating _field_.[[Value]].
+            1. Let _propValue_ be ? GetValue(_exprValueRef_).
+            1. If IsAnonymousFunctionDefinition(_field_.[[Value]]) is *true*, then
+              1. Let _hasNameProperty_ be ? HasOwnProperty(_propValue_, `"name"`).
+              1. If _hasNameProperty_ is *false*, perform SetFunctionName(_propValue_, _propKey_).
+            1. Perform ? CreateDataPropertyOrThrow(_object_, _propName_, _propValue_).
           1. Return _obj_.
         </emu-alg>
         <emu-grammar>LiteralPropertyName : IdentifierName</emu-grammar>
@@ -11470,28 +11478,23 @@
         <emu-see-also-para op="PropertyDefinitionEvaluation"></emu-see-also-para>
         <emu-grammar>PropertyDefinitionList : PropertyDefinitionList `,` PropertyDefinition</emu-grammar>
         <emu-alg>
-          1. Perform ? PropertyDefinitionEvaluation of |PropertyDefinitionList| with arguments _object_ and _enumerable_.
-          1. Return the result of performing PropertyDefinitionEvaluation of |PropertyDefinition| with arguments _object_ and _enumerable_.
+          1. Let _fields_ be ? PropertyDefinitionEvaluation of |PropertyDefinitionList| with arguments _object_ and _enumerable_.
+          1. Let _field_ be ? PropertyDefinitionEvaluation of |PropertyDefinition| with arguments _object_ and _enumerable_.
+          1. Append the elements of _field_ to _fields_.
+          1. Return _fields_.
         </emu-alg>
         <emu-grammar>PropertyDefinition : IdentifierReference</emu-grammar>
         <emu-alg>
           1. Let _propName_ be StringValue of |IdentifierReference|.
-          1. Let _exprValue_ be the result of evaluating |IdentifierReference|.
-          1. Let _propValue_ be ? GetValue(_exprValue_).
           1. Assert: _enumerable_ is *true*.
-          1. Return CreateDataPropertyOrThrow(_object_, _propName_, _propValue_).
+          1. Return a new List containing Record{ [[Name]]: _propName_, [[Value]]: |IdentifierReference| }.
         </emu-alg>
         <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>
         <emu-alg>
           1. Let _propKey_ be the result of evaluating |PropertyName|.
           1. ReturnIfAbrupt(_propKey_).
-          1. Let _exprValueRef_ be the result of evaluating |AssignmentExpression|.
-          1. Let _propValue_ be ? GetValue(_exprValueRef_).
-          1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true*, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_propValue_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_propValue_, _propKey_).
           1. Assert: _enumerable_ is *true*.
-          1. Return CreateDataPropertyOrThrow(_object_, _propKey_, _propValue_).
+          1. Return a new List containing Record{ [[Name]]: _propName_, [[Value]]: |AssignmentExpression| }.
         </emu-alg>
         <emu-note>
           <p>An alternative semantics for this production is given in <emu-xref href="#sec-__proto__-property-names-in-object-initializers"></emu-xref>.</p>
@@ -18653,7 +18656,8 @@
         1. ReturnIfAbrupt(_methodDef_).
         1. Perform SetFunctionName(_methodDef_.[[Closure]], _methodDef_.[[Key]]).
         1. Let _desc_ be the PropertyDescriptor{[[Value]]: _methodDef_.[[Closure]], [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true*}.
-        1. Return ? DefinePropertyOrThrow(_object_, _methodDef_.[[Key]], _desc_).
+        1. Perform ? DefinePropertyOrThrow(_object_, _methodDef_.[[Key]], _desc_).
+        1. Return a new empty List.
       </emu-alg>
       <emu-grammar>MethodDefinition : `get` PropertyName `(` `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
@@ -18666,7 +18670,8 @@
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_, `"get"`).
         1. Let _desc_ be the PropertyDescriptor{[[Get]]: _closure_, [[Enumerable]]: _enumerable_, [[Configurable]]: *true*}.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        1. Perform ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        1. Return a new empty List.
       </emu-alg>
       <emu-grammar>MethodDefinition : `set` PropertyName `(` PropertySetParameterList `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
@@ -18678,7 +18683,8 @@
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_, `"set"`).
         1. Let _desc_ be the PropertyDescriptor{[[Set]]: _closure_, [[Enumerable]]: _enumerable_, [[Configurable]]: *true*}.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        1. Perform ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        1. Return a new empty List.
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -18938,7 +18944,8 @@
         1. Perform DefinePropertyOrThrow(_closure_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
         1. Perform SetFunctionName(_closure_, _propKey_).
         1. Let _desc_ be the PropertyDescriptor{[[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true*}.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        1. Perform ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        1. Return a new empty List.
       </emu-alg>
     </emu-clause>
 
@@ -19335,12 +19342,13 @@
         1. Else, let _methods_ be NonConstructorMethodDefinitions of |ClassBody|.
         1. For each |ClassElement| _m_ in order from _methods_, do
           1. If IsStatic of _m_ is *false*, then
-            1. Let _status_ be the result of performing PropertyDefinitionEvaluation for _m_ with arguments _proto_ and *false*.
+            1. Let _fields_ be the result of performing PropertyDefinitionEvaluation for _m_ with arguments _proto_ and *false*.
           1. Else,
-            1. Let _status_ be the result of performing PropertyDefinitionEvaluation for _m_ with arguments _F_ and *false*.
-          1. If _status_ is an abrupt completion, then
+            1. Let _fields_ be the result of performing PropertyDefinitionEvaluation for _m_ with arguments _F_ and *false*.
+          1. If _fields_ is an abrupt completion, then
             1. Set the running execution context's LexicalEnvironment to _lex_.
             1. Return Completion(_status_).
+          1. Assert: _fields_ is an empty List.
         1. Set the running execution context's LexicalEnvironment to _lex_.
         1. If _className_ is not *undefined*, then
           1. Perform _classScopeEnvRec_.InitializeBinding(_className_, _F_).
@@ -19634,7 +19642,8 @@
         1. Perform ! MakeMethod(_closure_, _object_).
         1. Perform ! SetFunctionName(_closure_, _propKey_).
         1. Let _desc_ be the PropertyDescriptor{[[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true*}.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        1. Perform ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        1. Return a new empty List.
       </emu-alg>
     </emu-clause>
     <emu-clause id="sec-async-function-definitions-runtime-semantics-evaluation">
@@ -38763,19 +38772,16 @@ THH:mm:ss.sss
         is replaced with the following definition:</p>
       <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>
       <emu-alg>
-        1. Let _propKey_ be the result of evaluating |PropertyName|.
-        1. ReturnIfAbrupt(_propKey_).
-        1. Let _exprValueRef_ be the result of evaluating |AssignmentExpression|.
-        1. Let _propValue_ be ? GetValue(_exprValueRef_).
-        1. If _propKey_ is the String value `"__proto__"` and if IsComputedPropertyKey(|PropertyName|) is *false*, then
-          1. If Type(_propValue_) is either Object or Null, then
-            1. Return _object_.[[SetPrototypeOf]](_propValue_).
-          1. Return NormalCompletion(~empty~).
-        1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true*, then
-          1. Let _hasNameProperty_ be ? HasOwnProperty(_propValue_, `"name"`).
-          1. If _hasNameProperty_ is *false*, perform SetFunctionName(_propValue_, _propKey_).
-        1. Assert: _enumerable_ is *true*.
-        1. Return CreateDataPropertyOrThrow(_object_, _propKey_, _propValue_).
+        <emu-alg>
+          1. <ins>If PropName of _propKey_ is `"__proto__"`, then</ins>
+            1. <ins>If Type(_propValue_) is either Object or Null, then</ins>
+              1. <ins>Perform ? _object_.[[SetPrototypeOf]](_propValue_).</ins>
+            1. <ins>Return a new empty List.</ins>
+          1. Let _propKey_ be the result of evaluating |PropertyName|.
+          1. ReturnIfAbrupt(_propKey_).
+          1. Assert: _enumerable_ is *true*.
+          1. Return a new List containing Record{ [[Name]]: _propName_, [[Value]]: |AssignmentExpression| }.
+        </emu-alg>
       </emu-alg>
     </emu-annex>
 
