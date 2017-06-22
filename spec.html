@@ -21638,16 +21638,24 @@
         </emu-clause>
 
         <emu-clause id="sec-resolutionfailure" aoid="ResolutionFailure">
-          <h1>Runtime Semantics: ResolutionFailure( _module_, _resolveMode_ )</h1>
+          <h1>Runtime Semantics: ResolutionFailure( _resolveMode_ )</h1>
           <p>The ResolutionFailure abstract operation performs the following steps:</p>
           <emu-alg>
-            1. Assert: _module_.[[Status]] is `"uninstantiated"` or `"instantiating"`.
             1. If _resolveMode_ is `"namespace"` or `"star"`: return *undefined*.
             1. Assert: _resolveMode_ is `"normal"`.
-            1. Let _error_ be Completion{[[Type]]: ~throw~, [[Value]]: a newly created *SyntaxError* object, [[Target]]: ~empty~}.
-            1. Set _module_.[[ErrorCompletion]] to _error_.
-            1. Set _module_.[[Status]] to `"errored"`.
-            1. Return _error_.
+            1. Throw a new *SyntaxError* exception.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-propagateresolution" aoid="PropagateResolution">
+          <h1>Runtime Semantics: PropagateResolution( _module_, _resolution_ )</h1>
+          <p>The PropagateResolution abstract operation performs the following steps:</p>
+          <emu-alg>
+            1. If _resolution_ is an abrupt completion, then
+              1. Assert: _module_.[[Status]] is `"uninstantiated"` or `"instantiating"`.
+              1. Set _module_.[[Status]] to `"errored"`.
+              1. Set _module_.[[ErrorCompletion]] to _resolution_.
+            1. Return _resolution_.
           </emu-alg>
         </emu-clause>
 
@@ -21661,7 +21669,7 @@
             1. For each Record {[[Module]], [[ExportName]]} _r_ in _resolveSet_, do
               1. If _module_ and _r_.[[Module]] are the same Module Record and SameValue(_exportName_, _r_.[[ExportName]]) is *true*, then
                 1. Assert: This is a circular import request.
-                1. Return ResolutionFailure(_module_, _resolveMode_).
+                1. Return ResolutionFailure(_resolveMode_).
             1. Append the Record {[[Module]]: _module_, [[ExportName]]: _exportName_} to _resolveSet_.
             1. For each ExportEntry Record _e_ in _module_.[[LocalExportEntries]], do
               1. If SameValue(_exportName_, _e_.[[ExportName]]) is *true*, then
@@ -21672,27 +21680,26 @@
                 1. Assert: _module_ imports a specific binding for this export.
                 1. Let _importedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
                 1. If _resolveMode_ is `"star"`, set _resolveMode_ to `"normal"`.
-                1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveMode_, _resolveSet_).
+                1. Let _resolution_ be _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveMode_, _resolveSet_).
+                1. Return PropagateResolution(_module_, _resolution_).
             1. If SameValue(_exportName_, `"default"`) is *true*, then
               1. Assert: A `default` export was not explicitly defined by this module.
-              1. Return ResolutionFailure(_module_, _resolveMode_).
+              1. Return ResolutionFailure(_resolveMode_).
               1. NOTE: A `default` export cannot be provided by an `export *`.
             1. Let _starResolution_ be *undefined*.
             1. Let _newResolveMode_ be _resolveMode_.
             1. If _resolveMode_ is `"normal"`, set _newResolveMode_ to `"star"`.
             1. For each ExportEntry Record _e_ in _module_.[[StarExportEntries]], do
               1. Let _importedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
-              1. Let _resolution_ be ? _importedModule_.ResolveExport(_exportName_, _newResolveMode_, _resolveSet_).
+              1. Let _resolution_ be _importedModule_.ResolveExport(_exportName_, _newResolveMode_, _resolveSet_).
+              1. Perform ? PropagateResolution(_module_, _resolution_).
               1. If _resolution_ is not *undefined*, then
                 1. If _starResolution_ is *null*, set _starResolution_ to _resolution_.
                 1. Else,
                   1. Assert: There is more than one `*` import that includes the requested name.
                   1. If _resolveMode_ is `"star"`, set _resolveMode_ to `"normal"`.
-                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]]
-                  are not the same Module Record or
-                  SameValue(_resolution_.[[BindingName]],
-                  _starResolution_.[[BindingName]]) is *false*, return ResolutionFailure(_module_, _resolveMode_).
-            1. If _starResolution_ is *undefined*, return ResolutionFailure(_module_, _resolveMode_);
+                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record or SameValue(_resolution_.[[BindingName]], _starResolution_.[[BindingName]]) is *false*, return ResolutionFailure(_resolveMode_).
+            1. If _starResolution_ is *undefined*, return ResolutionFailure(_resolveMode_);
             1. Otherwise, return _starResolution_.
           </emu-alg>
           <emu-note>
@@ -21776,7 +21783,8 @@
                   1. Perform ! _envRec_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                   1. Call _envRec_.InitializeBinding(_in_.[[LocalName]], _namespace_).
                 1. Else,
-                  1. Let _resolution_ be ? _importedModule_.ResolveExport(_in_.[[ImportName]], `"normal"`, &laquo; &raquo;).
+                  1. Let _resolution_ be _importedModule_.ResolveExport(_in_.[[ImportName]], `"normal"`, &laquo; &raquo;).
+                  1. Perform ? PropagateResolution(_module_, _resolution_).
                   1. Call _envRec_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
               1. Let _code_ be _module_.[[ECMAScriptCode]].
               1. Let _varDeclarations_ be the VarScopedDeclarations of _code_.
