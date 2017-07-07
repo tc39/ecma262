@@ -21742,7 +21742,7 @@
 
           <p>The ModuleDeclarationInstantiation concrete method of a Source Text Module Record implements the corresponding Module Record abstract method.</p>
 
-          <p>ModuleDeclarationInstantiation ensures that if instantiation (the actual work for which is performed by InnerModuleDeclarationInstantiation) fails, that fact is recorded in the module's [[Status]] and [[ErrorCompletion]] fields, and furthermore this failure is propagated to every other module in the same strongly connected component of the module graph. The exception that caused the failure is then re-thrown to the caller.</p>
+          <p>ModuleDeclarationInstantiation ensures that if instantiation (the actual work for which is performed by InnerModuleDeclarationInstantiation) fails, that fact is recorded in the module's [[Status]] and [[ErrorCompletion]] fields, and furthermore this failure is propagated to every other module in the same strongly connected component of the module graph. The exception that caused the failure is then re-thrown to the caller. In particular, this will cause such failures to propagate to any parent modules in the graph, and thus to their strongly connected components.</p>
 
           <p>This abstract method performs the following steps:</p>
 
@@ -21859,7 +21859,7 @@
 
           <p>The ModuleEvaluation concrete method of a Source Text Module Record implements the corresponding Module Record abstract method.</p>
 
-          <p>ModuleEvaluation ensures that if evaluation (the actual work for which is performed by InnerModuleEvaluation) fails, that fact is recorded in the module's [[Status]] and [[ErrorCompletion]] fields, and furthermore this failure is propagated to every other module in the same strongly connected component of the module graph. The exception that caused the failure is then re-thrown to the caller.</p>
+          <p>ModuleEvaluation ensures that if evaluation (the actual work for which is performed by InnerModuleEvaluation) fails, that fact is recorded in the module's [[Status]] and [[ErrorCompletion]] fields, and furthermore this failure is propagated to every other module in the same strongly connected component of the module graph. The exception that caused the failure is then re-thrown to the caller. In particular, this will cause such failures to propagate to any parent modules in the graph, and thus to their strongly connected components.</p>
 
           <p>This abstract method performs the following steps:</p>
 
@@ -21944,6 +21944,46 @@
               1. Resume the context that is now on the top of the execution context stack as the running execution context.
             </emu-alg>
           </emu-clause>
+        </emu-clause>
+
+        <emu-clause id="sec-example-source-text-module-record-graphs">
+          <h1>Example Source Text Module Record Graphs</h1>
+
+          <p>This section gives a series of non-normative examples of the instantiation and evaluation of various module graphs, with a specific focus on how errors can occur.</p>
+
+          <p>First consider the following simple module graph:</p>
+
+          <emu-figure id="figure-module-graph-simple" caption="A simple module graph">
+            <img alt="A module graph in which module A depends on module B" width="121" height="121" src="img/module-graph-simple.svg">
+          </emu-figure>
+
+          <p>Let's first assume that there are no error conditions. Then, a host will call _A_.ModuleDeclarationInstantiation(), which will complete successfully by assumption, and recursively instantiate module _B_ as well. This preparatory step can be performed at any time. Later, when the host is ready to incur any possible side effects of the module, it can call _A_.ModuleEvaluation(), which will complete successfully (again by assumption).</p>
+
+          <p>Consider then cases involving instantiation errors. If _B_ cannot be instantiated, for example because it imports itself, then _A_.ModuleDeclarationInstantiation() will fail, and the resulting exception will be recorded in both _A_ and _B_'s [[Status]] and [[ErrorCompletion]] fields. If the host then proceeds to call to _A_.ModuleEvaluation(), the exception will be re-thrown. Storing the exception also ensures that any time a host tries to reuse _A_ or _B_, it will encounter the same exception. (Hosts are not required to reuse Source Text Module Records; similarly, hosts are not required to expose the exception objects thrown by these methods. However, the specification enables such uses.)</p>
+
+          <p>Evaluation errors, such as throwing an exception at top-level, act much the same way as instantiation errors. Like instantiation errors, they are recorded in the [[Status]] and [[ErrorCompletion]] fields, thus preventing future instantiation or evaluation. They differ only in that detection will be delayed until _A_.ModuleEvaluation() is called.</p>
+
+          <p>Note that if the instantiation or evaluation error occurs in _A_, _B_'s [[Status]] and [[ErrorCompletion]] remain unaffected. In other words, there is no propagation of errors to dependencies, only to dependents. (Unless the dependencies are in the same strongly connected component, i.e. are part of a cycle—see below for that case.)</p>
+
+          <p>Now consider a different type of error condition:</p>
+
+          <emu-figure id="figure-module-graph-missing" caption="A module graph with an unresolvable module">
+            <img alt="A module graph in which module A depends on a missing (unresolvable) module, represented by ???" width="121" height="121" src="img/module-graph-missing.svg">
+          </emu-figure>
+
+          <p>In this scenario, module _A_ declares a dependency (via an `import` statement) on some other module, but no Module Record exists for that module, i.e. HostResolveImportedModule throws an exception when asked for it. This could occur for a variety of reasons, such as the corresponding resource not existing, or the resource existing but ParseModule throwing an exception when trying to parse the resulting source text. Hosts can choose to expose the cause of failure via the exception they throw from HostResolveImportedModule. In any case, this exception causes an instantiation failure, which as before is recorded in _A_.</p>
+
+          <p>Finally consider a module graph with a cycle:</p>
+
+          <emu-figure id="figure-module-graph-cycle" caption="A cyclic module graph">
+            <img alt="A module graph in which module A depends on module B and C, but module B also depends on module A" width="181" height="121" src="img/module-graph-cycle.svg">
+          </emu-figure>
+
+          <p>Here we assume that the entry point is module _A_, so that the host proceeds by calling _A_.ModuleDeclarationInstantiation(). This in turn calls _B_.ModuleDeclarationInstantiation(). Because of the cycle, _B_.ModuleDeclarationInstantiation() calls _A_.ModuleDeclarationInstantiation(). In this case, _A_.[[Status]] is `"instantiating"`, so it returns the partially-instantiated _A_. This leaves _B_ as `"instantiating"` as well, i.e. the last steps of InnerModuleDeclarationInstantiation are not performed on _B_. But eventually, when we unwind back up and _C_ has become `"instantiated"`, both _A_ and _B_ then transition from `"instantiating"` to `"instantiated"` together; this is by design, since they are part of the same strongly connected component.</p>
+
+          <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to _A_.ModuleDeclarationInstantiation(). However, once we unwind back to the original call to _A_.ModuleDeclarationInstantiation(), it fails during ModuleDeclarationEnvironmentSetup, and in particular during a call to _C_.ResolveExport(). This exception propagates up to ModuleDeclarationInstantiation, which goes through everything in the depth-first search stack and propagates the exception to them. Since the stack at this point consists of both _A_ and _B_, this atomically transitions _A_ and _B_ to the `"errored"` status, as desired. Note that _C_ is left as `"uninstantiated"`.</p>
+
+          <p>Analogous stories occur for evaluation of the cyclic module graph, both in the success and error cases.</p>
         </emu-clause>
       </emu-clause>
 
