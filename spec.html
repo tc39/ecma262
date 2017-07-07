@@ -21035,7 +21035,7 @@
             </tr>
             <tr>
               <td>
-                GetExportedNames(exportStarSet)
+                GetExportedNames(_exportStarSet_)
               </td>
               <td>
                 Return a list of all names that are either directly or indirectly exported from this module.
@@ -21043,10 +21043,11 @@
             </tr>
             <tr>
               <td>
-                ResolveExport(exportName, resolveMode, resolveSet)
+                ResolveExport(_exportName_, _resolveMode_, _resolveSet_)
               </td>
               <td>
-                Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record">ResolvedBinding Record</dfn>, of the form {[[Module]]: Module Record, [[BindingName]]: String}. Return *null* if the name cannot be resolved, or `"ambiguous"` if multiple bindings were found.
+                <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record">ResolvedBinding Record</dfn>, of the form {[[Module]]: Module Record, [[BindingName]]: String}. Return *null* if the name cannot be resolved, or `"ambiguous"` if multiple bindings were found.</p>
+                <p>The provided _resolveMode_ will be one of `"normal"` or `"namespace"`, indicating what type of export is being resolved.</p>
               </td>
             </tr>
             <tr>
@@ -21182,7 +21183,7 @@
                 Integer | *undefined*
               </td>
               <td>
-                Auxiliary field used during ModuleDeclarationInstantiation and ModuleEvaluation only. If [[Status]] is "`instantiating`" or "`evaluating`", this is either the module's own [[DFSIndex]] or that of an "earlier" module in the same strongly-connected component.
+                Auxiliary field used during ModuleDeclarationInstantiation and ModuleEvaluation only. If [[Status]] is "`instantiating`" or "`evaluating`", this is either the module's own [[DFSIndex]] or that of an "earlier" module in the same strongly connected component.
               </td>
             </tr>
             </tbody>
@@ -21637,35 +21638,32 @@
           </emu-note>
         </emu-clause>
 
-        <emu-clause id="sec-resolutionfailure" aoid="ResolutionFailure">
-          <h1>Runtime Semantics: ResolutionFailure( _resolveMode_ )</h1>
-          <p>The ResolutionFailure abstract operation performs the following steps:</p>
-          <emu-alg>
-            1. If _resolveMode_ is `"namespace"` or `"star"`: return *undefined*.
-            1. Assert: _resolveMode_ is `"normal"`.
-            1. Throw a new *SyntaxError* exception.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-propagateresolution" aoid="PropagateResolution">
-          <h1>Runtime Semantics: PropagateResolution( _module_, _resolution_ )</h1>
-          <p>The PropagateResolution abstract operation performs the following steps:</p>
-          <emu-alg>
-            1. If _resolution_ is an abrupt completion, then
-              1. If _module_.[[Status]] is `"errored"`, then
-                1. Assert: _module_.[[ErrorCompletion]] is _resolution_.
-              1. Otherwise,
-                1. Assert: _module_.[[Status]] is `"uninstantiated"` or `"instantiating"`.
-                1. Set _module_.[[Status]] to `"errored"`.
-                1. Set _module_.[[ErrorCompletion]] to _resolution_.
-            1. Return _resolution_.
-          </emu-alg>
-        </emu-clause>
-
-        <!-- es6num="15.2.1.16.3" -->
         <emu-clause id="sec-resolveexport">
           <h1>ResolveExport( _exportName_, _resolveMode_, _resolveSet_ ) Concrete Method</h1>
-          <p>The ResolveExport concrete method of a Source Text Module Record with arguments _exportName_, _resolveMode_, and _resolveSet_ performs the following steps:</p>
+          <p>The ResolveExport concrete method of a Source Text Module Record implements the corresponding Module Record abstract method.</p>
+
+          <p>ResolveExport attempts to resolve an imported binding to the actual defining module and local binding name. The defining module may be the module represented by the Module Record this method was invoked on or some other module that is imported by that module. The parameter _resolveSet_ is use to detect unresolved circular import/export paths. If a pair consisting of specific Module Record and _exportName_ is reached that is already in _resolveSet_, an import circularity has been encountered. Before recursively calling ResolveExport, a pair consisting of _module_ and _exportName_ is added to _resolveSet_.</p>
+
+          <p>If a defining module is found, a ResolvedBinding Record {[[Module]], [[BindingName]]} is returned. This record identifies the resolved binding of the originally requested export. If no definition is found or the request is found to be circular or ambiguous, an error is thrown or *undefined* is returned, depending on _resolveMode_ (see below for more details).</p>
+
+          <p>In addition to the standard _resolveMode_ values of `"normal"` or `"namespace"`, ResolveExport for Source Text Module Records also accepts a third value, `"star"`. This is only used when it calls itself recursively, in order to help implement the semantics of the `"normal"` mode.</p>
+
+          <p>Its failure behavior, when the _exportName_ cannot be resolved, varies among the different _resolveMode_ values:</p>
+          <dl>
+            <dt>`"normal"`</dt>
+            <dd>Throws a *SyntaxError* exception, which is recorded in the culprit module when applicable.</dd>
+
+            <dt>`"namespace"`</dt>
+            <dd>Returns *undefined*.</dd>
+
+            <dt>`"star"`</dt>
+            <dd>If a culprit module responsible for the unresolved name can be found, and has a recorded exception, it is rethrown. Otherwise, returns *undefined*.</dd>
+          </dl>
+
+          <p>(Note that if HostResolveImportedModule throws, the above analysis does not apply; such errors will be rethrown before any mode-specific logic is involved.)</p>
+
+          <p>This abstract method performs the following steps:</p>
+
           <emu-alg>
             1. Let _module_ be this Source Text Module Record.
             1. Assert: _module_.[[Status]] is not `"errored"`.
@@ -21705,16 +21703,49 @@
             1. If _starResolution_ is *undefined*, return ResolutionFailure(_resolveMode_);
             1. Otherwise, return _starResolution_.
           </emu-alg>
-          <emu-note>
-            <p>ResolveExport attempts to resolve an imported binding to the actual defining module and local binding name. The defining module may be the module represented by the Module Record this method was invoked on or some other module that is imported by that module. The parameter _resolveSet_ is use to detect unresolved circular import/export paths. If a pair consisting of specific Module Record and _exportName_ is reached that is already in _resolveSet_, an import circularity has been encountered. Before recursively calling ResolveExport, a pair consisting of _module_ and _exportName_ is added to _resolveSet_.</p>
-            <p>If a defining module is found, a ResolvedBinding Record {[[Module]], [[BindingName]]} is returned. This record identifies the resolved binding of the originally requested export. If no definition is found or the request is found to be circular or ambiguous, an error is thrown or *undefined* is returned, depending on _resolveMode_.</p>
-          </emu-note>
+
+          <emu-clause id="sec-resolutionfailure" aoid="ResolutionFailure">
+            <h1>Runtime Semantics: ResolutionFailure( _resolveMode_ )</h1>
+
+            <p>The ResolutionFailure abstract operation is used by ResolveExport to react property to a module resolution failure in a given _resolveMode_.</p>
+
+            <p>This abstract operation performs the following steps:</p>
+            <emu-alg>
+              1. If _resolveMode_ is `"namespace"` or `"star"`: return *undefined*.
+              1. Assert: _resolveMode_ is `"normal"`.
+              1. Throw a new *SyntaxError* exception.
+            </emu-alg>
+          </emu-clause>
+
+          <emu-clause id="sec-propagateresolution" aoid="PropagateResolution">
+            <h1>Runtime Semantics: PropagateResolution( _module_, _resolution_ )</h1>
+
+            <p>The PropagateResolution abstract operation is used by ResolveExport to ensure any module resolution failures from indirect or star exports are correctly propagated to the Source Text Module Record in question.</p>
+
+            <p>This abstract operation performs the following steps:</p>
+            <emu-alg>
+              1. If _resolution_ is an abrupt completion, then
+                1. If _module_.[[Status]] is `"errored"`, then
+                  1. Assert: _module_.[[ErrorCompletion]] is _resolution_.
+                1. Otherwise,
+                  1. Assert: _module_.[[Status]] is `"uninstantiated"` or `"instantiating"`.
+                  1. Set _module_.[[Status]] to `"errored"`.
+                  1. Set _module_.[[ErrorCompletion]] to _resolution_.
+              1. Return _resolution_.
+            </emu-alg>
+          </emu-clause>
         </emu-clause>
 
         <!-- es6num="15.2.1.16.4" -->
         <emu-clause id="sec-moduledeclarationinstantiation">
           <h1>ModuleDeclarationInstantiation( ) Concrete Method</h1>
-          <p>The ModuleDeclarationInstantiation concrete method of a Source Text Module Record performs the following steps:</p>
+
+          <p>The ModuleDeclarationInstantiation concrete method of a Source Text Module Record implements the corresponding Module Record abstract method.</p>
+
+          <p>ModuleDeclarationInstantiation ensures that if instantiation (the actual work for which is performed by InnerModuleDeclarationInstantiation) fails, that fact is recorded in the module's [[Status]] and [[ErrorCompletion]] fields, and furthermore this failure is propagated to every other module in the same strongly connected component of the module graph.</p>
+
+          <p>This abstract method performs the following steps:</p>
+
           <emu-alg>
             1. Let _module_ be this Source Text Module Record.
             1. Assert: _module_.[[Status]] is not `"instantiating"` or `"evaluating"`.
@@ -21734,7 +21765,11 @@
 
           <emu-clause id="sec-innermoduledeclarationinstantiation" aoid="InnerModuleDeclarationInstantiation">
             <h1>Runtime Semantics: InnerModuleDeclarationInstantiation( _module_, _stack_, _index_ )</h1>
-            <p>The InnerModuleDeclarationInstantiation abstract operation performs the following steps:</p>
+
+            <p>The InnerModuleDeclarationInstantiation abstract operation is used by ModuleDeclarationInstantiation to perform the actual instantiation process for the Source Text Module Record _module_, as well as recursively on all other modules in the same strongly connected component of the module graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestoreIndex]] fields, are used to track the traversal within the strongly connected component.</p>
+
+            <p>This abstract operation performs the following steps:</p>
+
             <emu-alg>
               1. If _module_ is not a Source Text Module Record,
                 1. Assert: _module_.[[Status]] is not `"instantiating"`.
@@ -21756,7 +21791,7 @@
                 1. Assert: _requiredModule_.[[Status]] is either `"instantiating"`, `"instantiated"`, or `"evaluated"`.
                 1. Assert: _requiredModule_.[[Status]] is "`instantiating`" if and only if _requiredModule_ is in _stack_.
                 1. If _requiredModule_.[[Status]] is "`instantiating`", set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-              1. Perform ? ModuleDeclarationResolution(_module_).
+              1. Perform ? ModuleDeclarationEnvironmentSetup(_module_).
               1. Assert: _module_ occurs exactly once in _stack_.
               1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
               1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], repeat:
@@ -21768,9 +21803,13 @@
             </emu-alg>
           </emu-clause>
 
-          <emu-clause id="sec-moduledeclarationresolution" aoid="ModuleDeclarationResolution">
-            <h1>Runtime Semantics: ModuleDeclarationResolution( _module_ )</h1>
-            <p>The ModuleDeclarationResolution abstract operation performs the following steps:</p>
+          <emu-clause id="sec-moduledeclarationresolution" aoid="ModuleDeclarationEnvironmentSetup">
+            <h1>Runtime Semantics: ModuleDeclarationEnvironmentSetup( _module_ )</h1>
+
+            <p>The ModuleDeclarationEnvironmentSetup abstract operation is used by InnerModuleDeclarationInstantiation to initialize the Lexical Environment of the module, including resolving all imported bindings.</p>
+
+            <p>This abstract operation performs the following steps:</p>
+
             <emu-alg>
               1. For each ExportEntry Record _e_ in _module_.[[IndirectExportEntries]], do
                 1. Perform ? _module_.ResolveExport(_e_.[[ExportName]], `"normal"`, &laquo; &raquo;).
@@ -21817,7 +21856,13 @@
         <!-- es6num="15.2.1.16.5" -->
         <emu-clause id="sec-moduleevaluation">
           <h1>ModuleEvaluation( ) Concrete Method</h1>
-          <p>The ModuleEvaluation concrete method of a Source Text Module Record performs the following steps:</p>
+
+          <p>The ModuleEvaluation concrete method of a Source Text Module Record implements the corresponding Module Record abstract method.</p>
+
+          <p>ModuleEvaluation ensures that if evaluation (the actual work for which is performed by InnerModuleEvaluation) fails, that fact is recorded in the module's [[Status]] and [[ErrorCompletion]] fields, and furthermore this failure is propagated to every other module in the same strongly connected component of the module graph.</p>
+
+          <p>This abstract method performs the following steps:</p>
+
           <emu-alg>
             1. Let _module_ be this Source Text Module Record.
             1. Assert: _module_.[[Status]] is `"errored"`, `"instantiated"`, or `"evaluated"`.
@@ -21837,7 +21882,11 @@
 
           <emu-clause id="sec-innermoduleevaluation" aoid="InnerModuleEvaluation">
             <h1>Runtime Semantics: InnerModuleEvaluation( _module_, _stack_, _index_ )</h1>
-            <p>The InnerModuleEvaluation abstract operation performs the following steps:</p>
+
+            <p>The InnerModuleEvaluation abstract operation is used by ModuleEvaluation to perform the actual evaluation process for the Source Text Module Record _module_, as well as recursively on all other modules in the same strongly connected component of the module graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestoreIndex]] fields, are used to track the traversal within the strongly connected component.</p>
+
+            <p>This abstract operation performs the following steps:</p>
+
             <emu-alg>
               1. If _module_ is not a Source Text Module Record,
                 1. Assert: _module_.[[Status]] is not `"evaluating"`.
@@ -21874,7 +21923,11 @@
 
           <emu-clause id="sec-moduleexecution" aoid="ModuleExecution">
             <h1>Runtime Semantics: ModuleExecution( _module_ )</h1>
-            <p>The ModuleExecution abstract operation performs the following steps:</p>
+
+            <p>The ModuleExecution abstract operation is used by InnerModuleEvaluation to initialize the execution context of the module and evaluate the module's code within it.</p>
+
+            <p>This abstract operation performs the following steps:</p>
+
             <emu-alg>
               1. Let _moduleCxt_ be a new ECMAScript code execution context.
               1. Set the Function of _moduleCxt_ to *null*.
@@ -21913,10 +21966,13 @@
         <p>Multiple different _referencingModule_, _specifier_ pairs may map to the same Module Record instance. The actual mapping semantic is implementation-defined but typically a normalization process is applied to _specifier_ as part of the mapping process. A typical normalization process would include actions such as alphabetic case folding and expansion of relative and abbreviated path specifiers.</p>
       </emu-clause>
 
-      <!-- es6num="15.2.1.18" -->
       <emu-clause id="sec-getmodulenamespace" aoid="GetModuleNamespace">
         <h1>Runtime Semantics: GetModuleNamespace( _module_ )</h1>
-        <p>The abstract operation GetModuleNamespace called with argument _module_ performs the following steps:</p>
+
+        <p>The GetModuleNamespace abstract operation retrieves the the Module Namespace Exotic object representing _module_'s exports, lazily creating it the first time it was requested, and storing it in _module_.[[Namespace]] for future retrieval.</p>
+
+        <p>This abstract operation performs the following steps:</p>
+
         <emu-alg>
           1. Assert: _module_ is an instance of a concrete subclass of Module Record.
           1. Assert: _module_.[[Status]] is neither `"uninstantiated"` nor `"errored"`.
