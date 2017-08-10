@@ -483,7 +483,7 @@
       <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn>Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol.</p>
       <p>Productions of the syntactic grammar are distinguished by having just one colon &ldquo;<b>:</b>&rdquo; as punctuation.</p>
       <p>The syntactic grammar as presented in clauses 12, 13, 14 and 15 is not a complete account of which token sequences are accepted as a correct ECMAScript |Script| or |Module|. Certain additional token sequences are also accepted, namely, those that would be described by the grammar if only semicolons were added to the sequence in certain places (such as before line terminator characters). Furthermore, certain token sequences that are described by the grammar are not considered acceptable if a line terminator character appears in certain &ldquo;awkward&rdquo; places.</p>
-      <p>In certain cases, in order to avoid ambiguities, the syntactic grammar uses generalized productions that permit token sequences that do not form a valid ECMAScript |Script| or |Module|. For example, this technique is used for object literals and object destructuring patterns. In such cases a more restrictive <em>supplemental grammar</em> is provided that further restricts the acceptable token sequences. In certain contexts, when explicitly specified, the input elements corresponding to such a production are parsed again using a goal symbol of a supplemental grammar. The input stream is syntactically in error if the tokens in the stream of input elements parsed by a cover grammar cannot be parsed as a single instance of the corresponding supplemental goal symbol, with no tokens left over.</p>
+      <p>In certain cases, in order to avoid ambiguities, the syntactic grammar uses generalized productions that permit token sequences that do not form a valid ECMAScript |Script| or |Module|. For example, this technique is used for object literals and object destructuring patterns. In such cases a more restrictive <em>supplemental grammar</em> is provided that further restricts the acceptable token sequences. Typically, an early error rule will then define an error condition if "_P_ cannot be <dfn>reparsed</dfn> as an _N_", where _P_ is a Parse Node (an instance of the generalized production) and _N_ is a nonterminal from the supplemental grammar. Here, the sequence of tokens originally matched by _P_ is parsed again using _N_ as the goal symbol. (If _N_ takes grammatical parameters, then they are set to the same values used when _P_ was originally parsed.) An error occurs if the sequence of tokens cannot be parsed as a single instance of _N_, with no tokens left over. Subsequently, algorithms access the result of the parse using a phrase of the form "the result of <dfn>reparsing</dfn> _P_ as an _N_". This will always be a Parse Node (an instance of _N_), since any parsing failure would have been detected by an early error rule.</p>
     </emu-clause>
 
     <!-- es6num="5.1.5" -->
@@ -11244,7 +11244,7 @@
         <h1>Static Semantics: CoveredParenthesizedExpression</h1>
         <emu-grammar>CoverParenthesizedExpressionAndArrowParameterList[Yield, Await] : `(` Expression[+In, ?Yield, ?Await] `)`</emu-grammar>
         <emu-alg>
-          1. Return the result of parsing the lexical token stream matched by |CoverParenthesizedExpressionAndArrowParameterList| using |ParenthesizedExpression| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing this |CoverParenthesizedExpressionAndArrowParameterList|.
+          1. Return the result of reparsing |CoverParenthesizedExpressionAndArrowParameterList| as a |ParenthesizedExpression|.
         </emu-alg>
       </emu-clause>
 
@@ -12088,7 +12088,7 @@
         <emu-grammar>PrimaryExpression : CoverParenthesizedExpressionAndArrowParameterList</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the lexical token sequence matched by |CoverParenthesizedExpressionAndArrowParameterList| cannot be parsed with no tokens left over using |ParenthesizedExpression| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing this |CoverParenthesizedExpressionAndArrowParameterList|.
+            It is a Syntax Error if |CoverParenthesizedExpressionAndArrowParameterList| cannot be reparsed as a |ParenthesizedExpression|.
           </li>
           <li>
             All Early Error rules for |ParenthesizedExpression| and its derived productions also apply to CoveredParenthesizedExpression of |CoverParenthesizedExpressionAndArrowParameterList|.
@@ -12206,7 +12206,7 @@
           CallExpression : CoverCallExpressionAndAsyncArrowHead
         </emu-grammar>
         <emu-alg>
-          1. Return the result of parsing the lexical token stream matched by |CoverCallExpressionAndAsyncArrowHead| using |CallMemberExpression| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing |CoverCallExpressionAndAsyncArrowHead|.
+          1. Return the result of reparsing |CoverCallExpressionAndAsyncArrowHead| as a |CallMemberExpression|.
         </emu-alg>
       </emu-clause>
 
@@ -14106,7 +14106,7 @@
       <emu-grammar>AssignmentExpression : LeftHandSideExpression `=` AssignmentExpression</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and the lexical token sequence matched by |LeftHandSideExpression| cannot be parsed with no tokens left over using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing |LeftHandSideExpression|.
+          It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and |LeftHandSideExpression| cannot be reparsed as an |AssignmentPattern|.
         </li>
         <li>
           It is an early Reference Error if |LeftHandSideExpression| is neither an |ObjectLiteral| nor an |ArrayLiteral| and IsValidSimpleAssignmentTarget of |LeftHandSideExpression| is *false*.
@@ -14175,7 +14175,7 @@
             1. If _hasNameProperty_ is *false*, perform SetFunctionName(_rval_, GetReferencedName(_lref_)).
           1. Perform ? PutValue(_lref_, _rval_).
           1. Return _rval_.
-        1. Let _assignmentPattern_ be the parse of the lexical token sequence matched by |LeftHandSideExpression| using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing |LeftHandSideExpression|.
+        1. Let _assignmentPattern_ be the result of reparsing |LeftHandSideExpression| as an |AssignmentPattern|.
         1. Let _rref_ be the result of evaluating |AssignmentExpression|.
         1. Let _rval_ be ? GetValue(_rref_).
         1. Perform ? DestructuringAssignmentEvaluation of _assignmentPattern_ using _rval_ as the argument.
@@ -14254,7 +14254,7 @@
         <emu-grammar>DestructuringAssignmentTarget : LeftHandSideExpression</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if the lexical token sequence matched by |LeftHandSideExpression| cannot be parsed with no tokens left over using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing |LeftHandSideExpression|.
+            It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| cannot be reparsed as an |AssignmentPattern|.
           </li>
           <li>
             It is a Syntax Error if |LeftHandSideExpression| is neither an |ObjectLiteral| nor an |ArrayLiteral| and IsValidSimpleAssignmentTarget(|LeftHandSideExpression|) is *false*.
@@ -14417,7 +14417,7 @@
             1. Let _v_ be ? GetValue(_defaultValue_).
           1. Else, let _v_ be _value_.
           1. If |DestructuringAssignmentTarget| is an |ObjectLiteral| or an |ArrayLiteral|, then
-            1. Let _nestedAssignmentPattern_ be the parse of the lexical token sequence matched by |DestructuringAssignmentTarget| using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing this |DestructuringAssignmentTarget|.
+            1. Let _nestedAssignmentPattern_ be the result of reparsing |DestructuringAssignmentTarget| as an |AssignmentPattern|.
             1. Return the result of performing DestructuringAssignmentEvaluation of _nestedAssignmentPattern_ with _v_ as the argument.
           1. If |Initializer| is present and _value_ is *undefined* and IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
             1. Let _hasNameProperty_ be ? HasOwnProperty(_v_, `"name"`).
@@ -14448,7 +14448,7 @@
               1. Increment _n_ by 1.
           1. If |DestructuringAssignmentTarget| is neither an |ObjectLiteral| nor an |ArrayLiteral|, then
             1. Return ? PutValue(_lref_, _A_).
-          1. Let _nestedAssignmentPattern_ be the parse of the lexical token sequence matched by |DestructuringAssignmentTarget| using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing this |AssignmentRestElement|.
+          1. Let _nestedAssignmentPattern_ be the result of reparsing |DestructuringAssignmentTarget| as an |AssignmentPattern|.
           1. Return the result of performing DestructuringAssignmentEvaluation of _nestedAssignmentPattern_ with _A_ as the argument.
         </emu-alg>
       </emu-clause>
@@ -14468,7 +14468,7 @@
             1. Let _rhsValue_ be ? GetValue(_defaultValue_).
           1. Else, let _rhsValue_ be _v_.
           1. If |DestructuringAssignmentTarget| is an |ObjectLiteral| or an |ArrayLiteral|, then
-            1. Let _assignmentPattern_ be the parse of the lexical token sequence matched by |DestructuringAssignmentTarget| using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing this |DestructuringAssignmentTarget|.
+            1. Let _assignmentPattern_ be the result of reparsing |DestructuringAssignmentTarget| as an |AssignmentPattern|.
             1. Return the result of performing DestructuringAssignmentEvaluation of _assignmentPattern_ with _rhsValue_ as the argument.
           1. If |Initializer| is present and _v_ is *undefined* and IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
             1. Let _hasNameProperty_ be ? HasOwnProperty(_rhsValue_, `"name"`).
@@ -16407,10 +16407,10 @@
         </emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if the lexical token sequence matched by |LeftHandSideExpression| cannot be parsed with no tokens left over using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing |LeftHandSideExpression|.
+            It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| cannot be reparsed as an |AssignmentPattern|.
           </li>
         </ul>
-        <p>If |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if the lexical token sequence matched by |LeftHandSideExpression| can be parsed with no tokens left over using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing |LeftHandSideExpression| then the following rules are not applied. Instead, the Early Error rules for |AssignmentPattern| are used.</p>
+        <p>If |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| can be reparsed as an |AssignmentPattern| then the following rules are not applied. Instead, the Early Error rules for |AssignmentPattern| are used.</p>
         <ul>
           <li>
             It is a Syntax Error if IsValidSimpleAssignmentTarget of |LeftHandSideExpression| is *false*.
@@ -16718,7 +16718,7 @@
           1. Let _destructuring_ be IsDestructuring of _lhs_.
           1. If _destructuring_ is *true* and if _lhsKind_ is ~assignment~, then
             1. Assert: _lhs_ is a |LeftHandSideExpression|.
-            1. Let _assignmentPattern_ be the parse of the lexical token sequence matched by _lhs_ using |AssignmentPattern| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing _lhs_.
+            1. Let _assignmentPattern_ be the result of reparsing _lhs_ as an |AssignmentPattern|.
           1. Repeat,
             1. Let _nextResult_ be ? IteratorStep(_iterator_).
             1. If _nextResult_ is *false*, return NormalCompletion(_V_).
@@ -18603,7 +18603,7 @@
       <emu-grammar>ArrowParameters[Yield, Await] : CoverParenthesizedExpressionAndArrowParameterList[?Yield, ?Await]</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if the lexical token sequence matched by |CoverParenthesizedExpressionAndArrowParameterList| cannot be parsed with no tokens left over using |ArrowFormalParameters| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing this |CoverParenthesizedExpressionAndArrowParameterList|.
+          It is a Syntax Error if |CoverParenthesizedExpressionAndArrowParameterList| cannot be reparsed as an |ArrowFormalParameters|.
         </li>
         <li>
           All early error rules for |ArrowFormalParameters| and its derived productions also apply to CoveredFormalsList of |CoverParenthesizedExpressionAndArrowParameterList|.
@@ -18714,7 +18714,7 @@
           `(` Expression `,` `...` BindingPattern `)`
       </emu-grammar>
       <emu-alg>
-        1. Return the result of parsing the lexical token stream matched by |CoverParenthesizedExpressionAndArrowParameterList| using |ArrowFormalParameters| as the goal symbol with its <sub>[Yield]</sub> and <sub>[Await]</sub> parameters set to the values used when parsing this |CoverParenthesizedExpressionAndArrowParameterList|.
+        1. Return the result of reparsing |CoverParenthesizedExpressionAndArrowParameterList| as an |ArrowFormalParameters|.
       </emu-alg>
     </emu-clause>
 
@@ -20046,7 +20046,7 @@
       <ul>
         <li>It is a Syntax Error if |CoverCallExpressionAndAsyncArrowHead| Contains |YieldExpression| is *true*.</li>
         <li>It is a Syntax Error if |CoverCallExpressionAndAsyncArrowHead| Contains |AwaitExpression| is *true*.</li>
-        <li>It is a Syntax Error if the lexical token sequence matched by |CoverCallExpressionAndAsyncArrowHead| cannot be parsed with no tokens left over using |AsyncArrowHead| as the goal symbol.</li>
+        <li>It is a Syntax Error if |CoverCallExpressionAndAsyncArrowHead| cannot be reparsed as an |AsyncArrowHead|.</li>
         <li>It is a Syntax Error if any element of the BoundNames of |CoverCallExpressionAndAsyncArrowHead| also occurs in the LexicallyDeclaredNames of |AsyncConciseBody|.</li>
         <li>It is a Syntax Error if ContainsUseStrict of |AsyncConciseBody| is *true* and IsSimpleParameterList of |CoverCallExpressionAndAsyncArrowHead| is *false*.</li>
         <li>All Early Error rules for |AsyncArrowHead| and its derived productions apply to CoveredAsyncArrowHead of |CoverCallExpressionAndAsyncArrowHead|.</li>
@@ -20059,7 +20059,7 @@
         CoverCallExpressionAndAsyncArrowHead : MemberExpression Arguments
       </emu-grammar>
       <emu-alg>
-        1. Return the result of parsing the lexical token stream matched by |CoverCallExpressionAndAsyncArrowHead| using |AsyncArrowHead| as the goal symbol.
+        1. Return the result of reparsing |CoverCallExpressionAndAsyncArrowHead| as an |AsyncArrowHead|.
       </emu-alg>
     </emu-clause>
 
