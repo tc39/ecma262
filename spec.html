@@ -4780,7 +4780,9 @@
           1. Set _method_ to ? GetMethod(_obj_, @@iterator).
         1. Let _iterator_ be ? Call(_method_, _obj_).
         1. If Type(_iterator_) is not Object, throw a *TypeError* exception.
-        1. Return _iterator_.
+        1. Let _nextMethod_ be ? GetV(_iterator_, `"next"`).
+        1. Let _iteratorRecord_ be Record {[[Iterator]]: _iterator_, [[NextMethod]]: _nextMethod_, [[Done]]: *false*}.
+        1. Return _iteratorRecord_.
       </emu-alg>
     </emu-clause>
 
@@ -4861,16 +4863,15 @@
     </emu-clause>
 
     <!-- es6num="7.4.8" -->
-    <emu-clause id="sec-createlistiterator" aoid="CreateListIterator">
-      <h1>CreateListIterator ( _list_ )</h1>
-      <p>The abstract operation CreateListIterator with argument _list_ creates an Iterator (<emu-xref href="#sec-iterator-interface"></emu-xref>) object whose next method returns the successive elements of _list_. It performs the following steps:</p>
+    <emu-clause id="sec-createlistiteratorRecord" aoid="CreateListIteratorRecord">
+      <h1>CreateListIteratorRecord ( _list_ )</h1>
+      <p>The abstract operation CreateListIteratorRecord with argument _list_ creates an Iterator (<emu-xref href="#sec-iterator-interface"></emu-xref>) object record whose next method returns the successive elements of _list_. It performs the following steps:</p>
       <emu-alg>
         1. Let _iterator_ be ObjectCreate(%IteratorPrototype%, &laquo; [[IteratedList]], [[ListIteratorNextIndex]] &raquo;).
         1. Set _iterator_.[[IteratedList]] to _list_.
         1. Set _iterator_.[[ListIteratorNextIndex]] to 0.
         1. Let _next_ be a new built-in function object as defined in ListIterator `next` (<emu-xref href="#sec-listiterator-next"></emu-xref>).
-        1. Perform CreateMethodProperty(_iterator_, `"next"`, _next_).
-        1. Return _iterator_.
+        1. Return Record { [[Iterator]]: _iterator_, [[NextMethod]]: _next_, [[Done]]: *false* }.
       </emu-alg>
       <emu-note>
         <p>The list iterator object is never directly accessible to ECMAScript code.</p>
@@ -7586,7 +7587,7 @@
           1. Let _parameterBindings_ be a new List of _parameterNames_ with `"arguments"` appended.
         1. Else,
           1. Let _parameterBindings_ be _parameterNames_.
-        1. Let _iteratorRecord_ be Record {[[Iterator]]: CreateListIterator(_argumentsList_), [[Done]]: *false*}.
+        1. Let _iteratorRecord_ be CreateListIterator(_argumentsList_).
         1. If _hasDuplicates_ is *true*, then
           1. Perform ? IteratorBindingInitialization for _formals_ with _iteratorRecord_ and *undefined* as arguments.
         1. Else,
@@ -11585,9 +11586,9 @@
         <emu-alg>
           1. Let _spreadRef_ be the result of evaluating |AssignmentExpression|.
           1. Let _spreadObj_ be ? GetValue(_spreadRef_).
-          1. Let _iterator_ be ? GetIterator(_spreadObj_).
+          1. Let _iteratorRecord_ be ? GetIterator(_spreadObj_).
           1. Repeat,
-            1. Let _next_ be ? IteratorStep(_iterator_).
+            1. Let _next_ be ? IteratorStep(_iteratorRecord_).
             1. If _next_ is *false*, return _nextIndex_.
             1. Let _nextValue_ be ? IteratorValue(_next_).
             1. Let _status_ be CreateDataProperty(_array_, ToString(ToUint32(_nextIndex_)), _nextValue_).
@@ -12719,9 +12720,9 @@
           1. Let _list_ be a new empty List.
           1. Let _spreadRef_ be the result of evaluating |AssignmentExpression|.
           1. Let _spreadObj_ be ? GetValue(_spreadRef_).
-          1. Let _iterator_ be ? GetIterator(_spreadObj_).
+          1. Let _iteratorRecord_ be ? GetIterator(_spreadObj_).
           1. Repeat,
-            1. Let _next_ be ? IteratorStep(_iterator_).
+            1. Let _next_ be ? IteratorStep(_iteratorRecord_).
             1. If _next_ is *false*, return _list_.
             1. Let _nextArg_ be ? IteratorValue(_next_).
             1. Append _nextArg_ as the last element of _list_.
@@ -12740,9 +12741,9 @@
           1. Let _precedingArgs_ be ArgumentListEvaluation of |ArgumentList|.
           1. ReturnIfAbrupt(_precedingArgs_).
           1. Let _spreadRef_ be the result of evaluating |AssignmentExpression|.
-          1. Let _iterator_ be ? GetIterator(? GetValue(_spreadRef_)).
+          1. Let _iteratorRecord_ be ? GetIterator(? GetValue(_spreadRef_)).
           1. Repeat,
-            1. Let _next_ be ? IteratorStep(_iterator_).
+            1. Let _next_ be ? IteratorStep(_iteratorRecord_).
             1. If _next_ is *false*, return _precedingArgs_.
             1. Let _nextArg_ be ? IteratorValue(_next_).
             1. Append _nextArg_ as the last element of _precedingArgs_.
@@ -14377,45 +14378,41 @@
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` `]`</emu-grammar>
         <emu-alg>
-          1. Let _iterator_ be ? GetIterator(_value_).
-          1. Return ? IteratorClose(_iterator_, NormalCompletion(~empty~)).
+          1. Let _iteratorRecord_ be ? GetIterator(_value_).
+          1. Return ? IteratorClose(_iteratorRecord_, NormalCompletion(~empty~)).
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` Elision `]`</emu-grammar>
         <emu-alg>
-          1. Let _iterator_ be ? GetIterator(_value_).
-          1. Let _iteratorRecord_ be Record {[[Iterator]]: _iterator_, [[Done]]: *false*}.
+          1. Let _iteratorRecord_ be ? GetIterator(_value_).
           1. Let _result_ be the result of performing IteratorDestructuringAssignmentEvaluation of |Elision| with _iteratorRecord_ as the argument.
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iterator_, _result_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _result_).
           1. Return _result_.
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` Elision? AssignmentRestElement `]`</emu-grammar>
         <emu-alg>
-          1. Let _iterator_ be ? GetIterator(_value_).
-          1. Let _iteratorRecord_ be Record {[[Iterator]]: _iterator_, [[Done]]: *false*}.
+          1. Let _iteratorRecord_ be ? GetIterator(_value_).
           1. If |Elision| is present, then
             1. Let _status_ be the result of performing IteratorDestructuringAssignmentEvaluation of |Elision| with _iteratorRecord_ as the argument.
             1. If _status_ is an abrupt completion, then
               1. Assert: _iteratorRecord_.[[Done]] is *true*.
               1. Return Completion(_status_).
           1. Let _result_ be the result of performing IteratorDestructuringAssignmentEvaluation of |AssignmentRestElement| with _iteratorRecord_ as the argument.
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iterator_, _result_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _result_).
           1. Return _result_.
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` AssignmentElementList `]`</emu-grammar>
         <emu-alg>
-          1. Let _iterator_ be ? GetIterator(_value_).
-          1. Let _iteratorRecord_ be Record {[[Iterator]]: _iterator_, [[Done]]: *false*}.
+          1. Let _iteratorRecord_ be ? GetIterator(_value_).
           1. Let _result_ be the result of performing IteratorDestructuringAssignmentEvaluation of |AssignmentElementList| using _iteratorRecord_ as the argument.
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iterator_, _result_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _result_).
           1. Return _result_.
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` AssignmentElementList `,` Elision? AssignmentRestElement? `]`</emu-grammar>
         <emu-alg>
-          1. Let _iterator_ be ? GetIterator(_value_).
-          1. Let _iteratorRecord_ be Record {[[Iterator]]: _iterator_, [[Done]]: *false*}.
+          1. Let _iteratorRecord_ be ? GetIterator(_value_).
           1. Let _status_ be the result of performing IteratorDestructuringAssignmentEvaluation of |AssignmentElementList| using _iteratorRecord_ as the argument.
           1. If _status_ is an abrupt completion, then
-            1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iterator_, _status_).
+            1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _status_).
             1. Return Completion(_status_).
           1. If |Elision| is present, then
             1. Set _status_ to the result of performing IteratorDestructuringAssignmentEvaluation of |Elision| with _iteratorRecord_ as the argument.
@@ -14424,7 +14421,7 @@
               1. Return Completion(_status_).
           1. If |AssignmentRestElement| is present, then
             1. Set _status_ to the result of performing IteratorDestructuringAssignmentEvaluation of |AssignmentRestElement| with _iteratorRecord_ as the argument.
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iterator_, _status_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _status_).
           1. Return Completion(_status_).
         </emu-alg>
         <emu-grammar>AssignmentPropertyList : AssignmentPropertyList `,` AssignmentProperty</emu-grammar>
@@ -14478,7 +14475,7 @@
         <emu-grammar>Elision : `,`</emu-grammar>
         <emu-alg>
           1. If _iteratorRecord_.[[Done]] is *false*, then
-            1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+            1. Let _next_ be IteratorStep(_iteratorRecord_).
             1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
             1. ReturnIfAbrupt(_next_).
             1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -14488,7 +14485,7 @@
         <emu-alg>
           1. Perform ? IteratorDestructuringAssignmentEvaluation of |Elision| with _iteratorRecord_ as the argument.
           1. If _iteratorRecord_.[[Done]] is *false*, then
-            1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+            1. Let _next_ be IteratorStep(_iteratorRecord_).
             1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
             1. ReturnIfAbrupt(_next_).
             1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -14500,7 +14497,7 @@
             1. Let _lref_ be the result of evaluating |DestructuringAssignmentTarget|.
             1. ReturnIfAbrupt(_lref_).
           1. If _iteratorRecord_.[[Done]] is *false*, then
-            1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+            1. Let _next_ be IteratorStep(_iteratorRecord_).
             1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
             1. ReturnIfAbrupt(_next_).
             1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -14532,7 +14529,7 @@
           1. Let _A_ be ! ArrayCreate(0).
           1. Let _n_ be 0.
           1. Repeat, while _iteratorRecord_.[[Done]] is *false*,
-            1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+            1. Let _next_ be IteratorStep(_iteratorRecord_).
             1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
             1. ReturnIfAbrupt(_next_).
             1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -15685,10 +15682,9 @@
         </emu-alg>
         <emu-grammar>BindingPattern : ArrayBindingPattern</emu-grammar>
         <emu-alg>
-          1. Let _iterator_ be ? GetIterator(_value_).
-          1. Let _iteratorRecord_ be Record {[[Iterator]]: _iterator_, [[Done]]: *false*}.
+          1. Let _iteratorRecord_ be ? GetIterator(_value_).
           1. Let _result_ be IteratorBindingInitialization for |ArrayBindingPattern| using _iteratorRecord_ and _environment_ as arguments.
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iterator_, _result_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _result_).
           1. Return _result_.
         </emu-alg>
         <emu-grammar>ObjectBindingPattern : `{` `}`</emu-grammar>
@@ -15782,7 +15778,7 @@
           1. Let _bindingId_ be StringValue of |BindingIdentifier|.
           1. Let _lhs_ be ? ResolveBinding(_bindingId_, _environment_).
           1. If _iteratorRecord_.[[Done]] is *false*, then
-            1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+            1. Let _next_ be IteratorStep(_iteratorRecord_).
             1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
             1. ReturnIfAbrupt(_next_).
             1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -15803,7 +15799,7 @@
         <emu-grammar>BindingElement : BindingPattern Initializer?</emu-grammar>
         <emu-alg>
           1. If _iteratorRecord_.[[Done]] is *false*, then
-            1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+            1. Let _next_ be IteratorStep(_iteratorRecord_).
             1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
             1. ReturnIfAbrupt(_next_).
             1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -15824,7 +15820,7 @@
           1. Let _n_ be 0.
           1. Repeat,
             1. If _iteratorRecord_.[[Done]] is *false*, then
-              1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+              1. Let _next_ be IteratorStep(_iteratorRecord_).
               1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
               1. ReturnIfAbrupt(_next_).
               1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -15844,7 +15840,7 @@
           1. Let _n_ be 0.
           1. Repeat,
             1. If _iteratorRecord_.[[Done]] is *false*, then
-              1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+              1. Let _next_ be IteratorStep(_iteratorRecord_).
               1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
               1. ReturnIfAbrupt(_next_).
               1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -16807,8 +16803,8 @@
 
       <!-- es6num="13.7.5.13" -->
       <emu-clause id="sec-runtime-semantics-forin-div-ofbodyevaluation-lhs-stmt-iterator-lhskind-labelset" aoid="ForIn/OfBodyEvaluation">
-        <h1>Runtime Semantics: ForIn/OfBodyEvaluation ( _lhs_, _stmt_, _iterator_, _iterationKind_, _lhsKind_, _labelSet_ )</h1>
-        <p>The abstract operation ForIn/OfBodyEvaluation is called with arguments _lhs_, _stmt_, _iterator_, _iterationKind_, _lhsKind_, and _labelSet_. The value of _iterationKind_ is either ~enumerate~ or ~iterate~. The value of _lhsKind_ is either ~assignment~, ~varBinding~ or ~lexicalBinding~.</p>
+        <h1>Runtime Semantics: ForIn/OfBodyEvaluation ( _lhs_, _stmt_, _iteratorRecord_, _iterationKind_, _lhsKind_, _labelSet_ )</h1>
+        <p>The abstract operation ForIn/OfBodyEvaluation is called with arguments _lhs_, _stmt_, _iteratorRecord_, _iterationKind_, _lhsKind_, and _labelSet_. The value of _iterationKind_ is either ~enumerate~ or ~iterate~. The value of _lhsKind_ is either ~assignment~, ~varBinding~ or ~lexicalBinding~.</p>
         <emu-alg>
           1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
           1. Let _V_ be *undefined*.
@@ -16817,7 +16813,7 @@
             1. Assert: _lhs_ is a |LeftHandSideExpression|.
             1. Let _assignmentPattern_ be the result of reparsing _lhs_ as an |AssignmentPattern|.
           1. Repeat,
-            1. Let _nextResult_ be ? IteratorStep(_iterator_).
+            1. Let _nextResult_ be ? IteratorStep(_iteratorRecord_).
             1. If _nextResult_ is *false*, return NormalCompletion(_V_).
             1. Let _nextValue_ be ? IteratorValue(_nextResult_).
             1. If _lhsKind_ is either ~assignment~ or ~varBinding~, then
@@ -16856,7 +16852,7 @@
                 1. Return _status_.
               1. Else,
                 1. Assert: _iterationKind_ is ~iterate~.
-                1. Return ? IteratorClose(_iterator_, _status_).
+                1. Return ? IteratorClose(_iteratorRecord_, _status_).
             1. Let _result_ be the result of evaluating _stmt_.
             1. Set the running execution context's LexicalEnvironment to _oldEnv_.
             1. If LoopContinues(_result_, _labelSet_) is *false*, then
@@ -16864,7 +16860,7 @@
                 1. Return Completion(UpdateEmpty(_result_, _V_)).
               1. Else,
                 1. Assert: _iterationKind_ is ~iterate~.
-                1. Return ? IteratorClose(_iterator_, UpdateEmpty(_result_, _V_)).
+                1. Return ? IteratorClose(_iteratorRecord_, UpdateEmpty(_result_, _V_)).
             1. If _result_.[[Value]] is not ~empty~, set _V_ to _result_.[[Value]].
         </emu-alg>
       </emu-clause>
@@ -18861,7 +18857,7 @@
       <emu-grammar>ArrowParameters : BindingIdentifier</emu-grammar>
       <emu-alg>
         1. Assert: _iteratorRecord_.[[Done]] is *false*.
-        1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+        1. Let _next_ be IteratorStep(_iteratorRecord_).
         1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
         1. ReturnIfAbrupt(_next_).
         1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -19394,11 +19390,12 @@
       <emu-alg>
         1. Let _exprRef_ be the result of evaluating |AssignmentExpression|.
         1. Let _value_ be ? GetValue(_exprRef_).
-        1. Let _iterator_ be ? GetIterator(_value_).
+        1. Let _iteratorRecord_ be ? GetIterator(_value_).
+        1. Let _iterator_ be _iteratorRecord_.[[Iterator]].
         1. Let _received_ be NormalCompletion(*undefined*).
         1. Repeat,
           1. If _received_.[[Type]] is ~normal~, then
-            1. Let _innerResult_ be ? IteratorNext(_iterator_, _received_.[[Value]]).
+            1. Let _innerResult_ be ? IteratorNext(_iteratorRecord_, _received_.[[Value]]).
             1. Let _done_ be ? IteratorComplete(_innerResult_).
             1. If _done_ is *true*, then
               1. Return ? IteratorValue(_innerResult_).
@@ -19415,7 +19412,7 @@
               1. Set _received_ to GeneratorYield(_innerResult_).
             1. Else,
               1. NOTE: If _iterator_ does not have a `throw` method, this throw is going to terminate the `yield*` loop. But first we need to give _iterator_ a chance to clean up.
-              1. Perform ? IteratorClose(_iterator_, Completion{[[Type]]: ~normal~, [[Value]]: ~empty~, [[Target]]: ~empty~}).
+              1. Perform ? IteratorClose(_iteratorResult_, Completion{[[Type]]: ~normal~, [[Value]]: ~empty~, [[Target]]: ~empty~}).
               1. NOTE: The next step throws a *TypeError* to indicate that there was a `yield*` protocol violation: _iterator_ does not have a `throw` method.
               1. Throw a *TypeError* exception.
           1. Else,
@@ -20285,7 +20282,7 @@
       </emu-grammar>
       <emu-alg>
         1. Assert: _iteratorRecord_.[[Done]] is *false*.
-        1. Let _next_ be ? IteratorStep(_iteratorRecord_.[[Iterator]]).
+        1. Let _next_ be ? IteratorStep(_iteratorRecord_).
         1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
         1. ReturnIfAbrupt(_next_).
         1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
@@ -31033,25 +31030,25 @@ THH:mm:ss.sss
               1. Let _A_ be ? Construct(_C_).
             1. Else,
               1. Let _A_ be ! ArrayCreate(0).
-            1. Let _iterator_ be ? GetIterator(_items_, _usingIterator_).
+            1. Let _iteratorRecord_ be ? GetIterator(_items_, _usingIterator_).
             1. Let _k_ be 0.
             1. Repeat,
               1. If _k_ &ge; 2<sup>53</sup>-1, then
                 1. Let _error_ be Completion{[[Type]]: ~throw~, [[Value]]: a newly created *TypeError* object, [[Target]]: ~empty~}.
-                1. Return ? IteratorClose(_iterator_, _error_).
+                1. Return ? IteratorClose(_iteratorRecord_, _error_).
               1. Let _Pk_ be ! ToString(_k_).
-              1. Let _next_ be ? IteratorStep(_iterator_).
+              1. Let _next_ be ? IteratorStep(_iteratorRecord_).
               1. If _next_ is *false*, then
                 1. Perform ? Set(_A_, `"length"`, _k_, *true*).
                 1. Return _A_.
               1. Let _nextValue_ be ? IteratorValue(_next_).
               1. If _mapping_ is *true*, then
                 1. Let _mappedValue_ be Call(_mapfn_, _T_, &laquo; _nextValue_, _k_ &raquo;).
-                1. If _mappedValue_ is an abrupt completion, return ? IteratorClose(_iterator_, _mappedValue_).
+                1. If _mappedValue_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _mappedValue_).
                 1. Let _mappedValue_ be _mappedValue_.[[Value]].
               1. Else, let _mappedValue_ be _nextValue_.
               1. Let _defineStatus_ be CreateDataPropertyOrThrow(_A_, _Pk_, _mappedValue_).
-              1. If _defineStatus_ is an abrupt completion, return ? IteratorClose(_iterator_, _defineStatus_).
+              1. If _defineStatus_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _defineStatus_).
               1. Increase _k_ by 1.
           1. NOTE: _items_ is not an Iterable so assume it is an array-like object.
           1. Let _arrayLike_ be ! ToObject(_items_).
@@ -32664,11 +32661,11 @@ THH:mm:ss.sss
           <h1>Runtime Semantics: IterableToList( _items_, _method_ )</h1>
           <p>The abstract operation IterableToList performs the following steps:</p>
           <emu-alg>
-            1. Let _iterator_ be ? GetIterator(_items_, _method_).
+            1. Let _iteratorRecord_ be ? GetIterator(_items_, _method_).
             1. Let _values_ be a new empty List.
             1. Let _next_ be *true*.
             1. Repeat, while _next_ is not *false*
-              1. Set _next_ to ? IteratorStep(_iterator_).
+              1. Set _next_ to ? IteratorStep(_iteratorRecord_).
               1. If _next_ is not *false*, then
                 1. Let _nextValue_ be ? IteratorValue(_next_).
                 1. Append _nextValue_ to the end of the List _values_.
@@ -33578,25 +33575,23 @@ THH:mm:ss.sss
           1. Let _map_ be ? OrdinaryCreateFromConstructor(NewTarget, `"%MapPrototype%"`, &laquo; [[MapData]] &raquo;).
           1. Set _map_.[[MapData]] to a new empty List.
           1. If _iterable_ is not present, let _iterable_ be *undefined*.
-          1. If _iterable_ is either *undefined* or *null*, let _iter_ be *undefined*.
-          1. Else,
-            1. Let _adder_ be ? Get(_map_, `"set"`).
-            1. If IsCallable(_adder_) is *false*, throw a *TypeError* exception.
-            1. Let _iter_ be ? GetIterator(_iterable_).
-          1. If _iter_ is *undefined*, return _map_.
+          1. If _iterable_ is either *undefined* or *null*, return _map_.
+          1. Let _adder_ be ? Get(_map_, `"set"`).
+          1. If IsCallable(_adder_) is *false*, throw a *TypeError* exception.
+          1. Let _iteratorRecord_ be ? GetIterator(_iterable_).
           1. Repeat,
-            1. Let _next_ be ? IteratorStep(_iter_).
+            1. Let _next_ be ? IteratorStep(_iteratorRecord_).
             1. If _next_ is *false*, return _map_.
             1. Let _nextItem_ be ? IteratorValue(_next_).
             1. If Type(_nextItem_) is not Object, then
               1. Let _error_ be Completion{[[Type]]: ~throw~, [[Value]]: a newly created *TypeError* object, [[Target]]: ~empty~}.
-              1. Return ? IteratorClose(_iter_, _error_).
+              1. Return ? IteratorClose(_iteratorRecord_, _error_).
             1. Let _k_ be Get(_nextItem_, `"0"`).
-            1. If _k_ is an abrupt completion, return ? IteratorClose(_iter_, _k_).
+            1. If _k_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _k_).
             1. Let _v_ be Get(_nextItem_, `"1"`).
-            1. If _v_ is an abrupt completion, return ? IteratorClose(_iter_, _v_).
+            1. If _v_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _v_).
             1. Let _status_ be Call(_adder_, _map_, &laquo; _k_.[[Value]], _v_.[[Value]] &raquo;).
-            1. If _status_ is an abrupt completion, return ? IteratorClose(_iter_, _status_).
+            1. If _status_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _status_).
         </emu-alg>
         <emu-note>
           <p>If the parameter _iterable_ is present, it is expected to be an object that implements an @@iterator method that returns an iterator object that produces a two element array-like object whose first element is a value that will be used as a Map key and whose second element is the value to associate with that key.</p>
@@ -33953,18 +33948,16 @@ THH:mm:ss.sss
           1. Let _set_ be ? OrdinaryCreateFromConstructor(NewTarget, `"%SetPrototype%"`, &laquo; [[SetData]] &raquo;).
           1. Set _set_.[[SetData]] to a new empty List.
           1. If _iterable_ is not present, let _iterable_ be *undefined*.
-          1. If _iterable_ is either *undefined* or *null*, let _iter_ be *undefined*.
-          1. Else,
-            1. Let _adder_ be ? Get(_set_, `"add"`).
-            1. If IsCallable(_adder_) is *false*, throw a *TypeError* exception.
-            1. Let _iter_ be ? GetIterator(_iterable_).
-          1. If _iter_ is *undefined*, return _set_.
+          1. If _iterable_ is either *undefined* or *null*, return _set_.
+          1. Let _adder_ be ? Get(_set_, `"add"`).
+          1. If IsCallable(_adder_) is *false*, throw a *TypeError* exception.
+          1. Let _iteratorRecord_ be ? GetIterator(_iterable_).
           1. Repeat,
-            1. Let _next_ be ? IteratorStep(_iter_).
+            1. Let _next_ be ? IteratorStep(_iteratorRecord_).
             1. If _next_ is *false*, return _set_.
             1. Let _nextValue_ be ? IteratorValue(_next_).
             1. Let _status_ be Call(_adder_, _set_, &laquo; _nextValue_.[[Value]] &raquo;).
-            1. If _status_ is an abrupt completion, return ? IteratorClose(_iter_, _status_).
+            1. If _status_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _status_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -34306,25 +34299,23 @@ THH:mm:ss.sss
           1. Let _map_ be ? OrdinaryCreateFromConstructor(NewTarget, `"%WeakMapPrototype%"`, &laquo; [[WeakMapData]] &raquo;).
           1. Set _map_.[[WeakMapData]] to a new empty List.
           1. If _iterable_ is not present, let _iterable_ be *undefined*.
-          1. If _iterable_ is either *undefined* or *null*, let _iter_ be *undefined*.
-          1. Else,
-            1. Let _adder_ be ? Get(_map_, `"set"`).
-            1. If IsCallable(_adder_) is *false*, throw a *TypeError* exception.
-            1. Let _iter_ be ? GetIterator(_iterable_).
-          1. If _iter_ is *undefined*, return _map_.
+          1. If _iterable_ is either *undefined* or *null*, return _map_.
+          1. Let _adder_ be ? Get(_map_, `"set"`).
+          1. If IsCallable(_adder_) is *false*, throw a *TypeError* exception.
+          1. Let _iteratorRecord_ be ? GetIterator(_iterable_).
           1. Repeat,
-            1. Let _next_ be ? IteratorStep(_iter_).
+            1. Let _next_ be ? IteratorStep(_iterRecord_).
             1. If _next_ is *false*, return _map_.
             1. Let _nextItem_ be ? IteratorValue(_next_).
             1. If Type(_nextItem_) is not Object, then
               1. Let _error_ be Completion{[[Type]]: ~throw~, [[Value]]: a newly created *TypeError* object, [[Target]]: ~empty~}.
-              1. Return ? IteratorClose(_iter_, _error_).
+              1. Return ? IteratorClose(_iteratorRecord_, _error_).
             1. Let _k_ be Get(_nextItem_, `"0"`).
-            1. If _k_ is an abrupt completion, return ? IteratorClose(_iter_, _k_).
+            1. If _k_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _k_).
             1. Let _v_ be Get(_nextItem_, `"1"`).
-            1. If _v_ is an abrupt completion, return ? IteratorClose(_iter_, _v_).
+            1. If _v_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _v_).
             1. Let _status_ be Call(_adder_, _map_, &laquo; _k_.[[Value]], _v_.[[Value]] &raquo;).
-            1. If _status_ is an abrupt completion, return ? IteratorClose(_iter_, _status_).
+            1. If _status_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _status_).
         </emu-alg>
         <emu-note>
           <p>If the parameter _iterable_ is present, it is expected to be an object that implements an @@iterator method that returns an iterator object that produces a two element array-like object whose first element is a value that will be used as a WeakMap key and whose second element is the value to associate with that key.</p>
@@ -34471,18 +34462,16 @@ THH:mm:ss.sss
           1. Let _set_ be ? OrdinaryCreateFromConstructor(NewTarget, `"%WeakSetPrototype%"`, &laquo; [[WeakSetData]] &raquo;).
           1. Set _set_.[[WeakSetData]] to a new empty List.
           1. If _iterable_ is not present, let _iterable_ be *undefined*.
-          1. If _iterable_ is either *undefined* or *null*, let _iter_ be *undefined*.
-          1. Else,
-            1. Let _adder_ be ? Get(_set_, `"add"`).
-            1. If IsCallable(_adder_) is *false*, throw a *TypeError* exception.
-            1. Let _iter_ be ? GetIterator(_iterable_).
-          1. If _iter_ is *undefined*, return _set_.
+          1. If _iterable_ is either *undefined* or *null*, return _set_.
+          1. Let _adder_ be ? Get(_set_, `"add"`).
+          1. If IsCallable(_adder_) is *false*, throw a *TypeError* exception.
+          1. Let _iteratorRecord_ be ? GetIterator(_iterable_).
           1. Repeat,
-            1. Let _next_ be ? IteratorStep(_iter_).
+            1. Let _next_ be ? IteratorStep(_iteratorRecord_).
             1. If _next_ is *false*, return _set_.
             1. Let _nextValue_ be ? IteratorValue(_next_).
             1. Let _status_ be Call(_adder_, _set_, &laquo; _nextValue_ &raquo;).
-            1. If _status_ is an abrupt completion, return ? IteratorClose(_iter_, _status_).
+            1. If _status_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _status_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -37027,12 +37016,11 @@ THH:mm:ss.sss
           1. Let _C_ be the *this* value.
           1. If Type(_C_) is not Object, throw a *TypeError* exception.
           1. Let _promiseCapability_ be ? NewPromiseCapability(_C_).
-          1. Let _iterator_ be GetIterator(_iterable_).
-          1. IfAbruptRejectPromise(_iterator_, _promiseCapability_).
-          1. Let _iteratorRecord_ be Record { [[Iterator]]: _iterator_, [[Done]]: *false* }.
+          1. Let _iteratorRecord_ be GetIterator(_iterable_).
+          1. IfAbruptRejectPromise(_iteratorRecord_, _promiseCapability_).
           1. Let _result_ be PerformPromiseAll(_iteratorRecord_, _C_, _promiseCapability_).
           1. If _result_ is an abrupt completion, then
-            1. If _iteratorRecord_.[[Done]] is *false*, let _result_ be IteratorClose(_iterator_, _result_).
+            1. If _iteratorRecord_.[[Done]] is *false*, let _result_ be IteratorClose(_iteratorRecord_, _result_).
             1. IfAbruptRejectPromise(_result_, _promiseCapability_).
           1. Return Completion(_result_).
         </emu-alg>
@@ -37052,7 +37040,7 @@ THH:mm:ss.sss
             1. Let _remainingElementsCount_ be a new Record { [[Value]]: 1 }.
             1. Let _index_ be 0.
             1. Repeat,
-              1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+              1. Let _next_ be IteratorStep(_iteratorRecord_).
               1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
               1. ReturnIfAbrupt(_next_).
               1. If _next_ is *false*, then
@@ -37118,9 +37106,8 @@ THH:mm:ss.sss
           1. Let _C_ be the *this* value.
           1. If Type(_C_) is not Object, throw a *TypeError* exception.
           1. Let _promiseCapability_ be ? NewPromiseCapability(_C_).
-          1. Let _iterator_ be GetIterator(_iterable_).
-          1. IfAbruptRejectPromise(_iterator_, _promiseCapability_).
-          1. Let _iteratorRecord_ be Record { [[Iterator]]: _iterator_, [[Done]]: *false* }.
+          1. Let _iteratorRecord_ be GetIterator(_iterable_).
+          1. IfAbruptRejectPromise(_iteratorRecord_, _promiseCapability_).
           1. Let _result_ be PerformPromiseRace(_iteratorRecord_, _C_, _promiseCapability_).
           1. If _result_ is an abrupt completion, then
             1. If _iteratorRecord_.[[Done]] is *false*, let _result_ be IteratorClose(_iterator_, _result_).
@@ -37142,7 +37129,7 @@ THH:mm:ss.sss
             1. Assert: _constructor_ is a constructor function.
             1. Assert: _resultCapability_ is a PromiseCapability Record.
             1. Repeat,
-              1. Let _next_ be IteratorStep(_iteratorRecord_.[[Iterator]]).
+              1. Let _next_ be IteratorStep(_iteratorRecord_).
               1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
               1. ReturnIfAbrupt(_next_).
               1. If _next_ is *false*, then
