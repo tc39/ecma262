@@ -9661,6 +9661,8 @@
           1. Assert: _binding_ is a ResolvedBinding Record.
           1. Let _targetModule_ be _binding_.[[Module]].
           1. Assert: _targetModule_ is not *undefined*.
+          1. If _binding_.[[BindingName]] is `"*namespace*"`, then
+            1. Return ? GetModuleNamespace(_targetModule_).
           1. Let _targetEnv_ be _targetModule_.[[Environment]].
           1. If _targetEnv_ is *undefined*, throw a *ReferenceError* exception.
           1. Let _targetEnvRec_ be _targetEnv_'s EnvironmentRecord.
@@ -22579,7 +22581,7 @@
                 ResolveExport(_exportName_ [, _resolveSet_])
               </td>
               <td>
-                <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String }. Return *null* if the name cannot be resolved, or `"ambiguous"` if multiple bindings were found.</p>
+                <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String }. If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to `"*namespace*"`. Return *null* if the name cannot be resolved, or `"ambiguous"` if multiple bindings were found.</p>
                 <p>This operation must be idempotent if it completes normally. Each time it is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result.</p>
               </td>
             </tr>
@@ -22974,7 +22976,7 @@
                 List of ExportEntry Records
               </td>
               <td>
-                A List of ExportEntry records derived from the code of this module that correspond to reexported imports that occur within the module.
+                A List of ExportEntry records derived from the code of this module that correspond to reexported imports that occur within the module or exports from `export * as namespace` declarations.
               </td>
             </tr>
             <tr>
@@ -22985,7 +22987,7 @@
                 List of ExportEntry Records
               </td>
               <td>
-                A List of ExportEntry records derived from the code of this module that correspond to export * declarations that occur within the module.
+                A List of ExportEntry records derived from the code of this module that correspond to `export *` declarations that occur within the module, not including `export * as namespace` declarations.
               </td>
             </tr>
             </tbody>
@@ -23366,6 +23368,23 @@
                   *null*
                 </td>
               </tr>
+              <tr>
+                <td>
+                  `export * as ns from "mod";`
+                </td>
+                <td>
+                  `"ns"`
+                </td>
+                <td>
+                  `"mod"`
+                </td>
+                <td>
+                  `"*"`
+                </td>
+                <td>
+                  *null*
+                </td>
+              </tr>
               </tbody>
             </table>
           </emu-table>
@@ -23398,7 +23417,7 @@
                   1. Else,
                     1. NOTE: This is a re-export of a single name.
                     1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.
-              1. Else if _ee_.[[ImportName]] is `"*"`, then
+              1. Else if _ee_.[[ImportName]] is `"*"` and _ee_.[[ExportName]] is *null*, then
                 1. Append _ee_ to _starExportEntries_.
               1. Else,
                 1. Append _ee_ to _indirectExportEntries_.
@@ -23448,7 +23467,7 @@
 
           <p>ResolveExport attempts to resolve an imported binding to the actual defining module and local binding name. The defining module may be the module represented by the Module Record this method was invoked on or some other module that is imported by that module. The parameter _resolveSet_ is used to detect unresolved circular import/export paths. If a pair consisting of specific Module Record and _exportName_ is reached that is already in _resolveSet_, an import circularity has been encountered. Before recursively calling ResolveExport, a pair consisting of _module_ and _exportName_ is added to _resolveSet_.</p>
 
-          <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]] } is returned. This record identifies the resolved binding of the originally requested export. If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, the string `"ambiguous"` is returned.</p>
+          <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]] } is returned. This record identifies the resolved binding of the originally requested export, unless this is the export of a namespace with no local binding. In this case, [[BindingName]] will be set to `"*namespace*"`. If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, the string `"ambiguous"` is returned.</p>
 
           <p>This abstract method performs the following steps:</p>
 
@@ -23467,13 +23486,17 @@
                 1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }.
             1. For each ExportEntry Record _e_ in _module_.[[IndirectExportEntries]], do
               1. If SameValue(_exportName_, _e_.[[ExportName]]) is *true*, then
-                1. Assert: _module_ imports a specific binding for this export.
                 1. Let _importedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
-                1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
+                1. If _e_.[[ImportName]] is `"*"`, then
+                  1. Assert: _module_ does not provide the direct binding for this export.
+                  1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: `"*namespace*"` }.
+                1. Else,
+                  1. Assert: _module_ imports a specific binding for this export.
+                  1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
             1. If SameValue(_exportName_, `"default"`) is *true*, then
               1. Assert: A `default` export was not explicitly defined by this module.
               1. Return *null*.
-              1. NOTE: A `default` export cannot be provided by an `export *`.
+              1. NOTE: A `default` export cannot be provided by an `export *` or `export * from "mod"` declaration.
             1. Let _starResolution_ be *null*.
             1. For each ExportEntry Record _e_ in _module_.[[StarExportEntries]], do
               1. Let _importedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
@@ -23518,7 +23541,12 @@
               1. Else,
                 1. Let _resolution_ be ? _importedModule_.ResolveExport(_in_.[[ImportName]]).
                 1. If _resolution_ is *null* or `"ambiguous"`, throw a *SyntaxError* exception.
-                1. Call _envRec_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+                1. If _resolution_.[[BindingName]] is `"*namespace*"`, then
+                  1. Let _namespace_ be ? GetModuleNamespace(_resolution_.[[Module]]).
+                  1. Perform ! _envRec_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
+                  1. Call _envRec_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+                1. Else,
+                  1. Call _envRec_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
             1. Let _moduleCxt_ be a new ECMAScript code execution context.
             1. Set the Function of _moduleCxt_ to *null*.
             1. Assert: _module_.[[Realm]] is not *undefined*.
@@ -23914,16 +23942,20 @@
       <h2>Syntax</h2>
       <emu-grammar type="definition">
         ExportDeclaration :
-          `export` `*` FromClause `;`
-          `export` ExportClause FromClause `;`
-          `export` ExportClause `;`
+          `export` ExportFromClause FromClause `;`
+          `export` NamedExports `;`
           `export` VariableStatement[~Yield, ~Await]
           `export` Declaration[~Yield, ~Await]
           `export` `default` HoistableDeclaration[~Yield, ~Await, +Default]
           `export` `default` ClassDeclaration[~Yield, ~Await, +Default]
           `export` `default` [lookahead &lt;! {`function`, `async` [no |LineTerminator| here] `function`, `class`}] AssignmentExpression[+In, ~Yield, ~Await] `;`
 
-        ExportClause :
+        ExportFromClause :
+          `*`
+          `*` `as` IdentifierName
+          NamedExports
+
+        NamedExports :
           `{` `}`
           `{` ExportsList `}`
           `{` ExportsList `,` `}`
@@ -23939,14 +23971,14 @@
 
       <emu-clause id="sec-exports-static-semantics-early-errors">
         <h1>Static Semantics: Early Errors</h1>
-        <emu-grammar>ExportDeclaration : `export` ExportClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` NamedExports `;`</emu-grammar>
         <ul>
           <li>
-            For each |IdentifierName| _n_ in ReferencedBindings of |ExportClause|: It is a Syntax Error if StringValue of _n_ is a |ReservedWord| or if the StringValue of _n_ is one of: `"implements"`, `"interface"`, `"let"`, `"package"`, `"private"`, `"protected"`, `"public"`, or `"static"`.
+            For each |IdentifierName| _n_ in ReferencedBindings of |NamedExports|: It is a Syntax Error if StringValue of _n_ is a |ReservedWord| or if the StringValue of _n_ is one of: `"implements"`, `"interface"`, `"let"`, `"package"`, `"private"`, `"protected"`, `"public"`, or `"static"`.
           </li>
         </ul>
         <emu-note>
-          <p>The above rule means that each ReferencedBindings of |ExportClause| is treated as an |IdentifierReference|.</p>
+          <p>The above rule means that each ReferencedBindings of |NamedExports| is treated as an |IdentifierReference|.</p>
         </emu-note>
       </emu-clause>
 
@@ -23955,9 +23987,8 @@
         <emu-see-also-para op="BoundNames"></emu-see-also-para>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
-            `export` ExportClause `;`
+            `export` ExportFromClause FromClause `;`
+            `export` NamedExports `;`
         </emu-grammar>
         <emu-alg>
           1. Return a new empty List.
@@ -23993,15 +24024,14 @@
         <emu-see-also-para op="ExportedBindings"></emu-see-also-para>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
+            `export` ExportFromClause FromClause `;`
         </emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>ExportDeclaration : `export` ExportClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` NamedExports `;`</emu-grammar>
         <emu-alg>
-          1. Return the ExportedBindings of |ExportClause|.
+          1. Return the ExportedBindings of |NamedExports|.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` VariableStatement</emu-grammar>
         <emu-alg>
@@ -24021,7 +24051,7 @@
         <emu-alg>
           1. Return the BoundNames of this |ExportDeclaration|.
         </emu-alg>
-        <emu-grammar>ExportClause : `{` `}`</emu-grammar>
+        <emu-grammar>NamedExports : `{` `}`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
@@ -24044,17 +24074,21 @@
       <emu-clause id="sec-exports-static-semantics-exportednames">
         <h1>Static Semantics: ExportedNames</h1>
         <emu-see-also-para op="ExportedNames"></emu-see-also-para>
-        <emu-grammar>ExportDeclaration : `export` `*` FromClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause `;`</emu-grammar>
+        <emu-alg>
+          1. Return the ExportedNames of |ExportFromClause|.
+        </emu-alg>
+        <emu-grammar>ExportFromClause : `*`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>
-          ExportDeclaration : `export` ExportClause FromClause `;`
-
-          ExportDeclaration : `export` ExportClause `;`
-        </emu-grammar>
+        <emu-grammar>ExportFromClause : `*` `as` IdentifierName </emu-grammar>
         <emu-alg>
-          1. Return the ExportedNames of |ExportClause|.
+          1. Return a List containing the StringValue of |IdentifierName|.
+        </emu-alg>
+        <emu-grammar>ExportFromClause : NamedExports</emu-grammar>
+        <emu-alg>
+          1. Return the ExportedNames of |NamedExports|.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` VariableStatement</emu-grammar>
         <emu-alg>
@@ -24074,7 +24108,7 @@
         <emu-alg>
           1. Return &laquo; `"default"` &raquo;.
         </emu-alg>
-        <emu-grammar>ExportClause : `{` `}`</emu-grammar>
+        <emu-grammar>NamedExports : `{` `}`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
@@ -24097,20 +24131,14 @@
       <emu-clause id="sec-exports-static-semantics-exportentries">
         <h1>Static Semantics: ExportEntries</h1>
         <emu-see-also-para op="ExportEntries"></emu-see-also-para>
-        <emu-grammar>ExportDeclaration : `export` `*` FromClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause `;`</emu-grammar>
         <emu-alg>
           1. Let _module_ be the sole element of ModuleRequests of |FromClause|.
-          1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: `"*"`, [[LocalName]]: *null*, [[ExportName]]: *null* }.
-          1. Return a new List containing _entry_.
+          1. Return ExportEntriesForModule of |ExportFromClause| with argument _module_.
         </emu-alg>
-        <emu-grammar>ExportDeclaration : `export` ExportClause FromClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` NamedExports `;`</emu-grammar>
         <emu-alg>
-          1. Let _module_ be the sole element of ModuleRequests of |FromClause|.
-          1. Return ExportEntriesForModule of |ExportClause| with argument _module_.
-        </emu-alg>
-        <emu-grammar>ExportDeclaration : `export` ExportClause `;`</emu-grammar>
-        <emu-alg>
-          1. Return ExportEntriesForModule of |ExportClause| with argument *null*.
+          1. Return ExportEntriesForModule of |NamedExports| with argument *null*.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` VariableStatement</emu-grammar>
         <emu-alg>
@@ -24153,7 +24181,18 @@
       <emu-clause id="sec-static-semantics-exportentriesformodule">
         <h1>Static Semantics: ExportEntriesForModule</h1>
         <p>With parameter _module_.</p>
-        <emu-grammar>ExportClause : `{` `}`</emu-grammar>
+        <emu-grammar>ExportFromClause : `*`</emu-grammar>
+        <emu-alg>
+          1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: `"*"`, [[LocalName]]: *null*, [[ExportName]]: *null* }.
+          1. Return a new List containing _entry_.
+        </emu-alg>
+        <emu-grammar>ExportFromClause : `*` `as` IdentifierName</emu-grammar>
+        <emu-alg>
+          1. Let _exportName_ be the StringValue of |IdentifierName|.
+          1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: `"*"`, [[LocalName]]: *null*, [[ExportName]]: _exportName_ }.
+          1. Return a new List containing _entry_.
+        </emu-alg>
+        <emu-grammar>NamedExports : `{` `}`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
@@ -24193,9 +24232,8 @@
         <emu-see-also-para op="IsConstantDeclaration"></emu-see-also-para>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
-            `export` ExportClause `;`
+            `export` ExportFromClause FromClause `;`
+            `export` NamedExports `;`
             `export` `default` AssignmentExpression `;`
         </emu-grammar>
         <emu-alg>
@@ -24211,9 +24249,8 @@
         <emu-see-also-para op="LexicallyScopedDeclarations"></emu-see-also-para>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
-            `export` ExportClause `;`
+            `export` ExportFromClause FromClause `;`
+            `export` NamedExports `;`
             `export` VariableStatement
         </emu-grammar>
         <emu-alg>
@@ -24241,16 +24278,14 @@
         <h1>Static Semantics: ModuleRequests</h1>
         <emu-see-also-para op="ModuleRequests"></emu-see-also-para>
         <emu-grammar>
-          ExportDeclaration : `export` `*` FromClause `;`
-
-          ExportDeclaration : `export` ExportClause FromClause `;`
+          ExportDeclaration : `export` ExportFromClause FromClause `;`
         </emu-grammar>
         <emu-alg>
           1. Return the ModuleRequests of |FromClause|.
         </emu-alg>
         <emu-grammar>
           ExportDeclaration :
-            `export` ExportClause `;`
+            `export` NamedExports `;`
             `export` VariableStatement
             `export` Declaration
             `export` `default` HoistableDeclaration
@@ -24264,7 +24299,7 @@
 
       <emu-clause id="sec-static-semantics-referencedbindings">
         <h1>Static Semantics: ReferencedBindings</h1>
-        <emu-grammar>ExportClause : `{` `}`</emu-grammar>
+        <emu-grammar>NamedExports : `{` `}`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
@@ -24288,9 +24323,8 @@
         <h1>Runtime Semantics: Evaluation</h1>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
-            `export` ExportClause `;`
+            `export` ExportFromClause FromClause `;`
+            `export` NamedExports `;`
         </emu-grammar>
         <emu-alg>
           1. Return NormalCompletion(~empty~).
@@ -41374,7 +41408,7 @@ THH:mm:ss.sss
     <emu-prodref name=ModuleSpecifier></emu-prodref>
     <emu-prodref name=ImportedBinding></emu-prodref>
     <emu-prodref name=ExportDeclaration></emu-prodref>
-    <emu-prodref name=ExportClause></emu-prodref>
+    <emu-prodref name=NamedExports></emu-prodref>
     <emu-prodref name=ExportsList></emu-prodref>
     <emu-prodref name=ExportSpecifier></emu-prodref>
   </emu-annex>
