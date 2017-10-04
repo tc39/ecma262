@@ -3,8 +3,8 @@ There are a number of ways to contribute to ECMAScript. How to actually contribu
 
 Ecma TC39 accepts contributions from non-member individuals who have accepted the TC39 copyright and patent policies. Currently all ECMAScript related technical work is done by the TC39 RF TG (Royalty Free Task Group), for which the following IPR Policies apply:
 
-  * [Ecma International RF Patent Policy](http://www.ecma-international.org/memento/Policies/Ecma_Royalty-Free_Patent_Policy_Extension_Option.htm)
-  * [Ecma International Software Copyright Policy](http://www.ecma-international.org/memento/Policies/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.htm) ([PDF](http://www.ecma-international.org/memento/Policies/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.pdf))
+  * [Ecma International RF Patent Policy](https://ecma-international.org/memento/Policies/Ecma_Royalty-Free_Patent_Policy_Extension_Option.htm)
+  * [Ecma International Software Copyright Policy](https://ecma-international.org/memento/Policies/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.htm) ([PDF](https://ecma-international.org/memento/Policies/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.pdf))
 
 #### Bug Reports & Bug Fixes
 File a bug or pull requests against the current text of ECMA262 in this repository. If the fix is trivial you may not need to sign the CLA. If your fix is involved, signing the CLA will be required.
@@ -19,4 +19,4 @@ If you have a new proposal you want to get into the language, you first need a T
 If you wish to submit a proposal and are not a representative of a TC39 member, here are the steps you need to take:
 
   1. Read the [TC39 process document](https://tc39.github.io/process-document/).
-  2. [Register as a TC39 contributor](http://www.ecma-international.org/memento/register_TC39_Royalty_Free_Task_Group.php) (it is not necessary to submit the contribution as attachment to the form)
+  2. [Register as a TC39 contributor](https://ecma-international.org/memento/register_TC39_Royalty_Free_Task_Group.php) (it is not necessary to submit the contribution as attachment to the form)

@@ -53,7 +53,7 @@ class Date {
   constructor(...args) {
     initializeDate(super(), ...args);
   }
-  
+
   call constructor() {
     return ToDateString(clockGetTime());
   }
@@ -62,9 +62,9 @@ class Date {
 
 ## Specification
 
-The following changes and additions are relative the [ECMAScript 2015 Specification](http://ecma-international.org/ecma-262/6.0/)
+The following changes and additions are relative the [ECMAScript 2015 Specification](https://ecma-international.org/ecma-262/6.0/)
 
-### [9.2](http://ecma-international.org/ecma-262/6.0/#sec-ecmascript-function-objects) [Table 27](http://ecma-international.org/ecma-262/6.0/#table-27)
+### [9.2](https://ecma-international.org/ecma-262/6.0/#sec-ecmascript-function-objects) [Table 27](https://ecma-international.org/ecma-262/6.0/#table-27)
 
 The following entry is added to Table 27
 
@@ -72,7 +72,7 @@ The following entry is added to Table 27
 | ------------------- | ------- | ---------------------------------------------------------------------------- |
 | [[ConstructorCall]] | Object or empty | The function object that is evaluated when a class constructor is invoked using [[Call]]. Only used when [[FunctionKind]] is `"classConstructor"`. |
 
-### [9.2.1 [[Call]]](http://ecma-international.org/ecma-262/6.0/#sec-ecmascript-function-objects-call-thisargument-argumentslist)
+### [9.2.1 [[Call]]](https://ecma-international.org/ecma-262/6.0/#sec-ecmascript-function-objects-call-thisargument-argumentslist)
 
 Step 2 is replaced with:
 
@@ -91,7 +91,7 @@ Step 7 is replaced with:
 
 Update the step reference in the NOTE.
 
-### [9.2.9 MakeClassConstructor](http://ecma-international.org/ecma-262/6.0/#sec-makeclassconstructor)
+### [9.2.9 MakeClassConstructor](https://ecma-international.org/ecma-262/6.0/#sec-makeclassconstructor)
 Between the existing steps 3 and 4 insert the following steps:
 
 <pre>
@@ -99,22 +99,22 @@ Between the existing steps 3 and 4 insert the following steps:
 </pre>
 
 
-### [14.5 Class Definition Syntax](http://ecma-international.org/ecma-262/6.0/#sec-class-definitions) 
+### [14.5 Class Definition Syntax](https://ecma-international.org/ecma-262/6.0/#sec-class-definitions)
 
 The definition for the production *ClassElement*<sub>[Yield]</sub> is replaced with:
 
 <pre>
-<i>ClassElement</i><sub>[Yield]</sub> : 
+<i>ClassElement</i><sub>[Yield]</sub> :
     <i>MethodElement</i><sub>[?Yield]</sub>
     <b><code>static</code></b> <i>MethodElement</i><sub>[?Yield]</sub>
     <i>CallConstructor</i>
     <b><code>;</code></b>
-    
+
 <i>CallConstructor</i> :
     <b><code>call constructor (</code></b> <i>StrictFormalParameters</i> <b><code>) {</code></b> <i>FunctionBody</i><b><code>}</code></b>
 </pre>
 
-### [14.5.1 Early Errors](http://ecma-international.org/ecma-262/6.0/#sec-class-definitions-static-semantics-early-errors)
+### [14.5.1 Early Errors](https://ecma-international.org/ecma-262/6.0/#sec-class-definitions-static-semantics-early-errors)
 
 Add the rules:
 
@@ -143,7 +143,7 @@ Add the rules:
    2.  Return CallConstructorDefinition of <i>ClassElementList</i>.
 </pre>
 
-### [14.5.5 Static Semantics: ComputedPropertyContains](http://ecma-international.org/ecma-262/6.0/#sec-class-definitions-static-semantics-computedpropertycontains)
+### [14.5.5 Static Semantics: ComputedPropertyContains](https://ecma-international.org/ecma-262/6.0/#sec-class-definitions-static-semantics-computedpropertycontains)
 
 Add the rule:
 
@@ -153,7 +153,7 @@ Add the rule:
    1.  Return <b>false</b>.
 </pre>
 
-### [14.5.9 Static Semantics: IsStatic](http://ecma-international.org/ecma-262/6.0/#sec-static-semantics-isstatic)
+### [14.5.9 Static Semantics: IsStatic](https://ecma-international.org/ecma-262/6.0/#sec-static-semantics-isstatic)
 
 Add the rule:
 
@@ -162,7 +162,7 @@ Add the rule:
 
    1.  Return <b>false</b>.
 </pre>
-### [14.5.10 Static Semantics: NonConstructorMethodDefinition](http://ecma-international.org/ecma-262/6.0/#sec-static-semantics-nonconstructormethoddefinitions)
+### [14.5.10 Static Semantics: NonConstructorMethodDefinition](https://ecma-international.org/ecma-262/6.0/#sec-static-semantics-nonconstructormethoddefinitions)
 
 In the algorithm for the rule <i>ClassElementList</i> : <i>ClassElement</i> add the following new step between the existing steps 1 and 2:
 <pre>
@@ -174,7 +174,7 @@ In the algorithm for the rule <i>ClassElementList</i> : <i>ClassElementList Clas
    2.1  If <i>ClassElement</i> is the production <i>ClassElement</i> <b>:</b> <i>CallConstructor</i> , return <i>list</i>.
 </pre>
 
-### [14.5.12 Static Semantics: PropName](http://ecma-international.org/ecma-262/6.0/#sec-class-definitions-static-semantics-propname)
+### [14.5.12 Static Semantics: PropName](https://ecma-international.org/ecma-262/6.0/#sec-class-definitions-static-semantics-propname)
 
 Add the rule:
 
@@ -183,7 +183,7 @@ Add the rule:
 
    1.  Return empty.
 </pre>
-### [14.5.14 Static Semantics: ClassDefinitionEvaluation](http://ecma-international.org/ecma-262/6.0/#sec-runtime-semantics-classdefinitionevaluation)
+### [14.5.14 Static Semantics: ClassDefinitionEvaluation](https://ecma-international.org/ecma-262/6.0/#sec-runtime-semantics-classdefinitionevaluation)
 Replace the existing steps 8 and 9 with:
 
 <pre>
@@ -206,8 +206,8 @@ The following informative NOTE is added:
 
 NOTE  The function object created as the value of <i>callF</i> is not observable to ECMAScript code.  MakeMethod is not applied to that function object, because the <i>F's</i>  [[HomeObject]] binding is used when invoking the [[CallConstructor]].
 
-### Remarks 
-The presence of a `call constructor` in a class body installs the call constructor function in the `[[CallConstructor]]` slot of the constructed class. The [[Call]] internal method of a class constructor invokes the [[CallConstructor]] function. 
+### Remarks
+The presence of a `call constructor` in a class body installs the call constructor function in the `[[CallConstructor]]` slot of the constructed class. The [[Call]] internal method of a class constructor invokes the [[CallConstructor]] function.
 
 The function object value of [[CallConstructor]] is not intended to be ovservable by ECMAScript code.  If any features are added to ECMAScript that exposes the "current function" that such features should expose the constructor object and not the [[CallConstructor]] object.
 
@@ -284,16 +284,16 @@ class InternalSlots {
     this._weakMap = new WeakMap();
     this._SlotClass = SlotClass;
   }
-  
+
   initialize(obj, ...args) {
     let { _weakMap, _SlotClass } = this;
     _weakMap.set(obj, new _SlotClass(...args));
   }
-  
+
   has(obj) {
     return this._weakMap.has(obj);
   }
-  
+
   get(obj) {
     return this._weakMap.get(obj);
   }
