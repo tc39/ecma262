@@ -21973,6 +21973,23 @@
                   *null*
                 </td>
               </tr>
+              <tr>
+                <td>
+                  `export * as ns from "mod";`
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  `"mod"`
+                </td>
+                <td>
+                  `"*"`
+                </td>
+                <td>
+                  `"ns"`
+                </td>
+              </tr>
               </tbody>
             </table>
           </emu-table>
@@ -22660,14 +22677,21 @@
       <h2>Syntax</h2>
       <emu-grammar type="definition">
         ExportDeclaration :
-          `export` `*` FromClause `;`
-          `export` ExportClause FromClause `;`
+          `export` ExportFromClause FromClause `;`
           `export` ExportClause `;`
           `export` VariableStatement[~Yield, ~Await]
           `export` Declaration[~Yield, ~Await]
           `export` `default` HoistableDeclaration[~Yield, ~Await, +Default]
           `export` `default` ClassDeclaration[~Yield, ~Await, +Default]
           `export` `default` [lookahead &lt;! {`function`, `async` [no |LineTerminator| here] `function`, `class`}] AssignmentExpression[+In, ~Yield, ~Await] `;`
+
+        ExportFromClause :
+          `*`
+          ExportClause
+          NameSpaceExport
+
+        NameSpaceExport:
+          `*` `as` IdentifierName
 
         ExportClause :
           `{` `}`
@@ -22703,8 +22727,7 @@
         <emu-see-also-para op="BoundNames"></emu-see-also-para>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
+            `export` ExportFromClause FromClause `;`
             `export` ExportClause `;`
         </emu-grammar>
         <emu-alg>
@@ -22742,8 +22765,7 @@
         <emu-see-also-para op="ExportedBindings"></emu-see-also-para>
         <emu-grammar>
           ExportDeclaration :
-            `export` ExportClause FromClause `;`
-            `export` `*` FromClause `;`
+            `export` ExportFromClause FromClause `;`
         </emu-grammar>
         <emu-alg>
           1. Return a new empty List.
@@ -22794,17 +22816,21 @@
       <emu-clause id="sec-exports-static-semantics-exportednames">
         <h1>Static Semantics: ExportedNames</h1>
         <emu-see-also-para op="ExportedNames"></emu-see-also-para>
-        <emu-grammar>ExportDeclaration : `export` `*` FromClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause `;`</emu-grammar>
+        <emu-alg>
+          1. Return the ExportedNames of ExportFromClause.
+        </emu-alg>
+        <emu-grammar>ExportFromClause : `*`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>
-          ExportDeclaration : `export` ExportClause FromClause `;`
-
-          ExportDeclaration : `export` ExportClause `;`
-        </emu-grammar>
+        <emu-grammar>ExportFromClause : ExportClause</emu-grammar>
         <emu-alg>
-          1. Return the ExportedNames of |ExportClause|.
+          1. Return the ExportedNames of ExportClause.
+        </emu-alg>
+        <emu-grammar>ExportFromClause : NameSpaceExport</emu-grammar>
+        <emu-alg>
+          1. Return the ExportedNames of NameSpaceExport.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` VariableStatement</emu-grammar>
         <emu-alg>
@@ -22848,16 +22874,10 @@
       <emu-clause id="sec-exports-static-semantics-exportentries">
         <h1>Static Semantics: ExportEntries</h1>
         <emu-see-also-para op="ExportEntries"></emu-see-also-para>
-        <emu-grammar>ExportDeclaration : `export` `*` FromClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause `;`</emu-grammar>
         <emu-alg>
           1. Let _module_ be the sole element of ModuleRequests of |FromClause|.
-          1. Let _entry_ be the ExportEntry Record {[[ModuleRequest]]: _module_, [[ImportName]]: `"*"`, [[LocalName]]: *null*, [[ExportName]]: *null* }.
-          1. Return a new List containing _entry_.
-        </emu-alg>
-        <emu-grammar>ExportDeclaration : `export` ExportClause FromClause `;`</emu-grammar>
-        <emu-alg>
-          1. Let _module_ be the sole element of ModuleRequests of |FromClause|.
-          1. Return ExportEntriesForModule of |ExportClause| with argument _module_.
+          1. Return ExportEntriesForModule of |ExportFromClause| with argument _module_.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` ExportClause `;`</emu-grammar>
         <emu-alg>
@@ -22905,6 +22925,17 @@
       <emu-clause id="sec-static-semantics-exportentriesformodule">
         <h1>Static Semantics: ExportEntriesForModule</h1>
         <p>With parameter _module_.</p>
+        <emu-grammar>ExportFromClause : `*`</emu-grammar>
+        <emu-alg>
+          1. Let _entry_ be the ExportEntry Record {[[ModuleRequest]]: _module_, [[ImportName]]: `"*"`, [[LocalName]]: *null*, [[ExportName]]: *null* }.
+          1. Return a new List containing _entry_.
+        </emu-alg>
+        <emu-grammar>ExportFromClause : `*` as IdentifierName</emu-grammar>
+        <emu-alg>
+          1. Let exportName be the StringValue of IdentifierName.
+          1. Let _entry_ be the ExportEntry Record {[[ModuleRequest]]: _module_, [[ImportName]]: `"*"`, [[LocalName]]: *null*, [[ExportName]]: _exportName_ }.
+          1. Return a new List containing _entry_.
+        </emu-alg>
         <emu-grammar>ExportClause : `{` `}`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
@@ -22946,8 +22977,7 @@
         <emu-see-also-para op="IsConstantDeclaration"></emu-see-also-para>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
+            `export` ExportFromClause FromClause `;`
             `export` ExportClause `;`
             `export` `default` AssignmentExpression `;`
         </emu-grammar>
@@ -22965,8 +22995,7 @@
         <emu-see-also-para op="LexicallyScopedDeclarations"></emu-see-also-para>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
+            `export` ExportFromClause FromClause `;`
             `export` ExportClause `;`
             `export` VariableStatement
         </emu-grammar>
@@ -22996,9 +23025,7 @@
         <h1>Static Semantics: ModuleRequests</h1>
         <emu-see-also-para op="ModuleRequests"></emu-see-also-para>
         <emu-grammar>
-          ExportDeclaration : `export` `*` FromClause `;`
-
-          ExportDeclaration : `export` ExportClause FromClause `;`
+          ExportDeclaration : `export` ExportFromClause FromClause `;`
         </emu-grammar>
         <emu-alg>
           1. Return the ModuleRequests of |FromClause|.
@@ -23045,8 +23072,7 @@
         <h1>Runtime Semantics: Evaluation</h1>
         <emu-grammar>
           ExportDeclaration :
-            `export` `*` FromClause `;`
-            `export` ExportClause FromClause `;`
+            `export` ExportFromClause FromClause `;`
             `export` ExportClause `;`
         </emu-grammar>
         <emu-alg>
