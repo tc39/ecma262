@@ -23,12 +23,12 @@ To make a feature request, document the problem and a sketch of the solution wit
 Your goal will be to convince others that your proposal is a useful addition to the language and recruit TC39 members to help turn your request into a proposal and shepherd it into the language. Once a proposal is introduced to the committee, new features are considered by the committee according to the [TC39 process document](https://tc39.github.io/process-document/).
 
 ##### TC39 meetings and champions
-If you have a new proposal you want to get into the language, you first need a TC39 "champion": a member of the committee who will make the case for the proposal at physical TC39 meetings and shepard it through the process. If you are a TC39 member, you can be a champion; otherwise, find a TC39 member to work with for this (e.g., through es-discuss or #tc39). Proposals may have multiple champions (a "champion group").
+If you have a new proposal you want to get into the language, you first need a TC39 "champion": a member of the committee who will make the case for the proposal at physical TC39 meetings and help it move through the process. If you are a TC39 member, you can be a champion; otherwise, find a TC39 member to work with for this (e.g., through es-discuss or #tc39). Proposals may have multiple champions (a "champion group").
 
 TC39 meets six times a year, mostly in the United States, to discuss proposals. It is possible for members to join meetings remotely. At meetings, we discuss ways to resolve issues and feature requests. We spend most of the time considering proposals and advancing them through the stage process. Meetings follow an agenda which is developed in the [agendas GitHub repository](https://github.com/tc39/agendas/). After the meeting, notes are published in the [notes GitHub repository](https://github.com/tc39/tc39-notes/). To advance your proposal towards inclusion in the final specification, ensure that it is included on the agenda for an upcoming meeting and propose advancement at that time.
 
 ##### Helping with existing proposals
-TC39 is currently considering adding several new features to the lanuguage. These proposals are linked from [the proposals repository](https://github.com/tc39/proposals). There are many ways to help with existing proposals:
+TC39 is currently considering adding several new features to the language. These proposals are linked from [the proposals repository](https://github.com/tc39/proposals). There are many ways to help with existing proposals:
   * File issues in the individual proposal repository to provide constructive criticism and feedback.
   * Make PRs against proposals, e.g., to clarify explanations of the motivation and use cases in README.md, or to fix issues in the proposal's specification text.
   * Talk about what you think of the proposal, including sharing thoughts with the champion.
