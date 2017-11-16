@@ -4,7 +4,7 @@ Contributors to ECMAScript and TC39 are expected to follow our [Code of Conduct]
 If you are not an Ecma member, any non-trivial contributions require signing a legal agreement with Ecma. See the section "Required Legal Agreements" below for details.
 
 #### Issues and Pull Requests
-For a small changes to ECMAScript, you can contribute by filing an issue or a pull request against the current text of ECMA-262 standard in this repository.
+For small changes to ECMAScript, you can contribute by filing an issue or a pull request against the current text of ECMA-262 standard in this repository.
 
 To file an issue, go to the ecma262 [issues page](https://github.com/tc39/ecma262/issues). From there, [examine](https://guides.github.com/features/issues/) in the existing issues to see if an issue already exists to track this issue. If so, add a comment to the existing issue; otherwise, [file a new issue](https://help.github.com/articles/creating-an-issue/) documenting the problem.
 
