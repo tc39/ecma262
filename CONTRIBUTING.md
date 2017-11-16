@@ -11,11 +11,12 @@ To file an issue, go to the ecma262 [issues page](https://github.com/tc39/ecma26
 To make a pull request (PR), [fork](https://help.github.com/articles/fork-a-repo/) the [ecma262](https://github.com/tc39/ecma262), apply changes to the spec.html, and upload it to your fork on GitHub, using the web interface to file a pull request. Locally, to see how your change renders in HTML, use [ecmarkup](https://github.com/bterlson/ecmarkup) to build spec.html into an actual HTML file.
 
 Commits in pull requests should have a first line which starts with a tag, followed by a colon, indicating which type of patch they are:
-
   * Normative: changes impacting JavaScript developers in some way
   * Editorial: any non-normative changes to spec text including typo fixes, changes to the document style, etc.
   * Markup: non-visible changes to markup in the spec
   * Meta: changes to documents about this repository (e.g. readme.md or contributing.md) and other supporting documents or scripts (e.g. package.json, design documents, etc.)
+
+Issues and PRs in the ecma262 repository are appropriate for minor modifications to the existing specification, for example to make behavior more consistent in an edge case, match what is implemented by the large majority of actual implementations, or to clarify wording. New features use the feature request process described below.
 
 #### New feature proposals
 TC39 is open to accepting new feature requests for ECMAScript, referred to as "proposals". Proposals go through a four-stage process which is documented in the [TC39 process document](https://tc39.github.io/process-document/).
