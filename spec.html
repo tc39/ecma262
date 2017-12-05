@@ -23,6 +23,15 @@
   #ecma-logo {
     width: 500px;
   }
+  .unicode-property-table {
+    table-layout: fixed;
+    width: 100%;
+    font-size: 80%;
+  }
+  .unicode-property-table ul {
+    padding-left: 0;
+    list-style: none;
+  }
 </style>
 <script>
   if (location.hostname === 'tc39.github.io' && location.protocol !== 'https:') {
@@ -29204,8 +29213,51 @@ THH:mm:ss.sss
         DecimalEscape ::
           NonZeroDigit DecimalDigits? [lookahead &lt;! DecimalDigit]
 
-        CharacterClassEscape :: one of
-          `d` `D` `s` `S` `w` `W`
+        CharacterClassEscape[U] ::
+          `d`
+          `D`
+          `s`
+          `S`
+          `w`
+          `W`
+          [+U] `p{` UnicodePropertyValueExpression `}`
+          [+U] `P{` UnicodePropertyValueExpression `}`
+
+        UnicodePropertyValueExpression ::
+          UnicodePropertyName `=` UnicodePropertyValue
+          LoneUnicodePropertyNameOrValue
+
+        UnicodePropertyNameCharacter ::
+          ControlLetter
+          `_`
+
+        UnicodePropertyNameCharacters ::
+          UnicodePropertyNameCharacter UnicodePropertyNameCharacters?
+
+        UnicodePropertyName ::
+          UnicodePropertyNameCharacters
+
+        UnicodePropertyValueCharacter ::
+          UnicodePropertyNameCharacter
+          `0`
+          `1`
+          `2`
+          `3`
+          `4`
+          `5`
+          `6`
+          `7`
+          `8`
+          `9`
+
+        UnicodePropertyValueCharacters ::
+          UnicodePropertyValueCharacter UnicodePropertyValueCharacters?
+
+        UnicodePropertyValue ::
+          UnicodePropertyValueCharacters
+
+        LoneUnicodePropertyNameOrValue ::
+          UnicodePropertyValueCharacters
 
         CharacterClass[U] ::
           `[` [lookahead &lt;! {`^`}] ClassRanges[?U] `]`
@@ -29298,6 +29350,21 @@ THH:mm:ss.sss
         <ul>
           <li>
             It is a Syntax Error if SV(|RegExpUnicodeEscapeSequence|) is none of `"$"`, or `"_"`, or the UTF16Encoding of either &lt;ZWNJ&gt; or &lt;ZWJ&gt;, or the UTF16Encoding of a Unicode code point that would be matched by the |UnicodeIDContinue| lexical grammar production.
+          </li>
+        </ul>
+        <emu-grammar>UnicodePropertyValueExpression :: UnicodePropertyName `=` UnicodePropertyValue</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the List of Unicode code points that is SourceText of <emu-nt>UnicodePropertyName</emu-nt> is not identical to a List of Unicode code points that is a Unicode property name or property alias listed in the “Property name and aliases” column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref>.
+          </li>
+          <li>
+            It is a Syntax Error if the List of Unicode code points that is SourceText of <emu-nt>UnicodePropertyValue</emu-nt> is not identical to a List of Unicode code points that is a value or value alias for the Unicode property or property alias given by SourceText of <emu-nt>UnicodePropertyName</emu-nt> listed in the “Property value and aliases” column of the corresponding tables <emu-xref href="#table-unicode-general-category-values"></emu-xref> or <emu-xref href="#table-unicode-script-values"></emu-xref>.
+          </li>
+        </ul>
+        <emu-grammar>UnicodePropertyValueExpression :: LoneUnicodePropertyNameOrValue</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the List of Unicode code points that is SourceText of <emu-nt>LoneUnicodePropertyNameOrValue</emu-nt> is not identical to a List of Unicode code points that is a Unicode general category or general category alias listed in the “Property value and aliases” column of <emu-xref href="#table-unicode-general-category-values"></emu-xref>, nor a binary property or binary property alias listed in the “Property name and aliases” column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
           </li>
         </ul>
       </emu-clause>
@@ -29535,6 +29602,15 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _ch_ be the code point matched by |IdentityEscape|.
           1. Return the code point value of _ch_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-static-semantics-sourcetext">
+        <h1>Static Semantics: SourceText</h1>
+        <emu-grammar>UnicodePropertyNameCharacters :: UnicodePropertyNameCharacter UnicodePropertyNameCharacters?</emu-grammar>
+        <emu-grammar>UnicodePropertyValueCharacters :: UnicodePropertyValueCharacter UnicodePropertyValueCharacters?</emu-grammar>
+        <emu-alg>
+          1. Return the List, in source text order, of Unicode code points in the source text matched by this production.
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -30241,6 +30317,49 @@ THH:mm:ss.sss
             <p>In case-insignificant matches when _Unicode_ is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `"&szlig;"` (U+00DF) to `"SS"`. It may however map a code point outside the Basic Latin range to a character within, for example, `"&#x17f;"` (U+017F) to `"s"`. Such characters are not mapped if _Unicode_ is *false*. This prevents Unicode code points such as U+017F and U+212A from matching regular expressions such as `/[a-z]/i`, but they will match `/[a-z]/ui`.</p>
           </emu-note>
         </emu-clause>
+        <emu-clause id="sec-runtime-semantics-unicodematchproperty-p" aoid="UnicodeMatchProperty">
+          <h1>Runtime Semantics: UnicodeMatchProperty ( _p_ )</h1>
+          <p>The algorithm uses values from the following tables, which associate supported Unicode property names and property aliases and their canonical property names.</p>
+          <p>Implementations must support the following non-binary Unicode properties and their property aliases:</p>
+          <emu-import href="table-nonbinary-unicode-properties.html"></emu-import>
+          <p>Additionally, implementations must support the following binary Unicode properties and their property aliases:</p>
+          <emu-import href="table-binary-unicode-properties.html"></emu-import>
+          <p>The abstract operation UnicodeMatchProperty takes a parameter _p_ that is a List of Unicode code points and performs the following steps:</p>
+          <emu-alg>
+            1. Assert: _p_ is a List of Unicode code points that is identical to a List of Unicode code points that is a Unicode property name or property alias listed in the “Property name and aliases” column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref> or <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
+            1. Let _p_ be the canonical property name of _p_ as given in the “Canonical property name” column of the corresponding row.
+            1. Return the List of Unicode code points of _p_.
+          </emu-alg>
+          <p>To ensure interoperability, implementations must not extend Unicode property support to the remaining properties.</p>
+          <p>Implementations must only recognize the property aliases listed in <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref> and <emu-xref href="#table-binary-unicode-properties"></emu-xref>.</p>
+          <p>Implementations must only recognize the property value aliases and canonical property value names listed in <emu-xref href="#table-unicode-general-category-values"></emu-xref> and <emu-xref href="#table-unicode-script-values"></emu-xref>.</p>
+          <emu-note>
+            <p>For example, `Script_Extensions` (property name) and `scx` (property alias) are valid, but `script_extensions` or `Scx` aren’t.</p>
+          </emu-note>
+          <emu-note>
+            <p>The listed properties form a superset of what <a href="https://unicode.org/reports/tr18/#RL1.2">UTS18 RL1.2</a> requires.</p>
+          </emu-note>
+        </emu-clause>
+        <emu-clause id="sec-runtime-semantics-unicodematchpropertyvalue-p-v" aoid="UnicodeMatchPropertyValue">
+          <h1>Runtime Semantics: UnicodeMatchPropertyValue ( _p_, _v_ )</h1>
+          <p>The algorithm uses values from the following tables, which associate canonical Unicode property names and their supported values and value aliases:</p>
+          <emu-import href="table-unicode-general-category-values.html"></emu-import>
+          <emu-import href="table-unicode-script-values.html"></emu-import>
+          <p>The abstract operation UnicodeMatchPropertyValue takes two parameters _p_ and _v_, each of which is a List of Unicode code points, and performs the following steps:</p>
+          <emu-alg>
+            1. Assert: _p_ is a List of Unicode code points that is identical to a List of Unicode code points that is a canonical, unaliased Unicode property name listed in the “Canonical property name” column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref>.
+            1. Assert: _v_ is a List of Unicode code points that is identical to a List of Unicode code points that is a property value or property value alias for Unicode property _p_ listed in the “Property value and aliases” column of <emu-xref href="#table-unicode-general-category-values"></emu-xref> or <emu-xref href="#table-unicode-script-values"></emu-xref>.
+            1. Let _value_ be the canonical property value of _v_ as given in the “Canonical property value” column of the corresponding row.
+            1. Return the List of Unicode code points of _value_.
+          </emu-alg>
+          <p>Only the canonical property values and property value aliases listed in <emu-xref href="#table-unicode-general-category-values"></emu-xref> and <emu-xref href="#table-unicode-script-values"></emu-xref> must be recognized.</p>
+          <emu-note>
+            <p>For example, `Xpeo` and `Old_Persian` are valid `Script_Extension` values, but `xpeo` and `Old Persian` aren’t.</p>
+          </emu-note>
+          <emu-note>
+            <p>This algorithm differs from <a href="https://unicode.org/reports/tr44/#Matching_Symbolic">the matching rules for symbolic values listed in UAX44</a>: case, <emu-xref href="#sec-white-space">white space</emu-xref>, U+002D (HYPHEN-MINUS), and U+005F (LOW LINE) are not ignored, and the `Is` prefix is not supported.</p>
+          </emu-note>
+        </emu-clause>
       </emu-clause>
 
       <!-- es6num="21.2.2.9" -->
@@ -30333,6 +30452,23 @@ THH:mm:ss.sss
         <p>The production <emu-grammar>CharacterClassEscape :: `W`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return the set of all characters not included in the set returned by <emu-grammar>CharacterClassEscape :: `w`</emu-grammar> .
+        </emu-alg>
+        <p>The production <emu-grammar>CharacterClassEscape :: `\p{` UnicodePropertyValueExpression `}`</emu-grammar> evaluates by returning the CharSet containing all Unicode code points included in the CharSet returned by <emu-nt>UnicodePropertyValueExpression</emu-nt>.</p>
+        <p>The production <emu-grammar>CharacterClassEscape :: `\P{` UnicodePropertyValueExpression `}`</emu-grammar> evaluates by returning the CharSet containing all Unicode code points not included in the CharSet returned by <emu-nt>UnicodePropertyValueExpression</emu-nt>.</p>
+        <p>The production <emu-grammar>UnicodePropertyValueExpression :: UnicodePropertyName `=` UnicodePropertyValue</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _p_ be ! UnicodeMatchProperty(_UnicodePropertyName_).
+          1. Assert: _p_ is a Unicode property name or property alias listed in the “Property name and aliases” column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref>.
+          1. Let _v_ be ! UnicodeMatchPropertyValue(_p_, _UnicodePropertyValue_).
+          1. Return the CharSet containing all Unicode code points whose character database definition includes the property _p_ with value _v_.
+        </emu-alg>
+        <p>The production <emu-grammar>UnicodePropertyValueExpression :: LoneUnicodePropertyNameOrValue</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. If ! UnicodeMatchPropertyValue(`"General_Category"`, _LoneUnicodePropertyNameOrValue_) is identical to a List of Unicode code points that is the name of a Unicode general category or general category alias listed in the “Property value and aliases” column of <emu-xref href="#table-unicode-general-category-values"></emu-xref>, then
+            1. Return the CharSet containing all Unicode code points whose character database definition includes the property `General_Category` with value _LoneUnicodePropertyNameOrValue_.
+          1. Let _p_ be ! UnicodeMatchProperty(_LoneUnicodePropertyNameOrValue_).
+          1. Assert: _p_ is a binary Unicode property or binary property alias listed in the “Property name and aliases” column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
+          1. Return the CharSet containing all Unicode code points whose character database definition includes the property _p_ with value |True|.
         </emu-alg>
       </emu-clause>
 
@@ -40494,16 +40630,28 @@ THH:mm:ss.sss
       <i>The Unicode Standard</i>, available at &lt;<a href="https://unicode.org/versions/latest">https://unicode.org/versions/latest</a>&gt;
     </li>
     <li>
+      <i>Unicode Technical Note #5: Canonical Equivalence in Applications</i>, available at &lt;<a href="https://unicode.org/notes/tn5/">https://unicode.org/notes/tn5/</a>&gt;
+    </li>
+    <li>
+      <i>Unicode Technical Standard #10: Unicode Collation Algorithm</i>, available at &lt;<a href="https://unicode.org/reports/tr10/">https://unicode.org/reports/tr10/</a>&gt;
+    </li>
+    <li>
       <i>Unicode Standard Annex #15, Unicode Normalization Forms</i>, available at &lt;<a href="https://unicode.org/reports/tr15/">https://unicode.org/reports/tr15/</a>&gt;
+    </li>
+    <li>
+      <i>Unicode Standard Annex #18: Unicode Regular Expressions</i>, available at &lt;<a href="https://unicode.org/reports/tr18/">https://unicode.org/reports/tr18/</a>&gt;
+    </li>
+    <li>
+      <i>Unicode Standard Annex #24: Unicode `Script` Property</i>, available at &lt;<a href="https://unicode.org/reports/tr24/">https://unicode.org/reports/tr24/</a>&gt;
     </li>
     <li>
       <i>Unicode Standard Annex #31, Unicode Identifiers and Pattern Syntax</i>, available at &lt;<a href="https://unicode.org/reports/tr31/">https://unicode.org/reports/tr31/</a>&gt;
     </li>
     <li>
-      <i>Unicode Technical Note #5: Canonical Equivalence in Applications</i>, available at &lt;<a href="https://unicode.org/notes/tn5/">https://unicode.org/notes/tn5/</a>&gt;
+      <i>Unicode Standard Annex #44: Unicode Character Database</i>, available at &lt;<a href="https://unicode.org/reports/tr44/">https://unicode.org/reports/tr44/</a>&gt;
     </li>
     <li>
-      <i>Unicode Technical Standard #10: Unicode Collation Algorithm</i>, available at &lt;<a href="https://unicode.org/reports/tr10/">https://unicode.org/reports/tr10/</a>&gt;
+      <i>Unicode Technical Standard #51: Unicode Emoji</i>, available at &lt;<a href="https://unicode.org/reports/tr51/">https://unicode.org/reports/tr51/</a>&gt;
     </li>
     <li>
       <i>IANA Time Zone Database</i>, available at &lt;<a href="https://www.iana.org/time-zones">https://www.iana.org/time-zones</a>&gt;
