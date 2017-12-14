@@ -8620,8 +8620,6 @@
       -->
       <emu-alg>
         1. Let _calleeContext_ be the running execution context.
-        1. Let _env_ be the LexicalEnvironment of _calleeContext_.
-        1. Let _envRec_ be _env_'s EnvironmentRecord.
         1. Let _code_ be _func_.[[ECMAScriptCode]].
         1. Let _strict_ be _func_.[[Strict]].
         1. Let _formals_ be _func_.[[FormalParameters]].
@@ -8651,6 +8649,15 @@
         1. Else if _hasParameterExpressions_ is *false*, then
           1. If *"arguments"* is an element of _functionNames_ or if *"arguments"* is an element of _lexicalNames_, then
             1. Set _argumentsObjectNeeded_ to *false*.
+        1. If _strict_ is *true* or if _hasParameterExpressions_ is *false*, then
+          1. NOTE: Only a single lexical environment is needed for the parameters and top-level vars.
+          1. Let _env_ be the LexicalEnvironment of _calleeContext_.
+          1. Let _envRec_ be _env_'s EnvironmentRecord.
+        1. Else,
+          1. NOTE: A separate Environment Record is needed to ensure that bindings created by direct eval calls in the formal parameter list are outside the environment where parameters are declared.
+          1. Let _calleeEnv_ be the LexicalEnvironment of _calleeContext_.
+          1. Let _env_ be NewDeclarativeEnvironment(_calleeEnv_).
+          1. Let _envRec_ be _env_'s EnvironmentRecord.
         1. For each String _paramName_ in _parameterNames_, do
           1. Let _alreadyDeclared_ be _envRec_.HasBinding(_paramName_).
           1. NOTE: Early errors ensure that duplicate parameter names can only occur in non-strict functions that do not have parameter default values or rest parameters.
@@ -19560,40 +19567,12 @@
       </emu-alg>
       <emu-grammar>FormalParameter : BindingElement</emu-grammar>
       <emu-alg>
-        1. If ContainsExpression of |BindingElement| is *false*, return the result of performing IteratorBindingInitialization for |BindingElement| using _iteratorRecord_ and _environment_ as the arguments.
-        1. Let _currentContext_ be the running execution context.
-        1. Let _originalEnv_ be the VariableEnvironment of _currentContext_.
-        1. Assert: The VariableEnvironment and LexicalEnvironment of _currentContext_ are the same.
-        1. Assert: If _environment_ is not *undefined*, then _environment_ and _originalEnv_ are the same.
-        1. Let _paramVarEnv_ be NewDeclarativeEnvironment(_originalEnv_).
-        1. Set the VariableEnvironment of _currentContext_ to _paramVarEnv_.
-        1. Set the LexicalEnvironment of _currentContext_ to _paramVarEnv_.
-        1. Let _result_ be IteratorBindingInitialization of |BindingElement| with arguments _iteratorRecord_ and _environment_.
-        1. Set the VariableEnvironment of _currentContext_ to _originalEnv_.
-        1. Set the LexicalEnvironment of _currentContext_ to _originalEnv_.
-        1. Return _result_.
+        1. Return the result of performing IteratorBindingInitialization for |BindingElement| with arguments _iteratorRecord_ and _environment_.
       </emu-alg>
-      <emu-note>
-        <p>The new Environment Record created in step 6 is only used if the |BindingElement| contains a direct eval.</p>
-      </emu-note>
       <emu-grammar>FunctionRestParameter : BindingRestElement</emu-grammar>
       <emu-alg>
-        1. If ContainsExpression of |BindingRestElement| is *false*, return the result of performing IteratorBindingInitialization for |BindingRestElement| using _iteratorRecord_ and _environment_ as the arguments.
-        1. Let _currentContext_ be the running execution context.
-        1. Let _originalEnv_ be the VariableEnvironment of _currentContext_.
-        1. Assert: The VariableEnvironment and LexicalEnvironment of _currentContext_ are the same.
-        1. Assert: If _environment_ is not *undefined*, then _environment_ and _originalEnv_ are the same.
-        1. Let _paramVarEnv_ be NewDeclarativeEnvironment(_originalEnv_).
-        1. Set the VariableEnvironment of _currentContext_ to _paramVarEnv_.
-        1. Set the LexicalEnvironment of _currentContext_ to _paramVarEnv_.
-        1. Let _result_ be IteratorBindingInitialization of |BindingRestElement| with arguments _iteratorRecord_ and _environment_.
-        1. Set the VariableEnvironment of _currentContext_ to _originalEnv_.
-        1. Set the LexicalEnvironment of _currentContext_ to _originalEnv_.
-        1. Return _result_.
+        1. Return the result of performing IteratorBindingInitialization for |BindingRestElement| with arguments _iteratorRecord_ and _environment_.
       </emu-alg>
-      <emu-note>
-        <p>The new Environment Record created in step 6 is only used if the |BindingRestElement| contains a direct eval.</p>
-      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-function-definitions-runtime-semantics-instantiatefunctionobject">
