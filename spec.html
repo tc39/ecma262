@@ -4779,6 +4779,33 @@
         <p>Step 5 will only be reached if _obj_ is a non-standard function exotic object that does not have a [[Realm]] internal slot.</p>
       </emu-note>
     </emu-clause>
+
+    <emu-clause id="sec-copydataproperties" aoid="CopyDataProperties">
+      <h1>CopyDataProperties (_target_, _source_, _excluded_)</h1>
+      <p>When the abstract operation CopyDataProperties is called with arguments _target_, _source_, and _excludedItems_, the following steps are taken:</p>
+      <emu-alg>
+        1. Assert: Type(_target_) is Object.
+        1. Assert: _excludedItems_ is a List of property keys.
+        1. If _source_ is *undefined* or *null*, return _target_.
+        1. Let _from_ be ! ToObject(_source_).
+        1. Let _keys_ be ? _from_.[[OwnPropertyKeys]]().
+        1. For each element _nextKey_ of _keys_ in List order, do
+          1. Let _excluded_ be *false*.
+          1. For each element _e_ of _excludedItems_ in List order, do
+            1. If SameValue(_e_, _nextKey_) is true, then
+              1. Set _excluded_ to *true*.
+          1. If _excluded_ is *false*, then
+            1. Let _desc_ be ? _from_.[[GetOwnProperty]](_nextKey_).
+            1. If _desc_ is not *undefined* and _desc_.[[Enumerable]] is *true*, then
+              1. Let _propValue_ be ? Get(_from_, _nextKey_).
+              1. Perform ! CreateDataProperty(_target_, _nextKey_, _propValue_).
+        1. Return _target_.
+      </emu-alg>
+      <emu-note>
+        <p>The target passed in here is always a newly created object which is not directly accessible in case of an error being thrown.</p>
+      </emu-note>
+    </emu-clause>
+
   </emu-clause>
 
   <!-- es6num="7.4" -->
@@ -11674,6 +11701,7 @@
           CoverInitializedName[?Yield, ?Await]
           PropertyName[?Yield, ?Await] `:` AssignmentExpression[+In, ?Yield, ?Await]
           MethodDefinition[?Yield, ?Await]
+          `...` AssignmentExpression[In, ?Yield, ?Await]
 
         PropertyName[Yield, Await] :
           LiteralPropertyName
@@ -11778,6 +11806,10 @@
         <emu-alg>
           1. Return StringValue of |IdentifierReference|.
         </emu-alg>
+        <emu-grammar>PropertyDefinition : `...` AssignmentExpression</emu-grammar>
+        <emu-alg>
+          1. Return ~empty~.
+        </emu-alg>
         <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>
         <emu-alg>
           1. Return PropName of |PropertyName|.
@@ -11865,6 +11897,13 @@
         <emu-alg>
           1. Perform ? PropertyDefinitionEvaluation of |PropertyDefinitionList| with arguments _object_ and _enumerable_.
           1. Return the result of performing PropertyDefinitionEvaluation of |PropertyDefinition| with arguments _object_ and _enumerable_.
+        </emu-alg>
+        <emu-grammar>PropertyDefinition : `...` AssignmentExpression</emu-grammar>
+        <emu-alg>
+          1. Let _exprValue_ be the result of evaluating _AssignmentExpression_.
+          1. Let _fromValue_ be ? GetValue(_exprValue_).
+          1. Let _excludedNames_ be a new empty List.
+          1. Return ? CopyDataProperties(_object_, _fromValue_, _excludedNames_).
         </emu-alg>
         <emu-grammar>PropertyDefinition : IdentifierReference</emu-grammar>
         <emu-alg>
@@ -14324,13 +14363,17 @@
 
         ObjectAssignmentPattern[Yield, Await] :
           `{` `}`
+          `{` AssignmentRestProperty[?Yield, ?Await] `}`
           `{` AssignmentPropertyList[?Yield, ?Await] `}`
-          `{` AssignmentPropertyList[?Yield, ?Await] `,` `}`
+          `{` AssignmentPropertyList[?Yield, ?Await] `,` AssignmentRestProperty[?Yield, ?Await]? `}`
 
         ArrayAssignmentPattern[Yield, Await] :
           `[` Elision? AssignmentRestElement[?Yield, ?Await]? `]`
           `[` AssignmentElementList[?Yield, ?Await] `]`
           `[` AssignmentElementList[?Yield, ?Await] `,` Elision? AssignmentRestElement[?Yield, ?Await]? `]`
+
+        AssignmentRestProperty[Yield, Await] :
+          `...` DestructuringAssignmentTarget[?Yield, ?Await]
 
         AssignmentPropertyList[Yield, Await] :
           AssignmentProperty[?Yield, ?Await]
@@ -14393,7 +14436,8 @@
         </emu-grammar>
         <emu-alg>
           1. Perform ? RequireObjectCoercible(_value_).
-          1. Return the result of performing DestructuringAssignmentEvaluation for |AssignmentPropertyList| using _value_ as the argument.
+          1. Perform ? PropertyDestructuringAssignmentEvaluation for |AssignmentPropertyList| using _value_ as the argument.
+          1. Return NormalCompletion(~empty~).
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` `]`</emu-grammar>
         <emu-alg>
@@ -14443,11 +14487,44 @@
           1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _status_).
           1. Return Completion(_status_).
         </emu-alg>
+        <emu-grammar>ObjectAssignmentPattern : `{` AssignmentRestProperty `}`</emu-grammar>
+        <emu-alg>
+          1. Let _excludedNames_ be a new empty List.
+          1. Return the result of performing RestDestructuringAssignmentEvaluation of _AssignmentRestProperty_ with _value_ and _excludedNames_ as the arguments.
+        </emu-alg>
+
+        <emu-grammar>ObjectAssignmentPattern : `{` AssignmentPropertyList `,` AssignmentRestProperty `}`</emu-grammar>
+        <emu-alg>
+          1. Let _excludedNames_ be the result of performing ? PropertyDestructuringAssignmentEvaluation for _AssignmentPropertyList_ using _value_ as the argument.
+          1. Return the result of performing RestDestructuringAssignmentEvaluation of _AssignmentRestProperty_ with _value_ and _excludedNames_ as the arguments.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-runtime-semantics-destructuringassignmentevaluation-nested-rest-prohibition">
+        <h1>Static Semantics: Early Errors</h1>
+        <emu-grammar>
+          AssignmentRestProperty[Yield, Await] :
+            `...` DestructuringAssignmentTarget[Yield, Await]
+        </emu-grammar>
+        <ul><li>It is a Syntax Error if |DestructuringAssignmentTarget| is an |ArrayLiteral| or an |ObjectLiteral|.</li></ul>
+      </emu-clause>
+
+      <emu-clause id="Rest-RuntimeSemantics-PropertyDestructuringAssignmentEvaluation">
+        <h1>Runtime Semantics: PropertyDestructuringAssignmentEvaluation</h1>
+        <p>With parameter _value_.</p>
+
+        <emu-note>The following operations collect a list of all destructured property names.</emu-note>
+
         <emu-grammar>AssignmentPropertyList : AssignmentPropertyList `,` AssignmentProperty</emu-grammar>
         <emu-alg>
-          1. Perform ? DestructuringAssignmentEvaluation for |AssignmentPropertyList| using _value_ as the argument.
-          1. Return the result of performing DestructuringAssignmentEvaluation for |AssignmentProperty| using _value_ as the argument.
+          1. Let _propertyNames_ be the result of performing PropertyDestructuringAssignmentEvaluation for |AssignmentPropertyList| using _value_ as the argument.
+          1. ReturnIfAbrupt(_propertyNames_).
+          1. Let _nextNames_ be the result of performing PropertyDestructuringAssignmentEvaluation for |AssignmentProperty| using _value_ as the argument.
+          1. ReturnIfAbrupt(_nextNames_).
+          1. Append each item in _nextNames_ to the end of _propertyNames_.
+          1. Return _propertyNames_.
         </emu-alg>
+
         <emu-grammar>AssignmentProperty : IdentifierReference Initializer?</emu-grammar>
         <emu-alg>
           1. Let _P_ be StringValue of |IdentifierReference|.
@@ -14459,13 +14536,30 @@
             1. If IsAnonymousFunctionDefinition(|Initializer|) is *true*, then
               1. Let _hasNameProperty_ be ? HasOwnProperty(_v_, `"name"`).
               1. If _hasNameProperty_ is *false*, perform SetFunctionName(_v_, _P_).
-          1. Return ? PutValue(_lref_, _v_).
+          1. Perform ? PutValue(_lref_, _v_).
+          1. Return a new List containing _P_.
         </emu-alg>
+
         <emu-grammar>AssignmentProperty : PropertyName `:` AssignmentElement</emu-grammar>
         <emu-alg>
           1. Let _name_ be the result of evaluating |PropertyName|.
           1. ReturnIfAbrupt(_name_).
-          1. Return the result of performing KeyedDestructuringAssignmentEvaluation of |AssignmentElement| with _value_ and _name_ as the arguments.
+          1. Perform ? KeyedDestructuringAssignmentEvaluation of |AssignmentElement| with _value_ and _name_ as the arguments.
+          1. Return a new List containing _name_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="Rest-RuntimeSemantics-RestDestructuringAssignmentEvaluation">
+        <h1>Runtime Semantics: RestDestructuringAssignmentEvaluation</h1>
+        <p>With parameters _value_ and _excludedNames_.</p>
+
+        <emu-grammar>AssignmentRestProperty : `...` DestructuringAssignmentTarget</emu-grammar>
+        <emu-alg>
+          1. Let _lref_ be the result of evaluating |DestructuringAssignmentTarget|.
+          1. ReturnIfAbrupt(_lref_).
+          1. Let _restObj_ be ObjectCreate(%ObjectPrototype%).
+          1. Perform ? CopyDataProperties(_restObj_, _value_, _excludedNames_).
+          1. Return PutValue(_lref_, _restObj_).
         </emu-alg>
       </emu-clause>
 
@@ -15481,13 +15575,17 @@
 
         ObjectBindingPattern[Yield, Await] :
           `{` `}`
+          `{` BindingRestProperty[?Yield, ?Await] `}`
           `{` BindingPropertyList[?Yield, ?Await] `}`
-          `{` BindingPropertyList[?Yield, ?Await] `,` `}`
+          `{` BindingPropertyList[?Yield, ?Await] `,` BindingRestProperty[?Yield, ?Await]? `}`
 
         ArrayBindingPattern[Yield, Await] :
           `[` Elision? BindingRestElement[?Yield, ?Await]? `]`
           `[` BindingElementList[?Yield, ?Await] `]`
           `[` BindingElementList[?Yield, ?Await] `,` Elision? BindingRestElement[?Yield, ?Await]? `]`
+
+        BindingRestProperty[Yield, Await] :
+          `...` BindingIdentifier[?Yield, ?Await]
 
         BindingPropertyList[Yield, Await] :
           BindingProperty[?Yield, ?Await]
@@ -15710,21 +15808,73 @@
         <emu-alg>
           1. Return NormalCompletion(~empty~).
         </emu-alg>
+        <emu-grammar>
+          ObjectBindingPattern :
+            `{` BindingPropertyList `}`
+            `{` BindingPropertyList `,` `}`
+        </emu-grammar>
+        <emu-alg>
+          1. Perform ? PropertyBindingInitialization for |BindingPropertyList| using _value_ and _environment_ as the argument.
+          1. Return NormalCompletion(~empty~).
+        </emu-alg>
+
+        <emu-grammar>ObjectBindingPattern : `{` BindingRestProperty `}`</emu-grammar>
+        <emu-alg>
+          1. Let _excludedNames_ be a new empty List.
+          1. Return the result of performing RestBindingInitialization of _BindingRestProperty_ with _value_, _environment_ and _excludedNames_ as the arguments.
+        </emu-alg>
+
+        <emu-grammar>ObjectBindingPattern : `{` BindingPropertyList `,` BindingRestProperty `}`</emu-grammar>
+        <emu-alg>
+          1. Let _excludedNames_ be the result of performing PropertyBindingInitialization of |BindingPropertyList| using _value_ and _environment_ as arguments.
+          1. ReturnIfAbrupt(_excludedNames_).
+          1. Return the result of performing RestBindingInitialization of _BindingRestProperty_ with _value_, _environment_, and _excludedNames_ as the arguments.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="Rest-RuntimeSemantics-PropertyBindingInitialization">
+        <h1>Runtime Semantics: PropertyBindingInitialization</h1>
+        <p>With parameters _value_ and _environment_.</p>
+
+        <emu-note>These collect a list of all bound property names rather than just empty completion.</emu-note>
+
         <emu-grammar>BindingPropertyList : BindingPropertyList `,` BindingProperty</emu-grammar>
         <emu-alg>
-          1. Perform ? BindingInitialization for |BindingPropertyList| using _value_ and _environment_ as arguments.
-          1. Return the result of performing BindingInitialization for |BindingProperty| using _value_ and _environment_ as arguments.
+          1. Let _boundNames_ be the result of performing PropertyBindingInitialization for |BindingPropertyList| using _value_ and _environment_ as arguments.
+          1. ReturnIfAbrupt(_boundNames_).
+          1. Let _nextNames_ be the result of performing PropertyBindingInitialization for |BindingProperty| using _value_ and _environment_ as arguments.
+          1. ReturnIfAbrupt(_nextNames_).
+          1. Append each item in _nextNames_ to the end of _boundNames_.
+          1. Return _boundNames_.
         </emu-alg>
+
         <emu-grammar>BindingProperty : SingleNameBinding</emu-grammar>
         <emu-alg>
           1. Let _name_ be the string that is the only element of BoundNames of |SingleNameBinding|.
-          1. Return the result of performing KeyedBindingInitialization for |SingleNameBinding| using _value_, _environment_, and _name_ as the arguments.
+          1. Perform ? KeyedBindingInitialization for |SingleNameBinding| using _value_, _environment_, and _name_ as the arguments.
+          1. Return a new List containing _name_.
         </emu-alg>
+
         <emu-grammar>BindingProperty : PropertyName `:` BindingElement</emu-grammar>
         <emu-alg>
           1. Let _P_ be the result of evaluating |PropertyName|.
           1. ReturnIfAbrupt(_P_).
-          1. Return the result of performing KeyedBindingInitialization for |BindingElement| using _value_, _environment_, and _P_ as arguments.
+          1. Perform ? KeyedBindingInitialization of |BindingElement| with _value_, _environment_, and _P_ as the arguments.
+          1. Return a new List containing _P_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="Rest-RuntimeSemantics-RestBindingInitialization">
+        <h1>Runtime Semantics: RestBindingInitialization</h1>
+        <p>With parameters _value_, _environment_, and _excludedNames_.</p>
+
+        <emu-grammar>BindingRestProperty : `...` BindingIdentifier</emu-grammar>
+        <emu-alg>
+          1. Let _lhs_ be ? ResolveBinding(StringValue of |BindingIdentifier|, _environment_).
+          1. Let _restObj_ be ObjectCreate(%ObjectPrototype%).
+          1. Perform ? CopyDataProperties(_restObj_, _value_, _excludedNames_).
+          1. If _environment_ is *undefined*, return PutValue(_lhs_, _restObj_).
+          1. Return InitializeReferencedBinding(_lhs_, _restObj_).
         </emu-alg>
       </emu-clause>
 
