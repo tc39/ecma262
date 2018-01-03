@@ -30,4 +30,4 @@ After cloning, do `npm install` to set up your environment. You can then do `npm
 ## Community
 
 * [Es-discuss mailing list](https://esdiscuss.org): Mailing list for ECMAScript discussions
-* IRC: #tc39 on Freenode ([instructions](https://freenode.net/kb/answer/chat))
+* IRC: [#tc39 on Freenode](irc://irc.freenode.net/tc39) ([instructions](https://freenode.net/kb/answer/chat))
