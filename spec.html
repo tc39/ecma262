@@ -968,6 +968,17 @@
           <table>
             <tbody>
             <tr>
+              <td>
+                @@asyncIterator
+              </td>
+              <td>
+                `"Symbol.asyncIterator"`
+              </td>
+              <td>
+                A method that returns the default AsyncIterator for an object. Called by the semantics of the `for`-`await`-`of` statement.
+              </td>
+            </tr>
+            <tr>
               <th>
                 Specification Name
               </th>
@@ -1819,6 +1830,16 @@
             </tr>
             <tr>
               <td>
+                %AsyncFromSyncIteratorPrototype%
+              </td>
+              <td>
+              </td>
+              <td>
+                The prototype of async-from-sync iterator objects (<emu-xref href="#sec-async-from-sync-iterator-objects"></emu-xref>)
+              </td>
+            </tr>
+            <tr>
+              <td>
                 %AsyncFunction%
               </td>
               <td>
@@ -1835,6 +1856,46 @@
               </td>
               <td>
                 The initial value of the `prototype` data property of %AsyncFunction%
+              </td>
+            </tr>
+            <tr>
+              <td>
+                %AsyncGenerator%
+              </td>
+              <td>
+              </td>
+              <td>
+                The initial value of the `prototype` property of %AsyncGeneratorFunction%
+              </td>
+            </tr>
+            <tr>
+              <td>
+                %AsyncGeneratorFunction%
+              </td>
+              <td>
+              </td>
+              <td>
+                The constructor of async iterator objects (<emu-xref href="#sec-asyncgeneratorfunction-constructor"></emu-xref>)
+              </td>
+            </tr>
+            <tr>
+              <td>
+                %AsyncGeneratorPrototype%
+              </td>
+              <td>
+              </td>
+              <td>
+                The initial value of the `prototype` property of %AsyncGenerator%
+              </td>
+            </tr>
+            <tr>
+              <td>
+                %AsyncIteratorPrototype%
+              </td>
+              <td>
+              </td>
+              <td>
+                An object that all standard built-in async iterator objects indirectly inherit from
               </td>
             </tr>
             <tr>
@@ -2962,6 +3023,93 @@
         </table>
       </emu-table>
       <p>The term &ldquo;<dfn>abrupt completion</dfn>&rdquo; refers to any completion with a [[Type]] value other than ~normal~.</p>
+
+      <emu-clause id="await" aoid="Await">
+        <h1>Await</h1>
+
+        <emu-note type=editor>
+          <p>The AsyncFunctionAwait abstract operation could probably be refactored in terms of this primitive.</p>
+        </emu-note>
+
+        <p>Algorithm steps that say</p>
+
+        <emu-alg>
+          1. Let _completion_ be Await(_promise_).
+        </emu-alg>
+
+        <p>mean the same thing as:</p>
+
+        <emu-alg>
+          1. Let _asyncContext_ be the running execution context.
+          1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+          1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « _promise_ »).
+          1. Let _onFulfilled_ be a new built-in function object as defined in <emu-xref href="#await-fulfilled" title></emu-xref>.
+          1. Let _onRejected_ be a new built-in function object as defined in <emu-xref href="#await-rejected" title></emu-xref>.
+          1. Set _onFulfilled_ and _onRejected_'s [[AsyncContext]] internal slots to _asyncContext_.
+          1. Let _throwawayCapability_ be NewPromiseCapability(%Promise%).
+          1. Set _throwawayCapability_.[[Promise]].[[PromiseIsHandled]] to *true*.
+          1. Perform ! PerformPromiseThen(_promiseCapability_.[[Promise]], _onFulfilled_, _onRejected_, _throwawayCapability_).
+          1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+          1. Set the code evaluation state of _asyncContext_ such that when evaluation is resumed with a Completion _completion_, the following steps of the algorithm that invoked Await will be performed, with _completion_ available.
+        </emu-alg>
+
+        <p>where all variables in the above steps, with the exception of _completion_, are ephemeral and visible only in the steps pertaining to Await.</p>
+
+        <emu-note>
+          <p>Await can be combined with the `?` and `!` prefixes, so that for example</p>
+
+          <emu-alg>
+            1. Let _value_ be ? Await(_promise_).
+          </emu-alg>
+
+          <p>means the same thing as:</p>
+
+          <emu-alg>
+            1. Let _value_ be Await(_promise_).
+            1. ReturnIfAbrupt(_value_).
+          </emu-alg>
+        </emu-note>
+
+        <emu-clause id="await-fulfilled">
+          <h1>Await Fulfilled Functions</h1>
+
+          <p>An Await fulfilled function is an anonymous built-in function that is used as part of the Await specification device to deliver the promise fulfillment value to the caller as a normal completion. Each Await fulfilled function has an [[AsyncContext]] internal slot.</p>
+
+          <p>When an Await fulfilled function _F_ is called with argument _value_, the following steps are taken:</p>
+
+          <emu-alg>
+            1. Let _asyncContext_ be _F_.[[AsyncContext]].
+            1. Let _prevContext_ be the running execution context.
+            1. Suspend _prevContext_.
+            1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
+            1. Resume the suspended evaluation of _asyncContext_ using NormalCompletion(_value_) as the result of the operation that suspended it.
+            1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
+            1. Return *undefined*.
+          </emu-alg>
+
+          <p>The `length` property of an Await fulfilled function is 1.</p>
+        </emu-clause>
+
+        <emu-clause id="await-rejected">
+          <h1>Await Rejected Functions</h1>
+
+          <p>An Await rejected function is an anonymous built-in function that is used as part of the Await specification device to deliver the promise rejection reason to the caller as an abrupt throw completion. Each Await rejected function has an [[AsyncContext]] internal slot.</p>
+
+          <p>When an Await rejected function _F_ is called with argument _reason_, the following steps are taken:</p>
+
+          <emu-alg>
+            1. Let _asyncContext_ be _F_.[[AsyncContext]].
+            1. Let _prevContext_ be the running execution context.
+            1. Suspend _prevContext_.
+            1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
+            1. Resume the suspended evaluation of _asyncContext_ using Completion{[[Type]]: ~throw~, [[Value]]: _reason_, [[Target]]: ~empty~} as the result of the operation that suspended it.
+            1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
+            1. Return *undefined*.
+          </emu-alg>
+
+          <p>The `length` property of an Await rejected function is 1.</p>
+        </emu-clause>
+      </emu-clause>
 
       <!-- es6num="6.2.2.1" -->
       <emu-clause id="sec-normalcompletion" aoid="NormalCompletion">
@@ -4771,13 +4919,38 @@
     <h1>Operations on Iterator Objects</h1>
     <p>See Common Iteration Interfaces (<emu-xref href="#sec-iteration"></emu-xref>).</p>
 
+    <emu-clause id="sec-asynciteratorclose" aoid="AsyncIteratorClose">
+      <h1><ins>AsyncIteratorClose ( _iteratorRecord_, _completion_ )</ins></h1>
+      <p>The abstract operation AsyncIteratorClose with arguments _iteratorRecord_ and _completion_ is used to notify an async iterator that it should perform any actions it would normally perform when it has reached its completed state:</p>
+      <emu-alg>
+        1. Assert: Type(_iteratorRecord_.[[Iterator]]) is Object.
+        1. Assert: _completion_ is a Completion Record.
+        1. Let _iterator_ be _iteratorRecord_.[[Iterator]].
+        1. Let _return_ be ? GetMethod(_iterator_, `"return"`).
+        1. If _return_ is *undefined*, return Completion(_completion_).
+        1. Let _innerResult_ be Call(_return_, _iterator_, &laquo; &raquo;).
+        1. If _innerResult_.[[Type]] is ~normal~, set _innerResult_ to Await(_innerResult_.[[Value]]).
+        1. If _completion_.[[Type]] is ~throw~, return Completion(_completion_).
+        1. If _innerResult_.[[Type]] is ~throw~, return Completion(_innerResult_).
+        1. If Type(_innerResult_.[[Value]]) is not Object, throw a *TypeError* exception.
+        1. Return Completion(_completion_).
+      </emu-alg>
+    </emu-clause>
+
     <!-- es6num="7.4.1" -->
     <emu-clause id="sec-getiterator" aoid="GetIterator">
-      <h1>GetIterator ( _obj_ [ , _method_ ] )</h1>
+      <h1>GetIterator ( _obj_ [ , _hint_ ] [ , _method_ ] )</h1>
       <p>The abstract operation GetIterator with argument _obj_ and optional argument _method_ performs the following steps:</p>
       <emu-alg>
+        1. If _hint_ was not passed, let _hint_ be ~normal~.
         1. If _method_ is not present, then
-          1. Set _method_ to ? GetMethod(_obj_, @@iterator).
+          1. If _hint_ is ~async~,
+            1. Set _method_ to ? GetMethod(_obj_, @@asyncIterator).
+            1. If _method_ is *undefined*,
+              1. Let _syncMethod_ be ? GetMethod(_obj_, @@iterator).
+              1. Let _syncIteratorRecord_ be ? GetIterator(_obj_, ~normal~, _syncMethod_).
+              1. Return ? CreateAsyncFromSyncIterator(_syncIteratorRecord_).
+          1. Otherwise, set _method_ to ? GetMethod(_obj_, @@iterator).
         1. Let _iterator_ be ? Call(_method_, _obj_).
         1. If Type(_iterator_) is not Object, throw a *TypeError* exception.
         1. Let _nextMethod_ be ? GetV(_iterator_, `"next"`).
@@ -7367,6 +7540,16 @@
           1. If _result_.[[Value]] is not *undefined*, throw a *TypeError* exception.
         1. Else, ReturnIfAbrupt(_result_).
         1. Return ? _envRec_.GetThisBinding().
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgeneratorfunctioncreate" aoid="AsyncGeneratorFunctionCreate">
+      <h1><ins>AsyncGeneratorFunctionCreate (_kind_, _ParameterList_, _Body_, _Scope_, _Strict_)</ins></h1>
+      <p>The abstract operation AsyncGeneratorFunctionCreate requires the arguments: _kind_ which is one of (~Normal~, ~Method~), a parameter list production specified by _ParameterList_, a body production specified by _Body_, a Lexical Environment specified by _Scope_, and a Boolean flag _Strict_. AsyncGeneratorFunctionCreate performs the following steps:</p>
+      <emu-alg>
+        1. Let _functionPrototype_ be the intrinsic object %AsyncGenerator%.
+        1. Let _F_ be ! FunctionAllocate(_functionPrototype_, _Strict_, `"generator"`).
+        1. Return ! FunctionInitialize(_F_, _kind_, _ParameterList_, _Body_, _Scope_).
       </emu-alg>
     </emu-clause>
 
@@ -14655,7 +14838,14 @@
     BreakableStatement[Yield, Await, Return] :
       IterationStatement[?Yield, ?Await, ?Return]
       SwitchStatement[?Yield, ?Await, ?Return]
+
+    ReturnStatement[Yield, Await] :
+      `return` `;`
+      `return` [no LineTerminator here] Expression[+In, ?Yield, ?Await] `;`
   </emu-grammar>
+  <emu-note>
+    <p>A `return` statement causes a function to cease execution and return a value to the caller. If |Expression| is omitted, the return value is *undefined*. Otherwise, the return value is the value of |Expression|.</p>
+  </emu-note>
 
   <!-- es6num="13.1" -->
   <emu-clause id="sec-statement-semantics">
@@ -16086,6 +16276,9 @@
         `for` `(` [lookahead != `let` ] LeftHandSideExpression[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
         `for` `(` `var` ForBinding[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
         `for` `(` ForDeclaration[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
+        [+Await] `for` `await` `(` [lookahead != `let` ] LeftHandSideExpression[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
+        [+Await] `for` `await` `(` `var` ForBinding[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
+        [+Await] `for` `await` `(` ForDeclaration[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
 
       ForDeclaration[Yield, Await] :
         LetOrConst ForBinding[?Yield, ?Await]
@@ -16118,6 +16311,9 @@
             `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
             `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
             `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+            `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+            `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+            `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
         </emu-grammar>
         <ul>
           <li>
@@ -16489,7 +16685,7 @@
 
     <!-- es6num="13.7.5" -->
     <emu-clause id="sec-for-in-and-for-of-statements">
-      <h1>The `for`-`in` and `for`-`of` Statements</h1>
+      <h1>The `for`-`in`, `for`-`of`, and `for`-`await`-`of` Statements</h1>
 
       <!-- es6num="13.7.5.1" -->
       <emu-clause id="sec-for-in-and-for-of-statements-static-semantics-early-errors">
@@ -16498,6 +16694,7 @@
           IterationStatement :
             `for` `(` LeftHandSideExpression `in` Expression `)` Statement
             `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+            `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
         </emu-grammar>
         <ul>
           <li>
@@ -16520,6 +16717,7 @@
           IterationStatement :
             `for` `(` ForDeclaration `in` Expression `)` Statement
             `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+            `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
         </emu-grammar>
         <ul>
           <li>
@@ -16557,6 +16755,10 @@
             `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
             `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
             `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+            `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+            `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+            `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+
         </emu-grammar>
         <emu-alg>
           1. Return ContainsDuplicateLabels of |Statement| with argument _labelSet_.
@@ -16579,6 +16781,9 @@
             `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
             `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
             `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+            `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+            `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+            `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
         </emu-grammar>
         <emu-alg>
           1. Return ContainsUndefinedBreakTarget of |Statement| with argument _labelSet_.
@@ -16601,6 +16806,9 @@
             `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
             `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
             `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+            `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+            `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+            `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
         </emu-grammar>
         <emu-alg>
           1. Return ContainsUndefinedContinueTarget of |Statement| with arguments _iterationSet_ and &laquo; &raquo;.
@@ -16649,17 +16857,29 @@
         <emu-alg>
           1. Return the VarDeclaredNames of |Statement|.
         </emu-alg>
-        <emu-grammar>IterationStatement : `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement</emu-grammar>
+        <emu-grammar>
+          IterationStatement :
+            `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+            `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+        </emu-grammar>
         <emu-alg>
           1. Return the VarDeclaredNames of |Statement|.
         </emu-alg>
-        <emu-grammar>IterationStatement : `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement</emu-grammar>
+        <emu-grammar>
+          IterationStatement :
+            `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+            `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+        </emu-grammar>
         <emu-alg>
           1. Let _names_ be the BoundNames of |ForBinding|.
           1. Append to _names_ the elements of the VarDeclaredNames of |Statement|.
           1. Return _names_.
         </emu-alg>
-        <emu-grammar>IterationStatement : `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement</emu-grammar>
+        <emu-grammar>
+          IterationStatement :
+            `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+            `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+        </emu-grammar>
         <emu-alg>
           1. Return the VarDeclaredNames of |Statement|.
         </emu-alg>
@@ -16682,21 +16902,37 @@
           1. Append to _declarations_ the elements of the VarScopedDeclarations of |Statement|.
           1. Return _declarations_.
         </emu-alg>
-        <emu-grammar>IterationStatement : `for` `(` ForDeclaration `in` Expression `)` Statement</emu-grammar>
+        <emu-grammar>
+          IterationStatement :
+            `for` `(` ForDeclaration `in` Expression `)` Statement
+            `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+        </emu-grammar>
         <emu-alg>
           1. Return the VarScopedDeclarations of |Statement|.
         </emu-alg>
-        <emu-grammar>IterationStatement : `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement</emu-grammar>
+        <emu-grammar>
+          IterationStatement :
+            `for` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+            `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+        </emu-grammar>
         <emu-alg>
           1. Return the VarScopedDeclarations of |Statement|.
         </emu-alg>
-        <emu-grammar>IterationStatement : `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement</emu-grammar>
+        <emu-grammar>
+          IterationStatement :
+            `for` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+            `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+        </emu-grammar>
         <emu-alg>
           1. Let _declarations_ be a List containing |ForBinding|.
           1. Append to _declarations_ the elements of the VarScopedDeclarations of |Statement|.
           1. Return _declarations_.
         </emu-alg>
-        <emu-grammar>IterationStatement : `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement</emu-grammar>
+        <emu-grammar>
+          IterationStatement :
+            `for` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+            `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+        </emu-grammar>
         <emu-alg>
           1. Return the VarScopedDeclarations of |Statement|.
         </emu-alg>
@@ -16770,6 +17006,27 @@
           1. Let _keyResult_ be the result of performing ? ForIn/OfHeadEvaluation(BoundNames of |ForDeclaration|, |AssignmentExpression|, ~iterate~).
           1. Return ? ForIn/OfBodyEvaluation(|ForDeclaration|, |Statement|, _keyResult_, ~iterate~, ~lexicalBinding~, _labelSet_).
         </emu-alg>
+        <emu-grammar>
+          IterationStatement : `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+        </emu-grammar>
+        <emu-alg>
+          1. Let _keyResult_ be the result of performing ? ForIn/OfHeadEvaluation(« », |AssignmentExpression|, ~async-iterate~).
+          1. Return ? ForIn/OfBodyEvaluation(|LeftHandSideExpression|, |Statement|, _keyResult_, ~assignment~, _labelSet_, ~async~).
+        </emu-alg>
+        <emu-grammar>
+          IterationStatement : `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+        </emu-grammar>
+        <emu-alg>
+          1. Let _keyResult_ be the result of performing ? ForIn/OfHeadEvaluation(« », |AssignmentExpression|, ~async-iterate~).
+          1. Return ? ForIn/OfBodyEvaluation(|ForBinding|, |Statement|, _keyResult_, ~varBinding~, _labelSet_, ~async~).
+        </emu-alg>
+        <emu-grammar>
+          IterationStatement : `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
+        </emu-grammar>
+        <emu-alg>
+          1. Let _keyResult_ be the result of performing ? ForIn/OfHeadEvaluation(BoundNames of |ForDeclaration|, |AssignmentExpression|, ~async-iterate~).
+          1. Return ? ForIn/OfBodyEvaluation(|ForDeclaration|, |Statement|, _keyResult_, ~lexicalBinding~, _labelSet_, ~async~).
+        </emu-alg>
         <emu-note>
           <p>This section is extended by Annex <emu-xref href="#sec-initializers-in-forin-statement-heads"></emu-xref>.</p>
         </emu-note>
@@ -16798,15 +17055,18 @@
             1. Return ? EnumerateObjectProperties(_obj_).
           1. Else,
             1. Assert: _iterationKind_ is ~iterate~.
-            1. Return ? GetIterator(_exprValue_).
+            1. If _iterationKind_ is ~async-iterate~, let _iteratorHint_ be ~async~.
+            1. Else, let _iteratorHint_ be ~normal~.
+            1. Return ? GetIterator(_exprValue_, _iteratorHint_).
         </emu-alg>
       </emu-clause>
 
       <!-- es6num="13.7.5.13" -->
       <emu-clause id="sec-runtime-semantics-forin-div-ofbodyevaluation-lhs-stmt-iterator-lhskind-labelset" aoid="ForIn/OfBodyEvaluation">
-        <h1>Runtime Semantics: ForIn/OfBodyEvaluation ( _lhs_, _stmt_, _iteratorRecord_, _iterationKind_, _lhsKind_, _labelSet_ )</h1>
-        <p>The abstract operation ForIn/OfBodyEvaluation is called with arguments _lhs_, _stmt_, _iteratorRecord_, _iterationKind_, _lhsKind_, and _labelSet_. The value of _iterationKind_ is either ~enumerate~ or ~iterate~. The value of _lhsKind_ is either ~assignment~, ~varBinding~ or ~lexicalBinding~.</p>
+        <h1>Runtime Semantics: ForIn/OfBodyEvaluation ( _lhs_, _stmt_, _iteratorRecord_, _iterationKind_, _lhsKind_, _labelSet_ [ , _iteratorKind_ ])</h1>
+        <p>The abstract operation ForIn/OfBodyEvaluation is called with arguments _lhs_, _stmt_, _iteratorRecord_, _lhsKind_, labelSet_, and optional argument _iteratorKind_. The value of _lhsKind_ is either ~assignment~, ~varBinding~ or ~lexicalBinding~. The value of _iteratorKind_ is either ~normal~ or ~async~.</p>
         <emu-alg>
+          1. If _iteratorKind_ was not passed, let _iteratorKind_ be ~normal~.
           1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
           1. Let _V_ be *undefined*.
           1. Let _destructuring_ be IsDestructuring of _lhs_.
@@ -16814,8 +17074,9 @@
             1. Assert: _lhs_ is a |LeftHandSideExpression|.
             1. Let _assignmentPattern_ be the result of reparsing _lhs_ as an |AssignmentPattern|.
           1. Repeat,
-            1. Let _nextResult_ be ? IteratorStep(_iteratorRecord_).
-            1. If _nextResult_ is *false*, return NormalCompletion(_V_).
+            1. Let _nextResult_ be ? Call(_iteratorRecord_.[[NextMethod]], _iteratorRecord_.[[Iterator]], &laquo; &raquo;).
+            1. If _iteratorKind_ is ~async~, then set _nextResult_ to ? Await(_nextResult_).
+            1. If Type(_nextResult_) is not Object, throw a *TypeError* exception.
             1. Let _nextValue_ be ? IteratorValue(_nextResult_).
             1. If _lhsKind_ is either ~assignment~ or ~varBinding~, then
               1. If _destructuring_ is *false*, then
@@ -16849,6 +17110,7 @@
                 1. Let _status_ be the result of performing BindingInitialization for _lhs_ passing _nextValue_ and _iterationEnv_ as arguments.
             1. If _status_ is an abrupt completion, then
               1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+              1. If _iteratorKind_ is ~async~, return ? AsyncIteratorClose(_iteratorRecord_, _status_).
               1. If _iterationKind_ is ~enumerate~, then
                 1. Return _status_.
               1. Else,
@@ -17043,6 +17305,7 @@
       <emu-alg>
         1. Let _exprRef_ be the result of evaluating |Expression|.
         1. Let _exprValue_ be ? GetValue(_exprRef_).
+        1. If ! GetGeneratorKind() is ~async~, set _exprValue_ to ? Await(_exprValue_).
         1. Return Completion{[[Type]]: ~return~, [[Value]]: _exprValue_, [[Target]]: ~empty~}.
       </emu-alg>
     </emu-clause>
@@ -19016,6 +19279,7 @@
       <emu-grammar>
         MethodDefinition :
           GeneratorMethod
+          AsyncGeneratorMethod
           AsyncMethod
           `get` PropertyName `(` `)` `{` FunctionBody `}`
           `set` PropertyName `(` PropertySetParameterList `)` `{` FunctionBody `}`
@@ -19379,55 +19643,330 @@
       </emu-note>
       <emu-grammar>YieldExpression : `yield`</emu-grammar>
       <emu-alg>
-        1. Return ? GeneratorYield(CreateIterResultObject(*undefined*, *false*)).
+        1. Let _generatorKind_ be ! GetGeneratorKind().
+        1. If _generatorKind_ is ~async~, then return ? AsyncGeneratorYield(*undefined*).
+        1. Otherwise, return ? GeneratorYield(CreateIterResultObject(*undefined*, *false*)).
       </emu-alg>
       <emu-grammar>YieldExpression : `yield` AssignmentExpression</emu-grammar>
       <emu-alg>
+        1. Let _generatorKind_ be ! GetGeneratorKind().
         1. Let _exprRef_ be the result of evaluating |AssignmentExpression|.
         1. Let _value_ be ? GetValue(_exprRef_).
-        1. Return ? GeneratorYield(CreateIterResultObject(_value_, *false*)).
+        1. If _generatorKind_ is ~async~, then return ? AsyncGeneratorYield(_value_).
+        1. Otherwise, return ? GeneratorYield(CreateIterResultObject(_value_, *false*)).
       </emu-alg>
       <emu-grammar>YieldExpression : `yield` `*` AssignmentExpression</emu-grammar>
       <emu-alg>
+        1. Let _generatorKind_ be ! GetGeneratorKind().
         1. Let _exprRef_ be the result of evaluating |AssignmentExpression|.
         1. Let _value_ be ? GetValue(_exprRef_).
-        1. Let _iteratorRecord_ be ? GetIterator(_value_).
+        1. Let _iteratorRecord_ be ? GetIterator(_value_, _generatorKind_).
         1. Let _iterator_ be _iteratorRecord_.[[Iterator]].
         1. Let _received_ be NormalCompletion(*undefined*).
         1. Repeat,
           1. If _received_.[[Type]] is ~normal~, then
-            1. Let _innerResult_ be ? IteratorNext(_iteratorRecord_, _received_.[[Value]]).
+            1. Let _innerResult_ be ? Call(_iteratorRecord_.[[NextMethod]], _iteratorRecord_.[[Iterator]], &laquo; _received_.[[Value]] &raquo;).
+            1. If _generatorKind_ is ~async~, then set _innerResult_ to ? Await(_innerResult_).
+            1. If Type(_innerResult_) is not Object, throw a *TypeError* exception.
             1. Let _done_ be ? IteratorComplete(_innerResult_).
             1. If _done_ is *true*, then
               1. Return ? IteratorValue(_innerResult_).
-            1. Set _received_ to GeneratorYield(_innerResult_).
+            1. If _generatorKind_ is ~async~, then let _received_ be AsyncGeneratorYield(? IteratorValue(_innerResult_)).
+            1. Else, let _received_ be GeneratorYield(_innerResult_).
           1. Else if _received_.[[Type]] is ~throw~, then
             1. Let _throw_ be ? GetMethod(_iterator_, `"throw"`).
             1. If _throw_ is not *undefined*, then
               1. Let _innerResult_ be ? Call(_throw_, _iterator_, &laquo; _received_.[[Value]] &raquo;).
+              1. If _generatorKind_ is ~async~, then set _innerResult_ to ? Await(_innerResult_).
               1. NOTE: Exceptions from the inner iterator `throw` method are propagated. Normal completions from an inner `throw` method are processed similarly to an inner `next`.
               1. If Type(_innerResult_) is not Object, throw a *TypeError* exception.
               1. Let _done_ be ? IteratorComplete(_innerResult_).
               1. If _done_ is *true*, then
                 1. Return ? IteratorValue(_innerResult_).
-              1. Set _received_ to GeneratorYield(_innerResult_).
+              1. If _generatorKind_ is ~async~, then let _received_ be AsyncGeneratorYield(? IteratorValue(_innerResult_)).
+              1. Else, let _received_ be GeneratorYield(_innerResult_).
             1. Else,
               1. NOTE: If _iterator_ does not have a `throw` method, this throw is going to terminate the `yield*` loop. But first we need to give _iterator_ a chance to clean up.
-              1. Perform ? IteratorClose(_iteratorRecord_, Completion{[[Type]]: ~normal~, [[Value]]: ~empty~, [[Target]]: ~empty~}).
+              1. Let _closeCompletion_ be Completion{[[Type]]: ~normal~, [[Value]]: ~empty~, [[Target]]: ~empty~}.
+              1. If _generatorKind_ is ~async~, perform ? AsyncIteratorClose(_iteratorRecord_, _closeCompletion_).
+              1. Else, perform ? IteratorClose(_iteratorRecord_, _closeCompletion_).
               1. NOTE: The next step throws a *TypeError* to indicate that there was a `yield*` protocol violation: _iterator_ does not have a `throw` method.
               1. Throw a *TypeError* exception.
           1. Else,
             1. Assert: _received_.[[Type]] is ~return~.
             1. Let _return_ be ? GetMethod(_iterator_, `"return"`).
-            1. If _return_ is *undefined*, return Completion(_received_).
+            1. If _return_ is *undefined*, then:
+              1. If _generatorKind_ is ~async~, then set _received_.[[Value]] to ? Await(_received_.[[Value]]).
+              1. Return Completion(_received_).
             1. Let _innerReturnResult_ be ? Call(_return_, _iterator_, &laquo; _received_.[[Value]] &raquo;).
+            1. If _generatorKind_ is ~async~, then set _innerReturnResult_ to ? Await(_innerReturnResult_).
             1. If Type(_innerReturnResult_) is not Object, throw a *TypeError* exception.
             1. Let _done_ be ? IteratorComplete(_innerReturnResult_).
             1. If _done_ is *true*, then
               1. Let _value_ be ? IteratorValue(_innerReturnResult_).
               1. Return Completion{[[Type]]: ~return~, [[Value]]: _value_, [[Target]]: ~empty~}.
-            1. Set _received_ to GeneratorYield(_innerReturnResult_).
+            1. If _generatorKind_ is ~async~, then let _received_ be AsyncGeneratorYield(? IteratorValue(_innerResult_)).
+            1. Else, let _received_ be GeneratorYield(_innerResult_).
       </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-async-generator-function-definitions">
+    <h1>Async Generator Function Definitions</h1>
+    <h2>Syntax</h2>
+    <emu-grammar>
+      AsyncGeneratorMethod[Yield, Await] :
+        `async` [no LineTerminator here] `*` PropertyName[?Yield, ?Await] `(` UniqueFormalParameters[+Yield, +Await] `)` `{` AsyncGeneratorBody `}`
+
+      AsyncGeneratorDeclaration[Yield, Await, Default] :
+        `async` [no LineTerminator here] `function` `*` BindingIdentifier[?Yield, ?Await] `(` FormalParameters[+Yield, +Await] `)` `{` AsyncGeneratorBody `}`
+        [+Default] `async` [no LineTerminator here] `function` `*` `(` FormalParameters[+Yield, +Await] `)` `{` AsyncGeneratorBody `}`
+
+      AsyncGeneratorExpression :
+        `async` [no LineTerminator here] `function` `*` BindingIdentifier[+Yield, +Await]? `(` FormalParameters[+Yield, +Await] `)` `{` AsyncGeneratorBody `}`
+
+      AsyncGeneratorBody :
+        FunctionBody[+Yield, +Await]
+    </emu-grammar>
+    <emu-note>
+      <p>|YieldExpression| and |AwaitExpression| cannot be used within the |FormalParameters| of an async generator function because any expressions that are part of |FormalParameters| are evaluated before the resulting async generator object is in a resumable state.</p>
+    </emu-note>
+    <emu-note>
+      <p>Abstract operations relating to async generator objects are defined in <emu-xref href="#sec-asyncgenerator-abstract-operations"></emu-xref>.</p>
+    </emu-note>
+
+    <emu-clause id="sec-async-generator-function-definitions-static-semantics-early-errors">
+      <h1>Static Semantics: Early Errors</h1>
+      <emu-grammar>AsyncGeneratorMethod : `*` PropertyName `(` UniqueFormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <ul>
+        <li>It is a Syntax Error if HasDirectSuper of |AsyncGeneratorMethod| is *true*.</li>
+        <li>It is a Syntax Error if |UniqueFormalParameters| Contains |YieldExpression| is *true*.</li>
+        <li>It is a Syntax Error if |UniqueFormalParameters| Contains |AwaitExpression| is *true*.</li>
+        <li>It is a Syntax Error if ContainsUseStrict of |AsyncGeneratorBody| is *true* and IsSimpleParameterList of |UniqueFormalParameters| is *false*.</li>
+        <li>It is a Syntax Error if any element of the BoundNames of |UniqueFormalParameters| also occurs in the LexicallyDeclaredNames of |AsyncGeneratorBody|.</li>
+      </ul>
+      <emu-grammar>
+        AsyncGeneratorDeclaration : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+
+        AsyncGeneratorDeclaration : `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+
+        AsyncGeneratorDeclaration : `function` `*` BindingIdentifier? `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <ul>
+        <li>If the source code matching this production is strict mode code, the Early Error rules for <emu-grammar>UniqueFormalParameters : FormalParameters</emu-grammar> are applied.</li>
+        <li>If the source code matching this production is strict mode code, it is a Syntax Error if |BindingIdentifier| is the |IdentifierName| `eval` or the |IdentifierName| `arguments`.</li>
+        <li>It is a Syntax Error if ContainsUseStrict of |AsyncGeneratorBody| is *true* and IsSimpleParameterList of |FormalParameters| is *false*.</li>
+        <li>It is a Syntax Error if any element of the BoundNames of |FormalParameters| also occurs in the LexicallyDeclaredNames of |AsyncGeneratorBody|.</li>
+        <li>It is a Syntax Error if |FormalParameters| Contains |YieldExpression| is *true*.</li>
+        <li>It is a Syntax Error if |FormalParameters| Contains |AwaitExpression| is *true*.</li>
+        <li>It is a Syntax Error if |FormalParameters| Contains |SuperProperty| is *true*.</li>
+        <li>It is a Syntax Error if |AsyncGeneratorBody| Contains |SuperProperty| is *true*.</li>
+        <li>It is a Syntax Error if |FormalParameters| Contains |SuperCall| is *true*.</li>
+        <li>It is a Syntax Error if |AsyncGeneratorBody| Contains |SuperCall| is *true*.</li>
+      </ul>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-static-semantics-boundnames">
+      <h1>Static Semantics: BoundNames</h1>
+      <emu-see-also-para op="BoundNames"></emu-see-also-para>
+      <emu-grammar>AsyncGeneratorDeclaration : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return the BoundNames of |BindingIdentifier|.
+      </emu-alg>
+      <emu-grammar>AsyncGeneratorDeclaration : `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return &laquo; `"*default*"` &raquo;.
+      </emu-alg>
+      <emu-note>
+        <p>`"*default*"` is used within this specification as a synthetic name for hoistable anonymous functions that are defined using export declarations.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-static-semantics-computedpropertycontains">
+      <h1>Static Semantics: ComputedPropertyContains</h1>
+      <p>With parameter _symbol_.</p>
+      <emu-see-also-para op="ComputedPropertyContains"></emu-see-also-para>
+      <emu-grammar>AsyncGeneratorMethod : `*` PropertyName `(` UniqueFormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return the result of ComputedPropertyContains for |PropertyName| with argument _symbol_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-static-semantics-contains">
+      <h1>Static Semantics: Contains</h1>
+      <p>With parameter _symbol_.</p>
+      <emu-see-also-para op="Contains"></emu-see-also-para>
+      <emu-grammar>
+        AsyncGeneratorDeclaration : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+
+        AsyncGeneratorDeclaration : `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+
+        AsyncGeneratorExpression : `function` `*` BindingIdentifier? `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Return *false*.
+      </emu-alg>
+      <emu-note>
+        <p>Static semantic rules that depend upon substructure generally do not look into function definitions.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-static-semantics-hasdirectsuper">
+      <h1>Static Semantics: HasDirectSuper</h1>
+      <emu-see-also-para op="HasDirectSuper"></emu-see-also-para>
+      <emu-grammar>AsyncGeneratorMethod : `*` PropertyName `(` UniqueFormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. If |UniqueFormalParameters| Contains |SuperCall| is *true*, return *true*.
+        1. Return |AsyncGeneratorBody| Contains |SuperCall|.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-static-semantics-hasname">
+      <h1>Static Semantics: HasName</h1>
+      <emu-see-also-para op="HasName"></emu-see-also-para>
+      <emu-grammar>AsyncGeneratorExpression : `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return *false*.
+      </emu-alg>
+      <emu-grammar>AsyncGeneratorExpression : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-static-semantics-isconstantdeclaration">
+      <h1>Static Semantics: IsConstantDeclaration</h1>
+      <emu-see-also-para op="IsConstantDeclaration"></emu-see-also-para>
+      <emu-grammar>
+        AsyncGeneratorDeclaration : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+
+        AsyncGeneratorDeclaration : `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Return *false*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-static-semantics-isfunctiondefinition">
+      <h1>Static Semantics: IsFunctionDefinition</h1>
+      <emu-see-also-para op="IsFunctionDefinition"></emu-see-also-para>
+      <emu-grammar>AsyncGeneratorExpression : `function` `*` BindingIdentifier? `(` FormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-static-semantics-propname">
+      <h1>Static Semantics: PropName</h1>
+      <emu-see-also-para op="PropName"></emu-see-also-para>
+      <emu-grammar>AsyncGeneratorMethod : `*` PropertyName `(` UniqueFormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return PropName of |PropertyName|.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgenerator-definitions-evaluatebody">
+      <h1>Runtime Semantics: EvaluateBody</h1>
+      <p>With parameters _functionObject_ and List _argumentsList_.</p>
+      <emu-grammar>
+        AsyncGeneratorBody : FunctionBody
+      </emu-grammar>
+      <emu-alg>
+        1. Perform ? FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
+        1. Let _generator_ be ? OrdinaryCreateFromConstructor(_functionObject_, `"%AsyncGeneratorPrototype%"`, « [[AsyncGeneratorState]], [[AsyncGeneratorContext]], [[AsyncGeneratorQueue]] »).
+        1. Perform ! AsyncGeneratorStart(_generator_, _FunctionBody_).
+        1. Return Completion{[[Type]]: ~return~, [[Value]]: _generator_, [[Target]]: ~empty~}.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgenerator-definitions-instantiatefunctionobject">
+      <h1>Runtime Semantics: InstantiateFunctionObject</h1>
+      <p>With parameter _scope_.</p>
+      <emu-grammar>
+        AsyncGeneratorDeclaration : `async` [no LineTerminator here] `function` `*` BindingIdentifier `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. If the function code for |AsyncGeneratorDeclaration| is strict mode code, let _strict_ be *true*. Otherwise let _strict_ be *false*.
+        1. Let _name_ be StringValue of |BindingIdentifier|.
+        1. Let _F_ be ! AsyncGeneratorFunctionCreate(~Normal~, |FormalParameters|, |AsyncGeneratorBody|, _scope_, _strict_).
+        1. Let _prototype_ be ! ObjectCreate(%AsyncGeneratorPrototype%).
+        1. Perform ! DefinePropertyOrThrow(_F_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
+        1. Perform ! SetFunctionName(_F_, _name_).
+        1. Return _F_.
+      </emu-alg>
+
+      <emu-grammar>
+        AsyncGeneratorDeclaration : `async` [no LineTerminator here] `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. If the function code for |AsyncGeneratorDeclaration| is strict mode code, let _strict_ be *true*. Otherwise let _strict_ be *false*.
+        1. Let _F_ be AsyncGeneratorFunctionCreate(~Normal~, |FormalParameters|, |AsyncGeneratorBody|, _scope_, _strict_).
+        1. Let _prototype_ be ObjectCreate(%AsyncGeneratorPrototype%).
+        1. Perform DefinePropertyOrThrow(_F_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
+        1. Perform SetFunctionName(_F_, `"default"`).
+        1. Return _F_.
+      </emu-alg>
+      <emu-note>
+        <p>An anonymous |AsyncGeneratorDeclaration| can only occur as part of an `export default` declaration.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgenerator-definitions-propertydefinitionevaluation">
+      <h1>Runtime Semantics: PropertyDefinitionEvaluation</h1>
+      <p>With parameter _object_ and _enumerable_.</p>
+      <emu-grammar>
+        AsyncGeneratorMethod : `async` [no LineTerminator here] `*` PropertyName `(` UniqueFormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Let _propKey_ be the result of evaluating |PropertyName|.
+        1. ReturnIfAbrupt(_propKey_).
+        1. If the function code for this |AsyncGeneratorMethod| is strict mode code, let _strict_ be *true*. Otherwise let _strict_ be *false*.
+        1. Let _scope_ be the running execution context's LexicalEnvironment.
+        1. Let _closure_ be ! AsyncGeneratorFunctionCreate(~Method~, |UniqueFormalParameters|, |AsyncGeneratorBody|, _scope_, _strict_).
+        1. Perform ! MakeMethod(_closure_, _object_).
+        1. Let _prototype_ be ! ObjectCreate(%AsyncGeneratorPrototype%).
+        1. Perform ! DefinePropertyOrThrow(_closure_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
+        1. Perform ! SetFunctionName(_closure_, _propKey_).
+        1. Let _desc_ be PropertyDescriptor{[[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true*}.
+        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgenerator-definitions-evaluation">
+      <h1>Runtime Semantics: Evaluation</h1>
+
+      <emu-grammar>
+        AsyncGeneratorExpression : `async` [no LineTerminator here] `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. If the function code for this |AsyncGeneratorExpression| is strict mode code, let _strict_ be *true*. Otherwise let _strict_ be *false*.
+        1. Let _scope_ be the LexicalEnvironment of the running execution context.
+        1. Let _closure_ be ! AsyncGeneratorFunctionCreate(~Normal~, |FormalParameters|, |AsyncGeneratorBody|, _scope_, _strict_).
+        1. Let _prototype_ be ! ObjectCreate(%AsyncGeneratorPrototype%).
+        1. Perform ! DefinePropertyOrThrow(_closure_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
+        1. Return _closure_.
+      </emu-alg>
+
+      <emu-grammar>
+        AsyncGeneratorExpression : `async` [no LineTerminator here] `function` `*` BindingIdentifier `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. If the function code for this |AsyncGeneratorExpression| is strict mode code, let _strict_ be *true*. Otherwise let _strict_ be *false*.
+        1. Let _scope_ be the running execution context's LexicalEnvironment.
+        1. Let _funcEnv_ be ! NewDeclarativeEnvironment(_scope_).
+        1. Let _envRec_ be _funcEnv_'s EnvironmentRecord.
+        1. Let _name_ be StringValue of |BindingIdentifier|.
+        1. Perform ! _envRec_.CreateImmutableBinding(_name_).
+        1. Let _closure_ be ! AsyncGeneratorFunctionCreate(~Normal~, |FormalParameters|, |AsyncGeneratorBody|, _funcEnv_, _strict_).
+        1. Let _prototype_ be ! ObjectCreate(%AsyncGeneratorPrototype%).
+        1. Perform ! DefinePropertyOrThrow(_closure_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
+        1. Perform ! SetFunctionName(_closure_, _name_).
+        1. Perform ! _envRec_.InitializeBinding(_name_, _closure_).
+        1. Return _closure_.
+      </emu-alg>
+      <emu-note>
+        <p>The |BindingIdentifier| in an |AsyncGeneratorExpression| can be referenced from inside the |AsyncGeneratorExpression|'s |AsyncGeneratorBody| to allow the generator code to call itself recursively. However, unlike in an |AsyncGeneratorDeclaration|, the |BindingIdentifier| in an |AsyncGeneratorExpression| cannot be referenced from and does not affect the scope enclosing the |AsyncGeneratorExpression|.</p>
+      </emu-note>
     </emu-clause>
   </emu-clause>
 
@@ -24544,7 +25083,7 @@
         <!-- es6num="19.2.1.1.1" -->
         <emu-clause id="sec-createdynamicfunction" aoid="CreateDynamicFunction">
           <h1>Runtime Semantics: CreateDynamicFunction( _constructor_, _newTarget_, _kind_, _args_ )</h1>
-          <p>The abstract operation CreateDynamicFunction is called with arguments _constructor_, _newTarget_, _kind_, and _args_. _constructor_ is the constructor function that is performing this action, _newTarget_ is the constructor that `new` was initially applied to, _kind_ is either `"normal"`, `"generator"`, or `"async"`, and _args_ is a List containing the actual argument values that were passed to _constructor_. The following steps are taken:</p>
+          <p>The abstract operation CreateDynamicFunction is called with arguments _constructor_, _newTarget_, _kind_, and _args_. _constructor_ is the constructor function that is performing this action, _newTarget_ is the constructor that `new` was initially applied to, _kind_ is either `"normal"`, `"generator"`, `"async"`, or `"async generator"`, and _args_ is a List containing the actual argument values that were passed to _constructor_. The following steps are taken:</p>
           <emu-alg>
             1. Assert: The execution context stack has at least two elements.
             1. Let _callerContext_ be the second to top element of the execution context stack.
@@ -24560,11 +25099,16 @@
               1. Let _goal_ be the grammar symbol |GeneratorBody|.
               1. Let _parameterGoal_ be the grammar symbol |FormalParameters[+Yield, ~Await]|.
               1. Let _fallbackProto_ be `"%Generator%"`.
-            1. Else,
+            1. Else if _kind_ is `"async"`,
               1. Assert: _kind_ is `"async"`.
               1. Let _goal_ be the grammar symbol |AsyncFunctionBody|.
               1. Let _parameterGoal_ be the grammar symbol |FormalParameters[~Yield, +Await]|.
               1. Let _fallbackProto_ be `"%AsyncFunctionPrototype%"`.
+            1. Else,
+              1. Assert: _kind_ is `"async generator"`
+              1. Let _goal_ be the grammar symbol |AsyncGeneratorBody|.
+              1. Let _parameterGoal_ be the grammar symbol |FormalParameters[+Yield, +Await]|.
+              1. Let _fallbackProto_ be `"%AsyncGenerator%"`.
             1. Let _argCount_ be the number of elements in _args_.
             1. Let _P_ be the empty String.
             1. If _argCount_ = 0, let _bodyText_ be the empty String.
@@ -24590,9 +25134,9 @@
             1. If _parameters_ Contains |SuperCall| is *true*, throw a *SyntaxError* exception.
             1. If _body_ Contains |SuperProperty| is *true*, throw a *SyntaxError* exception.
             1. If _parameters_ Contains |SuperProperty| is *true*, throw a *SyntaxError* exception.
-            1. If _kind_ is `"generator"`, then
+            1. If _kind_ is `"generator"` or `"async generator"`, then
               1. If _parameters_ Contains |YieldExpression| is *true*, throw a *SyntaxError* exception.
-            1. If _kind_ is `"async"`, then
+            1. If _kind_ is `"async"` or `"async generator"`, then
               1. If _parameters_ Contains |AwaitExpression| is *true*, throw a *SyntaxError* exception.
             1. If _strict_ is *true*, then
               1. If BoundNames of _parameters_ contains any duplicate elements, throw a *SyntaxError* exception.
@@ -24603,6 +25147,9 @@
             1. Perform FunctionInitialize(_F_, ~Normal~, _parameters_, _body_, _scope_).
             1. If _kind_ is `"generator"`, then
               1. Let _prototype_ be ObjectCreate(%GeneratorPrototype%).
+              1. Perform DefinePropertyOrThrow(_F_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
+            1. Else if _kind_ is `"async generator"`, then
+              1. Let _prototype_ be ObjectCreate(%AsyncGeneratorPrototype%).
               1. Perform DefinePropertyOrThrow(_F_, `"prototype"`, PropertyDescriptor{[[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
             1. Else if _kind_ is `"normal"`, perform MakeConstructor(_F_).
             1. NOTE: Async functions are not constructable and do not have a [[Construct]] internal method or a `"prototype"` property.
@@ -24998,6 +25545,12 @@
       <emu-clause id="sec-symbol.iterator">
         <h1>Symbol.iterator</h1>
         <p>The initial value of `Symbol.iterator` is the well-known symbol @@iterator (<emu-xref href="#table-1"></emu-xref>).</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-symbol.asynciterator">
+        <h1><ins>Symbol.asyncIterator</ins></h1>
+        <p>The initial value of `Symbol.asyncIterator` is the well known symbol @@asyncIterator (<emu-xref href="#table-1-patch"></emu-xref>).</p>
         <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
       </emu-clause>
 
@@ -36337,6 +36890,91 @@ THH:mm:ss.sss
         </emu-note>
       </emu-clause>
 
+      <emu-clause id="sec-common-iteration-interfaces">
+        <h1>Common Iteration Interfaces</h1>
+
+        <emu-clause id="sec-asynciterable-interface">
+          <h1><ins>The <i>AsyncIterable</i> Interface</ins></h1>
+          <p>The <i>AsyncIterable</i> interface includes the properties described in <emu-xref href="#table-async-iterable"></emu-xref>:</p>
+          <emu-table id="table-async-iterable" caption="<i>AsyncIterable</i> Interface Required Properties">
+            <table>
+              <tbody>
+              <tr>
+                <th>Property</th>
+                <th>Value</th>
+                <th>Requirements</th>
+              </tr>
+              <tr>
+                <td>`@@asyncIterator`</td>
+                <td>A function that returns an <i>AsyncIterator</i> object.</td>
+                <td>The returned object must conform to the <i>AsyncIterator</i> interface.</td>
+              </tr>
+              </tbody>
+            </table>
+          </emu-table>
+        </emu-clause>
+
+        <emu-clause id="sec-asynciterator-interface">
+          <h1><ins>The <i>AsyncIterator</i> Interface</ins></h1>
+          <p>An object that implements the <i>AsyncIterator</i> interface must include the properties in <emu-xref href="#table-async-iterator-required"></emu-xref>. Such objects may also implement the properties in <emu-xref href="#table-async-iterator-optional"></emu-xref>.</p>
+          <emu-table id="table-async-iterator-required" caption="<i>AsyncIterator</i> Interface Required Properties">
+            <table>
+              <tbody>
+              <tr>
+                <th>Property</th>
+                <th>Value</th>
+                <th>Requirements</th>
+              </tr>
+              <tr>
+                <td>`next`</td>
+                <td>A function that returns a promise for an <i>IteratorResult</i> object.</td>
+                <td>
+                  <p>The returned promise, when fulfilled, must fulfill with an object which conforms to the <i>IteratorResult</i> interface. If a previous call to the `next` method of an <i>AsyncIterator</i> has returned a promise for an <i>IteratorResult</i> object whose `done` property is *true*, then all subsequent calls to the `next` method of that object should also return a promise for an <i>IteratorResult</i> object whose `done` property is *true*. However, this requirement is not enforced.</p>
+
+                  <p>Additionally, the <i>IteratorResult</i> object that serves as a fulfillment value should have a `value` property whose value is not a promise (or "thenable"). However, this requirement is also not enforced.</p>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </emu-table>
+          <emu-note>
+            <p>Arguments may be passed to the next function but their interpretation and validity is dependent upon the target <i>AsyncIterator</i>. The `for`-`await`-`of` statement and other common users of <em>AsyncIterators</em> do not pass any arguments, so <i>AsyncIterator</i> objects that expect to be used in such a manner must be prepared to deal with being called with no arguments.</p>
+          </emu-note>
+          <emu-table id="table-async-iterator-optional" caption="<i>AsyncIterator</i> Interface Optional Properties">
+            <table>
+              <tbody>
+              <tr>
+                <th>Property</th>
+                <th>Value</th>
+                <th>Requirements</th>
+              </tr>
+              <tr>
+                <td>`return`</td>
+                <td>A function that returns a promise for an <i>IteratorResult</i> object.</td>
+                <td>
+                  <p>The returned promise, when fulfilled, must fulfill with an object which conforms to the <i>IteratorResult</i> interface. Invoking this method notifies the <i>AsyncIterator</i> object that the caller does not intend to make any more `next` method calls to the <i>AsyncIterator</i>. The returned promise will fulfill with an <i>IteratorResult</i> object which will typically have a `done` property whose value is *true*, and a `value` property with the value passed as the argument of the `return` method. However, this requirement is not enforced.</p>
+
+                  <p>Additionally, the <i>IteratorResult</i> object that serves as a fulfillment value should have a `value` property whose value is not a promise (or "thenable"). If the argument value is used in the typical manner, then if it is a rejected promise, a promise rejected with the same reason should be returned; if it is a fulfilled promise, then its fulfillment value should be used as the `value` property of the returned promise's <i>IteratorResult</i> object fulfillment value. However, these requirements are also not enforced.</p>
+                </td>
+              </tr>
+              <tr>
+                <td>`throw`</td>
+                <td>A function that returns a promise for an <i>IteratorResult</i> object.</td>
+                <td>
+                  <p>The returned promise, when fulfilled, must fulfill with an object which conforms to the <i>IteratorResult</i> interface. Invoking this method notifies the <i>AsyncIterator</i> object that the caller has detected an error condition. The argument may be used to identify the error condition and typically will be an exception object. A typical response is to return a rejected promise which rejects with the value passed as the argument.</p>
+
+                  <p>If the returned promise is fulfilled, the <i>IteratorResult</i> fulfillment value will typically have a `done` property whose value is *true*. Additionally, it should have a `value` property whose value is not a promise (or "thenable"), but this requirement is not enforced.</p>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </emu-table>
+          <emu-note>
+            <p>Typically callers of these methods should check for their existence before invoking them. Certain ECMAScript language features including `for`-`await`-`of` and `yield*` call these methods after performing an existence check.</p>
+          </emu-note>
+        </emu-clause>
+      </emu-clause>
+
       <!-- es6num="25.1.1.3" -->
       <emu-clause id="sec-iteratorresult-interface">
         <h1>The IteratorResult Interface</h1>
@@ -36402,6 +37040,184 @@ THH:mm:ss.sss
         </emu-alg>
         <p>The value of the `name` property of this function is `"[Symbol.iterator]"`.</p>
       </emu-clause>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-asynciteratorprototype">
+    <h1><ins>The %AsyncIteratorPrototype% Object</ins></h1>
+    <p>The value of the [[Prototype]] internal slot of the <dfn>%AsyncIteratorPrototype%</dfn> object is the intrinsic object %ObjectPrototype%. The %AsyncIteratorPrototype% object is an ordinary object. The initial value of the [[Extensible]] internal slot of the %AsyncIteratorPrototype% object is *true*.</p>
+    <emu-note>
+      <p>All objects defined in this specification that implement the AsyncIterator interface also inherit from %AsyncIteratorPrototype%. ECMAScript code may also define objects that inherit from %AsyncIteratorPrototype%.The %AsyncIteratorPrototype% object provides a place where additional methods that are applicable to all async iterator objects may be added.</p>
+    </emu-note>
+
+    <emu-clause id="sec-asynciteratorprototype-asynciterator">
+      <h1>%AsyncIteratorPrototype% [ @@asyncIterator ] ( )</h1>
+      <p>The following steps are taken:</p>
+      <emu-alg>
+        1. Return the *this* value.
+      </emu-alg>
+      <p>The value of the `name` property of this function is `"[Symbol.asyncIterator]"`.</p>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-async-from-sync-iterator-objects">
+    <h1><ins>Async-from-Sync Iterator Objects</ins></h1>
+    <p>An Async-from-Sync Iterator object is an async iterator that adapts a specific synchronous iterator. There is not a named constructor for Async-from-Sync Iterator objects. Instead, Async-from-Sync iterator objects are created by the CreateAsyncFromSyncIterator abstract operation as needed.</p>
+
+    <emu-clause id="sec-createasyncfromsynciterator" aoid="CreateAsyncFromSyncIterator">
+      <h1>CreateAsyncFromSyncIterator(_syncIteratorRecord_) Abstract Operation</h1>
+      <p>The abstract operation CreateAsyncFromSyncIterator is used to create an async iterator Record from a synchronous iterator Record. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _asyncIterator_ be ! ObjectCreate(%AsyncFromSyncIteratorPrototype%, &laquo; [[SyncIteratorRecord]] &raquo;).
+        1. Set _asyncIterator_.[[SyncIteratorRecord]] to _syncIteratorRecord_.
+        1. Return ? GetIterator(_asyncIterator_, ~async~).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-%asyncfromsynciteratorprototype%-object">
+      <h1>The %AsyncFromSyncIteratorPrototype% Object</h1>
+      <p>All Async-from-Sync Iterator Objects inherit properties from the <dfn>%AsyncFromSyncIteratorPrototype%</dfn> intrinsic object. The %AsyncFromSyncIteratorPrototype% object is an ordinary object and its [[Prototype]] internal slot is the %AsyncIteratorPrototype% intrinsic object. In addition, %AsyncFromSyncIteratorPrototype% has the following properties:</p>
+
+      <emu-clause id="sec-%asyncfromsynciteratorprototype%.next">
+        <h1>%AsyncFromSyncIteratorPrototype%.next ( _value_ )</h1>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+          1. If Type(_O_) is not Object, or if _O_ does not have a [[SyncIteratorRecord]] internal slot, then
+            1. Let _badIteratorError_ be a new *TypeError* exception.
+            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _badIteratorError_ &raquo;).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _syncIteratorRecord_ be _O_.[[SyncIteratorRecord]].
+          1. Let _nextResult_ be IteratorNext(_syncIteratorRecord_, _value_).
+          1. IfAbruptRejectPromise(_nextResult_, _promiseCapability_).
+          1. Let _nextDone_ be IteratorComplete(_nextResult_).
+          1. IfAbruptRejectPromise(_nextDone_, _promiseCapability_).
+          1. Let _nextValue_ be IteratorValue(_nextResult_).
+          1. IfAbruptRejectPromise(_nextValue_, _promiseCapability_).
+          1. Let _valueWrapperCapability_ be ! NewPromiseCapability(%Promise%).
+          1. Perform ! Call(_valueWrapperCapability_.[[Resolve]], *undefined*, &laquo; _nextValue_ &raquo;).
+          1. Let _onFulfilled_ be a new built-in function object as defined in <emu-xref href="#sec-async-from-sync-iterator-value-unwrap-functions" title></emu-xref>.
+          1. Set _onFulfilled_.[[Done]] to _nextDone_.
+          1. Perform ! PerformPromiseThen(_valueWrapperCapability_.[[Promise]], _onFulfilled_, *undefined*, _promiseCapability_).
+          1. Return _promiseCapability_.[[Promise]].
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-%asyncfromsynciteratorprototype%.return">
+        <h1>%AsyncFromSyncIteratorPrototype%.return ( _value_ )</h1>
+
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+          1. If Type(_O_) is not Object, or if _O_ does not have a [[SyncIteratorRecord]] internal slot, then
+            1. Let _badIteratorError_ be a new *TypeError* exception.
+            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _badIteratorError_ &raquo;).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _syncIterator_ be _O_.[[SyncIteratorRecord]].[[Iterator]].
+          1. Let _return_ be GetMethod(_syncIterator_, `"return"`).
+          1. IfAbruptRejectPromise(_return_, _promiseCapability_).
+          1. If _return_ is *undefined*, then
+            1. Let _iterResult_ be ! CreateIterResultObject(_value_, *true*).
+            1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _iterResult_ &raquo;).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _returnResult_ be Call(_return_, _syncIterator_, &laquo; _value_ &raquo;).
+          1. IfAbruptRejectPromise(_returnResult_, _promiseCapability_).
+          1. If Type(_returnResult_) is not *Object*,
+            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a *TypeError* exception &raquo;).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _returnDone_ be IteratorComplete(_returnResult_).
+          1. IfAbruptRejectPromise(_returnDone_, _promiseCapability_).
+          1. Let _returnValue_ be IteratorValue(_returnResult_).
+          1. IfAbruptRejectPromise(_returnValue_, _promiseCapability_).
+          1. Let _valueWrapperCapability_ be ! NewPromiseCapability(%Promise%).
+          1. Perform ! Call(_valueWrapperCapability_.[[Resolve]], *undefined*, &laquo; _returnValue_ &raquo;).
+          1. Let _onFulfilled_ be a new built-in function object as defined in <emu-xref href="#sec-async-from-sync-iterator-value-unwrap-functions" title></emu-xref>.
+          1. Set _onFulfilled_.[[Done]] to _returnDone_.
+          1. Perform ! PerformPromiseThen(_valueWrapperCapability_.[[Promise]], _onFulfilled_, *undefined*, _promiseCapability_).
+          1. Return _promiseCapability_.[[Promise]].
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-%asyncfromsynciteratorprototype%.throw">
+        <h1>%AsyncFromSyncIteratorPrototype%.throw ( _value_ )</h1>
+
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+          1. If Type(_O_) is not Object, or if _O_ does not have a [[SyncIteratorRecord]] internal slot, then
+            1. Let _badIteratorError_ be a new *TypeError* exception.
+            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _badIteratorError_ &raquo;).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _syncIterator_ be _O_.[[SyncIteratorRecord]].[[Iterator]].
+          1. Let _throw_ be GetMethod(_syncIterator_, `"throw"`).
+          1. IfAbruptRejectPromise(_throw_, _promiseCapability_).
+          1. If _throw_ is *undefined*, then
+            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _value_ &raquo;).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _throwResult_ be Call(_throw_, _syncIterator_, &laquo; _value_ &raquo;).
+          1. IfAbruptRejectPromise(_throwResult_, _promiseCapability_).
+          1. If Type(_throwResult_) is not *Object*,
+            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a *TypeError* exception &raquo;).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _throwDone_ be IteratorComplete(_throwResult_).
+          1. IfAbruptRejectPromise(_throwDone_, _promiseCapability_).
+          1. Let _throwValue_ be IteratorValue(_throwResult_).
+          1. IfAbruptRejectPromise(_throwValue_, _promiseCapability_).
+          1. Let _valueWrapperCapability_ be ! NewPromiseCapability(%Promise%).
+          1. Perform ! Call(_valueWrapperCapability_.[[Resolve]], *undefined*, &laquo; _throwValue_ &raquo;).
+          1. Let _onFulfilled_ be a new built-in function object as defined in <emu-xref href="#sec-async-from-sync-iterator-value-unwrap-functions" title></emu-xref>.
+          1. Set _onFulfilled_.[[Done]] to _throwDone_.
+          1. Perform ! PerformPromiseThen(_valueWrapperCapability_.[[Promise]], _onFulfilled_, *undefined*, _promiseCapability_).
+          1. Return _promiseCapability_.[[Promise]].
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-%asyncfromsynciteratorprototype%-@@tostringtag">
+        <h1>%AsyncFromSyncIteratorPrototype% [ @@toStringTag ]</h1>
+        <p>The initial value of the @@toStringTag property is the String value `"Async-from-Sync Iterator"`.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-async-from-sync-iterator-value-unwrap-functions">
+        <h1>Async-from-Sync Iterator Value Unwrap Functions</h1>
+
+        <p>An async-from-sync iterator value unwrap function is an anonymous built-in function that is used by methods of %AsyncFromSyncIteratorPrototype% when processing the `value` field of an <i>IteratorResult</i> object, in order to wait for its value if it is a promise and re-package the result in a new "unwrapped" <i>IteratorResult</i> object. Each async iterator value unwrap function has a [[Done]] internal slot.</p>
+
+        <p>When an async-from-sync iterator value unwrap function _F_ is called with argument _value_, the following steps are taken:</p>
+
+        <emu-alg>
+          1. Return ! CreateIterResultObject(_value_, _F_.[[Done]]).
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-async-from-sync-iterator-instances">
+      <h1>Properties of Async-from-Sync Iterator Instances</h1>
+      <p>Async-from-Sync Iterator instances are ordinary objects that inherit properties from the %AsyncFromSyncIteratorPrototype% intrinsic object. Async-from-Sync Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-async-from-sync-iterator-internal-slots"></emu-xref>.</p>
+      <emu-table id="table-async-from-sync-iterator-internal-slots" caption="Internal Slots of Async-from-Sync Iterator Instances">
+        <table>
+          <thead>
+          <tr>
+            <th>
+              Internal Slot
+            </th>
+            <th>
+              Description
+            </th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>
+              [[SyncIteratorRecord]]
+            </td>
+            <td>
+              A Record, of the type returned by GetIterator, representing the original synchronous iterator which is being adapted.
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </emu-table>
     </emu-clause>
   </emu-clause>
 
@@ -36510,6 +37326,100 @@ THH:mm:ss.sss
         <p>This property has the attributes { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
         <emu-note>
           <p>Unlike Function instances, the object that is the value of the a GeneratorFunction's `prototype` property does not have a `constructor` property whose value is the GeneratorFunction instance.</p>
+        </emu-note>
+      </emu-clause>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-asyncgeneratorfunction-objects">
+    <h1>Generator Objects</h1>
+    <p>AsyncGenerator Function objects are functions that are usually created by evaluating |AsyncGeneratorDeclaration|, |AsyncGeneratorExpression|, and |AsyncGeneratorMethod| syntactic productions. They may also be created by calling the %AsyncGeneratorFunction% intrinsic.</p>
+
+    <emu-clause id="sec-asyncgeneratorfunction-constructor">
+      <h1>The AsyncGeneratorFunction Constructor</h1>
+      <p>The `AsyncGeneratorFunction` constructor is the <dfn>%AsyncGeneratorFunction%</dfn> intrinsic. When `AsyncGeneratorFunction` is called as a function rather than as a constructor, it creates and initializes a new AsyncGeneratorFunction object. Thus the function call `AsyncGeneratorFunction (...)` is equivalent to the object creation expression `new AsyncGeneratorFunction (...)` with the same arguments.</p>
+      <p>`AsyncGeneratorFunction` is designed to be subclassable. It may be used as the value of an `extends` clause of a class definition. Subclass constructors that intend to inherit the specified `AsyncGeneratorFunction` behaviour must include a `super` call to the `AsyncGeneratorFunction` constructor to create and initialize subclass instances with the internal slots necessary for built-in AsyncGeneratorFunction behaviour. All ECMAScript syntactic forms for defining async generator function objects create direct instances of `AsyncGeneratorFunction`. There is no syntactic means to create instances of `AsyncGeneratorFunction` subclasses.</p>
+
+      <emu-clause id="sec-asyncgeneratorfunction">
+        <h1>AsyncGeneratorFunction ( _p1_, _p2_, ..., _pn_, _body_ )</h1>
+        <p>The last argument specifies the body (executable code) of an async generator function; any preceding arguments specify formal parameters.</p>
+        <p>When the `AsyncGeneratorFunction` function is called with some arguments _p1_, _p2_, &hellip; , _pn_, _body_ (where _n_ might be 0, that is, there are no "_p_" arguments, and where _body_ might also not be provided), the following steps are taken:</p>
+        <emu-alg>
+          1. Let _C_ be the active function object.
+          1. Let _args_ be the _argumentsList_ that was passed to this function by [[Call]] or [[Construct]].
+          1. Return ? CreateDynamicFunction(_C_, NewTarget, `"async generator"`, _args_).
+        </emu-alg>
+        <emu-note>
+          <p>See NOTE for <emu-xref href="#sec-function-p1-p2-pn-body"></emu-xref>.</p>
+        </emu-note>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-asyncgeneratorfunction">
+      <h1>Properties of the AsyncGeneratorFunction Constructor</h1>
+      <p>The `AsyncGeneratorFunction` constructor is a standard built-in function object that inherits from the `Function` constructor. The value of the [[Prototype]] internal slot of the `AsyncGeneratorFunction` constructor is the intrinsic object %Function%.</p>
+      <p>The value of the [[Extensible]] internal slot of the AsyncGeneratorFunction constructor is *true*.</p>
+      <p>The value of the `name` property of the AsyncGeneratorFunction is `"AsyncGeneratorFunction"`.</p>
+      <p>The `AsyncGeneratorFunction` constructor has the following properties:</p>
+
+      <emu-clause id="sec-asyncgeneratorfunction-length">
+        <h1>AsyncGeneratorFunction.length</h1>
+        <p>This is a data property with a value of 1. This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorfunction-prototype">
+        <h1>AsyncGeneratorFunction.prototype</h1>
+        <p>The initial value of `AsyncGeneratorFunction.prototype` is the intrinsic object <dfn>%AsyncGenerator%</dfn>.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-asyncgeneratorfunction-prototype">
+      <h1>Properties of the AsyncGeneratorFunction Prototype Object</h1>
+      <p>The AsyncGeneratorFunction prototype object is an ordinary object. It is not a function object and does not have an [[ECMAScriptCode]] internal slot or any other of the internal slots listed in <emu-xref href="#table-27"></emu-xref> or <emu-xref href="#table-internal-slots-of-asyncgenerator-instances"></emu-xref>. In addition to being the value of the prototype property of the %AsyncGeneratorFunction% intrinsic, it is the %AsyncGenerator% intrinsic.</p>
+      <p>The value of the [[Prototype]] internal slot of the AsyncGeneratorFunction prototype object is the %FunctionPrototype% intrinsic object. The initial value of the [[Extensible]] internal slot of the AsyncGeneratorFunction prototype object is *true*.</p>
+
+      <emu-clause id="sec-asyncgeneratorfunction-prototype-constructor">
+        <h1>AsyncGeneratorFunction.prototype.constructor</h1>
+        <p>The initial value of `AsyncGeneratorFunction.prototype.constructor` is the intrinsic object %AsyncGeneratorFunction%.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorfunction-prototype-prototype">
+        <h1>AsyncGeneratorFunction.prototype.prototype</h1>
+        <p>The value of `AsyncGeneratorFunction.prototype.prototype` is the %AsyncGeneratorPrototype% intrinsic object.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorfunction-prototype-tostringtag">
+        <h1>AsyncGeneratorFunction.prototype [ @@toStringTag ]</h1>
+        <p>The initial value of the @@toStringTag property is the String value `"AsyncGeneratorFunction"`.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgeneratorfunction-instances">
+      <h1>AsyncGeneratorFunction Instances</h1>
+      <p>Every AsyncGeneratorFunction instance is an ECMAScript function object and has the internal slots listed in <emu-xref href="#table-27"></emu-xref>. The value of the [[FunctionKind]] internal slot for all such instances is `"generator"`.</p>
+      <p>Each AsyncGeneratorFunction instance has the following own properties:</p>
+
+      <emu-clause id="sec-asyncgeneratorfunction-instance-length">
+        <h1>length</h1>
+        <p>The value of the `length` property is an integer that indicates the typical number of arguments expected by the AsyncGeneratorFunction. However, the language permits the function to be invoked with some other number of arguments. The behaviour of an AsyncGeneratorFunction when invoked on a number of arguments other than the number specified by its `length` property depends on the function.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorfunction-instance-name">
+        <h1>name</h1>
+        <p>The specification for the `name` property of Function instances given in <emu-xref href="#sec-function-instances-name"></emu-xref> also applies to AsyncGeneratorFunction instances.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorfunction-instance-prototype">
+        <h1>prototype</h1>
+        <p>Whenever an AsyncGeneratorFunction instance is created another ordinary object is also created and is the initial value of the async generator function's `prototype` property. The value of the prototype property is used to initialize the [[Prototype]] internal slot of a newly created AsyncGenerator object when the generator function object is invoked using [[Call]].</p>
+        <p>This property has the attributes { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+        <emu-note>
+          <p>Unlike function instances, the object that is the value of the an AsyncGeneratorFunction's `prototype` property does not have a `constructor` property whose value is the AsyncGeneratorFunction instance.</p>
         </emu-note>
       </emu-clause>
     </emu-clause>
@@ -36701,6 +37611,17 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-getgeneratorkind" aoid="GetGeneratorKind">
+        <h1><ins>GetGeneratorKind ( )</ins></h1>
+        <emu-alg>
+          1. Let _genContext_ be the running execution context.
+          1. If _genContext_ does not have a Generator component, return ~non-generator~.
+          1. Let _generator_ be the Generator component of _genContext_.
+          1. If _generator_ has an [[AsyncGeneratorState]] internal slot, return ~async~.
+          1. Else, return ~normal~.
+        </emu-alg>
+      </emu-clause>
+
       <!-- es6num="25.3.3.5" -->
       <emu-clause id="sec-generatoryield" aoid="GeneratorYield">
         <h1>GeneratorYield ( _iterNextObj_ )</h1>
@@ -36710,6 +37631,7 @@ THH:mm:ss.sss
           1. Let _genContext_ be the running execution context.
           1. Assert: _genContext_ is the execution context of a generator.
           1. Let _generator_ be the value of the Generator component of _genContext_.
+          1. Assert: GetGeneratorKind() is ~normal~.
           1. Set _generator_.[[GeneratorState]] to `"suspendedYield"`.
           1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
           1. Set the code evaluation state of _genContext_ such that when evaluation is resumed with a Completion _resumptionValue_ the following steps will be performed:
@@ -36719,6 +37641,93 @@ THH:mm:ss.sss
           1. NOTE: This returns to the evaluation of the operation that had most previously resumed evaluation of _genContext_.
         </emu-alg>
       </emu-clause>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-asyncgenerator-objects">
+    <h1>AsyncGenerator Objects</h1>
+    <p>An AsyncGenerator object is an instance of an async generator function and conforms to both the AsyncIterator and AsyncIterable interfaces.</p>
+
+    <p>AsyncGenerator instances directly inherit properties from the object that is the value of the `prototype` property of the AsyncGenerator function that created the instance. AsyncGenerator instances indirectly inherit properties from the AsyncGenerator Prototype intrinsic, %AsyncGeneratorPrototype%.</p>
+
+    <emu-clause id="sec-properties-of-asyncgenerator-prototype">
+      <h1>Properties of AsyncGenerator Prototype</h1>
+      <p>The AsyncGenerator prototype object is the <dfn>%AsyncGeneratorPrototype%</dfn> intrinsic. It is also the initial value of the `prototype` property of the %AsyncGenerator% intrinsic (the AsyncGeneratorFunction.prototype).</p>
+      <p>The AsyncGenerator prototype is an ordinary object. It is not an AsyncGenerator instance and does not have an [[AsyncGeneratorState]] internal slot.</p>
+      <p>The value of the [[Prototype]] internal slot of the AsyncGenerator prototype object is the intrinsic object %AsyncIteratorPrototype%. The initial value of the [[Extensible]] internal slot of the AsyncGenerator prototype object is *true*.</p>
+      <p>All AsyncGenerator instances indirectly inherit properties of the AsyncGenerator prototype object.</p>
+
+      <emu-clause id="sec-asyncgenerator-prototype-constructor">
+        <h1>AsyncGenerator.prototype.constructor</h1>
+        <p>The initial value of `AsyncGenerator.prototype.constructor` is the intrinsic object %AsyncGenerator%.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgenerator-prototype-next">
+        <h1>AsyncGenerator.prototype.next ( _value_ )</h1>
+        <emu-alg>
+          1. Let _generator_ be the `this` value.
+          1. Let _completion_ be NormalCompletion(_value_).
+          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgenerator-prototype-return">
+        <h1>AsyncGenerator.prototype.return ( _value_ )</h1>
+        <emu-alg>
+          1. Let _generator_ be the `this` value.
+          1. Let _completion_ be Completion{[[Type]]: ~return~, [[Value]]: _value_, [[Target]]: ~empty~}.
+          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgenerator-prototype-throw">
+        <h1>AsyncGenerator.prototype.throw ( _exception_ )</h1>
+        <emu-alg>
+          1. Let _generator_ be the `this` value.
+          1. Let _completion_ be Completion{[[Type]]: ~throw~, [[Value]]: _exception_, [[Target]]: ~empty~}.
+          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgenerator-prototype-tostringtag">
+        <h1>AsyncGenerator.prototype [ @@toStringTag ]</h1>
+        <p>The initial value of the @@toStringTag property is the String value `"AsyncGenerator"`.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-asyncgenerator-intances">
+      <h1>Properties of AsyncGenerator Instances</h1>
+      <p>AsyncGenerator instances are initially created with the internal slots described below:</p>
+      <emu-table id="table-internal-slots-of-asyncgenerator-instances" caption="Internal Slots of AsyncGenerator Instances">
+        <table>
+          <tbody>
+          <tr>
+            <th>Internal Slot</th>
+            <th>Description</th>
+          </tr>
+          <tr>
+            <td>[[AsyncGeneratorState]]</td>
+            <td>The current execution state of the async generator. The possible values are: *undefined*, `"suspendedStart"`, `"suspendedYield"`, `"executing"`, `"awaiting-return"`, and `"completed"`.</td>
+          </tr>
+          <tr>
+            <td>[[AsyncGeneratorContext]]</td>
+            <td>The execution context that is used when executing the code of this async generator.</td>
+          </tr>
+          <tr>
+            <td>[[AsyncGeneratorQueue]]</td>
+            <td>A List of AsyncGeneratorRequest records which represent requests to resume the async generator.</td>
+          </tr>
+          </tbody>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgenerator-abstract-operations">
+      <h1>AsyncGenerator Abstract Operations</h1>
+      <emu-import href="./abstract-operations.html"></emu-import>
     </emu-clause>
   </emu-clause>
 
