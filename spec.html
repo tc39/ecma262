@@ -38171,7 +38171,204 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-asyncgenerator-abstract-operations">
       <h1>AsyncGenerator Abstract Operations</h1>
-      <emu-import href="./abstract-operations.html"></emu-import>
+      <emu-clause id="sec-asyncgeneratorrequest-records">
+        <h1>AsyncGeneratorRequest Records</h1>
+        <p>The AsyncGeneratorRequest is a Record value used to store information about how an async generator should be resumed and contains capabilities for fulfilling or rejecting the corresponding promise.</p>
+        <p>They have the following fields:</p>
+        <emu-table caption="AsyncGeneratorRequest Record Fields">
+          <table>
+            <tbody>
+            <tr>
+              <th>Field Name</th>
+              <th>Value</th>
+              <th>Meaning</th>
+            </tr>
+            <tr>
+              <td>[[Completion]]</td>
+              <td>A Completion record</td>
+              <td>The completion which should be used to resume the async generator.</td>
+            </tr>
+            <tr>
+              <td>[[Capability]]</td>
+              <td>A PromiseCapability record</td>
+              <td>The promise capabilities associated with this request.</td>
+            </tr>
+            </tbody>
+          </table>
+        </emu-table>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorstart" aoid="AsyncGeneratorStart">
+        <h1>AsyncGeneratorStart ( _generator_, _generatorBody_ )</h1>
+        <emu-alg>
+          1. Assert: _generator_ is an AsyncGenerator instance.
+          1. Assert: _generator_.[[AsyncGeneratorState]] is *undefined*.
+          1. Let _genContext_ be the running execution context.
+          1. Set the Generator component of _genContext_ to _generator_.
+          1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context the following steps will be performed:
+            1. Let _result_ be the result of evaluating _generatorBody_.
+            1. Assert: If we return here, the async generator either threw an exception or performed either an implicit or explicit return.
+            1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Set _generator_.[[AsyncGeneratorState]] to `"completed"`.
+            1. If _result_ is a normal completion, let _resultValue_ be *undefined*.
+            1. Else,
+              1. Let _resultValue_ be _result_.[[Value]].
+              1. If _result_.[[Type]] is not ~return~, then
+                1. Return ! AsyncGeneratorReject(_generator_, _resultValue_).
+            1. Return ! AsyncGeneratorResolve(_generator_, _resultValue_, *true*).
+          1. Set _generator_.[[AsyncGeneratorContext]] to _genContext_.
+          1. Set _generator_.[[AsyncGeneratorState]] to `"suspendedStart"`.
+          1. Set _generator_.[[AsyncGeneratorQueue]] to a new empty List.
+          1. Return *undefined*.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorresolve" aoid="AsyncGeneratorResolve">
+        <h1>AsyncGeneratorResolve ( _generator_, _value_, _done_ )</h1>
+        <emu-alg>
+          1. Assert: _generator_ is an AsyncGenerator instance.
+          1. Let _queue_ be _generator_.[[AsyncGeneratorQueue]].
+          1. Assert: _queue_ is not an empty List.
+          1. Remove the first element from _queue_ and let _next_ be the value of that element.
+          1. Let _promiseCapability_ be _next_.[[Capability]].
+          1. Let _iteratorResult_ be ! CreateIterResultObject(_value_, _done_).
+          1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _iteratorResult_ &raquo;).
+          1. Perform ! AsyncGeneratorResumeNext(_generator_).
+          1. Return *undefined*.
+        </emu-clause>
+      </emu-alg>
+
+      <emu-clause id="sec-asyncgeneratorreject" aoid="AsyncGeneratorReject">
+        <h1>AsyncGeneratorReject ( _generator_, _exception_ )</h1>
+        <emu-alg>
+          1. Assert: _generator_ is an AsyncGenerator instance.
+          1. Let _queue_ be _generator_.[[AsyncGeneratorQueue]].
+          1. Assert: _queue_ is not an empty List.
+          1. Remove the first element from _queue_ and let _next_ be the value of that element.
+          1. Let _promiseCapability_ be _next_.[[Capability]].
+          1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _exception_ »).
+          1. Perform ! AsyncGeneratorResumeNext(_generator_).
+          1. Return *undefined*.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorresumenext" aoid="AsyncGeneratorResumeNext">
+        <h1>AsyncGeneratorResumeNext ( _generator_ )</h1>
+        <emu-alg>
+          1. Assert: _generator_ is an AsyncGenerator instance.
+          1. Let _state_ be _generator_.[[AsyncGeneratorState]].
+          1. Assert: _state_ is not `"executing"`.
+          1. If _state_ is `"awaiting-return"`, return *undefined*.
+          1. Let _queue_ be _generator_.[[AsyncGeneratorQueue]].
+          1. If _queue_ is an empty List, return *undefined*.
+          1. Let _next_ be the value of the first element of _queue_.
+          1. Assert: _next_ is an AsyncGeneratorRequest record.
+          1. Let _completion_ be _next_.[[Completion]].
+          1. If _completion_ is an abrupt completion, then
+            1. If _state_ is `"suspendedStart"`, then
+              1. Set _generator_.[[AsyncGeneratorState]] to `"completed"`.
+              1. Set _state_ to `"completed"`.
+            1. If _state_ is `"completed"`, then
+              1. If _completion_.[[Type]] is ~return~:
+                1. Set _generator_.[[AsyncGeneratorState]] to `"awaiting-return"`.
+                1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+                1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « _completion_.[[Value]] »).
+                1. Let _onFulfilled_ be a new built-in function object as defined in <emu-xref href="#async-generator-resume-next-return-processor-fulfilled" title></emu-xref>.
+                1. Let _onRejected_ be a new built-in function object as defined in <emu-xref href="#async-generator-resume-next-return-processor-rejected" title></emu-xref>.
+                1. Set _onFulfilled_ and _onRejected_'s [[Generator]] internal slots to _generator_.
+                1. Let _throwawayCapability_ be NewPromiseCapability(%Promise%).
+                1. Set _throwawayCapability_.[[Promise]].[[PromiseIsHandled]] to *true*.
+                1. Perform ! PerformPromiseThen(_promiseCapability_.[[Promise]], _onFulfilled_, _onRejected_, _throwawayCapability_).
+                1. Return *undefined*.
+              1. Else,
+                1. Assert: _completion_.[[Type]] is ~throw~.
+                1. Perform ! AsyncGeneratorReject(_generator_, _completion_.[[Value]]).
+                1. Return *undefined*.
+          1. Else if _state_ is `"completed"`, then return ! AsyncGeneratorResolve(_generator_, *undefined*, *true*).
+          1. Assert: _state_ is either `"suspendedStart"` or `"suspendedYield"`.
+          1. Let _genContext_ be _generator_.[[AsyncGeneratorContext]].
+          1. Let _callerContext_ be the running execution context.
+          1. Suspend _callerContext_.
+          1. Set _generator_.[[AsyncGeneratorState]] to `"executing"`.
+          1. Push _genContext_ onto the execution context stack; _genContext_ is now the running execution context.
+          1. Resume the suspended evaluation of _genContext_ using _completion_ as the result of the operation that suspended it. Let _result_ be the completion record returned by the resumed computation.
+          1. Assert: _result_ is never an abrupt completion.
+          1. Assert: When we return here, _genContext_ has already been removed from the execution context stack and _callerContext_ is the currently running execution context.
+          1. Return *undefined*.
+        </emu-alg>
+
+        <emu-clause id="async-generator-resume-next-return-processor-fulfilled">
+          <h1>AsyncGeneratorResumeNext Return Processor Fulfilled Functions</h1>
+
+          <p>An AsyncGeneratorResumeNext return processor fulfilled function is an anonymous built-in function that is used as part of the AsyncGeneratorResumeNext specification device to unwrap promises passed in to the <emu-xref href="#sec-asyncgenerator-prototype-return" title></emu-xref> method. Each AsyncGeneratorResumeNext return processor fulfilled function has a [[Generator]] internal slot.</p>
+
+          <p>When an AsyncGeneratorResumeNext return processor fulfilled function _F_ is called with argument _value_, the following steps are taken:</p>
+
+          <emu-alg>
+            1. Set _F_.[[Generator]].[[AsyncGeneratorState]] to `"completed"`.
+            1. Return ! AsyncGeneratorResolve(_F_.[[Generator]], _value_, *true*).
+          </emu-alg>
+
+          <p>The `length` property of an AsyncGeneratorResumeNext return processor fulfilled function is 1.</p>
+        </emu-clause>
+
+        <emu-clause id="async-generator-resume-next-return-processor-rejected">
+          <h1>AsyncGeneratorResumeNext Return Processor Rejected Functions</h1>
+
+          <p>An AsyncGeneratorResumeNext return processor rejected function is an anonymous built-in function that is used as part of the AsyncGeneratorResumeNext specification device to unwrap promises passed in to the <emu-xref href="#sec-asyncgenerator-prototype-return" title></emu-xref> method. Each AsyncGeneratorResumeNext return processor rejected function has a [[Generator]] internal slot.</p>
+
+          <p>When an AsyncGeneratorResumeNext return processor rejected function _F_ is called with argument _reason_, the following steps are taken:</p>
+
+          <emu-alg>
+            1. Set _F_.[[Generator]].[[AsyncGeneratorState]] to `"completed"`.
+            1. Return ! AsyncGeneratorReject(_F_.[[Generator]], _reason_).
+          </emu-alg>
+
+          <p>The `length` property of an AsyncGeneratorResumeNext return processor rejected function is 1.</p>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratorenqueue" aoid="AsyncGeneratorEnqueue">
+        <h1>AsyncGeneratorEnqueue ( _generator_, _completion_ )</h1>
+        <emu-alg>
+          1. Assert: _completion_ is a Completion Record.
+          1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+          1. If Type(_generator_) is not Object, or if _generator_ does not have an [[AsyncGeneratorState]] internal slot, then
+            1. Let _badGeneratorError_ be a new *TypeError* exception.
+            1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _badGeneratorError_ &raquo;).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _queue_ be _generator_.[[AsyncGeneratorQueue]].
+          1. Let _request_ be AsyncGeneratorRequest{[[Completion]]: _completion_, [[Capability]]: _promiseCapability_}.
+          1. Append _request_ to the end of _queue_.
+          1. Let _state_ be _generator_.[[AsyncGeneratorState]].
+          1. If _state_ is not `"executing"`, then
+            1. Perform ! AsyncGeneratorResumeNext(_generator_).
+          1. Return _promiseCapability_.[[Promise]].
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-asyncgeneratoryield" aoid="AsyncGeneratorYield">
+        <h1><ins>AsyncGeneratorYield ( _value_ )</ins></h1>
+        <p>The abstract operation AsyncGeneratorYield with argument _value_ performs the following steps:</p>
+        <emu-alg>
+          1. Let _genContext_ be the running execution context.
+          1. Assert: _genContext_ is the execution context of a generator.
+          1. Let _generator_ be the value of the Generator component of _genContext_.
+          1. Assert: GetGeneratorKind() is ~async~.
+          1. Set _value_ to ? Await(_value_).
+          1. Set _generator_.[[AsyncGeneratorState]] to `"suspendedYield"`.
+          1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+          1. Set the code evaluation state of _genContext_ such that when evaluation is resumed with a Completion _resumptionValue_ the following steps will be performed:
+            1. If _resumptionValue_.[[Type]] is not ~return~, return Completion(_resumptionValue_).
+            1. Let _awaited_ be Await(_resumptionValue_.[[Value]]).
+            1. If _awaited_.[[Type]] is ~throw~, return Completion(_awaited_).
+            1. Assert: _awaited_.[[Type]] is ~normal~.
+            1. Return Completion{[[Type]]: ~return~, [[Value]]: _awaited_.[[Value]], [[Target]]: ~empty~}.
+            1. NOTE: When one of the above steps returns, it returns to the evaluation of the |YieldExpression| production that originally called this abstract operation.
+          1. Return ! AsyncGeneratorResolve(_generator_, _value_, *false*).
+          1. NOTE: This returns to the evaluation of the operation that had most previously resumed evaluation of _genContext_.
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
   </emu-clause>
 
