@@ -3042,10 +3042,6 @@
       <emu-clause id="await" aoid="Await">
         <h1>Await</h1>
 
-        <emu-note type=editor>
-          <p>The AsyncFunctionAwait abstract operation could probably be refactored in terms of this primitive.</p>
-        </emu-note>
-
         <p>Algorithm steps that say</p>
 
         <emu-alg>
@@ -20793,7 +20789,7 @@
       <emu-alg>
         1. Let _exprRef_ be the result of evaluating |UnaryExpression|.
         1. Let _value_ be ? GetValue(_exprRef_).
-        1. Return ? AsyncFunctionAwait(_value_).
+        1. Return ? Await(_value_).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -39301,63 +39297,8 @@ THH:mm:ss.sss
           1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
           1. Resume the suspended evaluation of _asyncContext_. Let _result_ be the value returned by the resumed computation.
           1. Assert: When we return here, _asyncContext_ has already been removed from the execution context stack and _runningContext_ is the currently running execution context.
-          1. Assert: _result_ is a normal completion with a value of *undefined*. The possible sources of completion values are AsyncFunctionAwait or, if the async function doesn't await anything, the step 3.g above.
+          1. Assert: _result_ is a normal completion with a value of *undefined*. The possible sources of completion values are Await or, if the async function doesn't await anything, the step 3.g above.
           1. Return.
-        </emu-alg>
-      </emu-clause>
-
-      <emu-clause id="sec-async-functions-abstract-operations-async-function-await" aoid="AsyncFunctionAwait">
-        <h1>AsyncFunctionAwait ( _value_ )</h1>
-        <emu-alg>
-          1. Let _asyncContext_ be the running execution context.
-          1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-          1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _value_ &raquo;).
-          1. Let _realm_ be the current Realm Record.
-          1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-async-functions-abstract-operations-awaited-fulfilled" title></emu-xref>.
-          1. Let _onFulfilled_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[AsyncContext]] &raquo;).
-          1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-async-functions-abstract-operations-awaited-rejected" title></emu-xref>.
-          1. Let _onRejected_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[AsyncContext]] &raquo;).
-          1. Set _onFulfilled_.[[AsyncContext]] to _asyncContext_.
-          1. Set _onRejected_.[[AsyncContext]] to _asyncContext_.
-          1. Let _throwawayCapability_ be ! NewPromiseCapability(%Promise%).
-          1. Set _throwawayCapability_.[[Promise]].[[PromiseIsHandled]] to *true*.
-          1. Perform ! PerformPromiseThen(_promiseCapability_.[[Promise]], _onFulfilled_, _onRejected_, _throwawayCapability_).
-          1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
-          1. Set the code evaluation state of _asyncContext_ such that when evaluation is resumed with a Completion _resumptionValue_ the following steps will be performed:
-            1. Return _resumptionValue_.
-          1. Return.
-        </emu-alg>
-
-        <emu-note>The return value of this abstract operation is unused. The interesting return is that of _resumptionValue_ being returned to the |AwaitExpression| that originally called this abstract operation.</emu-note>
-      </emu-clause>
-
-      <emu-clause id="sec-async-functions-abstract-operations-awaited-fulfilled">
-        <h1>AsyncFunction Awaited Fulfilled</h1>
-        <p>An AsyncFunction Awaited Fulfilled function is an anonymous built-in function that has an [[AsyncContext]] internal slot. The value of the [[AsyncContext]] internal slot is the execution context that will be restored when the function is called.</p>
-        <p>When an AsyncFunction Awaited Fulfilled function _F_ is called with argument _value_, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _asyncContext_ be _F_.[[AsyncContext]].
-          1. Let _prevContext_ be the running execution context.
-          1. Suspend _prevContext_.
-          1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
-          1. Resume the suspended evaluation of _asyncContext_ using NormalCompletion(_value_) as the result of the operation that suspended it. Let _result_ be the value returned by the resumed computation.
-          1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
-          1. Return Completion(_result_).
-        </emu-alg>
-      </emu-clause>
-
-      <emu-clause id="sec-async-functions-abstract-operations-awaited-rejected">
-        <h1>AsyncFunction Awaited Rejected</h1>
-        <p>An AsyncFunction Awaited Rejected function is an anonymous built-in function that has an [[AsyncContext]] internal slot. The value of the [[AsyncContext]] internal slot is the execution context that will be restored when the function is called.</p>
-        <p>When an AsyncFunction Awaited Rejected function _F_ is called with argument _reason_, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _asyncContext_ be _F_.[[AsyncContext]].
-          1. Let _prevContext_ be the running execution context.
-          1. Suspend _prevContext_.
-          1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
-          1. Resume the suspended evaluation of _asyncContext_ using Completion{[[Type]]: ~throw~, [[Value]]: _reason_, [[Target]]: ~empty~} as the result of the operation that suspended it. Let _result_ be the value returned by the resumed computation.
-          1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
-          1. Return Completion(_result_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
