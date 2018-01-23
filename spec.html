@@ -28534,7 +28534,7 @@ THH:mm:ss.sss
             1. Let _replStr_ be ? ToString(_replValue_).
           1. Else,
             1. Let _captures_ be a new empty List.
-            1. Let _replStr_ be GetSubstitution(_matched_, _string_, _pos_, _captures_, _replaceValue_).
+            1. Let _replStr_ be GetSubstitution(_matched_, _string_, _pos_, _captures_, *undefined*, _replaceValue_).
           1. Let _tailPos_ be _pos_ + the number of code units in _matched_.
           1. Let _newString_ be the string-concatenation of the first _pos_ code units of _string_, _replStr_, and the trailing substring of _string_ starting at index _tailPos_. If _pos_ is 0, the first element of the concatenation will be the empty String.
           1. Return _newString_.
@@ -28558,6 +28558,8 @@ THH:mm:ss.sss
             1. Assert: Type(_replacement_) is String.
             1. Let _tailPos_ be _position_ + _matchLength_.
             1. Let _m_ be the number of elements in _captures_.
+            1. If _namedCaptures_ is not *undefined*, then
+              1. Let _namedCaptures_ be ? ToObject(_namedCaptures_).
             1. Let _result_ be the String value derived from _replacement_ by copying code unit elements from _replacement_ to _result_ while performing replacements as specified in <emu-xref href="#table-45"></emu-xref>. These `$` replacements are done left-to-right, and, once such a replacement is performed, the new replacement text is not subject to further replacements.
             1. Return _result_.
           </emu-alg>
@@ -28651,6 +28653,27 @@ THH:mm:ss.sss
                 </td>
                 <td>
                   The _nn_<sup>th</sup> element of _captures_, where _nn_ is a two-digit decimal number in the range 01 to 99. If _nn_&le;_m_ and the _nn_<sup>th</sup> element of _captures_ is *undefined*, use the empty String instead. If _nn_ is 00 or _nn_&gt;_m_, no replacement is done.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  0x0024, 0x003C
+                </td>
+                <td>
+                  `$&lt;`
+                </td>
+                <td>
+                  <emu-alg>
+                    1. If _namedCaptures_ is *undefined*, the replacement text is the String `"$&lt;"`.
+                    1. Otherwise,
+                      1. Scan until the next `>` (U+003E GREATER-THAN SIGN).
+                      1. If none is found, the replacement text is the String `"$&lt;"`.
+                      1. Otherwise,
+                        1. Let the enclosed substring be _groupName_.
+                        1. Let _capture_ be ? Get(_namedCaptures_, _groupName_).
+                        1. If _capture_ is *undefined*, replace the text through `>` with the empty string.
+                        1. Otherwise, replace the text through this following `>` with ? ToString(_capture_).
+                  </emu-alg>
                 </td>
               </tr>
               <tr>
@@ -29094,13 +29117,13 @@ THH:mm:ss.sss
           `{` DecimalDigits `,` `}`
           `{` DecimalDigits `,` DecimalDigits `}`
 
-        Atom[U] ::
+        Atom[U, N] ::
           PatternCharacter
           `.`
-          `\` AtomEscape[?U]
-          CharacterClass[?U]
-          `(` Disjunction[?U] `)`
-          `(` `?` `:` Disjunction[?U] `)`
+          `\` AtomEscape[?U, ?N]
+          CharacterClass[?U, ?N]
+          `(` GroupSpecifier Disjunction[?U, ?N] `)`
+          `(` `?` `:` Disjunction[?U, ?N] `)`
 
         SyntaxCharacter :: one of
           `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `]` `{` `}` `|`
@@ -29108,10 +29131,11 @@ THH:mm:ss.sss
         PatternCharacter ::
           SourceCharacter but not SyntaxCharacter
 
-        AtomEscape[U] ::
+        AtomEscape[U, N] ::
           DecimalEscape
           CharacterClassEscape
           CharacterEscape[?U]
+          [+N] `k` GroupName[?U]
 
         CharacterEscape[U] ::
           ControlEscape
@@ -29127,6 +29151,31 @@ THH:mm:ss.sss
         ControlLetter :: one of
           `a` `b` `c` `d` `e` `f` `g` `h` `i` `j` `k` `l` `m` `n` `o` `p` `q` `r` `s` `t` `u` `v` `w` `x` `y` `z`
           `A` `B` `C` `D` `E` `F` `G` `H` `I` `J` `K` `L` `M` `N` `O` `P` `Q` `R` `S` `T` `U` `V` `W` `X` `Y` `Z`
+
+        GroupSpecifier[U] ::
+          [empty]
+          `?` GroupName[?U]
+
+        GroupName[U] ::
+          `<` RegExpIdentifierName[?U] `>`
+
+        RegExpIdentifierName[U] ::
+          RegExpIdentifierStart[?U]
+          RegExpIdentifierName[?U] RegExpIdentifierPart[?U]
+
+        RegExpIdentifierStart[U] ::
+          UnicodeIDStart
+          `$`
+          `_`
+          `\` RegExpUnicodeEscapeSequence[?U]
+
+        RegExpIdentifierPart[U] ::
+          UnicodeIDContinue
+          `$`
+          `_`
+          `\` RegExpUnicodeEscapeSequence[?U]
+          &lt;ZWNJ&gt;
+          &lt;ZWJ&gt;
 
         RegExpUnicodeEscapeSequence[U] ::
           [+U] `u` LeadSurrogate `\u` TrailSurrogate
@@ -29199,11 +29248,20 @@ THH:mm:ss.sss
           <li>
             It is a Syntax Error if _NcapturingParens_ &ge; 2<sup>32</sup>-1.
           </li>
+          <li>
+            It is a Syntax Error if |Pattern| contains multiple |GroupSpecifier|s whose enclosed |RegExpIdentifierName|s have the same StringValue.
+          </li>
         </ul>
         <emu-grammar>QuantifierPrefix :: `{` DecimalDigits `,` DecimalDigits `}`</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if the MV of the first |DecimalDigits| is larger than the MV of the second |DecimalDigits|.
+          </li>
+        </ul>
+        <emu-grammar>AtomEscape[U] :: [+N] `k` GroupName</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the enclosing RegExp does not contain a |GroupSpecifier| with an enclosed |RegExpIdentifierName| whose StringValue equals the StringValue of the |RegExpIdentifierName| of this production's |GroupName|.
           </li>
         </ul>
         <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar>
@@ -29228,6 +29286,18 @@ THH:mm:ss.sss
           </li>
           <li>
             It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *false* and IsCharacterClass of |ClassAtom| is *false* and the CharacterValue of |ClassAtomNoDash| is larger than the CharacterValue of |ClassAtom|.
+          </li>
+        </ul>
+        <emu-grammar>RegExpIdentifierStart[U] :: `\` RegExpUnicodeEscapeSequence[?U]</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if SV(|RegExpUnicodeEscapeSequence|) is none of `"$"`, or `"_"`, or the UTF16Encoding of a code point matched by the |UnicodeIDStart| lexical grammar production.
+          </li>
+        </ul>
+        <emu-grammar>RegExpIdentifierPart[U] :: `\` RegExpUnicodeEscapeSequence[?U]</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if SV(|RegExpUnicodeEscapeSequence|) is none of `"$"`, or `"_"`, or the UTF16Encoding of either &lt;ZWNJ&gt; or &lt;ZWJ&gt;, or the UTF16Encoding of a Unicode code point that would be matched by the |UnicodeIDContinue| lexical grammar production.
           </li>
         </ul>
       </emu-clause>
@@ -30180,17 +30250,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Evaluate |DecimalEscape| to obtain an integer _n_.
           1. Assert: _n_ &le; _NcapturingParens_.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-            1. Let _cap_ be _x_'s _captures_ List.
-            1. Let _s_ be _cap_[_n_].
-            1. If _s_ is *undefined*, return _c_(_x_).
-            1. Let _e_ be _x_'s _endIndex_.
-            1. Let _len_ be the number of elements in _s_.
-            1. Let _f_ be _e_+_len_.
-            1. If _f_&gt;_InputLength_, return ~failure~.
-            1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_s_[_i_]) is not the same character value as Canonicalize(_Input_[_e_+_i_]), return ~failure~.
-            1. Let _y_ be the State (_f_, _cap_).
-            1. Call _c_(_y_) and return its result.
+          1. Call BackreferenceMatcher(_n_) and return its Matcher result.
         </emu-alg>
         <p>The production <emu-grammar>AtomEscape :: CharacterEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
@@ -30206,6 +30266,13 @@ THH:mm:ss.sss
         <emu-note>
           <p>An escape sequence of the form `\\` followed by a nonzero decimal number _n_ matches the result of the _n_th set of capturing parentheses (<emu-xref href="#sec-notation"></emu-xref>). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_th one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
         </emu-note>
+        <p>The production <emu-grammar>AtomEscape[U] :: [+N] `k` GroupName</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+            1. Search the enclosing RegExp for an instance of a |GroupSpecifier| for a |RegExpIdentifierName| which has a StringValue equal to the StringValue of the |RegExpIdentifierName| contained in |GroupName|.
+            1. Assert: A unique such |GroupSpecifier| is found.
+            1. Let _parenIndex_ be the number of left capturing parentheses in the entire regular expression that occur to the left of the located |GroupSpecifier|. This is the total number of times the <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> production is expanded prior to that production's |Term| plus the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> productions enclosing this |Term|.
+            1. Call BackreferenceMatcher(_parenIndex_) and return its Matcher result.
+          </emu-alg>
       </emu-clause>
 
       <!-- es6num="21.2.2.10" -->
@@ -30486,10 +30553,10 @@ THH:mm:ss.sss
             1. If _F_ contains any code unit other than `"g"`, `"i"`, `"m"`, `"s"`, `"u"`, or `"y"` or if it contains the same code unit more than once, throw a *SyntaxError* exception.
             1. If _F_ contains `"u"`, let _BMP_ be *false*; else let _BMP_ be *true*.
             1. If _BMP_ is *true*, then
-              1. Parse _P_ using the grammars in <emu-xref href="#sec-patterns"></emu-xref> and interpreting each of its 16-bit elements as a Unicode BMP code point. UTF-16 decoding is not applied to the elements. The goal symbol for the parse is |Pattern[~U]|. Throw a *SyntaxError* exception if _P_ did not conform to the grammar, if any elements of _P_ were not matched by the parse, or if any Early Error conditions exist.
+              1. Parse _P_ using the grammars in <emu-xref href="#sec-patterns"></emu-xref> and interpreting each of its 16-bit elements as a Unicode BMP code point. UTF-16 decoding is not applied to the elements. The goal symbol for the parse is |Pattern[~U, ~N]|. If the result of parsing contains a |GroupName|, reparse with the goal symbol |Pattern[~U, +N]| and use this result instead. Throw a *SyntaxError* exception if _P_ did not conform to the grammar, if any elements of _P_ were not matched by the parse, or if any Early Error conditions exist.
               1. Let _patternCharacters_ be a List whose elements are the code unit elements of _P_.
             1. Else,
-              1. Parse _P_ using the grammars in <emu-xref href="#sec-patterns"></emu-xref> and interpreting _P_ as UTF-16 encoded Unicode code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>). The goal symbol for the parse is |Pattern[+U]|. Throw a *SyntaxError* exception if _P_ did not conform to the grammar, if any elements of _P_ were not matched by the parse, or if any Early Error conditions exist.
+              1. Parse _P_ using the grammars in <emu-xref href="#sec-patterns"></emu-xref> and interpreting _P_ as UTF-16 encoded Unicode code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>). The goal symbol for the parse is |Pattern[+U, +N]|. Throw a *SyntaxError* exception if _P_ did not conform to the grammar, if any elements of _P_ were not matched by the parse, or if any Early Error conditions exist.
               1. Let _patternCharacters_ be a List whose elements are the code points resulting from applying UTF-16 decoding to _P_'s sequence of elements.
             1. Set _obj_.[[OriginalSource]] to _P_.
             1. Set _obj_.[[OriginalFlags]] to _F_.
@@ -30641,6 +30708,11 @@ THH:mm:ss.sss
             1. Perform ! CreateDataProperty(_A_, `"input"`, _S_).
             1. Let _matchedSubstr_ be the matched substring (i.e. the portion of _S_ between offset _lastIndex_ inclusive and offset _e_ exclusive).
             1. Perform ! CreateDataProperty(_A_, `"0"`, _matchedSubstr_).
+            1. If _R_ contains any |GroupName|, then
+              1. Let _groups_ be ObjectCreate(*null*).
+            1. Else,
+              1. Let _groups_ be *undefined*.
+            1. Perform ! CreateDataProperty(_A_, `"groups"`, _groups_).
             1. For each integer _i_ such that _i_ &gt; 0 and _i_ &le; _n_, do
               1. Let _captureI_ be _i_<sup>th</sup> element of _r_'s _captures_ List.
               1. If _captureI_ is *undefined*, let _capturedValue_ be *undefined*.
@@ -30651,6 +30723,9 @@ THH:mm:ss.sss
                 1. Assert: _captureI_ is a List of code units.
                 1. Let _capturedValue_ be the String value consisting of the code units of _captureI_.
               1. Perform ! CreateDataProperty(_A_, ! ToString(_i_), _capturedValue_).
+              1. If the _i_th capture of _R_ was defined with a |GroupName|, then
+                1. Let _s_ be the StringValue of the corresponding |RegExpIdentifierName|.
+                1. Perform ! CreateDataProperty(_groups_, _s_, _capturedValue_).
             1. Return _A_.
           </emu-alg>
         </emu-clause>
@@ -30846,14 +30921,17 @@ THH:mm:ss.sss
                 1. Let _capN_ be ? ToString(_capN_).
               1. Append _capN_ as the last element of _captures_.
               1. Let _n_ be _n_+1.
+            1. Let _namedCaptures_ be ? Get(_result_, `"groups"`).
             1. If _functionalReplace_ is *true*, then
               1. Let _replacerArgs_ be &laquo; _matched_ &raquo;.
               1. Append in list order the elements of _captures_ to the end of the List _replacerArgs_.
-              1. Append _position_ and _S_ as the last two elements of _replacerArgs_.
+              1. Append _position_ and _S_ to _replacerArgs_.
+              1. If _namedCaptures_ is not *undefined*, then
+                1. Append _namedCaptures_ as the last element of _replacerArgs_.
               1. Let _replValue_ be ? Call(_replaceValue_, *undefined*, _replacerArgs_).
               1. Let _replacement_ be ? ToString(_replValue_).
             1. Else,
-              1. Let _replacement_ be GetSubstitution(_matched_, _S_, _position_, _captures_, _replaceValue_).
+              1. Let _replacement_ be GetSubstitution(_matched_, _S_, _position_, _captures_, _namedCaptures_, _replaceValue_).
             1. If _position_ &ge; _nextSourcePosition_, then
               1. NOTE: _position_ should not normally move backwards. If it does, it is an indication of an ill-behaving RegExp subclass or use of an access triggered side-effect to change the global flag or other characteristics of _rx_. In such cases, the corresponding substitution is ignored.
               1. Let _accumulatedResult_ be the string-concatenation of the current value of _accumulatedResult_, the substring of _S_ consisting of the code units from _nextSourcePosition_ (inclusive) up to _position_ (exclusive), and _replacement_.
@@ -31052,6 +31130,37 @@ THH:mm:ss.sss
         <h1>lastIndex</h1>
         <p>The value of the `lastIndex` property specifies the String index at which to start the next match. It is coerced to an integer when used (see <emu-xref href="#sec-regexpbuiltinexec"></emu-xref>). This property shall have the attributes { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
       </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-regexp-identifier-names-static-semantics-stringvalue">
+      <h1>Static Semantics: StringValue</h1>
+      <emu-see-also-para op="StringValue"></emu-see-also-para>
+      <emu-grammar>
+        RegExpIdentifierName[U] ::
+          RegExpIdentifierStart[?U]
+          RegExpIdentifierName[?U] RegExpIdentifierPart[?U]
+      </emu-grammar>
+      <emu-alg>
+        1. Return the String value consisting of the sequence of code units corresponding to |RegExpIdentifierName|. In determining the sequence any occurrences of `\\` |RegExpUnicodeEscapeSequence| are first replaced with the code point represented by the |RegExpUnicodeEscapeSequence| and then the code points of the entire |RegExpIdentifierName| are converted to code units by UTF16Encoding each code point.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-backreference-matcher" aoid="BackreferenceMatcher">
+      <h1>Runtime Semantics: BackreferenceMatcher Abstract Operation</h1>
+      <p>The abstract operation BackreferenceMatcher takes one argument, an integer _n_, and performs the following steps:</p>
+      <emu-alg>
+          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+            1. Let _cap_ be _x_'s _captures_ List.
+            1. Let _s_ be _cap_[_n_].
+            1. If _s_ is *undefined*, return _c_(_x_).
+            1. Let _e_ be _x_'s _endIndex_.
+            1. Let _len_ be the number of elements in _s_.
+            1. Let _f_ be _e_ + _len_.
+            1. If _f_ &gt; _InputLength_, return ~failure~.
+            1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_s_[_i_]) is not the same character value as Canonicalize(_Input_[_e_ + _i_]), return ~failure~.
+            1. Let _y_ be the State (_f_, _cap_).
+            1. Call _c_(_y_) and return its result.
+      </emu-alg>
     </emu-clause>
   </emu-clause>
 </emu-clause>
@@ -39083,35 +39192,35 @@ THH:mm:ss.sss
       <p>This alternative pattern grammar and semantics only changes the syntax and semantics of BMP patterns. The following grammar extensions include productions parameterized with the [U] parameter. However, none of these extensions change the syntax of Unicode patterns recognized when parsing with the [U] parameter present on the goal symbol.</p>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
-        Term[U] ::
-          [+U] Assertion[+U]
-          [+U] Atom[+U]
-          [+U] Atom[+U] Quantifier
+        Term[U, N] ::
+          [+U] Assertion[+U, ?N]
+          [+U] Atom[+U, ?N]
+          [+U] Atom[+U, ?N] Quantifier
           [~U] QuantifiableAssertion Quantifier
-          [~U] Assertion[~U]
-          [~U] ExtendedAtom Quantifier
-          [~U] ExtendedAtom
+          [~U] Assertion[~U, ?N]
+          [~U] ExtendedAtom[?N] Quantifier
+          [~U] ExtendedAtom[?N]
 
-        Assertion[U] ::
+        Assertion[U, N] ::
           `^`
           `$`
           `\` `b`
           `\` `B`
-          [+U] `(` `?` `=` Disjunction[+U] `)`
-          [+U] `(` `?` `!` Disjunction[+U] `)`
-          [~U] QuantifiableAssertion
+          [+U] `(` `?` `=` Disjunction[+U, ?N] `)`
+          [+U] `(` `?` `!` Disjunction[+U, ?N] `)`
+          [~U] QuantifiableAssertion[N]
 
-        QuantifiableAssertion ::
-          `(` `?` `=` Disjunction[~U] `)`
-          `(` `?` `!` Disjunction[~U] `)`
+        QuantifiableAssertion[N] ::
+          `(` `?` `=` Disjunction[~U, ?N] `)`
+          `(` `?` `!` Disjunction[~U, ?N] `)`
 
-        ExtendedAtom ::
+        ExtendedAtom[N] ::
           `.`
-          `\` AtomEscape[~U]
+          `\` AtomEscape[~U, ?N]
           `\` [lookahead == `c`]
-          CharacterClass[~U]
-          `(` Disjunction[~U] `)`
-          `(` `?` `:` Disjunction[~U] `)`
+          CharacterClass[~U, ?N]
+          `(` Disjunction[~U, ?N] `)`
+          `(` `?` `:` Disjunction[~U, ?N] `)`
           InvalidBracedQuantifier
           ExtendedPatternCharacter
 
@@ -39123,37 +39232,42 @@ THH:mm:ss.sss
         ExtendedPatternCharacter ::
           SourceCharacter but not one of `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `|`
 
-        AtomEscape[U] ::
+        AtomEscape[U, N] ::
           [+U] DecimalEscape
           [~U] DecimalEscape [> but only if the CapturingGroupNumber of |DecimalEscape| is &lt;= _NcapturingParens_]
           CharacterClassEscape
-          CharacterEscape[~U]
+          CharacterEscape[~U, ?N]
+          [+N] `k` GroupName
 
-        CharacterEscape[U] ::
+        CharacterEscape[U, N] ::
           ControlEscape
           `c` ControlLetter
           `0` [lookahead &lt;! DecimalDigit]
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?U]
           [~U] LegacyOctalEscapeSequence
-          IdentityEscape[?U]
+          IdentityEscape[?U, ?N]
 
-        IdentityEscape[U] ::
+        IdentityEscape[U, N] ::
           [+U] SyntaxCharacter
           [+U] `/`
-          [~U] SourceCharacter but not `c`
+          [~U] SourceCharacterIdentityEscape[?N]
 
-        ClassAtomNoDash[U] ::
+        SourceCharacterIdentityEscape[N] ::
+          [~N] SourceCharacter but not `c`
+          [+N] SourceCharacter but not one of `c` or `k`
+
+        ClassAtomNoDash[U, N] ::
           SourceCharacter but not one of `\` or `]` or `-`
-          `\` ClassEscape[?U]
+          `\` ClassEscape[?U, ?N]
           `\` [lookahead == `c`]
 
-        ClassEscape[U] ::
+        ClassEscape[U, N] ::
           `b`
           [+U] `-`
           [~U] `c` ClassControlLetter
           CharacterClassEscape
-          CharacterEscape[?U]
+          CharacterEscape[?U, ?N]
 
         ClassControlLetter ::
           DecimalDigit
