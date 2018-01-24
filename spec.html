@@ -37403,17 +37403,26 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _C_ be the *this* value.
           1. If Type(_C_) is not Object, throw a *TypeError* exception.
-          1. If IsPromise(_x_) is *true*, then
-            1. Let _xConstructor_ be ? Get(_x_, `"constructor"`).
-            1. If SameValue(_xConstructor_, _C_) is *true*, return _x_.
-          1. Let _promiseCapability_ be ? NewPromiseCapability(_C_).
-          1. Perform ? Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _x_ &raquo;).
-          1. Return _promiseCapability_.[[Promise]].
+          1. Return ? PromiseResolve(_C_, _x_).
         </emu-alg>
         <p>This function is the <dfn>%Promise_resolve%</dfn> intrinsic object.</p>
         <emu-note>
           <p>The `resolve` function expects its *this* value to be a constructor function that supports the parameter conventions of the `Promise` constructor.</p>
         </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-promise-resolve" aoid="PromiseResolve">
+        <h1>PromiseResolve ( _C_, _x_ )</h1>
+        <p>The abstract operation PromiseResolve, given a constructor and a value, returns a new promise resolved with that value.</p>
+        <emu-alg>
+          1. Assert: Type(_C_) is Object.
+          1. If IsPromise(_x_) is *true*, then
+              1. Let _xConstructor_ be ? Get(_x_, `"constructor"`).
+              1. If SameValue(_xConstructor_, _C_) is *true*, return _x_.
+          1. Let _promiseCapability_ be ? NewPromiseCapability(_C_).
+          1. Perform ? Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _x_ &raquo;).
+          1. Return _promiseCapability_.[[Promise]].
+        </emu-alg>
       </emu-clause>
 
       <!-- es6num="25.4.4.6" -->
@@ -37450,6 +37459,58 @@ THH:mm:ss.sss
         <h1>Promise.prototype.constructor</h1>
         <p>The initial value of `Promise.prototype.constructor` is the intrinsic object %Promise%.</p>
       </emu-clause>
+
+      <emu-clause id="sec-promise.prototype.finally">
+        <h1>Promise.prototype.finally ( _onFinally_ )</h1>
+        <p>When the `finally` method is called with argument _onFinally_, the following steps are taken:</p>
+        <emu-alg>
+          1. Let _promise_ be the *this* value.
+          1. If Type(_promise_) is not Object, throw a *TypeError* exception.
+          1. Let _C_ be ? SpeciesConstructor(_promise_, %Promise%).
+          1. Assert: IsConstructor(_C_) is *true*.
+          1. If IsCallable(_onFinally_) is *false*,
+              1. Let _thenFinally_ be _onFinally_.
+              1. Let _catchFinally_ be _onFinally_.
+          1. Else,
+              1. Let _thenFinally_ be a new built-in function object as defined in <emu-xref href="#sec-thenfinallyfunction">ThenFinally Function</emu-xref>.
+              1. Let _catchFinally_ be a new built-in function object as defined in <emu-xref href="#sec-catchfinallyfunction">CatchFinally Function</emu-xref>.
+              1. Set _thenFinally_ and _catchFinally_'s [[Constructor]] internal slots to _C_.
+              1. Set _thenFinally_ and _catchFinally_'s [[OnFinally]] internal slots to _onFinally_.
+          1. Return ? Invoke(_promise_, `"then"`, &laquo; _thenFinally_, _catchFinally_ &raquo;).
+        </emu-alg>
+
+        <emu-clause id="sec-thenfinallyfunction" aoid="ThenFinallyFunction">
+          <h1>ThenFinally Function</h1>
+          <p>A ThenFinally function is an anonymous built-in function that has a [[Constructor]] and an [[OnFinally]] internal slot. The value of the [[Constructor]] internal slot is a `Promise`-like constructor function object, and the value of the [[OnFinally]] internal slot is a function object.</p>
+          <p>When a ThenFinally function _F_ is called with argument _value_, the following steps are taken:</p>
+          <emu-alg>
+              1. Let _onFinally_ be _F_.[[OnFinally]].
+              1. Assert: IsCallable(_onFinally_) is *true*.
+              1. Let _result_ be ? Call(_onFinally_, *undefined*).
+              1. Let _C_ be _F_.[[Constructor]].
+              1. Assert: IsConstructor(_C_) is *true*.
+              1. Let _promise_ be ? PromiseResolve(_C_, _result_).
+              1. Let _valueThunk_ be equivalent to a function that returns _value_.
+              1. Return ? Invoke(_promise_, `"then"`, &laquo; _valueThunk_ &raquo;).
+          </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-catchfinallyfunction" aoid="CatchFinallyFunction">
+        <h1>CatchFinally Function</h1>
+        <p>A CatchFinally function is an anonymous built-in function that has a [[Constructor]] and an [[OnFinally]] internal slot. The value of the [[Constructor]] internal slot is a `Promise`-like constructor function object, and the value of the [[OnFinally]] internal slot is a function object.</p>
+        <p>When a CatchFinally function _F_ is called with argument _reason_, the following steps are taken:</p>
+        <emu-alg>
+            1. Let _onFinally_ be _F_.[[OnFinally]].
+            1. Assert: IsCallable(_onFinally_) is *true*.
+            1. Let _result_ be ? Call(_onFinally_, *undefined*).
+            1. Let _C_ be _F_.[[Constructor]].
+            1. Assert: IsConstructor(_C_) is *true*.
+            1. Let _promise_ be ? PromiseResolve(_C_, _result_).
+            1. Let _thrower_ be equivalent to a function that throws _reason_.
+            1. Return ? Invoke(_promise_, `"then"`, &laquo; _thrower_ &raquo;).
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
 
       <!-- es6num="25.4.5.3" -->
       <emu-clause id="sec-promise.prototype.then">
