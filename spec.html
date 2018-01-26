@@ -29113,6 +29113,8 @@ THH:mm:ss.sss
           `\` `B`
           `(` `?` `=` Disjunction[?U] `)`
           `(` `?` `!` Disjunction[?U] `)`
+          `(` `?` `&lt;=` Disjunction[?U] `)`
+          `(` `?` `&lt;!` Disjunction[?U] `)`
 
         Quantifier ::
           QuantifierPrefix
@@ -29682,7 +29684,7 @@ THH:mm:ss.sss
         <h1>Pattern</h1>
         <p>The production <emu-grammar>Pattern :: Disjunction</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |Disjunction| to obtain a Matcher _m_.
+          1. Evaluate |Disjunction| with +1 as its _direction_ argument to obtain a Matcher _m_.
           1. Return an internal closure that takes two arguments, a String _str_ and an integer _index_, and performs the following steps:
             1. Assert: _index_ &le; the length of _str_.
             1. If _Unicode_ is *true*, let _Input_ be a List consisting of the sequence of code points of _str_ interpreted as a UTF-16 encoded (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>) Unicode string. Otherwise, let _Input_ be a List consisting of the sequence of code units that are the elements of _str_. _Input_ will be used throughout the algorithms in <emu-xref href="#sec-pattern-semantics"></emu-xref>. Each element of _Input_ is considered to be a character.
@@ -29701,6 +29703,7 @@ THH:mm:ss.sss
       <!-- es6num="21.2.2.3" -->
       <emu-clause id="sec-disjunction">
         <h1>Disjunction</h1>
+        <p>With argument _direction_.</p>
         <p>The production <emu-grammar>Disjunction :: Alternative</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Alternative| to obtain a Matcher _m_.
@@ -29708,8 +29711,8 @@ THH:mm:ss.sss
         </emu-alg>
         <p>The production <emu-grammar>Disjunction :: Alternative `|` Disjunction</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |Alternative| to obtain a Matcher _m1_.
-          1. Evaluate |Disjunction| to obtain a Matcher _m2_.
+          1. Evaluate |Alternative| with argument _direction_ to obtain a Matcher _m1_.
+          1. Evaluate |Disjunction| with argument _direction_ to obtain a Matcher _m2_.
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps when evaluated:
             1. Call _m1_(_x_, _c_) and let _r_ be its result.
             1. If _r_ is not ~failure~, return _r_.
@@ -29724,32 +29727,41 @@ THH:mm:ss.sss
           <pre><code class="javascript">["abc", "a", "a", undefined, "bc", undefined, "bc"]</code></pre>
           <p>and not</p>
           <pre><code class="javascript">["abc", "ab", undefined, "ab", "c", "c", undefined]</code></pre>
+          <p>The order in which the two alternatives are tried is independent of the value of _direction_.</p>
         </emu-note>
       </emu-clause>
 
       <!-- es6num="21.2.2.4" -->
       <emu-clause id="sec-alternative">
         <h1>Alternative</h1>
+        <p>With argument _direction_.</p>
         <p>The production <emu-grammar>Alternative :: [empty]</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return a Matcher that takes two arguments, a State _x_ and a Continuation _c_, and returns the result of calling _c_(_x_).
         </emu-alg>
         <p>The production <emu-grammar>Alternative :: Alternative Term</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |Alternative| to obtain a Matcher _m1_.
-          1. Evaluate |Term| to obtain a Matcher _m2_.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps when evaluated:
-            1. Let _d_ be a Continuation that takes a State argument _y_ and returns the result of calling _m2_(_y_, _c_).
-            1. Call _m1_(_x_, _d_) and return its result.
+          1. Evaluate |Alternative| with argument _direction_ to obtain a Matcher _m1_.
+          1. Evaluate |Term| with argument _direction_ to obtain a Matcher _m2_.
+          1. If _direction_ is equal to +1, then
+            1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps when evaluated:
+              1. Let _d_ be a Continuation that takes a State argument _y_ and returns the result of calling _m2_(_y_, _c_).
+              1. Call _m1_(_x_, _d_) and return its result.
+          1. Else,
+            1. Assert: _direction_ is equal to -1.
+            1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps when evaluated:
+              1. Let _d_ be a Continuation that takes a State argument _y_ and returns the result of calling _m1_(_y_, _c_)
+              1. Call _m2_(_x_, _d_) and return its result.
         </emu-alg>
         <emu-note>
-          <p>Consecutive |Term|s try to simultaneously match consecutive portions of _Input_. If the left |Alternative|, the right |Term|, and the sequel of the regular expression all have choice points, all choices in the sequel are tried before moving on to the next choice in the right |Term|, and all choices in the right |Term| are tried before moving on to the next choice in the left |Alternative|.</p>
+          <p>Consecutive |Term|s try to simultaneously match consecutive portions of _Input_. When _direction_ is equal to +1, if the left |Alternative|, the right |Term|, and the sequel of the regular expression all have choice points, all choices in the sequel are tried before moving on to the next choice in the right |Term|, and all choices in the right |Term| are tried before moving on to the next choice in the left |Alternative|. When _direction_ is equal to -1, the evaluation order of |Alternative| and |Term| are reversed.</p>
         </emu-note>
       </emu-clause>
 
       <!-- es6num="21.2.2.5" -->
       <emu-clause id="sec-term">
         <h1>Term</h1>
+        <p>With argument _direction_.</p>
         <p>The production <emu-grammar>Term :: Assertion</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps when evaluated:
@@ -29758,13 +29770,16 @@ THH:mm:ss.sss
             1. If _r_ is *false*, return ~failure~.
             1. Call _c_(_x_) and return its result.
         </emu-alg>
+        <emu-note>
+          <p>The AssertionTester is independent of _direction_.</p>
+        </emu-note>
         <p>The production <emu-grammar>Term :: Atom</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the Matcher that is the result of evaluating |Atom|.
+          1. Return the Matcher that is the result of evaluating |Atom| with argument _direction_.
         </emu-alg>
         <p>The production <emu-grammar>Term :: Atom Quantifier</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |Atom| to obtain a Matcher _m_.
+          1. Evaluate |Atom| with argument _direction_ to obtain a Matcher _m_.
           1. Evaluate |Quantifier| to obtain the three results: an integer _min_, an integer (or &infin;) _max_, and Boolean _greedy_.
           1. Assert: If _max_ is finite, then _max_ is not less than _min_.
           1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Term|. This is the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Term|.
@@ -29886,7 +29901,7 @@ THH:mm:ss.sss
         </emu-alg>
         <p>The production <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |Disjunction| to obtain a Matcher _m_.
+          1. Evaluate |Disjunction| with +1 as its _direction_ argument to obtain a Matcher _m_.
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _d_ be a Continuation that always returns its State argument as a successful MatchResult.
             1. Call _m_(_x_, _d_) and let _r_ be its result.
@@ -29899,7 +29914,29 @@ THH:mm:ss.sss
         </emu-alg>
         <p>The production <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |Disjunction| to obtain a Matcher _m_.
+          1. Evaluate |Disjunction| with +1 as its _direction_ argument to obtain a Matcher _m_.
+          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+            1. Let _d_ be a Continuation that always returns its State argument as a successful MatchResult.
+            1. Call _m_(_x_, _d_) and let _r_ be its result.
+            1. If _r_ is not ~failure~, return ~failure~.
+            1. Call _c_(_x_) and return its result.
+        </emu-alg>
+        <p>The production <emu-grammar>Assertion :: `(` `?` `&lt;=` Disjunction `)`</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Evaluate |Disjunction| with -1 as its _direction_ argument to obtain a Matcher _m_.
+          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+            1. Let _d_ be a Continuation that always returns its State argument as a successful MatchResult.
+            1. Call _m_(_x_, _d_) and let _r_ be its result.
+            1. If _r_ is ~failure~, return ~failure~.
+            1. Let _y_ be _r_'s State.
+            1. Let _cap_ be _y_'s _captures_ List.
+            1. Let _xe_ be _x_'s _endIndex_.
+            1. Let _z_ be the State (_xe_, _cap_).
+            1. Call _c_(_z_) and return its result.
+        </emu-alg>
+        <p>The production <emu-grammar>Assertion :: `(` `?` `&lt;!` Disjunction `)`</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Evaluate |Disjunction| with -1 as its _direction_ argument to obtain a Matcher _m_.
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _d_ be a Continuation that always returns its State argument as a successful MatchResult.
             1. Call _m_(_x_, _d_) and let _r_ be its result.
@@ -30210,38 +30247,45 @@ THH:mm:ss.sss
       <!-- es6num="21.2.2.8" -->
       <emu-clause id="sec-atom">
         <h1>Atom</h1>
+        <p>With argument _direction_.</p>
         <p>The production <emu-grammar>Atom :: PatternCharacter</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Let _ch_ be the character matched by |PatternCharacter|.
           1. Let _A_ be a one-element CharSet containing the character _ch_.
-          1. Call CharacterSetMatcher(_A_, *false*) and return its Matcher result.
+          1. Call CharacterSetMatcher(_A_, *false*, _direction_) and return its Matcher result.
         </emu-alg>
         <p>The production <emu-grammar>Atom :: `.`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. If _DotAll_ is *true*, then
             1. Let _A_ be the set of all characters.
           1. Otherwise, let _A_ be the set of all characters except |LineTerminator|.
-          1. Call CharacterSetMatcher(_A_, *false*) and return its Matcher result.
+          1. Call CharacterSetMatcher(_A_, *false*, _direction_) and return its Matcher result.
         </emu-alg>
         <p>The production <emu-grammar>Atom :: `\` AtomEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the Matcher that is the result of evaluating |AtomEscape|.
+          1. Return the Matcher that is the result of evaluating |AtomEscape| with argument _direction_.
         </emu-alg>
         <p>The production <emu-grammar>Atom :: CharacterClass</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |CharacterClass| to obtain a CharSet _A_ and a Boolean _invert_.
-          1. Call CharacterSetMatcher(_A_, _invert_) and return its Matcher result.
+          1. Call CharacterSetMatcher(_A_, _invert_, _direction_) and return its Matcher result.
         </emu-alg>
         <p>The production <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |Disjunction| to obtain a Matcher _m_.
+          1. Evaluate |Disjunction| with argument _direction_ to obtain a Matcher _m_.
           1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Atom|. This is the total number of <emu-grammar>Atom :: `(` Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Atom|.
           1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _d_ be an internal Continuation closure that takes one State argument _y_ and performs the following steps:
               1. Let _cap_ be a copy of _y_'s _captures_ List.
               1. Let _xe_ be _x_'s _endIndex_.
               1. Let _ye_ be _y_'s _endIndex_.
-              1. Let _s_ be a new List whose characters are the characters of _Input_ at indices _xe_ (inclusive) through _ye_ (exclusive).
+              1. If _direction_ is equal to +1, then
+                1. Assert: _xe_ &lte; _ye_.
+                1. Let _s_ be a fresh List whose characters are the characters of _Input_ at indices _xe_ (inclusive) through _ye_ (exclusive).
+              1. Else,
+                1. Assert: _direction_ is equal to -1.
+                1. Assert: _ye_ &lte; _xe_.
+                1. Let _s_ be a fresh List whose characters are the characters of _Input_ at indices _ye_ (inclusive) through _xe_ (exclusive).
               1. Set _cap_[_parenIndex_+1] to _s_.
               1. Let _z_ be the State (_ye_, _cap_).
               1. Call _c_(_z_) and return its result.
@@ -30249,25 +30293,28 @@ THH:mm:ss.sss
         </emu-alg>
         <p>The production <emu-grammar>Atom :: `(` `?` `:` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the Matcher that is the result of evaluating |Disjunction|.
+          1. Return the Matcher that is the result of evaluating |Disjunction| with argument _direction_.
         </emu-alg>
 
         <!-- es6num="21.2.2.8.1" -->
         <emu-clause id="sec-runtime-semantics-charactersetmatcher-abstract-operation" aoid="CharacterSetMatcher">
-          <h1>Runtime Semantics: CharacterSetMatcher ( _A_, _invert_ )</h1>
-          <p>The abstract operation CharacterSetMatcher takes two arguments, a CharSet _A_ and a Boolean flag _invert_, and performs the following steps:</p>
+          <h1>Runtime Semantics: CharacterSetMatcher ( _A_, _invert_, _direction_ )</h1>
+          <p>The abstract operation CharacterSetMatcher takes three arguments, a CharSet _A_, a Boolean flag _invert_, and an integer _direction_, and performs the following steps:</p>
           <emu-alg>
             1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps when evaluated:
               1. Let _e_ be _x_'s _endIndex_.
-              1. If _e_ is _InputLength_, return ~failure~.
-              1. Let _ch_ be the character _Input_[_e_].
+              1. Let _f_ be _e_ + _direction_.
+              1. If _f_ &lt; 0 or _f_ > _InputLength_, return ~failure~.
+              1. Let _index_ be min(_e_, _f_).
+              1. Let _ch_ be the character _Input_[_index_].
               1. Let _cc_ be Canonicalize(_ch_).
               1. If _invert_ is *false*, then
                 1. If there does not exist a member _a_ of set _A_ such that Canonicalize(_a_) is _cc_, return ~failure~.
-              1. Else _invert_ is *true*,
+              1. Else,
+                1. Assert: _invert_ is *true*.
                 1. If there exists a member _a_ of set _A_ such that Canonicalize(_a_) is _cc_, return ~failure~.
               1. Let _cap_ be _x_'s _captures_ List.
-              1. Let _y_ be the State (_e_+1, _cap_).
+              1. Let _y_ be the State (_f_, _cap_).
               1. Call _c_(_y_) and return its result.
           </emu-alg>
         </emu-clause>
@@ -30365,6 +30412,7 @@ THH:mm:ss.sss
       <!-- es6num="21.2.2.9" -->
       <emu-clause id="sec-atomescape">
         <h1>AtomEscape</h1>
+        <p>With argument _direction_.</p>
         <p>The production <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |DecimalEscape| to obtain an integer _n_.
@@ -30375,12 +30423,12 @@ THH:mm:ss.sss
         <emu-alg>
           1. Evaluate |CharacterEscape| to obtain a character _ch_.
           1. Let _A_ be a one-element CharSet containing the character _ch_.
-          1. Call CharacterSetMatcher(_A_, *false*) and return its Matcher result.
+          1. Call CharacterSetMatcher(_A_, *false*, _direction_) and return its Matcher result.
         </emu-alg>
         <p>The production <emu-grammar>AtomEscape :: CharacterClassEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |CharacterClassEscape| to obtain a CharSet _A_.
-          1. Call CharacterSetMatcher(_A_, *false*) and return its Matcher result.
+          1. Call CharacterSetMatcher(_A_, *false*, _direction_) and return its Matcher result.
         </emu-alg>
         <emu-note>
           <p>An escape sequence of the form `\\` followed by a nonzero decimal number _n_ matches the result of the _n_th set of capturing parentheses (<emu-xref href="#sec-notation"></emu-xref>). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_th one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
@@ -31291,9 +31339,10 @@ THH:mm:ss.sss
             1. If _s_ is *undefined*, return _c_(_x_).
             1. Let _e_ be _x_'s _endIndex_.
             1. Let _len_ be the number of elements in _s_.
-            1. Let _f_ be _e_ + _len_.
-            1. If _f_ &gt; _InputLength_, return ~failure~.
-            1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_s_[_i_]) is not the same character value as Canonicalize(_Input_[_e_ + _i_]), return ~failure~.
+            1. Let _f_ be _e_ + _direction_ &times; _len_.
+            1. If _f_ &lt; 0 or _f_ &gt; _InputLength_, return ~failure~.
+            1. Let _g_ be min(_e_, _f_).
+            1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_s_[_i_]) is not the same character value as Canonicalize(_Input_[_g_ + _i_]), return ~failure~.
             1. Let _y_ be the State (_f_, _cap_).
             1. Call _c_(_y_) and return its result.
       </emu-alg>
