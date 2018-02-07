@@ -490,9 +490,12 @@
       <p>The <em>syntactic grammar</em> for ECMAScript is given in clauses 11, 12, 13, 14, and 15. This grammar has ECMAScript tokens defined by the lexical grammar as its terminal symbols (<emu-xref href="#sec-lexical-and-regexp-grammars"></emu-xref>). It defines a set of productions, starting from two alternative goal symbols |Script| and |Module|, that describe how sequences of tokens form syntactically correct independent components of ECMAScript programs.</p>
       <p>When a stream of code points is to be parsed as an ECMAScript |Script| or |Module|, it is first converted to a stream of input elements by repeated application of the lexical grammar; this stream of input elements is then parsed by a single application of the syntactic grammar. The input stream is syntactically in error if the tokens in the stream of input elements cannot be parsed as a single instance of the goal nonterminal (|Script| or |Module|), with no tokens left over.</p>
       <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn>Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol.</p>
+      <p>New Parse Nodes are instantiated for each invocation of the parser and never reused between parses even of identical source text. Parse Nodes are considered <dfn>the same Parse Node</dfn> if and only if they represent the same span of source text, are instances of the same grammar symbol, and resulted from the same parser invocation.</em>
+      <emu-note>Parsing the same String multiple times will lead to different Parse Nodes, e.g., as occurs in: <pre><code language="javascript">eval(str); eval(str);</code></pre>.</emu-note>
+      <emu-note>Parse Nodes are specification artefacts, and implementations are not required to use an analogous data structure.</emu-note>
       <p>Productions of the syntactic grammar are distinguished by having just one colon &ldquo;<b>:</b>&rdquo; as punctuation.</p>
       <p>The syntactic grammar as presented in clauses 12, 13, 14 and 15 is not a complete account of which token sequences are accepted as a correct ECMAScript |Script| or |Module|. Certain additional token sequences are also accepted, namely, those that would be described by the grammar if only semicolons were added to the sequence in certain places (such as before line terminator characters). Furthermore, certain token sequences that are described by the grammar are not considered acceptable if a line terminator character appears in certain &ldquo;awkward&rdquo; places.</p>
-      <p>In certain cases, in order to avoid ambiguities, the syntactic grammar uses generalized productions that permit token sequences that do not form a valid ECMAScript |Script| or |Module|. For example, this technique is used for object literals and object destructuring patterns. In such cases a more restrictive <em>supplemental grammar</em> is provided that further restricts the acceptable token sequences. Typically, an early error rule will then define an error condition if "_P_ cannot be <dfn>reparsed</dfn> as an _N_", where _P_ is a Parse Node (an instance of the generalized production) and _N_ is a nonterminal from the supplemental grammar. Here, the sequence of tokens originally matched by _P_ is parsed again using _N_ as the goal symbol. (If _N_ takes grammatical parameters, then they are set to the same values used when _P_ was originally parsed.) An error occurs if the sequence of tokens cannot be parsed as a single instance of _N_, with no tokens left over. Subsequently, algorithms access the result of the parse using a phrase of the form "the result of <dfn>reparsing</dfn> _P_ as an _N_". This will always be a Parse Node (an instance of _N_), since any parsing failure would have been detected by an early error rule.</p>
+      <p>In certain cases, in order to avoid ambiguities, the syntactic grammar uses generalized productions that permit token sequences that do not form a valid ECMAScript |Script| or |Module|. For example, this technique is used for object literals and object destructuring patterns. In such cases a more restrictive <em>supplemental grammar</em> is provided that further restricts the acceptable token sequences. Typically, an early error rule will then define an error condition if "_P_ is not <dfn>covering</dfn> an _N_", where _P_ is a Parse Node (an instance of the generalized production) and _N_ is a nonterminal from the supplemental grammar. Here, the sequence of tokens originally matched by _P_ is parsed again using _N_ as the goal symbol. (If _N_ takes grammatical parameters, then they are set to the same values used when _P_ was originally parsed.) An error occurs if the sequence of tokens cannot be parsed as a single instance of _N_, with no tokens left over. Subsequently, algorithms access the result of the parse using a phrase of the form "the _N_ that is <dfn>covered</dfn> by _P_". This will always be a Parse Node (an instance of _N_, unique for a given _P_), since any parsing failure would have been detected by an early error rule.</p>
     </emu-clause>
 
     <!-- es6num="5.1.5" -->
@@ -6121,10 +6124,11 @@
             [[TemplateMap]]
           </td>
           <td>
-            A List of Record { [[Strings]]: List, [[Array]]: Object}.
+            A List of Record { [[Site]]: Parse Node, [[Array]]: Object}.
           </td>
           <td>
-            Template objects are canonicalized separately for each realm using its Realm Record's [[TemplateMap]]. Each [[Strings]] value is a List containing, in source text order, the raw String values of a |TemplateLiteral| that has been evaluated. The associated [[Array]] value is the corresponding template object that is passed to a tag function.
+            Template objects are canonicalized separately for each realm using its Realm Record's [[TemplateMap]]. Each [[Site]] value is a Parse Node that is a |TemplateLiteral|. The associated [[Array]] value is the corresponding template object that is passed to a tag function.
+            <emu-note>Once a Parse Node becomes unreachable, the corresponding [[Array]] is also unreachable, and it would be unobservable if an implementation removed the pair from the [[TemplateMap]] list.</emu-note>
           </td>
         </tr>
         <tr>
@@ -11364,7 +11368,7 @@
         <h1>Static Semantics: CoveredParenthesizedExpression</h1>
         <emu-grammar>CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `)`</emu-grammar>
         <emu-alg>
-          1. Return the result of reparsing |CoverParenthesizedExpressionAndArrowParameterList| as a |ParenthesizedExpression|.
+          1. Return the |ParenthesizedExpression| that is covered by |CoverParenthesizedExpressionAndArrowParameterList|.
         </emu-alg>
       </emu-clause>
 
@@ -12079,7 +12083,7 @@
           1. Let _realm_ be the current Realm Record.
           1. Let _templateRegistry_ be _realm_.[[TemplateMap]].
           1. For each element _e_ of _templateRegistry_, do
-            1. If _e_.[[Strings]] and _rawStrings_ contain the same values in the same order, then
+            1. If _e_.[[Site]] is the same Parse Node as _templateLiteral_, then
               1. Return _e_.[[Array]].
           1. Let _cookedStrings_ be TemplateStrings of _templateLiteral_ with argument *false*.
           1. Let _count_ be the number of elements in the List _cookedStrings_.
@@ -12097,7 +12101,7 @@
           1. Perform SetIntegrityLevel(_rawObj_, `"frozen"`).
           1. Call _template_.[[DefineOwnProperty]](`"raw"`, PropertyDescriptor{[[Value]]: _rawObj_, [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false*}).
           1. Perform SetIntegrityLevel(_template_, `"frozen"`).
-          1. Append the Record{[[Strings]]: _rawStrings_, [[Array]]: _template_} to _templateRegistry_.
+          1. Append the Record{[[Site]]: _templateLiteral_, [[Array]]: _template_} to _templateRegistry_.
           1. Return _template_.
         </emu-alg>
         <emu-note>
@@ -12208,7 +12212,7 @@
         <emu-grammar>PrimaryExpression : CoverParenthesizedExpressionAndArrowParameterList</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if |CoverParenthesizedExpressionAndArrowParameterList| cannot be reparsed as a |ParenthesizedExpression|.
+            It is a Syntax Error if |CoverParenthesizedExpressionAndArrowParameterList| is not covering a |ParenthesizedExpression|.
           </li>
           <li>
             All Early Error rules for |ParenthesizedExpression| and its derived productions also apply to CoveredParenthesizedExpression of |CoverParenthesizedExpressionAndArrowParameterList|.
@@ -12326,7 +12330,7 @@
           CallExpression : CoverCallExpressionAndAsyncArrowHead
         </emu-grammar>
         <emu-alg>
-          1. Return the result of reparsing |CoverCallExpressionAndAsyncArrowHead| as a |CallMemberExpression|.
+          1. Return the |CallMemberExpression| that is covered by |CoverCallExpressionAndAsyncArrowHead|.
         </emu-alg>
       </emu-clause>
 
@@ -14212,7 +14216,7 @@
       <emu-grammar>AssignmentExpression : LeftHandSideExpression `=` AssignmentExpression</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and |LeftHandSideExpression| cannot be reparsed as an |AssignmentPattern|.
+          It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and |LeftHandSideExpression| is not covering an |AssignmentPattern|.
         </li>
         <li>
           It is an early Reference Error if |LeftHandSideExpression| is neither an |ObjectLiteral| nor an |ArrayLiteral| and IsValidSimpleAssignmentTarget of |LeftHandSideExpression| is *false*.
@@ -14281,7 +14285,7 @@
             1. If _hasNameProperty_ is *false*, perform SetFunctionName(_rval_, GetReferencedName(_lref_)).
           1. Perform ? PutValue(_lref_, _rval_).
           1. Return _rval_.
-        1. Let _assignmentPattern_ be the result of reparsing |LeftHandSideExpression| as an |AssignmentPattern|.
+        1. Let _assignmentPattern_ be the |AssignmentPattern| that is covered by |LeftHandSideExpression|.
         1. Let _rref_ be the result of evaluating |AssignmentExpression|.
         1. Let _rval_ be ? GetValue(_rref_).
         1. Perform ? DestructuringAssignmentEvaluation of _assignmentPattern_ using _rval_ as the argument.
@@ -14360,7 +14364,7 @@
         <emu-grammar>DestructuringAssignmentTarget : LeftHandSideExpression</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| cannot be reparsed as an |AssignmentPattern|.
+            It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| is not covering an |AssignmentPattern|.
           </li>
           <li>
             It is a Syntax Error if |LeftHandSideExpression| is neither an |ObjectLiteral| nor an |ArrayLiteral| and IsValidSimpleAssignmentTarget(|LeftHandSideExpression|) is *false*.
@@ -14521,7 +14525,7 @@
             1. Let _v_ be ? GetValue(_defaultValue_).
           1. Else, let _v_ be _value_.
           1. If |DestructuringAssignmentTarget| is an |ObjectLiteral| or an |ArrayLiteral|, then
-            1. Let _nestedAssignmentPattern_ be the result of reparsing |DestructuringAssignmentTarget| as an |AssignmentPattern|.
+            1. Let _nestedAssignmentPattern_ be the |AssignmentPattern| that is covered by |DestructuringAssignmentTarget|.
             1. Return the result of performing DestructuringAssignmentEvaluation of _nestedAssignmentPattern_ with _v_ as the argument.
           1. If |Initializer| is present and _value_ is *undefined* and IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
             1. Let _hasNameProperty_ be ? HasOwnProperty(_v_, `"name"`).
@@ -14552,7 +14556,7 @@
               1. Increment _n_ by 1.
           1. If |DestructuringAssignmentTarget| is neither an |ObjectLiteral| nor an |ArrayLiteral|, then
             1. Return ? PutValue(_lref_, _A_).
-          1. Let _nestedAssignmentPattern_ be the result of reparsing |DestructuringAssignmentTarget| as an |AssignmentPattern|.
+          1. Let _nestedAssignmentPattern_ be the |AssignmentPattern| that is covered by |DestructuringAssignmentTarget|.
           1. Return the result of performing DestructuringAssignmentEvaluation of _nestedAssignmentPattern_ with _A_ as the argument.
         </emu-alg>
       </emu-clause>
@@ -14572,7 +14576,7 @@
             1. Let _rhsValue_ be ? GetValue(_defaultValue_).
           1. Else, let _rhsValue_ be _v_.
           1. If |DestructuringAssignmentTarget| is an |ObjectLiteral| or an |ArrayLiteral|, then
-            1. Let _assignmentPattern_ be the result of reparsing |DestructuringAssignmentTarget| as an |AssignmentPattern|.
+            1. Let _assignmentPattern_ be the |AssignmentPattern| that is covered by |DestructuringAssignmentTarget|.
             1. Return the result of performing DestructuringAssignmentEvaluation of _assignmentPattern_ with _rhsValue_ as the argument.
           1. If |Initializer| is present and _v_ is *undefined* and IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
             1. Let _hasNameProperty_ be ? HasOwnProperty(_rhsValue_, `"name"`).
@@ -16510,10 +16514,10 @@
         </emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| cannot be reparsed as an |AssignmentPattern|.
+            It is a Syntax Error if |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| is not covering an |AssignmentPattern|.
           </li>
         </ul>
-        <p>If |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| can be reparsed as an |AssignmentPattern| then the following rules are not applied. Instead, the Early Error rules for |AssignmentPattern| are used.</p>
+        <p>If |LeftHandSideExpression| is either an |ObjectLiteral| or an |ArrayLiteral| and if |LeftHandSideExpression| is covering an |AssignmentPattern| then the following rules are not applied. Instead, the Early Error rules for |AssignmentPattern| are used.</p>
         <ul>
           <li>
             It is a Syntax Error if IsValidSimpleAssignmentTarget of |LeftHandSideExpression| is *false*.
@@ -16821,7 +16825,7 @@
           1. Let _destructuring_ be IsDestructuring of _lhs_.
           1. If _destructuring_ is *true* and if _lhsKind_ is ~assignment~, then
             1. Assert: _lhs_ is a |LeftHandSideExpression|.
-            1. Let _assignmentPattern_ be the result of reparsing _lhs_ as an |AssignmentPattern|.
+            1. Let _assignmentPattern_ be the |AssignmentPattern| that is covered by _lhs_.
           1. Repeat,
             1. Let _nextResult_ be ? IteratorStep(_iteratorRecord_).
             1. If _nextResult_ is *false*, return NormalCompletion(_V_).
@@ -18701,7 +18705,7 @@
       <emu-grammar>ArrowParameters : CoverParenthesizedExpressionAndArrowParameterList</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if |CoverParenthesizedExpressionAndArrowParameterList| cannot be reparsed as an |ArrowFormalParameters|.
+          It is a Syntax Error if |CoverParenthesizedExpressionAndArrowParameterList| is not covering an |ArrowFormalParameters|.
         </li>
         <li>
           All early error rules for |ArrowFormalParameters| and its derived productions also apply to CoveredFormalsList of |CoverParenthesizedExpressionAndArrowParameterList|.
@@ -18812,7 +18816,7 @@
           `(` Expression `,` `...` BindingPattern `)`
       </emu-grammar>
       <emu-alg>
-        1. Return the result of reparsing |CoverParenthesizedExpressionAndArrowParameterList| as an |ArrowFormalParameters|.
+        1. Return the |ArrowFormalParameters| that is covered by |CoverParenthesizedExpressionAndArrowParameterList|.
       </emu-alg>
     </emu-clause>
 
@@ -20145,7 +20149,7 @@
       <ul>
         <li>It is a Syntax Error if |CoverCallExpressionAndAsyncArrowHead| Contains |YieldExpression| is *true*.</li>
         <li>It is a Syntax Error if |CoverCallExpressionAndAsyncArrowHead| Contains |AwaitExpression| is *true*.</li>
-        <li>It is a Syntax Error if |CoverCallExpressionAndAsyncArrowHead| cannot be reparsed as an |AsyncArrowHead|.</li>
+        <li>It is a Syntax Error if |CoverCallExpressionAndAsyncArrowHead| is not covering an |AsyncArrowHead|.</li>
         <li>It is a Syntax Error if any element of the BoundNames of |CoverCallExpressionAndAsyncArrowHead| also occurs in the LexicallyDeclaredNames of |AsyncConciseBody|.</li>
         <li>It is a Syntax Error if ContainsUseStrict of |AsyncConciseBody| is *true* and IsSimpleParameterList of |CoverCallExpressionAndAsyncArrowHead| is *false*.</li>
         <li>All Early Error rules for |AsyncArrowHead| and its derived productions apply to CoveredAsyncArrowHead of |CoverCallExpressionAndAsyncArrowHead|.</li>
@@ -20158,7 +20162,7 @@
         CoverCallExpressionAndAsyncArrowHead : MemberExpression Arguments
       </emu-grammar>
       <emu-alg>
-        1. Return the result of reparsing |CoverCallExpressionAndAsyncArrowHead| as an |AsyncArrowHead|.
+        1. Return the |AsyncArrowHead| that is covered by |CoverCallExpressionAndAsyncArrowHead|.
       </emu-alg>
     </emu-clause>
 
