@@ -20556,7 +20556,6 @@
       <ul>
         <li>It is a Syntax Error if ContainsUseStrict of |AsyncFunctionBody| is *true* and IsSimpleParameterList of |UniqueFormalParameters| is *false*.</li>
         <li>It is a Syntax Error if HasDirectSuper of |AsyncMethod| is *true*.</li>
-        <li>It is a Syntax Error if |UniqueFormalParameters| Contains |AwaitExpression| is *true*.</li>
         <li>It is a Syntax Error if any element of the BoundNames of |UniqueFormalParameters| also occurs in the LexicallyDeclaredNames of |AsyncFunctionBody|.</li>
       </ul>
       <emu-grammar>
@@ -20570,7 +20569,6 @@
       </emu-grammar>
       <ul>
         <li>It is a Syntax Error if ContainsUseStrict of |AsyncFunctionBody| is *true* and IsSimpleParameterList of |FormalParameters| is *false*.</li>
-        <li>It is a Syntax Error if |FormalParameters| Contains |AwaitExpression| is *true*.</li>
         <li>If the source code matching this production is strict code, the Early Error rules for <emu-grammar>UniqueFormalParameters : FormalParameters</emu-grammar> are applied.</li>
         <li>If the source code matching this production is strict code, it is a Syntax Error if |BindingIdentifier| is present and the StringValue of |BindingIdentifier| is `"eval"` or `"arguments"`.</li>
         <li>It is a Syntax Error if any element of the BoundNames of |FormalParameters| also occurs in the LexicallyDeclaredNames of |AsyncFunctionBody|.</li>
@@ -20719,11 +20717,7 @@
       </emu-grammar>
       <emu-alg>
         1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-        1. Let _declResult_ be FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
-        1. If _declResult_ is not an abrupt completion, then
-          1. Perform ! AsyncFunctionStart(_promiseCapability_, |FunctionBody|).
-        1. Else _declResult_ is an abrupt completion,
-          1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo;_declResult_.[[Value]]&raquo;).
+        1. Perform ! AsyncFunctionStart(_promiseCapability_, |FunctionBody|, _functionObject_, _argumentsList_).
         1. Return Completion{[[Type]]: ~return~, [[Value]]: _promiseCapability_.[[Promise]], [[Target]]: ~empty~}.
       </emu-alg>
     </emu-clause>
@@ -25302,7 +25296,7 @@
             1. If _parameters_ Contains |SuperProperty| is *true*, throw a *SyntaxError* exception.
             1. If _kind_ is `"generator"` or `"async generator"`, then
               1. If _parameters_ Contains |YieldExpression| is *true*, throw a *SyntaxError* exception.
-            1. If _kind_ is `"async"` or `"async generator"`, then
+            1. If _kind_ is `"async generator"`, then
               1. If _parameters_ Contains |AwaitExpression| is *true*, throw a *SyntaxError* exception.
             1. If _strict_ is *true*, then
               1. If BoundNames of _parameters_ contains any duplicate elements, throw a *SyntaxError* exception.
@@ -39283,11 +39277,16 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-async-functions-abstract-operations-async-function-start" aoid="AsyncFunctionStart">
-        <h1>AsyncFunctionStart ( _promiseCapability_, _asyncFunctionBody_ )</h1>
+        <h1>AsyncFunctionStart ( _promiseCapability_, _asyncFunctionBody_, _functionObject_, _argumentsList_ )</h1>
         <emu-alg>
           1. Let _runningContext_ be the running execution context.
           1. Let _asyncContext_ be a copy of _runningContext_.
           1. Set the code evaluation state of _asyncContext_ such that when evaluation is resumed for that execution context the following steps will be performed:
+            1. Let _declResult_ be FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
+            1. If _declResult_ is an abrupt completion, then
+              1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo;_declResult_.[[Value]]&raquo;).
+              1. Return.
             1. Let _result_ be the result of evaluating _asyncFunctionBody_.
             1. Assert: If we return here, the async function either threw an exception or performed an implicit or explicit return; all awaiting is done.
             1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
