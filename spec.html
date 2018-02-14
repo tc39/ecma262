@@ -3054,12 +3054,11 @@
           1. Let _asyncContext_ be the running execution context.
           1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
           1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _promise_ &raquo;).
-          1. Let _realm_ be the current Realm Record.
           1. Let _stepsFulfilled_ be the algorithm steps defined in <emu-xref href="#await-fulfilled" title></emu-xref>.
-          1. Let _onFulfilled_ be CreateBuiltinFunction(_realm_, _stepsFulfilled_, %FunctionPrototype%, &laquo; [[AsyncContext]] &raquo;).
+          1. Let _onFulfilled_ be CreateBuiltinFunction(_stepsFulfilled_, &laquo; [[AsyncContext]] &raquo;).
           1. Set _onFulfilled_.[[AsyncContext]] to _asyncContext_.
           1. Let _stepsRejected_ be the algorithm steps defined in <emu-xref href="#await-rejected" title></emu-xref>.
-          1. Let _onRejected_ be CreateBuiltinFunction(_realm_, _stepsRejected_, %FunctionPrototype%, &laquo; [[AsyncContext]] &raquo;).
+          1. Let _onRejected_ be CreateBuiltinFunction(_stepsRejected_, &laquo; [[AsyncContext]] &raquo;).
           1. Set _onRejected_.[[AsyncContext]] to _asyncContext_.
           1. Let _throwawayCapability_ be ! NewPromiseCapability(%Promise%).
           1. Set _throwawayCapability_.[[Promise]].[[PromiseIsHandled]] to *true*.
@@ -5087,9 +5086,8 @@
         1. Let _iterator_ be ObjectCreate(%IteratorPrototype%, &laquo; [[IteratedList]], [[ListIteratorNextIndex]] &raquo;).
         1. Set _iterator_.[[IteratedList]] to _list_.
         1. Set _iterator_.[[ListIteratorNextIndex]] to 0.
-        1. Let _realm_ be the current Realm Record.
         1. Let _steps_ be the algorithm steps defined in ListIterator `next` (<emu-xref href="#sec-listiterator-next"></emu-xref>).
-        1. Let _next_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%).
+        1. Let _next_ be CreateBuiltinFunction(_steps_, &laquo; &raquo;).
         1. Return Record { [[Iterator]]: _iterator_, [[NextMethod]]: _next_, [[Done]]: *false* }.
       </emu-alg>
       <emu-note>
@@ -6376,14 +6374,14 @@
         1. Let _objProto_ be ObjectCreate(*null*).
         1. Set _intrinsics_.[[%ObjectPrototype%]] to _objProto_.
         1. Let _throwerSteps_ be the algorithm steps specified in <emu-xref href="#sec-%throwtypeerror%"></emu-xref> for the %ThrowTypeError% function.
-        1. Let _thrower_ be CreateBuiltinFunction(_realmRec_, _throwerSteps_, *null*).
+        1. Let _thrower_ be CreateBuiltinFunction(_throwerSteps_, &laquo; &raquo;, _realmRec_, *null*).
         1. Set _intrinsics_.[[%ThrowTypeError%]] to _thrower_.
         1. Let _noSteps_ be an empty sequence of algorithm steps.
-        1. Let _funcProto_ be CreateBuiltinFunction(_realmRec_, _noSteps_, _objProto_).
+        1. Let _funcProto_ be CreateBuiltinFunction(_noSteps_, &laquo; &raquo;, _realmRec_, _objProto_).
         1. Set _intrinsics_.[[%FunctionPrototype%]] to _funcProto_.
         1. Call _thrower_.[[SetPrototypeOf]](_funcProto_).
         1. Perform AddRestrictedFunctionProperties(_funcProto_, _realmRec_).
-        1. Set fields of _intrinsics_ with the values listed in <emu-xref href="#table-7"></emu-xref> that have not already been handled above. The field names are the names listed in column one of the table. The value of each field is a new object value fully and recursively populated with property values as defined by the specification of each object in clauses 18-26. All object property values are newly created object values. All values that are built-in function objects are created by performing CreateBuiltinFunction(_realmRec_, &lt;steps&gt;, &lt;prototype&gt;, &lt;slots&gt;) where &lt;steps&gt; is the definition of that function provided by this specification, &lt;prototype&gt; is the specified value of the function's [[Prototype]] internal slot and &lt;slots&gt; is a list of the names, if any, of the function's specified internal slots. The creation of the intrinsics and their properties must be ordered to avoid any dependencies upon objects that have not yet been created.
+        1. Set fields of _intrinsics_ with the values listed in <emu-xref href="#table-7"></emu-xref> that have not already been handled above. The field names are the names listed in column one of the table. The value of each field is a new object value fully and recursively populated with property values as defined by the specification of each object in clauses 18-26. All object property values are newly created object values. All values that are built-in function objects are created by performing CreateBuiltinFunction(&lt;steps&gt;, &lt;slots&gt;, _realmRec_, &lt;prototype&gt;) where &lt;steps&gt; is the definition of that function provided by this specification, &lt;slots&gt; is a list of the names, if any, of the function's specified internal slots, and &lt;prototype&gt; is the specified value of the function's [[Prototype]] internal slot. The creation of the intrinsics and their properties must be ordered to avoid any dependencies upon objects that have not yet been created.
         1. Return _intrinsics_.
       </emu-alg>
     </emu-clause>
@@ -7922,11 +7920,13 @@
 
     <!-- es6num="9.3.3" -->
     <emu-clause id="sec-createbuiltinfunction" aoid="CreateBuiltinFunction">
-      <h1>CreateBuiltinFunction ( _realm_, _steps_, _prototype_ [ , _internalSlotsList_ ] )</h1>
-      <p>The abstract operation CreateBuiltinFunction takes arguments _realm_, _steps_, and _prototype_. The optional argument _internalSlotsList_ is a List of the names of additional internal slots that must be defined as part of the object. If the list is not provided, a new empty List is used. CreateBuiltinFunction returns a built-in function object created by the following steps:</p>
+      <h1>CreateBuiltinFunction ( _steps_, _internalSlotsList_ [ , _realm_ [ , _prototype_ ] ] )</h1>
+      <p>The abstract operation CreateBuiltinFunction takes arguments _steps_, _internalSlotsList_, _realm_, and _prototype_. The argument _internalSlotsList_ is a List of the names of additional internal slots that must be defined as part of the object. CreateBuiltinFunction returns a built-in function object created by the following steps:</p>
       <emu-alg>
-        1. Assert: _realm_ is a Realm Record.
         1. Assert: _steps_ is either a set of algorithm steps or other definition of a function's behaviour provided in this specification.
+        1. If _realm_ is not present, set _realm_ to the current Realm Record.
+        1. Assert: _realm_ is a Realm Record.
+        1. If _prototype_ is not present, set _prototype_ to _realm_.[[Intrinsics]].[[%FunctionPrototype%]].
         1. Let _func_ be a new built-in function object that when called performs the action described by _steps_. The new function object has internal slots whose names are the elements of _internalSlotsList_. The initial value of each of those internal slots is *undefined*.
         1. Set _func_.[[Realm]] to _realm_.
         1. Set _func_.[[Prototype]] to _prototype_.
@@ -8443,9 +8443,8 @@
           <h1>MakeArgGetter ( _name_, _env_ )</h1>
           <p>The abstract operation MakeArgGetter called with String _name_ and Environment Record _env_ creates a built-in function object that when executed returns the value bound for _name_ in _env_. It performs the following steps:</p>
           <emu-alg>
-            1. Let _realm_ be the current Realm Record.
             1. Let _steps_ be the steps of an ArgGetter function as specified below.
-            1. Let _getter_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[Name]], [[Env]] &raquo;).
+            1. Let _getter_ be CreateBuiltinFunction(_steps_, &laquo; [[Name]], [[Env]] &raquo;).
             1. Set _getter_.[[Name]] to _name_.
             1. Set _getter_.[[Env]] to _env_.
             1. Return _getter_.
@@ -8466,9 +8465,8 @@
           <h1>MakeArgSetter ( _name_, _env_ )</h1>
           <p>The abstract operation MakeArgSetter called with String _name_ and Environment Record _env_ creates a built-in function object that when executed sets the value bound for _name_ in _env_. It performs the following steps:</p>
           <emu-alg>
-            1. Let _realm_ be the current Realm Record.
             1. Let _steps_ be the steps of an ArgSetter function as specified below.
-            1. Let _setter_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[Name]], [[Env]] &raquo;).
+            1. Let _setter_ be CreateBuiltinFunction(_steps_, &laquo; [[Name]], [[Env]] &raquo;).
             1. Set _setter_.[[Name]] to _name_.
             1. Set _setter_.[[Env]] to _env_.
             1. Return _setter_.
@@ -37540,9 +37538,8 @@ THH:mm:ss.sss
             1. IfAbruptRejectPromise(_nextValue_, _promiseCapability_).
             1. Let _valueWrapperCapability_ be ! NewPromiseCapability(%Promise%).
             1. Perform ! Call(_valueWrapperCapability_.[[Resolve]], *undefined*, &laquo; _nextValue_ &raquo;).
-            1. Let _realm_ be the current Realm Record.
             1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-async-from-sync-iterator-value-unwrap-functions" title></emu-xref>.
-            1. Let _onFulfilled_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[Done]] &raquo;).
+            1. Let _onFulfilled_ be CreateBuiltinFunction(_steps_, &laquo; [[Done]] &raquo;).
             1. Set _onFulfilled_.[[Done]] to _nextDone_.
             1. Perform ! PerformPromiseThen(_valueWrapperCapability_.[[Promise]], _onFulfilled_, *undefined*, _promiseCapability_).
             1. Return _promiseCapability_.[[Promise]].
@@ -37577,9 +37574,8 @@ THH:mm:ss.sss
             1. IfAbruptRejectPromise(_returnValue_, _promiseCapability_).
             1. Let _valueWrapperCapability_ be ! NewPromiseCapability(%Promise%).
             1. Perform ! Call(_valueWrapperCapability_.[[Resolve]], *undefined*, &laquo; _returnValue_ &raquo;).
-            1. Let _realm_ be the current Realm Record.
             1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-async-from-sync-iterator-value-unwrap-functions" title></emu-xref>.
-            1. Let _onFulfilled_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[Done]] &raquo;).
+            1. Let _onFulfilled_ be CreateBuiltinFunction(_steps_, &laquo; [[Done]] &raquo;).
             1. Set _onFulfilled_.[[Done]] to _returnDone_.
             1. Perform ! PerformPromiseThen(_valueWrapperCapability_.[[Promise]], _onFulfilled_, *undefined*, _promiseCapability_).
             1. Return _promiseCapability_.[[Promise]].
@@ -37613,9 +37609,8 @@ THH:mm:ss.sss
             1. IfAbruptRejectPromise(_throwValue_, _promiseCapability_).
             1. Let _valueWrapperCapability_ be ! NewPromiseCapability(%Promise%).
             1. Perform ! Call(_valueWrapperCapability_.[[Resolve]], *undefined*, &laquo; _throwValue_ &raquo;).
-            1. Let _realm_ be the current Realm Record.
             1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-async-from-sync-iterator-value-unwrap-functions" title></emu-xref>.
-            1. Let _onFulfilled_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[Done]] &raquo;).
+            1. Let _onFulfilled_ be CreateBuiltinFunction(_steps_, &laquo; [[Done]] &raquo;).
             1. Set _onFulfilled_.[[Done]] to _throwDone_.
             1. Perform ! PerformPromiseThen(_valueWrapperCapability_.[[Promise]], _onFulfilled_, *undefined*, _promiseCapability_).
             1. Return _promiseCapability_.[[Promise]].
@@ -38280,12 +38275,11 @@ THH:mm:ss.sss
                 1. Set _generator_.[[AsyncGeneratorState]] to `"awaiting-return"`.
                 1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
                 1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _completion_.[[Value]] &raquo;).
-                1. Let _realm_ be the current Realm Record.
                 1. Let _stepsFulfilled_ be the algorithm steps defined in <emu-xref href="#async-generator-resume-next-return-processor-fulfilled" title></emu-xref>.
-                1. Let _onFulfilled_ be CreateBuiltinFunction(_realm_, _stepsFulfilled_, %FunctionPrototype%, &laquo; [[Generator]] &raquo;).
+                1. Let _onFulfilled_ be CreateBuiltinFunction(_stepsFulfilled_, &laquo; [[Generator]] &raquo;).
                 1. Set _onFulfilled_.[[Generator]] to _generator_.
                 1. Let _stepsRejected_ be the algorithm steps defined in <emu-xref href="#async-generator-resume-next-return-processor-rejected" title></emu-xref>.
-                1. Let _onRejected_ be CreateBuiltinFunction(_realm_, _stepsRejected_, %FunctionPrototype%, &laquo; [[Generator]] &raquo;).
+                1. Let _onRejected_ be CreateBuiltinFunction(_stepsRejected_, &laquo; [[Generator]] &raquo;).
                 1. Set _onRejected_.[[Generator]] to _generator_.
                 1. Let _throwawayCapability_ be ! NewPromiseCapability(%Promise%).
                 1. Set _throwawayCapability_.[[Promise]].[[PromiseIsHandled]] to *true*.
@@ -38542,13 +38536,12 @@ THH:mm:ss.sss
         <p>When CreateResolvingFunctions is performed with argument _promise_, the following steps are taken:</p>
         <emu-alg>
           1. Let _alreadyResolved_ be a new Record { [[Value]]: *false* }.
-          1. Let _realm_ be the current Realm Record.
           1. Let _stepsResolve_ be the algorithm steps defined in Promise Resolve Functions (<emu-xref href="#sec-promise-resolve-functions"></emu-xref>).
-          1. Let _resolve_ be CreateBuiltinFunction(_realm_, _stepsResolve_, %FunctionPrototype%, &laquo; [[Promise]], [[AlreadyResolved]] &raquo;).
+          1. Let _resolve_ be CreateBuiltinFunction(_stepsResolve_, &laquo; [[Promise]], [[AlreadyResolved]] &raquo;).
           1. Set _resolve_.[[Promise]] to _promise_.
           1. Set _resolve_.[[AlreadyResolved]] to _alreadyResolved_.
           1. Let _stepsReject_ be the algorithm steps defined in Promise Reject Functions (<emu-xref href="#sec-promise-reject-functions"></emu-xref>).
-          1. Let _reject_ be CreateBuiltinFunction(_realm_, _stepsReject_, %FunctionPrototype%, &laquo; [[Promise]], [[AlreadyResolved]] &raquo;).
+          1. Let _reject_ be CreateBuiltinFunction(_stepsReject_, &laquo; [[Promise]], [[AlreadyResolved]] &raquo;).
           1. Set _reject_.[[Promise]] to _promise_.
           1. Set _reject_.[[AlreadyResolved]] to _alreadyResolved_.
           1. Return a new Record { [[Resolve]]: _resolve_, [[Reject]]: _reject_ }.
@@ -38622,9 +38615,8 @@ THH:mm:ss.sss
           1. If IsConstructor(_C_) is *false*, throw a *TypeError* exception.
           1. NOTE: _C_ is assumed to be a constructor function that supports the parameter conventions of the `Promise` constructor (see <emu-xref href="#sec-promise-executor"></emu-xref>).
           1. Let _promiseCapability_ be a new PromiseCapability { [[Promise]]: *undefined*, [[Resolve]]: *undefined*, [[Reject]]: *undefined* }.
-          1. Let _realm_ be the current Realm Record.
           1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-getcapabilitiesexecutor-functions" title></emu-xref>.
-          1. Let _executor_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[Capability]] &raquo;).
+          1. Let _executor_ be CreateBuiltinFunction(_steps_, &laquo; [[Capability]] &raquo;).
           1. Set _executor_.[[Capability]] to _promiseCapability_.
           1. Let _promise_ be ? Construct(_C_, &laquo; _executor_ &raquo;).
           1. If IsCallable(_promiseCapability_.[[Resolve]]) is *false*, throw a *TypeError* exception.
@@ -38847,9 +38839,8 @@ THH:mm:ss.sss
               1. ReturnIfAbrupt(_nextValue_).
               1. Append *undefined* to _values_.
               1. Let _nextPromise_ be ? Invoke(_constructor_, `"resolve"`, &laquo; _nextValue_ &raquo;).
-              1. Let _realm_ be the current Realm Record.
               1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-promise.all-resolve-element-functions" title></emu-xref>.
-              1. Let _resolveElement_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
+              1. Let _resolveElement_ be CreateBuiltinFunction(_steps_, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
               1. Set _resolveElement_.[[AlreadyCalled]] to a new Record { [[Value]]: *false* }.
               1. Set _resolveElement_.[[Index]] to _index_.
               1. Set _resolveElement_.[[Values]] to _values_.
@@ -39031,13 +39022,12 @@ THH:mm:ss.sss
             1. Let _thenFinally_ be _onFinally_.
             1. Let _catchFinally_ be _onFinally_.
           1. Else,
-            1. Let _realm_ be the current Realm Record.
             1. Let _stepsThenFinally_ be the algorithm steps defined in <emu-xref href="#sec-thenfinallyfunctions" title></emu-xref>.
-            1. Let _thenFinally_ be CreateBuiltinFunction(_realm_, _stepsThenFinally_, %FunctionPrototype%, &laquo; [[Constructor]], [[OnFinally]] &raquo;).
+            1. Let _thenFinally_ be CreateBuiltinFunction(_stepsThenFinally_, &laquo; [[Constructor]], [[OnFinally]] &raquo;).
             1. Set _thenFinally_.[[Constructor]] to _C_.
             1. Set _thenFinally_.[[OnFinally]] to _onFinally_.
             1. Let _stepsCatchFinally_ be the algorithm steps defined in <emu-xref href="#sec-catchfinallyfunctions" title></emu-xref>.
-            1. Let _catchFinally_ be CreateBuiltinFunction(_realm_, _stepsCatchFinally_, %FunctionPrototype%, &laquo; [[Constructor]], [[OnFinally]] &raquo;).
+            1. Let _catchFinally_ be CreateBuiltinFunction(_stepsCatchFinally_, &laquo; [[Constructor]], [[OnFinally]] &raquo;).
             1. Set _catchFinally_.[[Constructor]] to _C_.
             1. Set _catchFinally_.[[OnFinally]] to _onFinally_.
           1. Return ? Invoke(_promise_, `"then"`, &laquo; _thenFinally_, _catchFinally_ &raquo;).
@@ -39514,9 +39504,8 @@ THH:mm:ss.sss
         <p>The `Proxy.revocable` function is used to create a revocable Proxy object. When `Proxy.revocable` is called with arguments _target_ and _handler_, the following steps are taken:</p>
         <emu-alg>
           1. Let _p_ be ? ProxyCreate(_target_, _handler_).
-          1. Let _realm_ be the current Realm Record.
           1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-proxy-revocation-functions" title></emu-xref>.
-          1. Let _revoker_ be CreateBuiltinFunction(_realm_, _steps_, %FunctionPrototype%, &laquo; [[RevocableProxy]] &raquo;).
+          1. Let _revoker_ be CreateBuiltinFunction(_steps_, &laquo; [[RevocableProxy]] &raquo;).
           1. Set _revoker_.[[RevocableProxy]] to _p_.
           1. Let _result_ be ObjectCreate(%ObjectPrototype%).
           1. Perform CreateDataProperty(_result_, `"proxy"`, _p_).
