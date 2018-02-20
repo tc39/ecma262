@@ -8,7 +8,7 @@ For small changes to ECMAScript, you can contribute by filing an issue or a pull
 
 To file an issue, go to the ecma262 [issues page](https://github.com/tc39/ecma262/issues). From there, [examine](https://guides.github.com/features/issues/) in the existing issues to see if an issue already exists to track this issue. If so, add a comment to the existing issue; otherwise, [file a new issue](https://help.github.com/articles/creating-an-issue/) documenting the problem.
 
-To make a pull request (PR), [fork](https://help.github.com/articles/fork-a-repo/) the [ecma262](https://github.com/tc39/ecma262), apply changes to the spec.html, and upload it to your fork on GitHub, using the web interface to file a pull request. Locally, to see how your change renders in HTML, use [ecmarkup](https://github.com/bterlson/ecmarkup) to build spec.html into an actual HTML file.
+To make a pull request (PR), [fork](https://help.github.com/articles/fork-a-repo/) the [ecma262](https://github.com/tc39/ecma262), apply changes to the spec.html, and upload it to your fork on GitHub, using the web interface to file a pull request (against the 'master' branch, normally). Locally, to see how your change renders in HTML, use [ecmarkup](https://github.com/bterlson/ecmarkup) to build spec.html into an actual HTML file.
 
 Commits in pull requests should have a first line which starts with a tag, followed by a colon, indicating which type of patch they are:
   * Normative: changes impacting JavaScript developers in some way
