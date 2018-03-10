@@ -6714,7 +6714,7 @@
       <p>Examples of that type of termination are: operating systems or users terminating agents that are running in separate processes; the embedding itself terminating an agent that is running in-process with the other agents when per-agent resource accounting indicates that the agent is runaway.</p>
     </emu-note>
 
-    <p>Prior to any evaluation of any ECMAScript code by any agent in a cluster, the [[CandidateExecution]] field of the Agent Record for all agents in the cluster is set to the initial candidate execution. The initial candidate execution is an empty candidate execution whose [[EventsRecords]] field is a List containing, for each agent, an Agent Events Record whose [[AgentSignifier]] field is that agent's signifier and whose [[EventList]] field is an empty List.</p>
+    <p>Prior to any evaluation of any ECMAScript code by any agent in a cluster, the [[CandidateExecution]] field of the Agent Record for all agents in the cluster is set to the initial candidate execution. The initial candidate execution is an empty candidate execution whose [[EventsRecords]] field is a List containing, for each agent, an Agent Events Record whose [[AgentSignifier]] field is that agent's signifier, and whose [[EventList]] and [[AgentSynchronizesWith]] fields are empty Lists.</p>
 
     <emu-note>
       <p>All agents in an agent cluster share the same candidate execution in its Agent Record's [[CandidateExecution]] field. The candidate execution is a specification mechanism used by the memory model.</p>
@@ -35537,6 +35537,15 @@ THH:mm:ss.sss
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
           1. Assert: _W_ is on the list of waiters in _WL_.
+          1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
+          1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
+          1. Let _agentSynchronizesWith_ be _eventsRecord_.[[AgentSynchronizesWith]].
+          1. Let _notifierEventList_ be _eventsRecord_.[[EventList]].
+          1. Let _waiterEventList_ be the [[EventList]] field of the element in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is _W_.
+          1. Let _notifyEvent_ and _waitEvent_ be new Synchronize events.
+          1. Append _notifyEvent_ to _notifierEventList_.
+          1. Append _waitEvent_ to _waiterEventList_.
+          1. Append (_notifierEvent_, _waitEvent_) to _agentSynchronizesWith_.
           1. Notify the agent _W_.
         </emu-alg>
         <emu-note>
@@ -38617,12 +38626,13 @@ The abstract operation PerformPromiseThen performs the &ldquo;then&rdquo; operat
     </emu-table>
 
     <p>These events are introduced by abstract operations or by methods on the Atomics object.</p>
-    <p>In addition to Shared Data Block events, there are host-specific events.</p>
+    <p>Some operations may also introduce <dfn>Synchronize</dfn> events. A <dfn>Synchronize event</dfn> has no fields, and exists purely to directly constrain the permitted orderings of other events.</p>
+    <p>In addition to Shared Data Block and Synchronize events, there are host-specific events.</p>
     <p>Let the range of a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory event be the Set of contiguous integers from its [[ByteIndex]] to [[ByteIndex]] + [[ElementSize]] - 1. Two events' ranges are equal when the events have the same [[Block]], and the ranges are element-wise equal. Two events' ranges are overlapping when the events have the same [[Block]], the ranges are not equal and their intersection is non-empty. Two events' ranges are disjoint when the events do not have the same [[Block]] or their ranges are neither equal nor overlapping.</p>
     <emu-note>
       <p>Examples of host-specific synchronizing events that should be accounted for are: sending a SharedArrayBuffer from one agent to another (e.g., by `postMessage` in a browser), starting and stopping agents, and communicating within the agent cluster via channels other than shared memory. It is assumed those events are appended to agent-order during evaluation like the other SharedArrayBuffer events.</p>
     </emu-note>
-    <p>Shared Data Block events are ordered within candidate executions by the relations defined below.</p>
+    <p>Events are ordered within candidate executions by the relations defined below.</p>
   </emu-clause>
 
   <emu-clause id="sec-agent-event-records">
@@ -38645,6 +38655,11 @@ The abstract operation PerformPromiseThen performs the &ldquo;then&rdquo; operat
             <td>[[EventList]]</td>
             <td>A List of events</td>
             <td>Events are appended to the list during evaluation.</td>
+          </tr>
+          <tr>
+            <td>[[AgentSynchronizesWith]]</td>
+            <td>A List of pairs of Synchronize events</td>
+            <td>Synchronize relationships introduced by the operational semantics.</td>
           </tr>
         </tbody>
       </table>
@@ -38760,6 +38775,17 @@ The abstract operation PerformPromiseThen performs the &ldquo;then&rdquo; operat
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-synchronizeeventset" aoid="SynchronizeEventSet">
+      <h1>SynchronizeEventSet( _execution_ )</h1>
+      <p>The abstract operation SynchronizeEventSet takes one argument, a candidate execution _execution_. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _events_ be an empty Set.
+        1. For each event _E_ in EventSet(_execution_), do
+          1. If _E_ is a Synchronize event, add _E_ to _events_.
+        1. Return _events_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-hosteventset" aoid="HostEventSet">
       <h1>HostEventSet ( _execution_ )</h1>
       <p>The abstract operation HostEventSet takes one argument, a candidate execution _execution_. It performs the following steps:</p>
@@ -38868,12 +38894,18 @@ The abstract operation PerformPromiseThen performs the &ldquo;then&rdquo; operat
       <p>For a candidate execution _execution_, _execution_.[[SynchronizesWith]] is the least Relation on events that satisfies the following.</p>
       <ul>
         <li>
-          <p>For each pair (_R_, _W_) in _execution_.[[ReadsFrom]], (_W_, _R_) is in _execution_.[[SynchronizesWith]] if all the following are true.</p>
+          For each pair (_R_, _W_) in _execution_.[[ReadsFrom]], (_W_, _R_) is in _execution_.[[SynchronizesWith]] if all the following are true.
           <ul>
             <li>_R_.[[Order]] is `"SeqCst"`.</li>
             <li>_W_.[[Order]] is `"SeqCst"` or `"Init"`.</li>
             <li>If _W_.[[Order]] is `"SeqCst"`, then _R_ and _W_ have equal ranges.</li>
             <li>If _W_.[[Order]] is `"Init"`, then for each event _V_ such that (_R_, _V_) is in _execution_.[[ReadsFrom]], _V_.[[Order]] is `"Init"`.</li>
+          </ul>
+        </li>
+        <li>
+          For each element _eventsRecord_ of _execution_.[[EventsRecords]], the following is true.
+          <ul>
+            <li>For each pair (_S_, _Sw_) in _eventsRecord_.[[AgentSynchronizesWith]], (_S_, _Sw_) is in _execution_.[[SynchronizesWith]].</li>
           </ul>
         </li>
         <li>For each pair (_E_, _D_) in _execution_.[[HostSynchronizesWith]], (_E_, _D_) is in _execution_.[[SynchronizesWith]].</li>
@@ -38888,7 +38920,7 @@ The abstract operation PerformPromiseThen performs the &ldquo;then&rdquo; operat
       </emu-note>
 
       <emu-note>
-        <p>For an event _R_ and an event _W_ such that _W_ synchronizes-with _R_, _R_ may reads-from other writes than _W_.</p>
+        <p>For Shared Data Block events _R_ and _W_ such that _W_ synchronizes-with _R_, _R_ may reads-from other writes than _W_.</p>
       </emu-note>
     </emu-clause>
 
