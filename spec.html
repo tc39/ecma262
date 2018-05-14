@@ -35748,7 +35748,7 @@ THH:mm:ss.sss
         <h1>AllocateArrayBuffer ( _constructor_, _byteLength_ )</h1>
         <p>The abstract operation AllocateArrayBuffer with arguments _constructor_ and _byteLength_ is used to create an ArrayBuffer object. It performs the following steps:</p>
         <emu-alg>
-          1. Let _obj_ be ? OrdinaryCreateFromConstructor(_constructor_, `"%ArrayBufferPrototype%"`, &laquo; [[ArrayBufferData]], [[ArrayBufferByteLength]] &raquo;).
+          1. Let _obj_ be ? OrdinaryCreateFromConstructor(_constructor_, `"%ArrayBufferPrototype%"`, &laquo; [[ArrayBufferData]], [[ArrayBufferByteLength]], [[ArrayBufferDetachKey]] &raquo;).
           1. Assert: _byteLength_ is an integer value &ge; 0.
           1. Let _block_ be ? CreateByteDataBlock(_byteLength_).
           1. Set _obj_.[[ArrayBufferData]] to _block_.
@@ -35770,11 +35770,13 @@ THH:mm:ss.sss
 
       <!-- es6num="24.1.1.3" -->
       <emu-clause id="sec-detacharraybuffer" aoid="DetachArrayBuffer">
-        <h1>DetachArrayBuffer ( _arrayBuffer_ )</h1>
-        <p>The abstract operation DetachArrayBuffer with argument _arrayBuffer_ performs the following steps:</p>
+        <h1>DetachArrayBuffer ( _arrayBuffer_ [ , _key_ ] )</h1>
+        <p>The abstract operation DetachArrayBuffer with argument _arrayBuffer_ and optional argument _key_ performs the following steps:</p>
         <emu-alg>
-          1. Assert: Type(_arrayBuffer_) is Object and it has [[ArrayBufferData]] and [[ArrayBufferByteLength]] internal slots.
+          1. Assert: Type(_arrayBuffer_) is Object and it has [[ArrayBufferData]], [[ArrayBufferByteLength]], and [[ArrayBufferDetachKey]] internal slots.
           1. Assert: IsSharedArrayBuffer(_arrayBuffer_) is *false*.
+          1. If _key_ is not present, set _key_ to *undefined*.
+          1. If SameValue(_arrayBuffer_.[[ArrayBufferDetachKey]], _key_) is *false*, throw a *TypeError* exception.
           1. Set _arrayBuffer_.[[ArrayBufferData]] to *null*.
           1. Set _arrayBuffer_.[[ArrayBufferByteLength]] to 0.
           1. Return NormalCompletion(*null*).
@@ -36039,8 +36041,9 @@ THH:mm:ss.sss
     <!-- es6num="24.1.5" -->
     <emu-clause id="sec-properties-of-the-arraybuffer-instances">
       <h1>Properties of ArrayBuffer Instances</h1>
-      <p>ArrayBuffer instances inherit properties from the ArrayBuffer prototype object. ArrayBuffer instances each have an [[ArrayBufferData]] internal slot and an [[ArrayBufferByteLength]] internal slot.</p>
+      <p>ArrayBuffer instances inherit properties from the ArrayBuffer prototype object. ArrayBuffer instances each have an [[ArrayBufferData]] internal slot, an [[ArrayBufferByteLength]] internal slot, and an [[ArrayBufferDetachKey]] internal slot.</p>
       <p>ArrayBuffer instances whose [[ArrayBufferData]] is *null* are considered to be detached and all operators to access or modify data contained in the ArrayBuffer instance will fail.</p>
+      <p>ArrayBuffer instances whose [[ArrayBufferDetachKey]] is set to a value other than *undefined* need to have all DetachArrayBuffer calls passing that same "detach key" as an argument, otherwise a TypeError will result. This internal slot is only ever set by certain embedding environments, not by algorithms in this specification.</p>
     </emu-clause>
   </emu-clause>
 
@@ -40799,6 +40802,8 @@ THH:mm:ss.sss
           [+U] `(` `?` `=` Disjunction[+U, ?N] `)`
           [+U] `(` `?` `!` Disjunction[+U, ?N] `)`
           [~U] QuantifiableAssertion[?N]
+          `(` `?` `&lt;=` Disjunction[?U, ?N] `)`
+          `(` `?` `&lt;!` Disjunction[?U, ?N] `)`
 
         QuantifiableAssertion[N] ::
           `(` `?` `=` Disjunction[~U, ?N] `)`
