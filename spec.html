@@ -22436,6 +22436,49 @@
             </emu-alg>
           </emu-clause>
 
+          <emu-clause id="sec-example-cyclic-module-record-graphs">
+              <h1>Example Cyclic Module Record Graphs</h1>
+    
+              <p>This non-normative section gives a series of examples of the instantiation and evaluation of a few common module graphs, with a specific focus on how errors can occur.</p>
+    
+              <p>First consider the following simple module graph:</p>
+    
+              <emu-figure id="figure-module-graph-simple" caption="A simple module graph">
+                <img alt="A module graph in which module A depends on module B" width="121" height="211" src="img/module-graph-simple.svg">
+              </emu-figure>
+    
+              <p>Let's first assume that there are no error conditions. When a host first calls _A_.Instantiate(), this will complete successfully by assumption, and recursively instantiate modules _B_ and _C_ as well, such that _A_.[[Status]] = _B_.[[Status]] = _C_.[[Status]] = `"instantiated"`. This preparatory step can be performed at any time. Later, when the host is ready to incur any possible side effects of the modules, it can call _A_.Evaluate(), which will complete successfully (again by assumption), recursively having evaluated first _C_ and then _B_. Each module's [[Status]] at this point will be `"evaluated`".</p>
+    
+              <p>Consider then cases involving instantiation errors. If InnerModuleInstantiation of _C_ succeeds but, thereafter, fails for _B_, for example because it imports something that _C_ does not provide, then the original _A_.Instantiate() will fail, and both _A_ and _B_'s [[Status]] remain `"uninstantiated"`. _C_'s [[Status]] has become `"instantiated"`, though.</p>
+    
+              <p>Finally, consider a case involving evaluation errors. If InnerModuleEvaluation of _C_ succeeds but, thereafter, fails for _B_, for example because _B_ contains code that throws an exception, then the original _A_.Evaluate() will fail. The resulting exception will be recorded in both _A_ and _B_'s [[EvaluationError]] fields, and their [[Status]] will become `"evaluated"`. _C_ will also become `"evaluated"` but, in contrast to _A_ and _B_, will remain without an [[EvaluationError]], as it successfully completed evaluation. Storing the exception ensures that any time a host tries to reuse _A_ or _B_ by calling their Evaluate() method, it will encounter the same exception. (Hosts are not required to reuse Source Text Module Records; similarly, hosts are not required to expose the exception objects thrown by these  methods. However, the specification enables such uses.)</p>
+    
+              <p>The difference here between instantiation and evaluation errors is due to how evaluation must be only performed once, as it can cause side effects; it is thus important to remember whether evaluation has already been performed, even if unsuccessfully. (In the error case, it makes sense to also remember the exception because otherwise subsequent Evaluate() calls would have to synthesize a new one.) Instantiation, on the other hand, is side-effect-free, and thus even if it fails, it can be retried at a later time with no issues.</p>
+    
+              <p>Now consider a different type of error condition:</p>
+    
+              <emu-figure id="figure-module-graph-missing" caption="A module graph with an unresolvable module">
+                <img alt="A module graph in which module A depends on a missing (unresolvable) module, represented by ???" width="121" height="121" src="img/module-graph-missing.svg">
+              </emu-figure>
+    
+              <p>In this scenario, module _A_ declares a dependency on some other module, but no Module Record exists for that module, i.e. HostResolveImportedModule throws an exception when asked for it. This could occur for a variety of reasons, such as the corresponding resource not existing, or the resource existing but ParseModule throwing an exception when trying to parse the resulting source text. Hosts can choose to expose the cause of failure via the exception they throw from HostResolveImportedModule. In any case, this exception causes an instantiation failure, which as before results in _A_'s [[Status]] remaining `"uninstantiated"`.</p>
+    
+              <p>Lastly, consider a module graph with a cycle:</p>
+    
+              <emu-figure id="figure-module-graph-cycle" caption="A cyclic module graph">
+                <img alt="A module graph in which module A depends on module B and C, but module B also depends on module A" width="181" height="121" src="img/module-graph-cycle.svg">
+              </emu-figure>
+    
+              <p>Here we assume that the entry point is module _A_, so that the host proceeds by calling _A_.Instantiate(), which performs InnerModuleInstantiation on _A_. This in turn calls InnerModuleInstantiation on _B_. Because of the cycle, this again triggers InnerModuleInstantiation on _A_, but at this point it is a no-op since _A_.[[Status]] is already `"instantiating"`. _B_.[[Status]] itself remains `"instantiating"` when control gets back to _A_ and InnerModuleInstantiation is triggered on _C_. After this returns with _C_.[[Status]] being `"instantiated"` , both _A_ and _B_ transition from `"instantiating"` to `"instantiated"` together; this is by design, since they form a strongly connected component.</p>
+    
+              <p>An analogous story occurs for the evaluation phase of a cyclic module graph, in the success case.</p>
+    
+              <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to InnerModuleInstantiation on _A_. However, once we unwind back to the original InnerModuleInstantiation on _A_, it fails during ModuleDeclarationEnvironmentSetup, namely right after _C_.ResolveExport(). The thrown *SyntaxError* exception propagates up to _A_.Instantiate, which resets all modules that are currently on its _stack_ (these are always exactly the modules that are still `"instantiating"`). Hence both _A_ and _B_ become `"uninstantiated"`. Note that _C_ is left as `"instantiated"`.</p>
+    
+              <p>Finally, consider a case where _A_ has an evaluation error; for example, its source code throws an exception. In that case, the evaluation-time analog of the above steps still occurs, including the early return from the second call to InnerModuleEvaluation on _A_. However, once we unwind back to the original InnerModuleEvaluation on _A_, it fails by assumption. The exception thrown propagates up to _A_.Evaluate(), which records the error in all modules that are currently on its _stack_ (i.e., the modules that are still `"evaluating"`). Hence both _A_ and _B_ become `"evaluated"` and the exception is recorded in both _A_ and _B_'s [[EvaluationError]] fields, while _C_ is left as `"evaluated"` with no [[EvaluationError]].</p>
+            </emu-clause>
+          </emu-clause>
+    
       <!-- es6num="15.2.1.17" -->
       <emu-clause id="sec-source-text-module-records">
         <h1>Source Text Module Records</h1>
@@ -23103,49 +23146,6 @@
             </emu-alg>
           </emu-clause>
         </emu-clause>
-
-        <emu-clause id="sec-example-source-text-module-record-graphs">
-          <h1>Example Source Text Module Record Graphs</h1>
-
-          <p>This non-normative section gives a series of examples of the instantiation and evaluation of a few common module graphs, with a specific focus on how errors can occur.</p>
-
-          <p>First consider the following simple module graph:</p>
-
-          <emu-figure id="figure-module-graph-simple" caption="A simple module graph">
-            <img alt="A module graph in which module A depends on module B" width="121" height="211" src="img/module-graph-simple.svg">
-          </emu-figure>
-
-          <p>Let's first assume that there are no error conditions. When a host first calls _A_.Instantiate(), this will complete successfully by assumption, and recursively instantiate modules _B_ and _C_ as well, such that _A_.[[Status]] = _B_.[[Status]] = _C_.[[Status]] = `"instantiated"`. This preparatory step can be performed at any time. Later, when the host is ready to incur any possible side effects of the modules, it can call _A_.Evaluate(), which will complete successfully (again by assumption), recursively having evaluated first _C_ and then _B_. Each module's [[Status]] at this point will be `"evaluated`".</p>
-
-          <p>Consider then cases involving instantiation errors. If InnerModuleInstantiation of _C_ succeeds but, thereafter, fails for _B_, for example because it imports something that _C_ does not provide, then the original _A_.Instantiate() will fail, and both _A_ and _B_'s [[Status]] remain `"uninstantiated"`. _C_'s [[Status]] has become `"instantiated"`, though.</p>
-
-          <p>Finally, consider a case involving evaluation errors. If InnerModuleEvaluation of _C_ succeeds but, thereafter, fails for _B_, for example because _B_ contains code that throws an exception, then the original _A_.Evaluate() will fail. The resulting exception will be recorded in both _A_ and _B_'s [[EvaluationError]] fields, and their [[Status]] will become `"evaluated"`. _C_ will also become `"evaluated"` but, in contrast to _A_ and _B_, will remain without an [[EvaluationError]], as it successfully completed evaluation. Storing the exception ensures that any time a host tries to reuse _A_ or _B_ by calling their Evaluate() method, it will encounter the same exception. (Hosts are not required to reuse Source Text Module Records; similarly, hosts are not required to expose the exception objects thrown by these  methods. However, the specification enables such uses.)</p>
-
-          <p>The difference here between instantiation and evaluation errors is due to how evaluation must be only performed once, as it can cause side effects; it is thus important to remember whether evaluation has already been performed, even if unsuccessfully. (In the error case, it makes sense to also remember the exception because otherwise subsequent Evaluate() calls would have to synthesize a new one.) Instantiation, on the other hand, is side-effect-free, and thus even if it fails, it can be retried at a later time with no issues.</p>
-
-          <p>Now consider a different type of error condition:</p>
-
-          <emu-figure id="figure-module-graph-missing" caption="A module graph with an unresolvable module">
-            <img alt="A module graph in which module A depends on a missing (unresolvable) module, represented by ???" width="121" height="121" src="img/module-graph-missing.svg">
-          </emu-figure>
-
-          <p>In this scenario, module _A_ declares a dependency on some other module, but no Module Record exists for that module, i.e. HostResolveImportedModule throws an exception when asked for it. This could occur for a variety of reasons, such as the corresponding resource not existing, or the resource existing but ParseModule throwing an exception when trying to parse the resulting source text. Hosts can choose to expose the cause of failure via the exception they throw from HostResolveImportedModule. In any case, this exception causes an instantiation failure, which as before results in _A_'s [[Status]] remaining `"uninstantiated"`.</p>
-
-          <p>Lastly, consider a module graph with a cycle:</p>
-
-          <emu-figure id="figure-module-graph-cycle" caption="A cyclic module graph">
-            <img alt="A module graph in which module A depends on module B and C, but module B also depends on module A" width="181" height="121" src="img/module-graph-cycle.svg">
-          </emu-figure>
-
-          <p>Here we assume that the entry point is module _A_, so that the host proceeds by calling _A_.Instantiate(), which performs InnerModuleInstantiation on _A_. This in turn calls InnerModuleInstantiation on _B_. Because of the cycle, this again triggers InnerModuleInstantiation on _A_, but at this point it is a no-op since _A_.[[Status]] is already `"instantiating"`. _B_.[[Status]] itself remains `"instantiating"` when control gets back to _A_ and InnerModuleInstantiation is triggered on _C_. After this returns with _C_.[[Status]] being `"instantiated"` , both _A_ and _B_ transition from `"instantiating"` to `"instantiated"` together; this is by design, since they form a strongly connected component.</p>
-
-          <p>An analogous story occurs for the evaluation phase of a cyclic module graph, in the success case.</p>
-
-          <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to InnerModuleInstantiation on _A_. However, once we unwind back to the original InnerModuleInstantiation on _A_, it fails during ModuleDeclarationEnvironmentSetup, namely right after _C_.ResolveExport(). The thrown *SyntaxError* exception propagates up to _A_.Instantiate, which resets all modules that are currently on its _stack_ (these are always exactly the modules that are still `"instantiating"`). Hence both _A_ and _B_ become `"uninstantiated"`. Note that _C_ is left as `"instantiated"`.</p>
-
-          <p>Finally, consider a case where _A_ has an evaluation error; for example, its source code throws an exception. In that case, the evaluation-time analog of the above steps still occurs, including the early return from the second call to InnerModuleEvaluation on _A_. However, once we unwind back to the original InnerModuleEvaluation on _A_, it fails by assumption. The exception thrown propagates up to _A_.Evaluate(), which records the error in all modules that are currently on its _stack_ (i.e., the modules that are still `"evaluating"`). Hence both _A_ and _B_ become `"evaluated"` and the exception is recorded in both _A_ and _B_'s [[EvaluationError]] fields, while _C_ is left as `"evaluated"` with no [[EvaluationError]].</p>
-        </emu-clause>
-      </emu-clause>
 
       <!-- es6num="15.2.1.17" -->
       <emu-clause id="sec-hostresolveimportedmodule" aoid="HostResolveImportedModule">
