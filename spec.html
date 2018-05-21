@@ -22277,10 +22277,18 @@
             </tr>
             <tr>
               <td>
-                ModuleDeclarationEnvironmentSetup()
+                BeginModuleDeclarationEnvironmentSetup()
               </td>
               <td>
                 Initialize the Lexical Environment of the module, including resolving all imported bindings.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                FinishModuleDeclarationEnvironmentSetup()
+              </td>
+              <td>
+                Perform any additional instantiation that requires all JavaScript modules in the module graph to have initialized function declarations.
               </td>
             </tr>
             <tr>
@@ -22302,12 +22310,21 @@
         <p>The Instantiate concrete method of a Cyclic Module Record implements the corresponding Module Record abstract method.</p>
         <p>On success, Instantiate transitions this module's [[Status]] from `"uninstantiated"` to `"instantiated"`. On failure, an exception is thrown and this module's [[Status]] remains `"uninstantiated"`.</p>
 
-        <p>This abstract method performs the following steps (most of the work is done by the auxiliary function InnerModuleInstantiation):</p>
+        <p>This abstract method performs the following steps (most of the work is done by the auxiliary functions InnerModulePreinstantiation and InnerModuleInstantiation):</p>
 
         <emu-alg>
           1. Let _module_ be this Cyclic Module Record.
-          1. Assert: _module_.[[Status]] is not `"instantiating"` or `"evaluating"`.
+          1. Assert: _module_.[[Status]] is not `"preinstantiating"`, `"instantiating"` or `"evaluating"`.
           1. Let _stack_ be a new empty List.
+          1. Let _result_ be InnerModulePreinstantiation(_module_, _stack_, 0).
+          1. If _result_ is an abrupt completion, then
+            1. For each module _m_ in _stack_, do
+              1. Assert: _m_.[[Status]] is `"preinstantiating"`.
+              1. Set _m_.[[Status]] to `"uninstantiated"`.
+              1. Set _m_.[[Environment]] to *undefined*.
+              1. Set _m_.[[DFSIndex]] to *undefined*.
+              1. Set _m_.[[DFSAncestorIndex]] to *undefined*.
+          1. Assert: _stack_ is empty.
           1. Let _result_ be InnerModuleInstantiation(_module_, _stack_, 0).
           1. If _result_ is an abrupt completion, then
             1. For each module _m_ in _stack_, do
@@ -22324,10 +22341,10 @@
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-innermoduleinstantiation" aoid="InnerModuleInstantiation">
-        <h1>InnerModuleInstantiation( _module_, _stack_, _index_ )</h1>
+      <emu-clause id="sec-innermodulepreinstantiation" aoid="InnerModulePreinstantiation">
+        <h1>InnerModulePreinstantiation( _module_, _stack_, _index_ )</h1>
 
-        <p>The InnerModuleInstantiation abstract operation is used by Instantiate to perform the actual instantiation process for the Cyclic Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as a module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, keep track of the depth-first search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly connected components (SCCs), such that all modules in an SCC transition to `"instantiated"` together.</p>
+        <p>The InnerModulePreinstantiation abstract operation is used by Instantiate to perform the first phase of the actual instantiation process for the Cyclic Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as a module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, keep track of the depth-first search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly connected components (SCCs), such that all modules in an SCC transition to `"preinstantiated"` together.</p>
 
         <p>This abstract operation performs the following steps:</p>
 
@@ -22335,23 +22352,23 @@
           1. If _module_ is not a Cyclic Module Record, then
             1. Perform ? _module_.Instantiate().
             1. Return _index_.
-          1. If _module_.[[Status]] is `"instantiating"`, `"instantiated"`, or `"evaluated"`, then
+          1. If _module_.[[Status]] is `"preinstantiating"`, `"preinstantiated"`, or `"evaluated"`, then
             1. Return _index_.
           1. Assert: _module_.[[Status]] is `"uninstantiated"`.
-          1. Set _module_.[[Status]] to `"instantiating"`.
+          1. Set _module_.[[Status]] to `"preinstantiating"`.
           1. Set _module_.[[DFSIndex]] to _index_.
           1. Set _module_.[[DFSAncestorIndex]] to _index_.
           1. Set _index_ to _index_ + 1.
           1. Append _module_ to _stack_.
           1. For each String _required_ that is an element of _module_.[[RequestedModules]], do
             1. Let _requiredModule_ be ? HostResolveImportedModule(_module_, _required_).
-            1. Set _index_ to ? InnerModuleInstantiation(_requiredModule_, _stack_, _index_).
-            1. Assert: _requiredModule_.[[Status]] is either `"instantiating"`, `"instantiated"`, or `"evaluated"`.
-            1. Assert: _requiredModule_.[[Status]] is `"instantiating"` if and only if _requiredModule_ is in _stack_.
-            1. If _requiredModule_.[[Status]] is `"instantiating"`, then
+            1. Set _index_ to ? InnerModulePreinstantiation(_requiredModule_, _stack_, _index_).
+            1. Assert: _requiredModule_.[[Status]] is one of `"preinstantiating"`, `"preinstantiated"`, or `"evaluated"`.
+            1. Assert: _requiredModule_.[[Status]] is `"preinstantiating"` if and only if _requiredModule_ is in _stack_.
+            1. If _requiredModule_.[[Status]] is `"preinstantiating"`, then
               1. Assert: _requiredModule_ is a Cyclic Module Record.
               1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-          1. Perform ? ModuleDeclarationEnvironmentSetup(_module_).
+          1. Perform ? BeginModuleDeclarationEnvironmentSetup(_module_).
           1. Assert: _module_ occurs exactly once in _stack_.
           1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
           1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], then
@@ -22359,11 +22376,51 @@
             1. Repeat, while _done_ is *false*,
               1. Let _requiredModule_ be the last element in _stack_.
               1. Remove the last element of _stack_.
-              1. Set _requiredModule_.[[Status]] to `"instantiated"`.
+              1. Set requiredModule.[[Status]] to "preinstantiated".
               1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
           1. Return _index_.
         </emu-alg>
       </emu-clause>
+
+      <emu-clause id="sec-innermoduleinstantiation" aoid="InnerModuleInstantiation">
+          <h1>InnerModuleInstantiation( _module_, _stack_, _index_ )</h1>
+  
+          <p>The InnerModuleInstantiation abstract operation is used by Instantiate to allow modules to perform additional instantiation after BeginModuleDeclarationEnvironmentSetup has occured. This is useful for modules written in statically typed languages to be able to import functions from JavaScript cyclically. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestoreIndex]] fields, are used the same way as in InnerModulePreinstantiation.</p>
+  
+          <p>This abstract operation performs the following steps:</p>
+  
+          <emu-alg>
+            1. If _module_ is not a Cyclic Module Record, then
+              1. Return _index_.
+            1. If _module_.[[Status]] is `"instantiating"`, `"instantiated"`, or `"evaluated"`, then
+              1. Return _index_.
+            1. Assert: _module_.[[Status]] is `"preinstantiated"`.
+            1. Set _module_.[[Status]] to `"instantiating"`.
+            1. Set _module_.[[DFSIndex]] to _index_.
+            1. Set _module_.[[DFSAncestorIndex]] to _index_.
+            1. Set _index_ to _index_ + 1.
+            1. Append _module_ to _stack_.
+            1. For each String _required_ that is an element of _module_.[[RequestedModules]], do
+              1. Let _requiredModule_ be ? HostResolveImportedModule(_module_, _required_).
+              1. Set _index_ to ? InnerModuleInstantiation(_requiredModule_, _stack_, _index_).
+              1. Assert: _requiredModule_.[[Status]] is either `"instantiating"`, `"instantiated"`, or `"evaluated"`.
+              1. Assert: _requiredModule_.[[Status]] is `"instantiating"` if and only if _requiredModule_ is in _stack_.
+              1. If _requiredModule_.[[Status]] is `"instantiating"`, then
+                1. Assert: _requiredModule_ is a Cyclic Module Record.
+                1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+            1. Perform ? FinishModuleDeclarationEnvironmentSetup(_module_).
+            1. Assert: _module_ occurs exactly once in _stack_.
+            1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
+            1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], then
+              1. Let _done_ be *false*.
+              1. Repeat, while _done_ is *false*,
+                1. Let _requiredModule_ be the last element in _stack_.
+                1. Remove the last element of _stack_.
+                1. Set requiredModule.[[Status]] to "instantiated".
+                1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+            1. Return _index_.
+          </emu-alg>
+        </emu-clause>
 
       <emu-clause id="sec-moduleevaluation">
           <h1>Evaluate( ) Concrete Method</h1>
@@ -22395,7 +22452,7 @@
           <emu-clause id="sec-innermoduleevaluation" aoid="InnerModuleEvaluation">
             <h1>InnerModuleEvaluation( _module_, _stack_, _index_ )</h1>
 
-            <p>The InnerModuleEvaluation abstract operation is used by Evaluate to perform the actual evaluation process for the Cyclic Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestoreIndex]] fields, are used the same way as in InnerModuleInstantiation.</p>
+            <p>The InnerModuleEvaluation abstract operation is used by Evaluate to perform the actual evaluation process for the Cyclic Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestoreIndex]] fields, are used the same way as in InnerModulePreinstantiation.</p>
 
             <p>This abstract operation performs the following steps:</p>
 
@@ -22449,7 +22506,7 @@
     
               <p>Let's first assume that there are no error conditions. When a host first calls _A_.Instantiate(), this will complete successfully by assumption, and recursively instantiate modules _B_ and _C_ as well, such that _A_.[[Status]] = _B_.[[Status]] = _C_.[[Status]] = `"instantiated"`. This preparatory step can be performed at any time. Later, when the host is ready to incur any possible side effects of the modules, it can call _A_.Evaluate(), which will complete successfully (again by assumption), recursively having evaluated first _C_ and then _B_. Each module's [[Status]] at this point will be `"evaluated`".</p>
     
-              <p>Consider then cases involving instantiation errors. If InnerModuleInstantiation of _C_ succeeds but, thereafter, fails for _B_, for example because it imports something that _C_ does not provide, then the original _A_.Instantiate() will fail, and both _A_ and _B_'s [[Status]] remain `"uninstantiated"`. _C_'s [[Status]] has become `"instantiated"`, though.</p>
+              <p>Consider then cases involving instantiation errors. If InnerModulePreinstantiation of _C_ succeeds but, thereafter, fails for _B_, for example because it imports something that _C_ does not provide, then the original _A_.Instantiate() will fail, and both _A_ and _B_'s [[Status]] remain `"uninstantiated"`. _C_'s [[Status]] has become `"preinstantiated"`, though.</p>
     
               <p>Finally, consider a case involving evaluation errors. If InnerModuleEvaluation of _C_ succeeds but, thereafter, fails for _B_, for example because _B_ contains code that throws an exception, then the original _A_.Evaluate() will fail. The resulting exception will be recorded in both _A_ and _B_'s [[EvaluationError]] fields, and their [[Status]] will become `"evaluated"`. _C_ will also become `"evaluated"` but, in contrast to _A_ and _B_, will remain without an [[EvaluationError]], as it successfully completed evaluation. Storing the exception ensures that any time a host tries to reuse _A_ or _B_ by calling their Evaluate() method, it will encounter the same exception. (Hosts are not required to reuse Source Text Module Records; similarly, hosts are not required to expose the exception objects thrown by these  methods. However, the specification enables such uses.)</p>
     
@@ -22469,11 +22526,11 @@
                 <img alt="A module graph in which module A depends on module B and C, but module B also depends on module A" width="181" height="121" src="img/module-graph-cycle.svg">
               </emu-figure>
     
-              <p>Here we assume that the entry point is module _A_, so that the host proceeds by calling _A_.Instantiate(), which performs InnerModuleInstantiation on _A_. This in turn calls InnerModuleInstantiation on _B_. Because of the cycle, this again triggers InnerModuleInstantiation on _A_, but at this point it is a no-op since _A_.[[Status]] is already `"instantiating"`. _B_.[[Status]] itself remains `"instantiating"` when control gets back to _A_ and InnerModuleInstantiation is triggered on _C_. After this returns with _C_.[[Status]] being `"instantiated"` , both _A_ and _B_ transition from `"instantiating"` to `"instantiated"` together; this is by design, since they form a strongly connected component.</p>
+              <p>Here we assume that the entry point is module _A_, so that the host proceeds by calling _A_.Instantiate(), which performs InnerModulePreinstantiation on _A_. This in turn calls InnerModulePreinstantiation on _B_. Because of the cycle, this again triggers InnerModulePreinstantiation on _A_, but at this point it is a no-op since _A_.[[Status]] is already `"preinstantiating"`. _B_.[[Status]] itself remains `"preinstantiating"` when control gets back to _A_ and InnerModulePreinstantiation is triggered on _C_. After this returns with _C_.[[Status]] being `"preinstantiated"` , both _A_ and _B_ transition from `"preinstantiating"` to `"preinstantiated"` together; this is by design, since they form a strongly connected component.</p>
     
               <p>An analogous story occurs for the evaluation phase of a cyclic module graph, in the success case.</p>
     
-              <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to InnerModuleInstantiation on _A_. However, once we unwind back to the original InnerModuleInstantiation on _A_, it fails during ModuleDeclarationEnvironmentSetup, namely right after _C_.ResolveExport(). The thrown *SyntaxError* exception propagates up to _A_.Instantiate, which resets all modules that are currently on its _stack_ (these are always exactly the modules that are still `"instantiating"`). Hence both _A_ and _B_ become `"uninstantiated"`. Note that _C_ is left as `"instantiated"`.</p>
+              <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to InnerModulePreinstantiation on _A_. However, once we unwind back to the original InnerModulePreinstantiation on _A_, it fails during BeginModuleDeclarationEnvironmentSetup, namely right after _C_.ResolveExport(). The thrown *SyntaxError* exception propagates up to _A_.Instantiate, which resets all modules that are currently on its _stack_ (these are always exactly the modules that are still `"preinstantiating"`). Hence both _A_ and _B_ become `"uninstantiated"`. Note that _C_ is left as `"preinstantiated"`.</p>
     
               <p>Finally, consider a case where _A_ has an evaluation error; for example, its source code throws an exception. In that case, the evaluation-time analog of the above steps still occurs, including the early return from the second call to InnerModuleEvaluation on _A_. However, once we unwind back to the original InnerModuleEvaluation on _A_, it fails by assumption. The exception thrown propagates up to _A_.Evaluate(), which records the error in all modules that are currently on its _stack_ (i.e., the modules that are still `"evaluating"`). Hence both _A_ and _B_ become `"evaluated"` and the exception is recorded in both _A_ and _B_'s [[EvaluationError]] fields, while _C_ is left as `"evaluated"` with no [[EvaluationError]].</p>
             </emu-clause>
@@ -23067,10 +23124,10 @@
           </emu-alg>
         </emu-clause>
 
-          <emu-clause id="sec-moduledeclarationenvironmentsetup" aoid="ModuleDeclarationEnvironmentSetup">
-            <h1>ModuleDeclarationEnvironmentSetup()</h1>
+          <emu-clause id="sec-beginmoduledeclarationenvironmentsetup" aoid="BeginModuleDeclarationEnvironmentSetup">
+            <h1>BeginModuleDeclarationEnvironmentSetup()</h1>
 
-            <p>The ModuleDeclarationEnvironmentSetup abstract operation is used by InnerModuleInstantiation to initialize the Lexical Environment of the module, including resolving all imported bindings.</p>
+            <p>The BeginModuleDeclarationEnvironmentSetup abstract operation is used by InnerModulePreinstantiation to initialize the Lexical Environment of the module, including resolving all imported bindings.</p>
 
             <p>This abstract operation performs the following steps:</p>
 
@@ -23116,6 +23173,17 @@
                   1. If _d_ is a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
                     1. Let _fo_ be the result of performing InstantiateFunctionObject for _d_ with argument _env_.
                     1. Call _envRec_.InitializeBinding(_dn_, _fo_).
+            </emu-alg>
+          </emu-clause>
+        </emu-clause>
+
+        <emu-clause id="sec-finishmoduledeclarationenvironmentsetup" aoid="FinishModuleDeclarationEnvironmentSetup">
+            <h1>FinishModuleDeclarationEnvironmentSetup()</h1>
+
+            <p>The FinishModuleDeclarationEnvironmentSetup abstract operation is used by InnerModuleInstantiation to perform any additional instantiation. It runs after all JavaScript modules in the module graph have initialized function declarations. For JavaScript modules, this is a no-op.
+
+            <emu-alg>
+              1. Return *null*.
             </emu-alg>
           </emu-clause>
         </emu-clause>
