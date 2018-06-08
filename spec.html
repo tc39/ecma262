@@ -35449,7 +35449,7 @@ THH:mm:ss.sss
         <h1>GetWaiterList ( _block_, _i_ )</h1>
         <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered list of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_.</p>
         <p>The agent cluster has a store of WaiterList objects; the store is indexed by (_block_, _i_). WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
-        <p>Operations on a WaiterList -- adding and removing waiting agents, traversing the list of agents, suspending and waking agents on the list -- may only be performed by agents that have entered the WaiterList's critical section.</p>
+        <p>Operations on a WaiterList -- adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list -- may only be performed by agents that have entered the WaiterList's critical section.</p>
         <p>The abstract operation GetWaiterList takes two arguments, a Shared Data Block _block_ and a nonnegative integer _i_. It performs the following steps:</p>
         <emu-alg>
           1. Assert: _block_ is a Shared Data Block.
@@ -35521,23 +35521,23 @@ THH:mm:ss.sss
           1. Assert: _W_ is equal to AgentSignifier().
           1. Assert: _W_ is on the list of waiters in _WL_.
           1. Assert: AgentCanSuspend() is *true*.
-          1. Perform LeaveCriticalSection(_WL_) and suspend _W_ for up to _timeout_ milliseconds, performing the combined operation in such a way that a wakeup that arrives after the critical section is exited but before the suspension takes effect is not lost.  _W_ can wake up either because the timeout expired or because it was woken explicitly by another agent calling WakeWaiter(_WL_, _W_), and not for any other reasons at all.
+          1. Perform LeaveCriticalSection(_WL_) and suspend _W_ for up to _timeout_ milliseconds, performing the combined operation in such a way that a notification that arrives after the critical section is exited but before the suspension takes effect is not lost.  _W_ can notify either because the timeout expired or because it was notified explicitly by another agent calling NotifyWaiter(_WL_, _W_), and not for any other reasons at all.
           1. Perform EnterCriticalSection(_WL_).
-          1. If _W_ was woken explicitly by another agent calling WakeWaiter(_WL_, _W_), return *true*.
+          1. If _W_ was notified explicitly by another agent calling NotifyWaiter(_WL_, _W_), return *true*.
           1. Return *false*.
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-wakewaiter" aoid="WakeWaiter">
-        <h1>WakeWaiter ( _WL_, _W_ )</h1>
-        <p>The abstract operation WakeWaiter takes two arguments, a WaiterList _WL_ and an agent signifier _W_. It performs the following steps:</p>
+      <emu-clause id="sec-notifywaiter" aoid="NotifyWaiter">
+        <h1>NotifyWaiter( _WL_, _W_ )</h1>
+        <p>The abstract operation NotifyWaiter takes two arguments, a WaiterList _WL_ and an agent signifier _W_. It performs the following steps:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
           1. Assert: _W_ is on the list of waiters in _WL_.
-          1. Wake the agent _W_.
+          1. Notify the agent _W_.
         </emu-alg>
         <emu-note>
-          <p>The embedding may delay waking _W_, e.g. for resource management reasons, but _W_ must eventually be woken in order to guarantee forward progress.</p>
+          <p>The embedding may delay notifying _W_, e.g. for resource management reasons, but _W_ must eventually be notified in order to guarantee forward progress.</p>
         </emu-note>
       </emu-clause>
 
@@ -35681,7 +35681,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-atomics.wait">
       <h1>Atomics.wait ( _typedArray_, _index_, _value_, _timeout_ )</h1>
-      <p>`Atomics.wait` puts the calling agent in a wait queue and puts it to sleep until it is awoken or the sleep times out. The following steps are taken:</p>
+      <p>`Atomics.wait` puts the calling agent in a wait queue and puts it to sleep until it is notified or the sleep times out. The following steps are taken:</p>
       <emu-alg>
         1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
         1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
@@ -35701,20 +35701,20 @@ THH:mm:ss.sss
           1. Return the String `"not-equal"`.
         1. Let _W_ be AgentSignifier().
         1. Perform AddWaiter(_WL_, _W_).
-        1. Let _awoken_ be Suspend(_WL_, _W_, _t_).
-        1. If _awoken_ is *true*, then
+        1. Let _notified_ be Suspend(_WL_, _W_, _t_).
+        1. If _notified_ is *true*, then
           1. Assert: _W_ is not on the list of waiters in _WL_.
         1. Else,
           1. Perform RemoveWaiter(_WL_, _W_).
         1. Perform LeaveCriticalSection(_WL_).
-        1. If _awoken_ is *true*, return the String `"ok"`.
+        1. If _notified_ is *true*, return the String `"ok"`.
         1. Return the String `"timed-out"`.
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-atomics.wake">
-      <h1>Atomics.wake ( _typedArray_, _index_, _count_ )</h1>
-      <p>`Atomics.wake` wakes up some agents that are sleeping in the wait queue.  The following steps are taken:</p>
+    <emu-clause id="sec-atomics.notify">
+      <h1>Atomics.notify ( _typedArray_, _index_, _count_ )</h1>
+      <p>`Atomics.notify` notifies some agents that are sleeping in the wait queue.  The following steps are taken:</p>
       <emu-alg>
         1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
         1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
@@ -35732,7 +35732,7 @@ THH:mm:ss.sss
         1. Repeat, while _S_ is not an empty List,
           1. Let _W_ be the first agent in _S_.
           1. Remove _W_ from the front of _S_.
-          1. Perform WakeWaiter(_WL_, _W_).
+          1. Perform NotifyWaiter(_WL_, _W_).
           1. Add 1 to _n_.
         1. Perform LeaveCriticalSection(_WL_).
         1. Return _n_.
