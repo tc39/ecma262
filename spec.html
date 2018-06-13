@@ -948,22 +948,22 @@
     <emu-clause id="sec-ecmascript-language-types-string-type">
       <h1>The String Type</h1>
       <p>The String type is the set of all ordered sequences of zero or more 16-bit unsigned integer values (&ldquo;elements&rdquo;) up to a maximum length of 2<sup>53</sup>-1 elements. The String type is generally used to represent textual data in a running ECMAScript program, in which case each element in the String is treated as a UTF-16 code unit value. Each element is regarded as occupying a position within the sequence. These positions are indexed with nonnegative integers. The first element (if any) is at index 0, the next element (if any) at index 1, and so on. The length of a String is the number of elements (i.e., 16-bit values) within it. The empty String has length zero and therefore contains no elements.</p>
-      <p>Where ECMAScript operations interpret String values, each element is interpreted as a single UTF-16 code unit. However, ECMAScript does not place any restrictions or requirements on the sequence of code units in a String value, so they may be ill-formed when interpreted as UTF-16 code unit sequences. Operations that do not interpret String contents treat them as sequences of undifferentiated 16-bit unsigned integers. The function `String.prototype.normalize` (see <emu-xref href="#sec-string.prototype.normalize"></emu-xref>) can be used to explicitly normalize a String value. `String.prototype.localeCompare` (see <emu-xref href="#sec-string.prototype.localecompare"></emu-xref>) internally normalizes String values, but no other operations implicitly normalize the strings upon which they operate. Only operations that are explicitly specified to be language or locale sensitive produce language-sensitive results.</p>
+      <p>ECMAScript operations that do not interpret String contents apply no further semantics. Operations that do interpret String values treat each element as a single UTF-16 code unit. However, ECMAScript does not restrict the value of or relationships between these code units, so operations that further interpret String contents as sequences of Unicode code points encoded in UTF-16 must account for ill-formed subsequences. Such operations apply special treatment to every code unit with a numeric value in the inclusive range 0xD800 to 0xDBFF (defined by the Unicode Standard as a <dfn id="leading-surrogate">leading surrogate</dfn>, or more formally as a <dfn id="high-surrogate-code-unit">high-surrogate code unit</dfn>) and every code unit with a numeric value in the inclusive range 0xDC00 to 0xDFFF (defined as a <dfn id="trailing-surrogate">trailing surrogate</dfn>, or more formally as a <dfn id="low-surrogate-code-unit">low-surrogate code unit</dfn>) using the following rules:</p>
+      <ul>
+        <li>
+          A code unit that is not a <emu-xref href="#leading-surrogate"></emu-xref> and not a <emu-xref href="#trailing-surrogate"></emu-xref> is interpreted as a code point with the same value.
+        </li>
+        <li>
+          A sequence of two code units, where the first code unit _c1_ is a <emu-xref href="#leading-surrogate"></emu-xref> and the second code unit _c2_ a <emu-xref href="#trailing-surrogate"></emu-xref>, is a <dfn id="surrogate-pair">surrogate pair</dfn> and is interpreted as a code point with the value (_c1_ - 0xD800) &times; 0x400 + (_c2_ - 0xDC00) + 0x10000. (See <emu-xref href="#sec-utf16decode"></emu-xref>)
+        </li>
+        <li>
+          A code unit that is a <emu-xref href="#leading-surrogate"></emu-xref> or <emu-xref href="#trailing-surrogate"></emu-xref>, but is not part of a <emu-xref href="#surrogate-pair"></emu-xref>, is interpreted as a code point with the same value.
+        </li>
+      </ul>
+      <p>The function `String.prototype.normalize` (see <emu-xref href="#sec-string.prototype.normalize"></emu-xref>) can be used to explicitly normalize a String value. `String.prototype.localeCompare` (see <emu-xref href="#sec-string.prototype.localecompare"></emu-xref>) internally normalizes String values, but no other operations implicitly normalize the strings upon which they operate. Only operations that are explicitly specified to be language or locale sensitive produce language-sensitive results.</p>
       <emu-note>
         <p>The rationale behind this design was to keep the implementation of Strings as simple and high-performing as possible. If ECMAScript source text is in Normalized Form C, string literals are guaranteed to also be normalized, as long as they do not contain any Unicode escape sequences.</p>
       </emu-note>
-      <p>Some operations interpret String contents as UTF-16 encoded Unicode code points. In that case the interpretation is:</p>
-      <ul>
-        <li>
-          A code unit in the range 0 to 0xD7FF or in the range 0xE000 to 0xFFFF is interpreted as a code point with the same value.
-        </li>
-        <li>
-          A sequence of two code units, where the first code unit _c1_ is in the range 0xD800 to 0xDBFF and the second code unit _c2_ is in the range 0xDC00 to 0xDFFF, is a surrogate pair and is interpreted as a code point with the value (_c1_ - 0xD800) &times; 0x400 + (_c2_ - 0xDC00) + 0x10000. (See <emu-xref href="#sec-utf16decode"></emu-xref>)
-        </li>
-        <li>
-          A code unit that is in the range 0xD800 to 0xDFFF, but is not part of a surrogate pair, is interpreted as a code point with the same value.
-        </li>
-      </ul>
       <p>In this specification, the phrase "the <dfn>string-concatenation</dfn> of _A_, _B_, ..." (where each argument is a String value, a code unit, or a sequence of code units) denotes the String value whose sequence of code units is the concatenation of the code units (in order) of each of the arguments (in order).</p>
     </emu-clause>
 
@@ -3719,7 +3719,7 @@
         <h1>ToNumber Applied to the String Type</h1>
         <p>ToNumber applied to Strings applies the following grammar to the input String interpreted as a sequence of UTF-16 encoded code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>). If the grammar cannot interpret the String as an expansion of |StringNumericLiteral|, then the result of ToNumber is *NaN*.</p>
         <emu-note>
-          <p>The terminal symbols of this grammar are all composed of Unicode BMP code points so the result will be *NaN* if the string contains the UTF-16 encoding of any supplementary code points or any unpaired surrogate code points.</p>
+          <p>The terminal symbols of this grammar are all composed of characters in the Unicode Basic Multilingual Plane (BMP). Therefore, the result of ToNumber will be *NaN* if the string contains any <emu-xref href="#leading-surrogate"></emu-xref> or <emu-xref href="#trailing-surrogate"></emu-xref> code units, whether paired or unpaired.</p>
         </emu-note>
         <h2>Syntax</h2>
         <emu-grammar type="definition">
@@ -9592,9 +9592,9 @@
     <!-- es6num="10.1.2" -->
     <emu-clause id="sec-utf16decode" aoid="UTF16Decode">
       <h1>Static Semantics: UTF16Decode ( _lead_, _trail_ )</h1>
-      <p>Two code units, _lead_ and _trail_, that form a UTF-16 surrogate pair are converted to a code point by performing the following steps:</p>
+      <p>Two code units, _lead_ and _trail_, that form a UTF-16 <emu-xref href="#surrogate-pair"></emu-xref> are converted to a code point by performing the following steps:</p>
       <emu-alg>
-        1. Assert: 0xD800 &le; _lead_ &le; 0xDBFF and 0xDC00 &le; _trail_ &le; 0xDFFF.
+        1. Assert: _lead_ is a <emu-xref href="#leading-surrogate"></emu-xref> and _trail_ is a <emu-xref href="#trailing-surrogate"></emu-xref>.
         1. Let _cp_ be (_lead_ - 0xD800) &times; 0x400 + (_trail_ - 0xDC00) + 0x10000.
         1. Return the code point _cp_.
       </emu-alg>
@@ -24254,7 +24254,7 @@
           <p>The above syntax is based upon RFC 2396 and does not reflect changes introduced by the more recent RFC 3986.</p>
         </emu-note>
         <h2>Runtime Semantics</h2>
-        <p>When a code unit to be included in a URI is not listed above or is not intended to have the special meaning sometimes given to the reserved code units, that code unit must be encoded. The code unit is transformed into its UTF-8 encoding, with surrogate pairs first converted from UTF-16 to the corresponding code point value. (Note that for code units in the range [0, 127] this results in a single octet with the same value.) The resulting sequence of octets is then transformed into a String with each octet represented by an escape sequence of the form `"%xx"`.</p>
+        <p>When a code unit to be included in a URI is not listed above or is not intended to have the special meaning sometimes given to the reserved code units, that code unit must be encoded. The code unit is transformed into its UTF-8 encoding, with <emu-xref href="#surrogate-pair">surrogate pairs</emu-xref> first converted from UTF-16 to the corresponding code point value. (Note that for code units in the range [0, 127] this results in a single octet with the same value.) The resulting sequence of octets is then transformed into a String with each octet represented by an escape sequence of the form `"%xx"`.</p>
 
         <!-- es6num="18.2.6.1.1" -->
         <emu-clause id="sec-encode" aoid="Encode">
@@ -24271,14 +24271,14 @@
                 1. Let _S_ be the String value containing only the code unit _C_.
                 1. Set _R_ to the string-concatenation of the previous value of _R_ and _S_.
               1. Else _C_ is not in _unescapedSet_,
-                1. If the numeric value of _C_ is not less than 0xDC00 and not greater than 0xDFFF, throw a *URIError* exception.
-                1. If the numeric value of _C_ is less than 0xD800 or greater than 0xDBFF, then
+                1. If _C_ is a <emu-xref href="#trailing-surrogate"></emu-xref>, throw a *URIError* exception.
+                1. If _C_ is not a <emu-xref href="#leading-surrogate"></emu-xref>, then
                   1. Let _V_ be the code point with the same numeric value as code unit _C_.
                 1. Else,
                   1. Increase _k_ by 1.
                   1. If _k_ equals _strLen_, throw a *URIError* exception.
-                  1. Let _kChar_ be the numeric value of the code unit at index _k_ within _string_.
-                  1. If _kChar_ is less than 0xDC00 or greater than 0xDFFF, throw a *URIError* exception.
+                  1. Let _kChar_ be the code unit at index _k_ within _string_.
+                  1. If _kChar_ is not a <emu-xref href="#trailing-surrogate"></emu-xref>, throw a *URIError* exception.
                   1. Let _V_ be UTF16Decode(_C_, _kChar_).
                 1. Let _Octets_ be the List of octets resulting by applying the UTF-8 transformation to _V_.
                 1. For each element _octet_ of _Octets_ in List order, do
@@ -24505,8 +24505,8 @@
               <br>
                 _uuuuu_ = _vvvv_ + 1
               <br>
-              to account for the addition of 0x10000 as in Surrogates, section 3.8, of the Unicode Standard.</p>
-            <p>The range of code unit values 0xD800-0xDFFF is used to encode surrogate pairs; the above transformation combines a UTF-16 surrogate pair into a UTF-32 representation and encodes the resulting 21-bit value in UTF-8. Decoding reconstructs the surrogate pair.</p>
+              to account for the addition of 0x10000 as in section 3.8 of the Unicode Standard (Surrogates).</p>
+            <p>The above transformation combines each <emu-xref href="#surrogate-pair"></emu-xref> (for which code unit values in the inclusive range 0xD800 to 0xDFFF are reserved) into a UTF-32 representation and encodes the resulting 21-bit value into UTF-8. Decoding reconstructs the surrogate pair.</p>
             <p>RFC 3629 prohibits the decoding of invalid UTF-8 octet sequences. For example, the invalid sequence C0 80 must not decode into the code unit 0x0000. Implementations of the Decode algorithm are required to throw a *URIError* when encountering such invalid sequences.</p>
           </emu-note>
         </emu-clause>
@@ -29109,7 +29109,7 @@ THH:mm:ss.sss
       <emu-clause id="sec-string.prototype.codepointat">
         <h1>String.prototype.codePointAt ( _pos_ )</h1>
         <emu-note>
-          <p>Returns a nonnegative integer Number less than 0x110000 that is the code point value of the UTF-16 encoded code point (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>) starting at the string element at index _pos_ within the String resulting from converting this object to a String. If there is no element at that index, the result is *undefined*. If a valid UTF-16 surrogate pair does not begin at _pos_, the result is the code unit at _pos_.</p>
+          <p>Returns a nonnegative integer Number less than 0x110000 that is the code point value of the UTF-16 encoded code point (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>) starting at the string element at index _pos_ within the String resulting from converting this object to a String. If there is no element at that index, the result is *undefined*. If a valid UTF-16 <emu-xref href="#surrogate-pair"></emu-xref> does not begin at _pos_, the result is the code unit at _pos_.</p>
         </emu-note>
         <p>When the `codePointAt` method is called with one argument _pos_, the following steps are taken:</p>
         <emu-alg>
