@@ -23415,7 +23415,7 @@
         1. Return ? PerformEval(_x_, _callerRealm_, *false*, *false*).
       </emu-alg>
 
-      <emu-clause id="sec-performeval" aoid="PerformEval">
+      <emu-clause id="sec-performeval" aoid="PerformEval" oldids="sec-performeval-rules-outside-functions,sec-performeval-rules-outside-methods,sec-performeval-rules-outside-constructors">
         <h1>Runtime Semantics: PerformEval ( _x_, _callerRealm_, _strictCaller_, _direct_ )</h1>
         <p>The abstract operation PerformEval with arguments _x_, _callerRealm_, _strictCaller_, and _direct_ performs the following steps:</p>
         <emu-alg>
@@ -23433,9 +23433,13 @@
             1. Let _inFunction_ be *false*.
             1. Let _inMethod_ be *false*.
             1. Let _inDerivedConstructor_ be *false*.
-          1. Let _script_ be the ECMAScript code that is the result of parsing _x_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, for the goal symbol |Script|. If _inFunction_ is *false*, additional early error rules from <emu-xref href="#sec-performeval-rules-outside-functions"></emu-xref> are applied. If _inMethod_ is *false*, additional early error rules from <emu-xref href="#sec-performeval-rules-outside-methods"></emu-xref> are applied. If _inDerivedConstructor_ is *false*, additional early error rules from <emu-xref href="#sec-performeval-rules-outside-constructors"></emu-xref> are applied. If the parse fails, throw a *SyntaxError* exception. If any early errors are detected, throw a *SyntaxError* or a *ReferenceError* exception, depending on the type of the error (but see also clause <emu-xref href="#sec-error-handling-and-language-extensions"></emu-xref>). Parsing and early error detection may be interweaved in an implementation-dependent manner.
-          1. If _script_ Contains |ScriptBody| is *false*, return *undefined*.
-          1. Let _body_ be the |ScriptBody| of _script_.
+          1. Perform the following substeps in an implementation-dependent order, possibly interleaving parsing and error detection:
+            1. Let _script_ be the ECMAScript code that is the result of parsing _x_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, for the goal symbol |Script|. If the parse fails, throw a *SyntaxError* exception. If any early errors are detected, throw a *SyntaxError* or a *ReferenceError* exception, depending on the type of the error (but see also clause <emu-xref href="#sec-error-handling-and-language-extensions"></emu-xref>).
+            1. If _script_ Contains |ScriptBody| is *false*, return *undefined*.
+            1. Let _body_ be the |ScriptBody| of _script_.
+            1. If _inFunction_ is *false*, and _body_ Contains |NewTarget|, throw a *SyntaxError* exception.
+            1. If _inMethod_ is *false*, and _body_ Contains |SuperProperty|, throw a *SyntaxError* exception.
+            1. If _inDerivedConstructor_ is *false*, and _body_ Contains |SuperCall|, throw a *SyntaxError* exception.
           1. If _strictCaller_ is *true*, let _strictEval_ be *true*.
           1. Else, let _strictEval_ be IsStrict of _script_.
           1. Let _ctx_ be the running execution context.
@@ -23467,33 +23471,6 @@
         <emu-note>
           <p>The eval code cannot instantiate variable or function bindings in the variable environment of the calling context that invoked the eval if the calling context is evaluating formal parameter initializers or if either the code of the calling context or the eval code is strict mode code. Instead such bindings are instantiated in a new VariableEnvironment that is only accessible to the eval code. Bindings introduced by `let`, `const`, or `class` declarations are always instantiated in a new LexicalEnvironment.</p>
         </emu-note>
-
-        <emu-clause id="sec-performeval-rules-outside-functions">
-          <h1>Additional Early Error Rules for Eval Outside Functions</h1>
-          <p>These static semantics are applied by PerformEval when a direct eval call occurs outside of any function.</p>
-          <emu-grammar>ScriptBody : StatementList</emu-grammar>
-          <ul>
-            <li>It is a Syntax Error if |StatementList| Contains |NewTarget|.</li>
-          </ul>
-        </emu-clause>
-
-        <emu-clause id="sec-performeval-rules-outside-methods">
-          <h1>Additional Early Error Rules for Eval Outside Methods</h1>
-          <p>These static semantics are applied by PerformEval when a direct eval call occurs outside of a |MethodDefinition|.</p>
-          <emu-grammar>ScriptBody : StatementList</emu-grammar>
-          <ul>
-            <li>It is a Syntax Error if |StatementList| Contains |SuperProperty|.</li>
-          </ul>
-        </emu-clause>
-
-        <emu-clause id="sec-performeval-rules-outside-constructors">
-          <h1>Additional Early Error Rules for Eval Outside Constructor Methods</h1>
-          <p>These static semantics are applied by PerformEval when a direct eval call occurs outside of the <emu-xref href="#sec-static-semantics-constructormethod">constructor method</emu-xref> of a |ClassDeclaration| or |ClassExpression|.</p>
-          <emu-grammar>ScriptBody : StatementList</emu-grammar>
-          <ul>
-            <li>It is a Syntax Error if |StatementList| Contains |SuperCall|.</li>
-          </ul>
-        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-hostensurecancompilestrings" aoid="HostEnsureCanCompileStrings">
@@ -24750,22 +24727,23 @@
                 1. Set _k_ to _k_ + 1.
               1. Let _bodyText_ be _args_[_k_].
             1. Set _bodyText_ to ? ToString(_bodyText_).
-            1. Let _parameters_ be the result of parsing _P_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, using _parameterGoal_ as the goal symbol. Throw a *SyntaxError* exception if the parse fails.
-            1. Let _body_ be the result of parsing _bodyText_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, using _goal_ as the goal symbol. Throw a *SyntaxError* exception if the parse fails.
-            1. Let _strict_ be ContainsUseStrict of _body_.
-            1. If any static semantics errors are detected for _parameters_ or _body_, throw a *SyntaxError* or a *ReferenceError* exception, depending on the type of the error. If _strict_ is *true*, the Early Error rules for <emu-grammar>UniqueFormalParameters : FormalParameters</emu-grammar> are applied. Parsing and early error detection may be interweaved in an implementation-dependent manner.
-            1. If _strict_ is *true* and IsSimpleParameterList of _parameters_ is *false*, throw a *SyntaxError* exception.
-            1. If any element of the BoundNames of _parameters_ also occurs in the LexicallyDeclaredNames of _body_, throw a *SyntaxError* exception.
-            1. If _body_ Contains |SuperCall| is *true*, throw a *SyntaxError* exception.
-            1. If _parameters_ Contains |SuperCall| is *true*, throw a *SyntaxError* exception.
-            1. If _body_ Contains |SuperProperty| is *true*, throw a *SyntaxError* exception.
-            1. If _parameters_ Contains |SuperProperty| is *true*, throw a *SyntaxError* exception.
-            1. If _kind_ is `"generator"` or `"async generator"`, then
-              1. If _parameters_ Contains |YieldExpression| is *true*, throw a *SyntaxError* exception.
-            1. If _kind_ is `"async"` or `"async generator"`, then
-              1. If _parameters_ Contains |AwaitExpression| is *true*, throw a *SyntaxError* exception.
-            1. If _strict_ is *true*, then
-              1. If BoundNames of _parameters_ contains any duplicate elements, throw a *SyntaxError* exception.
+            1. Perform the following substeps in an implementation-dependent order, possibly interleaving parsing and error detection:
+              1. Let _parameters_ be the result of parsing _P_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, using _parameterGoal_ as the goal symbol. Throw a *SyntaxError* exception if the parse fails.
+              1. Let _body_ be the result of parsing _bodyText_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, using _goal_ as the goal symbol. Throw a *SyntaxError* exception if the parse fails.
+              1. Let _strict_ be ContainsUseStrict of _body_.
+              1. If any static semantics errors are detected for _parameters_ or _body_, throw a *SyntaxError* or a *ReferenceError* exception, depending on the type of the error. If _strict_ is *true*, the Early Error rules for <emu-grammar>UniqueFormalParameters : FormalParameters</emu-grammar> are applied.
+              1. If _strict_ is *true* and IsSimpleParameterList of _parameters_ is *false*, throw a *SyntaxError* exception.
+              1. If any element of the BoundNames of _parameters_ also occurs in the LexicallyDeclaredNames of _body_, throw a *SyntaxError* exception.
+              1. If _body_ Contains |SuperCall| is *true*, throw a *SyntaxError* exception.
+              1. If _parameters_ Contains |SuperCall| is *true*, throw a *SyntaxError* exception.
+              1. If _body_ Contains |SuperProperty| is *true*, throw a *SyntaxError* exception.
+              1. If _parameters_ Contains |SuperProperty| is *true*, throw a *SyntaxError* exception.
+              1. If _kind_ is `"generator"` or `"async generator"`, then
+                1. If _parameters_ Contains |YieldExpression| is *true*, throw a *SyntaxError* exception.
+              1. If _kind_ is `"async"` or `"async generator"`, then
+                1. If _parameters_ Contains |AwaitExpression| is *true*, throw a *SyntaxError* exception.
+              1. If _strict_ is *true*, then
+                1. If BoundNames of _parameters_ contains any duplicate elements, throw a *SyntaxError* exception.
             1. Let _proto_ be ? GetPrototypeFromConstructor(_newTarget_, _fallbackProto_).
             1. Let _F_ be FunctionAllocate(_proto_, _strict_, _kind_).
             1. Let _realmF_ be _F_.[[Realm]].
