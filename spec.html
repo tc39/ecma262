@@ -11395,6 +11395,9 @@
           <li>
             The MV of <emu-grammar>HexDigits :: HexDigits HexDigit</emu-grammar> is (the MV of |HexDigits| &times; 16<sub>ℝ</sub>) plus the MV of |HexDigit|.
           </li>
+          <li>
+            The MV of <emu-grammar>Hex4Digits :: HexDigit HexDigit HexDigit HexDigit</emu-grammar> is (0x1000<sub>ℝ</sub> times the MV of the first |HexDigit|) plus (0x100<sub>ℝ</sub> times the MV of the second |HexDigit|) plus (0x10<sub>ℝ</sub> times the MV of the third |HexDigit|) plus the MV of the fourth |HexDigit|.
+          </li>
         </ul>
       </emu-clause>
 
@@ -11760,7 +11763,7 @@
             The SV of <emu-grammar>UnicodeEscapeSequence :: `u` Hex4Digits</emu-grammar> is the SV of |Hex4Digits|.
           </li>
           <li>
-            The SV of <emu-grammar>Hex4Digits :: HexDigit HexDigit HexDigit HexDigit</emu-grammar> is the code unit whose value is (0x1000<sub>ℝ</sub> times the MV of the first |HexDigit|) plus (0x100<sub>ℝ</sub> times the MV of the second |HexDigit|) plus (0x10<sub>ℝ</sub> times the MV of the third |HexDigit|) plus the MV of the fourth |HexDigit|.
+            The SV of <emu-grammar>Hex4Digits :: HexDigit HexDigit HexDigit HexDigit</emu-grammar> is the code unit whose value is the MV of |Hex4Digits|.
           </li>
           <li>
             The SV of <emu-grammar>UnicodeEscapeSequence :: `u{` CodePoint `}`</emu-grammar> is the UTF16Encoding of the MV of |CodePoint|.
@@ -12043,7 +12046,7 @@
             The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` CodePoint [lookahead &lt;! HexDigit] [lookahead != `}`]</emu-grammar> is the sequence consisting of the code unit 0x0075 (LATIN SMALL LETTER U) followed by the code unit 0x007B (LEFT CURLY BRACKET) followed by the code units of the TRV of |CodePoint|.
           </li>
           <li>
-            The TRV of <emu-grammar>DecimalDigit :: one of `0` `1` `2` `3` `4` `5` `6` `7` `8` `9`</emu-grammar> is the SV of the |SourceCharacter| that is that single code point.
+            The TRV of <emu-grammar>DecimalDigit :: one of `0` `1` `2` `3` `4` `5` `6` `7` `8` `9`</emu-grammar> is the UTF16Encoding of the single code point matched by this production.
           </li>
           <li>
             The TRV of <emu-grammar>CharacterEscapeSequence :: SingleEscapeCharacter</emu-grammar> is the TRV of |SingleEscapeCharacter|.
@@ -12052,7 +12055,7 @@
             The TRV of <emu-grammar>CharacterEscapeSequence :: NonEscapeCharacter</emu-grammar> is the SV of |NonEscapeCharacter|.
           </li>
           <li>
-            The TRV of <emu-grammar>SingleEscapeCharacter :: one of `'` `"` `\` `b` `f` `n` `r` `t` `v`</emu-grammar> is the SV of the |SourceCharacter| that is that single code point.
+            The TRV of <emu-grammar>SingleEscapeCharacter :: one of `'` `"` `\` `b` `f` `n` `r` `t` `v`</emu-grammar> is the UTF16Encoding of the single code point matched by this production.
           </li>
           <li>
             The TRV of <emu-grammar>HexEscapeSequence :: `x` HexDigit HexDigit</emu-grammar> is the sequence consisting of the code unit 0x0078 (LATIN SMALL LETTER X) followed by TRV of the first |HexDigit| followed by the TRV of the second |HexDigit|.
@@ -12073,7 +12076,7 @@
             The TRV of <emu-grammar>HexDigits :: HexDigits HexDigit</emu-grammar> is the sequence consisting of TRV of |HexDigits| followed by TRV of |HexDigit|.
           </li>
           <li>
-            The TRV of a |HexDigit| is the SV of the |SourceCharacter| that is that |HexDigit|.
+            The TRV of <emu-grammar>HexDigit :: one of `0` `1` `2` `3` `4` `5` `6` `7` `8` `9` `a` `b` `c` `d` `e` `f` `A` `B` `C` `D` `E` `F`</emu-grammar> is the UTF16Encoding of the single code point matched by this production.
           </li>
           <li>
             The TRV of <emu-grammar>LineContinuation :: `\` LineTerminatorSequence</emu-grammar> is the sequence consisting of the code unit 0x005C (REVERSE SOLIDUS) followed by the code units of TRV of |LineTerminatorSequence|.
@@ -13581,7 +13584,7 @@
       <emu-clause id="sec-left-hand-side-expressions-static-semantics-coveredcallexpression">
         <h1>Static Semantics: CoveredCallExpression</h1>
         <emu-grammar>
-          CallExpression : CoverCallExpressionAndAsyncArrowHead
+          CoverCallExpressionAndAsyncArrowHead : MemberExpression Arguments
         </emu-grammar>
         <emu-alg>
           1. Return the |CallMemberExpression| that is covered by |CoverCallExpressionAndAsyncArrowHead|.
@@ -16707,6 +16710,12 @@
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
+        <emu-grammar>ObjectBindingPattern : `{` BindingPropertyList `,` BindingRestProperty `}`</emu-grammar>
+        <emu-alg>
+          1. Let _names_ be BoundNames of |BindingPropertyList|.
+          1. Append to _names_ the elements of BoundNames of |BindingRestProperty|.
+          1. Return _names_.
+        </emu-alg>
         <emu-grammar>ArrayBindingPattern : `[` Elision? `]`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
@@ -16758,9 +16767,17 @@
       <emu-clause id="sec-destructuring-binding-patterns-static-semantics-containsexpression">
         <h1>Static Semantics: ContainsExpression</h1>
         <emu-see-also-para op="ContainsExpression"></emu-see-also-para>
-        <emu-grammar>ObjectBindingPattern : `{` `}`</emu-grammar>
+        <emu-grammar>
+          ObjectBindingPattern :
+            `{` `}`
+            `{` BindingRestProperty `}`
+        </emu-grammar>
         <emu-alg>
           1. Return *false*.
+        </emu-alg>
+        <emu-grammar>ObjectBindingPattern : `{` BindingPropertyList `,` BindingRestProperty `}`</emu-grammar>
+        <emu-alg>
+          1. Return ContainsExpression of |BindingPropertyList|.
         </emu-alg>
         <emu-grammar>ArrayBindingPattern : `[` Elision? `]`</emu-grammar>
         <emu-alg>
@@ -19595,6 +19612,16 @@
       </emu-note>
     </emu-clause>
 
+    <emu-clause id="sec-function-definitions-static-semantics-containsduplicatelabels">
+      <h1>Static Semantics: ContainsDuplicateLabels</h1>
+      <p>With parameter _labelSet_.</p>
+      <emu-see-also-para op="ContainsDuplicateLabels"></emu-see-also-para>
+      <emu-grammar>FunctionStatementList : [empty]</emu-grammar>
+      <emu-alg>
+        1. Return *false*.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-function-definitions-static-semantics-containsexpression">
       <h1>Static Semantics: ContainsExpression</h1>
       <emu-see-also-para op="ContainsExpression"></emu-see-also-para>
@@ -19614,6 +19641,26 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-function-definitions-static-semantics-containsundefinedbreaktarget">
+      <h1>Static Semantics: ContainsUndefinedBreakTarget</h1>
+      <p>With parameter _labelSet_.</p>
+      <emu-see-also-para op="ContainsUndefinedBreakTarget"></emu-see-also-para>
+      <emu-grammar>FunctionStatementList : [empty]</emu-grammar>
+      <emu-alg>
+        1. Return *false*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-function-definitions-static-semantics-containsundefinedcontinuetarget">
+      <h1>Static Semantics: ContainsUndefinedContinueTarget</h1>
+      <p>With parameters _iterationSet_ and _labelSet_.</p>
+      <emu-see-also-para op="ContainsUndefinedContinueTarget"></emu-see-also-para>
+      <emu-grammar>FunctionStatementList : [empty]</emu-grammar>
+      <emu-alg>
+        1. Return *false*.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-function-definitions-static-semantics-containsusestrict">
       <h1>Static Semantics: ContainsUseStrict</h1>
       <emu-see-also-para op="ContainsUseStrict"></emu-see-also-para>
@@ -19626,7 +19673,11 @@
     <emu-clause id="sec-function-definitions-static-semantics-expectedargumentcount">
       <h1>Static Semantics: ExpectedArgumentCount</h1>
       <emu-see-also-para op="ExpectedArgumentCount"></emu-see-also-para>
-      <emu-grammar>FormalParameters : [empty]</emu-grammar>
+      <emu-grammar>
+        FormalParameters :
+          [empty]
+          FunctionRestParameter
+      </emu-grammar>
       <emu-alg>
         1. Return 0.
       </emu-alg>
@@ -19637,6 +19688,11 @@
       <emu-note>
         <p>The ExpectedArgumentCount of a |FormalParameterList| is the number of |FormalParameters| to the left of either the rest parameter or the first |FormalParameter| with an Initializer. A |FormalParameter| without an initializer is allowed after the first parameter with an initializer but such parameters are considered to be optional with *undefined* as their default value.</p>
       </emu-note>
+      <emu-grammar>FormalParameterList : FormalParameter</emu-grammar>
+      <emu-alg>
+        1. If HasInitializer of |FormalParameter| is *true*, return 0.
+        1. Return 1.
+      </emu-alg>
       <emu-grammar>FormalParameterList : FormalParameterList `,` FormalParameter</emu-grammar>
       <emu-alg>
         1. Let _count_ be ExpectedArgumentCount of |FormalParameterList|.
@@ -20000,6 +20056,11 @@
       <emu-alg>
         1. Return *false*.
       </emu-alg>
+      <emu-grammar>ArrowParameters : CoverParenthesizedExpressionAndArrowParameterList</emu-grammar>
+      <emu-alg>
+        1. Let _formals_ be CoveredFormalsList of |CoverParenthesizedExpressionAndArrowParameterList|.
+        1. Return ContainsExpression of _formals_.
+      </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-arrow-function-definitions-static-semantics-containsusestrict">
@@ -20017,6 +20078,11 @@
       <emu-grammar>ArrowParameters : BindingIdentifier</emu-grammar>
       <emu-alg>
         1. Return 1.
+      </emu-alg>
+      <emu-grammar>ArrowParameters : CoverParenthesizedExpressionAndArrowParameterList</emu-grammar>
+      <emu-alg>
+        1. Let _formals_ be CoveredFormalsList of |CoverParenthesizedExpressionAndArrowParameterList|.
+        1. Return ExpectedArgumentCount of _formals_.
       </emu-alg>
     </emu-clause>
 
@@ -20052,6 +20118,7 @@
       <emu-grammar>
         CoverParenthesizedExpressionAndArrowParameterList :
           `(` Expression `)`
+          `(` Expression `,` `)`
           `(` `)`
           `(` `...` BindingIdentifier `)`
           `(` `...` BindingPattern `)`
@@ -20119,6 +20186,11 @@
           1. ReturnIfAbrupt(_v_).
         1. If _iteratorRecord_.[[Done]] is *true*, let _v_ be *undefined*.
         1. Return the result of performing BindingInitialization for |BindingIdentifier| using _v_ and _environment_ as the arguments.
+      </emu-alg>
+      <emu-grammar>ArrowParameters : CoverParenthesizedExpressionAndArrowParameterList</emu-grammar>
+      <emu-alg>
+        1. Let _formals_ be CoveredFormalsList of |CoverParenthesizedExpressionAndArrowParameterList|.
+        1. Return IteratorBindingInitialization of _formals_.
       </emu-alg>
     </emu-clause>
 
@@ -21984,6 +22056,9 @@
             `for` `(` LeftHandSideExpression `in` Expression `)` Statement
             `for` `(` `var` ForBinding `in` Expression `)` Statement
             `for` `(` ForDeclaration `in` Expression `)` Statement
+            `for` `await` `(` LeftHandSideExpression `of` AssignmentExpression `)` Statement
+            `for` `await` `(` `var` ForBinding `of` AssignmentExpression `)` Statement
+            `for` `await` `(` ForDeclaration `of` AssignmentExpression `)` Statement
 
           WithStatement : `with` `(` Expression `)` Statement
         </emu-grammar>
