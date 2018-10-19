@@ -21339,7 +21339,8 @@
       <emu-clause id="sec-abstract-module-records">
         <h1>Abstract Module Records</h1>
         <p>A <dfn>Module Record</dfn> encapsulates structural information about the imports and exports of a single module. This information is used to link the imports and exports of sets of connected modules. A Module Record includes four fields that are only used when evaluating a module.</p>
-        <p>For specification purposes Module Record values are values of the Record specification type and can be thought of as existing in a simple object-oriented hierarchy where Module Record is an abstract class with both abstract and concrete subclasses. This specification defines the abstract subclass named Cyclic Module Record and its concrete subclass named Source Text Module Record. Other specifications and implementations may define additional Module Record subclasses corresponding to alternative module definition facilities that they defined.</p>        <p>Module Record defines the fields listed in <emu-xref href="#table-36"></emu-xref>. All Module Definition subclasses include at least those fields. Module Record also defines the abstract method list in <emu-xref href="#table-37"></emu-xref>. All Module definition subclasses must provide concrete implementations of these abstract methods.</p>
+        <p>For specification purposes Module Record values are values of the Record specification type and can be thought of as existing in a simple object-oriented hierarchy where Module Record is an abstract class with both abstract and concrete subclasses. This specification defines the abstract subclass named Cyclic Module Record and its concrete subclass named Source Text Module Record. Other specifications and implementations may define additional Module Record subclasses corresponding to alternative module definition facilities that they defined.</p>
+        <p>Module Record defines the fields listed in <emu-xref href="#table-36"></emu-xref>. All Module Definition subclasses include at least those fields. Module Record also defines the abstract method list in <emu-xref href="#table-37"></emu-xref>. All Module definition subclasses must provide concrete implementations of these abstract methods.</p>
         <emu-table id="table-36" caption="Module Record Fields">
           <table>
             <thead>
@@ -21516,6 +21517,17 @@
                   Auxiliary field used during Instantiate and Evaluate only. If [[Status]] is `"instantiating"` or `"evaluating"`, this is either the module's own [[DFSIndex]] or that of an "earlier" module in the same strongly connected component.
                 </td>
               </tr>
+              <tr>
+                <td>
+                  [[RequestedModules]]
+                </td>
+                <td>
+                  List of String
+                </td>
+                <td>
+                  A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module. The List is source code occurrence ordered.
+                </td>
+              </tr>
             </tbody>
           </table>
         </emu-table>
@@ -21533,7 +21545,7 @@
               </tr>
               <tr>
                 <td>
-                  ModuleDeclarationEnvironmentSetup()
+                  InitializeEnvironment()
                 </td>
                 <td>
                   Initialize the Lexical Environment of the module, including resolving all imported bindings.
@@ -21541,7 +21553,7 @@
               </tr>
               <tr>
                 <td>
-                  ModuleExecution()
+                  ExecuteModule()
                 </td>
                 <td>
                   Initialize the execution context of the module and evaluate the module's code within it.
@@ -21605,7 +21617,7 @@
                 1. If _requiredModule_.[[Status]] is `"instantiating"`, then
                   1. Assert: _requiredModule_ is a Cyclic Module Record.
                   1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-              1. Perform ? _module_.ModuleDeclarationEnvironmentSetup().
+              1. Perform ? _module_.InitializeEnvironment().
               1. Assert: _module_ occurs exactly once in _stack_.
               1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
               1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], then
@@ -21677,7 +21689,7 @@
                 1. If _requiredModule_.[[Status]] is `"evaluating"`, then
                   1. Assert: _requiredModule_ is a Cyclic Module Record.
                   1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-              1. Perform ? _module_.ModuleExecution().
+              1. Perform ? _module_.ExecuteModule().
               1. Assert: _module_ occurs exactly once in _stack_.
               1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
               1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], then
@@ -21729,7 +21741,7 @@
 
           <p>An analogous story occurs for the evaluation phase of a cyclic module graph, in the success case.</p>
 
-          <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to InnerModuleInstantiation on _A_. However, once we unwind back to the original InnerModuleInstantiation on _A_, it fails during ModuleDeclarationEnvironmentSetup, namely right after _C_.ResolveExport(). The thrown *SyntaxError* exception propagates up to _A_.Instantiate, which resets all modules that are currently on its _stack_ (these are always exactly the modules that are still `"instantiating"`). Hence both _A_ and _B_ become `"uninstantiated"`. Note that _C_ is left as `"instantiated"`.</p>
+          <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to InnerModuleInstantiation on _A_. However, once we unwind back to the original InnerModuleInstantiation on _A_, it fails during InitializeEnvironment, namely right after _C_.ResolveExport(). The thrown *SyntaxError* exception propagates up to _A_.Instantiate, which resets all modules that are currently on its _stack_ (these are always exactly the modules that are still `"instantiating"`). Hence both _A_ and _B_ become `"uninstantiated"`. Note that _C_ is left as `"instantiated"`.</p>
 
           <p>Finally, consider a case where _A_ has an evaluation error; for example, its source code throws an exception. In that case, the evaluation-time analog of the above steps still occurs, including the early return from the second call to InnerModuleEvaluation on _A_. However, once we unwind back to the original InnerModuleEvaluation on _A_, it fails by assumption. The exception thrown propagates up to _A_.Evaluate(), which records the error in all modules that are currently on its _stack_ (i.e., the modules that are still `"evaluating"`). Hence both _A_ and _B_ become `"evaluated"` and the exception is recorded in both _A_ and _B_'s [[EvaluationError]] fields, while _C_ is left as `"evaluated"` with no [[EvaluationError]].</p>
         </emu-clause>
@@ -21766,17 +21778,6 @@
               </td>
               <td>
                 The result of parsing the source text of this module using |Module| as the goal symbol.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[RequestedModules]]
-              </td>
-              <td>
-                List of String
-              </td>
-              <td>
-                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module. The List is source code occurrence ordered.
               </td>
             </tr>
             <tr>
@@ -22319,15 +22320,15 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-moduledeclarationenvironmentsetup" aoid="ModuleDeclarationEnvironmentSetup">
-          <h1>ModuleDeclarationEnvironmentSetup ( )</h1>
+        <emu-clause id="sec-source-text-module-record-initialize-environment" aoid="InitializeEnvironment">
+          <h1>InitializeEnvironment ( ) Concrete Method</h1>
 
-          <p>The ModuleDeclarationEnvironmentSetup concrete method implements the corresponding Cyclic Module Record abstract method.</p>
+          <p>The InitializeEnvironment concrete method of a Source Text Module Record implements the corresponding Cyclic Module Record abstract method.</p>
 
           <p>This abstract method performs the following steps:</p>
 
           <emu-alg>
-            1. 1. _module_ be this Source Text Module Record.
+            1. Let _module_ be this Source Text Module Record.
             1. For each ExportEntry Record _e_ in _module_.[[IndirectExportEntries]], do
               1. Let _resolution_ be ? _module_.ResolveExport(_e_.[[ExportName]], &laquo; &raquo;).
               1. If _resolution_ is *null* or `"ambiguous"`, throw a *SyntaxError* exception.
@@ -22372,10 +22373,10 @@
           </emu-alg>
         </emu-clause>
         
-        <emu-clause id="sec-moduleexecution" aoid="ModuleExecution">
-          <h1>ModuleExecution ( )</h1>
+        <emu-clause id="sec-source-text-module-record-execute-module" aoid="ExecuteModule">
+          <h1>ExecuteModule ( ) Concrete Method</h1>
 
-          <p>The ModuleExecution concrete method implements the corresponding Cyclic Module Record abstract method.</p>
+          <p>The ExecuteModule concrete method of a Source Text Module Record implements the corresponding Cyclic Module Record abstract method.</p>
 
           <p>This abstract method performs the following steps:</p>
 
