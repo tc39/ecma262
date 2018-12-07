@@ -8452,17 +8452,6 @@
           </tr>
           <tr>
             <td>
-              [[HostDefined]]
-            </td>
-            <td>
-              Any, default value is *undefined*.
-            </td>
-            <td>
-              Field reserved for use by host environments that need to associate additional information with a Module Namespace Exotic Object.
-            </td>
-          </tr>
-          <tr>
-            <td>
               [[Prototype]]
             </td>
             <td>
@@ -8617,7 +8606,6 @@
           1. Otherwise,
             1. Let _sortedExports_ be a new List containing the same values as the list _exports_ where the values are ordered as if an Array of the same values had been sorted using `Array.prototype.sort` using *undefined* as _comparefn_.
             1. Set _M_.[[Exports]] to _sortedExports_.
-          1. Set _M_.[[HostDefined]] to *undefined*.
           1. Create own properties of _M_ corresponding to the definitions in <emu-xref href="#sec-module-namespace-objects"></emu-xref>.
           1. Set _module_.[[Namespace]] to _M_.
           1. Return _M_.
@@ -21436,7 +21424,7 @@
             </tr>
             <tr>
               <td>
-                GetExportedNames(_exportStarSet_, _nsModule_)
+                GetExportedNames(_exportStarSet_)
               </td>
               <td>
                 Return a list of all names that are either directly or indirectly exported from this module.
@@ -22028,12 +22016,11 @@
         </emu-clause>
 
         <emu-clause id="sec-getexportednames">
-          <h1>GetExportedNames ( _exportStarSet_, _nsModule_ ) Concrete Method</h1>
+          <h1>GetExportedNames ( _exportStarSet_ ) Concrete Method</h1>
           <p>The GetExportedNames concrete method of a Source Text Module Record implements the corresponding Module Record abstract method.</p>
           <p>It performs the following steps:</p>
           <emu-alg>
             1. Assert: _exportStarSet_ is a List of Module Records.
-            1. Assert: _nsModule_ is a Module Record.
             1. Let _module_ be this Source Text Module Record.
             1. If _exportStarSet_ contains _module_, then
               1. Assert: We've reached the starting point of an `import *` circularity.
@@ -22048,9 +22035,9 @@
               1. Append _e_.[[ExportName]] to _exportedNames_.
             1. For each ExportEntry Record _e_ in _module_.[[StarExportEntries]], do
               1. Let _requestedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
-              1. Let _starNames_ be ? _requestedModule_.GetExportedNames(_exportStarSet_, _nsModule_).
+              1. Let _starNames_ be ? _requestedModule_.GetExportedNames(_exportStarSet_).
               1. If _starNames_ is *null*, then
-                 1. Return *null*.
+                1. Return *null*.
               1. For each element _n_ of _starNames_, do
                 1. If SameValue(_n_, `"default"`) is *false*, then
                   1. If _n_ is not an element of _exportedNames_, then
@@ -22058,7 +22045,7 @@
             1. Return _exportedNames_.
           </emu-alg>
           <emu-note>
-            <p>GetExportedNames does not filter out or throw an exception for names that have ambiguous star export bindings.</p>
+            <p>GetExportedNames does not filter out or throw an exception for names that have ambiguous star export bindings. It also doesn't throw for modules that star export from non-source text Module Records with deferred bindings.</p>
           </emu-note>
         </emu-clause>
 
@@ -22204,6 +22191,11 @@
                   1. Let _resolution_ be ? _importedModule_.ResolveExport(_in_.[[ImportName]], &laquo; &raquo;).
                   1. If _resolution_ is *null* or `"ambiguous"`, throw a *SyntaxError* exception.
                   1. Call _envRec_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+              1. For each ExportEntry Record _e_ in _module_.[[StarExportEntries]], do
+                1. Let _requestedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
+                1. Let _exportNames_ be ? _requestedModule_.GetExportedNames(_exportStarSet_).
+                1. If _exportNames_ is *null*, then
+                  1. Throw a *SyntaxError* exception.
               1. Let _code_ be _module_.[[ECMAScriptCode]].
               1. Let _varDeclarations_ be the VarScopedDeclarations of _code_.
               1. Let _declaredVarNames_ be a new empty List.
@@ -22225,6 +22217,9 @@
                     1. Call _envRec_.InitializeBinding(_dn_, _fo_).
               1. Return NormalCompletion(~empty~).
             </emu-alg>
+            <emu-note>
+              <p>A *null* return from GetExportedNames indicates a non-source text Module Record with deferred exports. Star exports from these modules are not supported and throw a Syntax Error.</p>
+            </emu-note>
           </emu-clause>
         </emu-clause>
 
@@ -22398,7 +22393,7 @@
           1. Assert: _module_.[[Status]] is not `"uninstantiated"`.
           1. Let _namespace_ be _module_.[[Namespace]].
           1. If _namespace_ is *undefined*, then
-            1. Let _exportedNames_ be ? _module_.GetExportedNames(&laquo; &raquo;, _module_).
+            1. Let _exportedNames_ be ? _module_.GetExportedNames(&laquo; &raquo;).
             1. If _exportedNames_ is *null*, then
               1. Set _namespace_ to ModuleNamespaceCreate(_module_, *null*).
             1. Otherwise,
