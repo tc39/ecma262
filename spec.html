@@ -11774,11 +11774,11 @@
         <emu-alg>
           1. Let _propKey_ be the result of evaluating |PropertyName|.
           1. ReturnIfAbrupt(_propKey_).
-          1. Let _exprValueRef_ be the result of evaluating |AssignmentExpression|.
-          1. Let _propValue_ be ? GetValue(_exprValueRef_).
           1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true*, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_propValue_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_propValue_, _propKey_).
+            1. Let _propValue_ be the result of performing NamedEvaluation for |AssignmentExpression| with argument _propKey_.
+          1. Else,
+            1. Let _exprValueRef_ be the result of evaluating |AssignmentExpression|.
+            1. Let _propValue_ be ? GetValue(_exprValueRef_).
           1. Assert: _enumerable_ is *true*.
           1. Assert: _object_ is an ordinary, extensible object with no non-configurable properties.
           1. Return ! CreateDataPropertyOrThrow(_object_, _propKey_, _propValue_).
@@ -12126,6 +12126,21 @@
         <emu-grammar>ParenthesizedExpression : `(` Expression `)`</emu-grammar>
         <emu-alg>
           1. Return AssignmentTargetType of |Expression|.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-grouping-operator-runtime-semantics-namedevaluation">
+        <h1>Runtime Semantics: NamedEvaluation</h1>
+        <p>With parameter _name_.</p>
+        <emu-grammar>PrimaryExpression : CoverParenthesizedExpressionAndArrowParameterList</emu-grammar>
+        <emu-alg>
+          1. Let _expr_ be CoveredParenthesizedExpression of |CoverParenthesizedExpressionAndArrowParameterList|.
+          1. Return the result of performing NamedEvaluation for _expr_ with argument _name_.
+        </emu-alg>
+        <emu-grammar>ParenthesizedExpression : `(` Expression `)`</emu-grammar>
+        <emu-alg>
+          1. Assert: IsAnonymousFunctionDefinition(|Expression|) is *true*.
+          1. Return the result of performing NamedEvaluation for |Expression| with argument _name_.
         </emu-alg>
       </emu-clause>
 
@@ -14076,11 +14091,11 @@
         1. If |LeftHandSideExpression| is neither an |ObjectLiteral| nor an |ArrayLiteral|, then
           1. Let _lref_ be the result of evaluating |LeftHandSideExpression|.
           1. ReturnIfAbrupt(_lref_).
-          1. Let _rref_ be the result of evaluating |AssignmentExpression|.
-          1. Let _rval_ be ? GetValue(_rref_).
           1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) and IsIdentifierRef of |LeftHandSideExpression| are both *true*, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_rval_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_rval_, GetReferencedName(_lref_)).
+            1. Let _rval_ be the result of performing NamedEvaluation for |AssignmentExpression| with argument GetReferencedName(_lref_).
+          1. Else,
+            1. Let _rref_ be the result of evaluating |AssignmentExpression|.
+            1. Let _rval_ be ? GetValue(_rref_).
           1. Perform ? PutValue(_lref_, _rval_).
           1. Return _rval_.
         1. Let _assignmentPattern_ be the |AssignmentPattern| that is covered by |LeftHandSideExpression|.
@@ -14280,11 +14295,11 @@
           1. Let _lref_ be ? ResolveBinding(_P_).
           1. Let _v_ be ? GetV(_value_, _P_).
           1. If |Initializer_opt| is present and _v_ is *undefined*, then
-            1. Let _defaultValue_ be the result of evaluating |Initializer|.
-            1. Set _v_ to ? GetValue(_defaultValue_).
             1. If IsAnonymousFunctionDefinition(|Initializer|) is *true*, then
-              1. Let _hasNameProperty_ be ? HasOwnProperty(_v_, `"name"`).
-              1. If _hasNameProperty_ is *false*, perform SetFunctionName(_v_, _P_).
+              1. Let _v_ be the result of performing NamedEvaluation for |Initializer| with argument _P_.
+            1. Else,
+              1. Let _defaultValue_ be the result of evaluating |Initializer|.
+              1. Set _v_ to ? GetValue(_defaultValue_).
           1. Perform ? PutValue(_lref_, _v_).
           1. Return a new List containing _P_.
         </emu-alg>
@@ -14368,15 +14383,15 @@
               1. ReturnIfAbrupt(_value_).
           1. If _iteratorRecord_.[[Done]] is *true*, let _value_ be *undefined*.
           1. If |Initializer| is present and _value_ is *undefined*, then
-            1. Let _defaultValue_ be the result of evaluating |Initializer|.
-            1. Let _v_ be ? GetValue(_defaultValue_).
+            1. If IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
+              1. Let _v_ be the result of performing NamedEvaluation for |Initializer| with argument GetReferencedName(_lref_).
+            1. Else,
+              1. Let _defaultValue_ be the result of evaluating |Initializer|.
+              1. Let _v_ be ? GetValue(_defaultValue_).
           1. Else, let _v_ be _value_.
           1. If |DestructuringAssignmentTarget| is an |ObjectLiteral| or an |ArrayLiteral|, then
             1. Let _nestedAssignmentPattern_ be the |AssignmentPattern| that is covered by |DestructuringAssignmentTarget|.
             1. Return the result of performing DestructuringAssignmentEvaluation of _nestedAssignmentPattern_ with _v_ as the argument.
-          1. If |Initializer| is present and _value_ is *undefined* and IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_v_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_v_, GetReferencedName(_lref_)).
           1. Return ? PutValue(_lref_, _v_).
         </emu-alg>
         <emu-note>
@@ -14418,15 +14433,15 @@
             1. ReturnIfAbrupt(_lref_).
           1. Let _v_ be ? GetV(_value_, _propertyName_).
           1. If |Initializer| is present and _v_ is *undefined*, then
-            1. Let _defaultValue_ be the result of evaluating |Initializer|.
-            1. Let _rhsValue_ be ? GetValue(_defaultValue_).
+            1. If IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
+              1. Let _rhsValue_ be the result of performing NamedEvaluation for |Initializer| with argument GetReferencedName(_lref_).
+            1. Else,
+              1. Let _defaultValue_ be the result of evaluating |Initializer|.
+              1. Let _rhsValue_ be ? GetValue(_defaultValue_).
           1. Else, let _rhsValue_ be _v_.
           1. If |DestructuringAssignmentTarget| is an |ObjectLiteral| or an |ArrayLiteral|, then
             1. Let _assignmentPattern_ be the |AssignmentPattern| that is covered by |DestructuringAssignmentTarget|.
             1. Return the result of performing DestructuringAssignmentEvaluation of _assignmentPattern_ with _rhsValue_ as the argument.
-          1. If |Initializer| is present and _v_ is *undefined* and IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_rhsValue_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_rhsValue_, GetReferencedName(_lref_)).
           1. Return ? PutValue(_lref_, _rhsValue_).
         </emu-alg>
       </emu-clause>
@@ -15153,11 +15168,11 @@
         <emu-alg>
           1. Let _bindingId_ be StringValue of |BindingIdentifier|.
           1. Let _lhs_ be ResolveBinding(_bindingId_).
-          1. Let _rhs_ be the result of evaluating |Initializer|.
-          1. Let _value_ be ? GetValue(_rhs_).
           1. If IsAnonymousFunctionDefinition(|Initializer|) is *true*, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_value_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_value_, _bindingId_).
+            1. Let _value_ be the result of performing NamedEvaluation for |Initializer| with argument _bindingId_.
+          1. Else,
+            1. Let _rhs_ be the result of evaluating |Initializer|.
+            1. Let _value_ be ? GetValue(_rhs_).
           1. Return InitializeReferencedBinding(_lhs_, _value_).
         </emu-alg>
         <emu-grammar>LexicalBinding : BindingPattern Initializer</emu-grammar>
@@ -15254,11 +15269,11 @@
         <emu-alg>
           1. Let _bindingId_ be StringValue of |BindingIdentifier|.
           1. Let _lhs_ be ? ResolveBinding(_bindingId_).
-          1. Let _rhs_ be the result of evaluating |Initializer|.
-          1. Let _value_ be ? GetValue(_rhs_).
           1. If IsAnonymousFunctionDefinition(|Initializer|) is *true*, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_value_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_value_, _bindingId_).
+            1. Let _value_ be the result of performing NamedEvaluation for |Initializer| with argument _bindingId_.
+          1. Else,
+            1. Let _rhs_ be the result of evaluating |Initializer|.
+            1. Let _value_ be ? GetValue(_rhs_).
           1. Return ? PutValue(_lhs_, _value_).
         </emu-alg>
         <emu-note>
@@ -15656,11 +15671,11 @@
               1. ReturnIfAbrupt(_v_).
           1. If _iteratorRecord_.[[Done]] is *true*, let _v_ be *undefined*.
           1. If |Initializer| is present and _v_ is *undefined*, then
-            1. Let _defaultValue_ be the result of evaluating |Initializer|.
-            1. Set _v_ to ? GetValue(_defaultValue_).
             1. If IsAnonymousFunctionDefinition(|Initializer|) is *true*, then
-              1. Let _hasNameProperty_ be ? HasOwnProperty(_v_, `"name"`).
-              1. If _hasNameProperty_ is *false*, perform SetFunctionName(_v_, _bindingId_).
+              1. Let _v_ be the result of performing NamedEvaluation for |Initializer| with argument _bindingId_.
+            1. Else,
+              1. Let _defaultValue_ be the result of evaluating |Initializer|.
+              1. Set _v_ to ? GetValue(_defaultValue_).
           1. If _environment_ is *undefined*, return ? PutValue(_lhs_, _v_).
           1. Return InitializeReferencedBinding(_lhs_, _v_).
         </emu-alg>
@@ -15743,11 +15758,11 @@
           1. Let _lhs_ be ? ResolveBinding(_bindingId_, _environment_).
           1. Let _v_ be ? GetV(_value_, _propertyName_).
           1. If |Initializer| is present and _v_ is *undefined*, then
-            1. Let _defaultValue_ be the result of evaluating |Initializer|.
-            1. Set _v_ to ? GetValue(_defaultValue_).
             1. If IsAnonymousFunctionDefinition(|Initializer|) is *true*, then
-              1. Let _hasNameProperty_ be ? HasOwnProperty(_v_, `"name"`).
-              1. If _hasNameProperty_ is *false*, perform SetFunctionName(_v_, _bindingId_).
+              1. Let _v_ be the result of performing NamedEvaluation for |Initializer| with argument _bindingId_.
+            1. Else,
+              1. Let _defaultValue_ be the result of evaluating |Initializer|.
+              1. Set _v_ to ? GetValue(_defaultValue_).
           1. If _environment_ is *undefined*, return ? PutValue(_lhs_, _v_).
           1. Return InitializeReferencedBinding(_lhs_, _v_).
         </emu-alg>
@@ -18408,6 +18423,17 @@
       </emu-note>
     </emu-clause>
 
+    <emu-clause id="sec-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>FunctionExpression : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
+      <emu-alg>
+        1. Let _closure_ be the result of evaluating this |FunctionExpression|.
+        1. Perform SetFunctionName(_closure_, _name_).
+        1. Return _closure_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-function-definitions-runtime-semantics-evaluation">
       <h1>Runtime Semantics: Evaluation</h1>
       <emu-grammar>FunctionDeclaration : `function` BindingIdentifier `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
@@ -18679,6 +18705,17 @@
         1. Let _exprRef_ be the result of evaluating |AssignmentExpression|.
         1. Let _exprValue_ be ? GetValue(_exprRef_).
         1. Return Completion { [[Type]]: ~return~, [[Value]]: _exprValue_, [[Target]]: ~empty~ }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-arrow-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>ArrowFunction : ArrowParameters `=&gt;` ConciseBody</emu-grammar>
+      <emu-alg>
+        1. Let _closure_ be the result of evaluating this |ArrowFunction|.
+        1. Perform SetFunctionName(_closure_, _name_).
+        1. Return _closure_.
       </emu-alg>
     </emu-clause>
 
@@ -19123,6 +19160,17 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-generator-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>GeneratorExpression : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Let _closure_ be the result of evaluating this |GeneratorExpression|.
+        1. Perform SetFunctionName(_closure_, _name_).
+        1. Return _closure_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-generator-function-definitions-runtime-semantics-evaluation">
       <h1>Runtime Semantics: Evaluation</h1>
       <emu-grammar>GeneratorExpression : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
@@ -19443,6 +19491,19 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-asyncgenerator-definitions-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>
+        AsyncGeneratorExpression : `async` [no LineTerminator here] `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Let _closure_ be the result of evaluating this |AsyncGeneratorExpression|.
+        1. Perform SetFunctionName(_closure_, _name_).
+        1. Return _closure_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-asyncgenerator-definitions-evaluation">
       <h1>Runtime Semantics: Evaluation</h1>
 
@@ -19729,14 +19790,14 @@
 
     <emu-clause id="sec-runtime-semantics-classdefinitionevaluation">
       <h1>Runtime Semantics: ClassDefinitionEvaluation</h1>
-      <p>With parameter _className_.</p>
+      <p>With parameters _classBinding_ and _className_.</p>
       <emu-grammar>ClassTail : ClassHeritage? `{` ClassBody? `}`</emu-grammar>
       <emu-alg>
         1. Let _lex_ be the LexicalEnvironment of the running execution context.
         1. Let _classScope_ be NewDeclarativeEnvironment(_lex_).
         1. Let _classScopeEnvRec_ be _classScope_'s EnvironmentRecord.
-        1. If _className_ is not *undefined*, then
-          1. Perform _classScopeEnvRec_.CreateImmutableBinding(_className_, *true*).
+        1. If _classBinding_ is not *undefined*, then
+          1. Perform _classScopeEnvRec_.CreateImmutableBinding(_classBinding_, *true*).
         1. If |ClassHeritage_opt| is not present, then
           1. Let _protoParent_ be the intrinsic object %ObjectPrototype%.
           1. Let _constructorParent_ be the intrinsic object %FunctionPrototype%.
@@ -19772,6 +19833,8 @@
         1. If |ClassHeritage_opt| is present, set _F_.[[ConstructorKind]] to `"derived"`.
         1. Perform MakeConstructor(_F_, *false*, _proto_).
         1. Perform MakeClassConstructor(_F_).
+        1. If _className_ is not *undefined*, then
+          1. Perform SetFunctionName(_F_, _className_).
         1. Perform CreateMethodProperty(_proto_, `"constructor"`, _F_).
         1. If |ClassBody_opt| is not present, let _methods_ be a new empty List.
         1. Else, let _methods_ be NonConstructorMethodDefinitions of |ClassBody|.
@@ -19784,8 +19847,8 @@
             1. Set the running execution context's LexicalEnvironment to _lex_.
             1. Return Completion(_status_).
         1. Set the running execution context's LexicalEnvironment to _lex_.
-        1. If _className_ is not *undefined*, then
-          1. Perform _classScopeEnvRec_.InitializeBinding(_className_, _F_).
+        1. If _classBinding_ is not *undefined*, then
+          1. Perform _classScopeEnvRec_.InitializeBinding(_classBinding_, _F_).
         1. Return _F_.
       </emu-alg>
     </emu-clause>
@@ -19795,21 +19858,28 @@
       <emu-grammar>ClassDeclaration : `class` BindingIdentifier ClassTail</emu-grammar>
       <emu-alg>
         1. Let _className_ be StringValue of |BindingIdentifier|.
-        1. Let _value_ be the result of ClassDefinitionEvaluation of |ClassTail| with argument _className_.
+        1. Let _value_ be the result of ClassDefinitionEvaluation of |ClassTail| with arguments _className_ and _className_.
         1. ReturnIfAbrupt(_value_).
-        1. Let _hasNameProperty_ be ? HasOwnProperty(_value_, `"name"`).
-        1. If _hasNameProperty_ is *false*, perform SetFunctionName(_value_, _className_).
         1. Let _env_ be the running execution context's LexicalEnvironment.
         1. Perform ? InitializeBoundName(_className_, _value_, _env_).
         1. Return _value_.
       </emu-alg>
       <emu-grammar>ClassDeclaration : `class` ClassTail</emu-grammar>
       <emu-alg>
-        1. Return the result of ClassDefinitionEvaluation of |ClassTail| with argument *undefined*.
+        1. Return the result of ClassDefinitionEvaluation of |ClassTail| with arguments *undefined* and `"default"`.
       </emu-alg>
       <emu-note>
-        <p><emu-grammar>ClassDeclaration : `class` ClassTail</emu-grammar> only occurs as part of an |ExportDeclaration| and the setting of a name property and establishing its binding are handled as part of the evaluation action for that production. See <emu-xref href="#sec-exports-runtime-semantics-evaluation"></emu-xref>.</p>
+        <p><emu-grammar>ClassDeclaration : `class` ClassTail</emu-grammar> only occurs as part of an |ExportDeclaration| and establishing its binding is handled as part of the evaluation action for that production. See <emu-xref href="#sec-exports-runtime-semantics-evaluation"></emu-xref>.</p>
       </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-class-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>ClassExpression : `class` ClassTail</emu-grammar>
+      <emu-alg>
+        1. Return the result of ClassDefinitionEvaluation of |ClassTail| with arguments *undefined* and _name_.
+      </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-class-definitions-runtime-semantics-evaluation">
@@ -19826,17 +19896,8 @@
       <emu-alg>
         1. If |BindingIdentifier_opt| is not present, let _className_ be *undefined*.
         1. Else, let _className_ be StringValue of |BindingIdentifier|.
-        1. Let _value_ be the result of ClassDefinitionEvaluation of |ClassTail| with argument _className_.
-        1. ReturnIfAbrupt(_value_).
-        1. If _className_ is not *undefined*, then
-          1. Let _hasNameProperty_ be ? HasOwnProperty(_value_, `"name"`).
-          1. If _hasNameProperty_ is *false*, then
-            1. Perform SetFunctionName(_value_, _className_).
-        1. Return NormalCompletion(_value_).
+        1. Return the result of ClassDefinitionEvaluation of |ClassTail| with arguments _className_ and _className_.
       </emu-alg>
-      <emu-note>
-        <p>If the class definition included a `name` static method then that method is not over-written with a `name` data property for the class name.</p>
-      </emu-note>
     </emu-clause>
   </emu-clause>
 
@@ -20077,6 +20138,20 @@
         1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
       </emu-alg>
     </emu-clause>
+
+    <emu-clause id="sec-async-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>
+        AsyncFunctionExpression : `async` [no LineTerminator here] `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Let _closure_ be the result of evaluating this |AsyncFunctionExpression|.
+        1. Perform SetFunctionName(_closure_, _name_).
+        1. Return _closure_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-async-function-definitions-runtime-semantics-evaluation">
       <h1>Runtime Semantics: Evaluation</h1>
       <emu-grammar>
@@ -20350,6 +20425,20 @@
       </emu-grammar>
       <emu-alg>
         1. Return the result of EvaluateBody of |AsyncFunctionBody| passing _functionObject_ and _argumentsList_ as the arguments.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-async-arrow-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>
+        AsyncArrowFunction : `async` [no LineTerminator here] AsyncArrowBindingIdentifier [no LineTerminator here] `=>` AsyncConciseBody
+        AsyncArrowFunction : CoverCallExpressionAndAsyncArrowHead [no LineTerminator here] `=>` AsyncConciseBody
+      </emu-grammar>
+      <emu-alg>
+        1. Let _closure_ be the result of evaluating this |AsyncArrowFunction|.
+        1. Perform SetFunctionName(_closure_, _name_).
+        1. Return _closure_.
       </emu-alg>
     </emu-clause>
 
@@ -23019,19 +23108,17 @@
           1. ReturnIfAbrupt(_value_).
           1. Let _className_ be the sole element of BoundNames of |ClassDeclaration|.
           1. If _className_ is `"*default*"`, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_value_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_value_, `"default"`).
             1. Let _env_ be the running execution context's LexicalEnvironment.
             1. Perform ? InitializeBoundName(`"*default*"`, _value_, _env_).
           1. Return NormalCompletion(~empty~).
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` `default` AssignmentExpression `;`</emu-grammar>
         <emu-alg>
-          1. Let _rhs_ be the result of evaluating |AssignmentExpression|.
-          1. Let _value_ be ? GetValue(_rhs_).
           1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true*, then
-            1. Let _hasNameProperty_ be ? HasOwnProperty(_value_, `"name"`).
-            1. If _hasNameProperty_ is *false*, perform SetFunctionName(_value_, `"default"`).
+            1. Let _value_ be the result of performing NamedEvaluation for |AssignmentExpression| with argument `"default"`.
+          1. Else,
+            1. Let _rhs_ be the result of evaluating |AssignmentExpression|.
+            1. Let _value_ be ? GetValue(_rhs_).
           1. Let _env_ be the running execution context's LexicalEnvironment.
           1. Perform ? InitializeBoundName(`"*default*"`, _value_, _env_).
           1. Return NormalCompletion(~empty~).
@@ -40459,15 +40546,19 @@ THH:mm:ss.sss
       <emu-alg>
         1. Let _propKey_ be the result of evaluating |PropertyName|.
         1. ReturnIfAbrupt(_propKey_).
-        1. Let _exprValueRef_ be the result of evaluating |AssignmentExpression|.
-        1. Let _propValue_ be ? GetValue(_exprValueRef_).
         1. If _propKey_ is the String value `"__proto__"` and if IsComputedPropertyKey(|PropertyName|) is *false*, then
+          1. Let _isProtoSetter_ be *true*.
+        1. Else,
+          1. Let _isProtoSetter_ be *false*.
+        1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and _isProtoSetter_ is *false*, then
+          1. Let _propValue_ be the result of performing NamedEvaluation for |AssignmentExpression| with argument _propKey_.
+        1. Else,
+          1. Let _exprValueRef_ be the result of evaluating |AssignmentExpression|.
+          1. Let _propValue_ be ? GetValue(_exprValueRef_).
+        1. If _isProtoSetter_ is *true*, then
           1. If Type(_propValue_) is either Object or Null, then
             1. Return _object_.[[SetPrototypeOf]](_propValue_).
           1. Return NormalCompletion(~empty~).
-        1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true*, then
-          1. Let _hasNameProperty_ be ? HasOwnProperty(_propValue_, `"name"`).
-          1. If _hasNameProperty_ is *false*, perform SetFunctionName(_propValue_, _propKey_).
         1. Assert: _enumerable_ is *true*.
         1. Assert: _object_ is an ordinary, extensible object with no non-configurable properties.
         1. Return ! CreateDataPropertyOrThrow(_object_, _propKey_, _propValue_).
@@ -40779,11 +40870,11 @@ THH:mm:ss.sss
       <emu-alg>
         1. Let _bindingId_ be StringValue of |BindingIdentifier|.
         1. Let _lhs_ be ? ResolveBinding(_bindingId_).
-        1. Let _rhs_ be the result of evaluating |Initializer|.
-        1. Let _value_ be ? GetValue(_rhs_).
         1. If IsAnonymousFunctionDefinition(|Initializer|) is *true*, then
-          1. Let _hasNameProperty_ be ? HasOwnProperty(_value_, `"name"`).
-          1. If _hasNameProperty_ is *false*, perform SetFunctionName(_value_, _bindingId_).
+          1. Let _value_ be the result of performing NamedEvaluation for |Initializer| with argument _bindingId_.
+        1. Else,
+          1. Let _rhs_ be the result of evaluating |Initializer|.
+          1. Let _value_ be ? GetValue(_rhs_).
         1. Perform ? PutValue(_lhs_, _value_).
         1. Let _keyResult_ be ? ForIn/OfHeadEvaluation(&laquo; &raquo;, |Expression|, ~enumerate~).
         1. Return ? ForIn/OfBodyEvaluation(|BindingIdentifier|, |Statement|, _keyResult_, ~enumerate~, ~varBinding~, _labelSet_).
