@@ -20,6 +20,13 @@ If changes in the upstream master branch cause your PR to have conflicts, you sh
 
 Issues and PRs in the ecma262 repository are appropriate for minor modifications to the existing specification, for example to make behavior more consistent in an edge case, match what is implemented by the large majority of actual implementations, or to clarify wording. New features use the feature request process described below.
 
+##### Downstream dependencies
+
+If you are changing the signature or behavior of an existing construct, please check if this affects downstream dependencies (searching for the construct's name is sufficient) and if needed file an issue:
+
+* [Web IDL](https://heycam.github.io/webidl/) — [file an issue](https://github.com/heycam/webidl/issues/new)
+* [HTML Standard](https://html.spec.whatwg.org/) — [file an issue](https://github.com/whatwg/html/issues/new)
+
 #### New feature proposals
 TC39 is open to accepting new feature requests for ECMAScript, referred to as "proposals". Proposals go through a four-stage process which is documented in the [TC39 process document](https://tc39.github.io/process-document/).
 
