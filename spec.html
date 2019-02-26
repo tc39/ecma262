@@ -21473,7 +21473,7 @@
       <emu-clause id="sec-abstract-module-records">
         <h1>Abstract Module Records</h1>
         <p>A <dfn>Module Record</dfn> encapsulates structural information about the imports and exports of a single module. This information is used to link the imports and exports of sets of connected modules. A Module Record includes four fields that are only used when evaluating a module.</p>
-        <p>For specification purposes Module Record values are values of the Record specification type and can be thought of as existing in a simple object-oriented hierarchy where Module Record is an abstract class with concrete subclasses. This specification only defines a single Module Record concrete subclass named Source Text Module Record. Other specifications and implementations may define additional Module Record subclasses corresponding to alternative module definition facilities that they defined.</p>
+        <p>For specification purposes Module Record values are values of the Record specification type and can be thought of as existing in a simple object-oriented hierarchy where Module Record is an abstract class with both abstract and concrete subclasses. This specification defines the abstract subclass named Cyclic Module Record and its concrete subclass named Source Text Module Record. Other specifications and implementations may define additional Module Record subclasses corresponding to alternative module definition facilities that they defined.</p>
         <p>Module Record defines the fields listed in <emu-xref href="#table-36"></emu-xref>. All Module Definition subclasses include at least those fields. Module Record also defines the abstract method list in <emu-xref href="#table-37"></emu-xref>. All Module definition subclasses must provide concrete implementations of these abstract methods.</p>
         <emu-table id="table-36" caption="Module Record Fields">
           <table>
@@ -21588,15 +21588,307 @@
         </emu-table>
       </emu-clause>
 
+      <emu-clause id="sec-cyclic-module-records">
+        <h1>Cyclic Module Records</h1>
+        <p>A <dfn id="cyclic-module-record">Cyclic Module Record</dfn> is used to represent information about a module that can participate in dependency cycles with other modules that are subclasses of the Cyclic Module Record type. Module Records that are not subclasses of the Cyclic Module Record type must not participate in dependency cycles with Source Text Module Records.</p>
+        <p>In addition to the fields defined in <emu-xref href="#table-36"></emu-xref> Cyclic Module Records have the additional fields listed in <emu-xref href="#table-cyclic-module-fields"></emu-xref></p>
+        <emu-table id="table-cyclic-module-fields" caption="Additional Fields of Cyclic Module Records">
+          <table>
+            <tbody>
+              <tr>
+                <th>
+                  Field Name
+                </th>
+                <th>
+                  Value Type
+                </th>
+                <th>
+                  Meaning
+                </th>
+              </tr>
+              <tr>
+                <td>
+                  [[Status]]
+                </td>
+                <td>
+                  String
+                </td>
+                <td>
+                  Initially `"uninstantiated"`. Transitions to `"instantiating"`, `"instantiated"`, `"evaluating"`, `"evaluated"` (in that order) as the module progresses throughout its lifecycle.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[EvaluationError]]
+                </td>
+                <td>
+                  An abrupt completion | *undefined*
+                </td>
+                <td>
+                  A completion of type ~throw~ representing the exception that occurred during evaluation.  *undefined* if no exception occurred or if [[Status]] is not `"evaluated"`.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[DFSIndex]]
+                </td>
+                <td>
+                  Integer | *undefined*
+                </td>
+                <td>
+                  Auxiliary field used during Instantiate and Evaluate only.
+                  If [[Status]] is `"instantiating"` or `"evaluating"`, this nonnegative number records the point at which the module was first visited during the ongoing depth-first traversal of the dependency graph.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[DFSAncestorIndex]]
+                </td>
+                <td>
+                  Integer | *undefined*
+                </td>
+                <td>
+                  Auxiliary field used during Instantiate and Evaluate only. If [[Status]] is `"instantiating"` or `"evaluating"`, this is either the module's own [[DFSIndex]] or that of an "earlier" module in the same strongly connected component.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[RequestedModules]]
+                </td>
+                <td>
+                  List of String
+                </td>
+                <td>
+                  A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module. The List is source code occurrence ordered.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </emu-table>
+        <p>In addition to the methods defined in <emu-xref href="#table-37"></emu-xref> Cyclic Module Records have the additional methods listed in <emu-xref href="#table-cyclic-module-methods"></emu-xref></p>
+        <emu-table id="table-cyclic-module-methods" caption="Additional Abstract Methods of Cyclic Module Records">
+          <table>
+            <tbody>
+              <tr>
+                <th>
+                  Method
+                </th>
+                <th>
+                  Purpose
+                </th>
+              </tr>
+              <tr>
+                <td>
+                  InitializeEnvironment()
+                </td>
+                <td>
+                  Initialize the Lexical Environment of the module, including resolving all imported bindings.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  ExecuteModule()
+                </td>
+                <td>
+                  Initialize the execution context of the module and evaluate the module's code within it.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </emu-table>
+
+        <emu-clause id="sec-moduledeclarationinstantiation">
+          <h1>Instantiate ( ) Concrete Method</h1>
+
+          <p>The Instantiate concrete method of a Cyclic Module Record implements the corresponding Module Record abstract method.</p>
+          <p>On success, Instantiate transitions this module's [[Status]] from `"uninstantiated"` to `"instantiated"`. On failure, an exception is thrown and this module's [[Status]] remains `"uninstantiated"`.</p>
+
+          <p>This abstract method performs the following steps (most of the work is done by the auxiliary function InnerModuleInstantiation):</p>
+
+          <emu-alg>
+            1. Let _module_ be this Cyclic Module Record.
+            1. Assert: _module_.[[Status]] is not `"instantiating"` or `"evaluating"`.
+            1. Let _stack_ be a new empty List.
+            1. Let _result_ be InnerModuleInstantiation(_module_, _stack_, 0).
+            1. If _result_ is an abrupt completion, then
+              1. For each module _m_ in _stack_, do
+                1. Assert: _m_.[[Status]] is `"instantiating"`.
+                1. Set _m_.[[Status]] to `"uninstantiated"`.
+                1. Set _m_.[[Environment]] to *undefined*.
+                1. Set _m_.[[DFSIndex]] to *undefined*.
+                1. Set _m_.[[DFSAncestorIndex]] to *undefined*.
+              1. Assert: _module_.[[Status]] is `"uninstantiated"`.
+              1. Return _result_.
+            1. Assert: _module_.[[Status]] is `"instantiated"` or `"evaluated"`.
+            1. Assert: _stack_ is empty.
+            1. Return *undefined*.
+          </emu-alg>
+
+          <emu-clause id="sec-innermoduleinstantiation" aoid="InnerModuleInstantiation">
+            <h1>InnerModuleInstantiation ( _module_, _stack_, _index_ )</h1>
+
+            <p>The InnerModuleInstantiation abstract operation is used by Instantiate to perform the actual instantiation process for the Cyclic Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as a module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, keep track of the depth-first search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly connected components (SCCs), such that all modules in an SCC transition to `"instantiated"` together.</p>
+
+            <p>This abstract operation performs the following steps:</p>
+
+            <emu-alg>
+              1. If _module_ is not a Cyclic Module Record, then
+                1. Perform ? _module_.Instantiate().
+                1. Return _index_.
+              1. If _module_.[[Status]] is `"instantiating"`, `"instantiated"`, or `"evaluated"`, then
+                1. Return _index_.
+              1. Assert: _module_.[[Status]] is `"uninstantiated"`.
+              1. Set _module_.[[Status]] to `"instantiating"`.
+              1. Set _module_.[[DFSIndex]] to _index_.
+              1. Set _module_.[[DFSAncestorIndex]] to _index_.
+              1. Increase _index_ by 1.
+              1. Append _module_ to _stack_.
+              1. For each String _required_ that is an element of _module_.[[RequestedModules]], do
+                1. Let _requiredModule_ be ? HostResolveImportedModule(_module_, _required_).
+                1. Set _index_ to ? InnerModuleInstantiation(_requiredModule_, _stack_, _index_).
+                1. Assert: _requiredModule_.[[Status]] is either `"instantiating"`, `"instantiated"`, or `"evaluated"`.
+                1. Assert: _requiredModule_.[[Status]] is `"instantiating"` if and only if _requiredModule_ is in _stack_.
+                1. If _requiredModule_.[[Status]] is `"instantiating"`, then
+                  1. Assert: _requiredModule_ is a Cyclic Module Record.
+                  1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+              1. Perform ? _module_.InitializeEnvironment().
+              1. Assert: _module_ occurs exactly once in _stack_.
+              1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
+              1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], then
+                1. Let _done_ be *false*.
+                1. Repeat, while _done_ is *false*,
+                  1. Let _requiredModule_ be the last element in _stack_.
+                  1. Remove the last element of _stack_.
+                  1. Set _requiredModule_.[[Status]] to `"instantiated"`.
+                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+              1. Return _index_.
+            </emu-alg>
+          </emu-clause>
+        </emu-clause>
+
+        <emu-clause id="sec-moduleevaluation">
+          <h1>Evaluate ( ) Concrete Method</h1>
+
+          <p>The Evaluate concrete method of a Cyclic Module Record implements the corresponding Module Record abstract method.</p>
+          <p>Evaluate transitions this module's [[Status]] from `"instantiated"` to `"evaluated"`.</p>
+
+          <p>If execution results in an exception, that exception is recorded in the [[EvaluationError]] field and rethrown by future invocations of Evaluate.</p>
+
+          <p>This abstract method performs the following steps (most of the work is done by the auxiliary function InnerModuleEvaluation):</p>
+
+          <emu-alg>
+            1. Let _module_ be this Cyclic Module Record.
+            1. Assert: _module_.[[Status]] is `"instantiated"` or `"evaluated"`.
+            1. Let _stack_ be a new empty List.
+            1. Let _result_ be InnerModuleEvaluation(_module_, _stack_, 0).
+            1. If _result_ is an abrupt completion, then
+              1. For each module _m_ in _stack_, do
+                1. Assert: _m_.[[Status]] is `"evaluating"`.
+                1. Set _m_.[[Status]] to `"evaluated"`.
+                1. Set _m_.[[EvaluationError]] to _result_.
+              1. Assert: _module_.[[Status]] is `"evaluated"` and _module_.[[EvaluationError]] is _result_.
+              1. Return _result_.
+            1. Assert: _module_.[[Status]] is `"evaluated"` and _module_.[[EvaluationError]] is *undefined*.
+            1. Assert: _stack_ is empty.
+            1. Return *undefined*.
+          </emu-alg>
+
+          <emu-clause id="sec-innermoduleevaluation" aoid="InnerModuleEvaluation">
+            <h1>InnerModuleEvaluation ( _module_, _stack_, _index_ )</h1>
+
+            <p>The InnerModuleEvaluation abstract operation is used by Evaluate to perform the actual evaluation process for the Source Text Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestoreIndex]] fields, are used the same way as in InnerModuleInstantiation.</p>
+
+            <p>This abstract operation performs the following steps:</p>
+
+            <emu-alg>
+              1. If _module_ is not a Cyclic Module Record, then
+                1. Perform ? _module_.Evaluate().
+                1. Return _index_.
+              1. If _module_.[[Status]] is `"evaluated"`, then
+                1. If _module_.[[EvaluationError]] is *undefined*, return _index_.
+                1. Otherwise return _module_.[[EvaluationError]].
+              1. If _module_.[[Status]] is `"evaluating"`, return _index_.
+              1. Assert: _module_.[[Status]] is `"instantiated"`.
+              1. Set _module_.[[Status]] to `"evaluating"`.
+              1. Set _module_.[[DFSIndex]] to _index_.
+              1. Set _module_.[[DFSAncestorIndex]] to _index_.
+              1. Increase _index_ by 1.
+              1. Append _module_ to _stack_.
+              1. For each String _required_ that is an element of _module_.[[RequestedModules]], do
+                1. Let _requiredModule_ be ! HostResolveImportedModule(_module_, _required_).
+                1. NOTE: Instantiate must be completed successfully prior to invoking this method, so every requested module is guaranteed to resolve successfully.
+                1. Set _index_ to ? InnerModuleEvaluation(_requiredModule_, _stack_, _index_).
+                1. Assert: _requiredModule_.[[Status]] is either `"evaluating"` or `"evaluated"`.
+                1. Assert: _requiredModule_.[[Status]] is `"evaluating"` if and only if _requiredModule_ is in _stack_.
+                1. If _requiredModule_.[[Status]] is `"evaluating"`, then
+                  1. Assert: _requiredModule_ is a Cyclic Module Record.
+                  1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+              1. Perform ? _module_.ExecuteModule().
+              1. Assert: _module_ occurs exactly once in _stack_.
+              1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
+              1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], then
+                1. Let _done_ be *false*.
+                1. Repeat, while _done_ is *false*,
+                  1. Let _requiredModule_ be the last element in _stack_.
+                  1. Remove the last element of _stack_.
+                  1. Set _requiredModule_.[[Status]] to `"evaluated"`.
+                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+              1. Return _index_.
+            </emu-alg>
+          </emu-clause>
+        </emu-clause>
+
+        <emu-clause id="sec-example-cyclic-module-record-graphs">
+          <h1>Example Cyclic Module Record Graphs</h1>
+
+          <p>This non-normative section gives a series of examples of the instantiation and evaluation of a few common module graphs, with a specific focus on how errors can occur.</p>
+
+          <p>First consider the following simple module graph:</p>
+
+          <emu-figure id="figure-module-graph-simple" caption="A simple module graph">
+            <img alt="A module graph in which module A depends on module B" width="121" height="211" src="img/module-graph-simple.svg">
+          </emu-figure>
+
+          <p>Let's first assume that there are no error conditions. When a host first calls _A_.Instantiate(), this will complete successfully by assumption, and recursively instantiate modules _B_ and _C_ as well, such that _A_.[[Status]] = _B_.[[Status]] = _C_.[[Status]] = `"instantiated"`. This preparatory step can be performed at any time. Later, when the host is ready to incur any possible side effects of the modules, it can call _A_.Evaluate(), which will complete successfully (again by assumption), recursively having evaluated first _C_ and then _B_. Each module's [[Status]] at this point will be `"evaluated`".</p>
+
+          <p>Consider then cases involving instantiation errors. If InnerModuleInstantiation of _C_ succeeds but, thereafter, fails for _B_, for example because it imports something that _C_ does not provide, then the original _A_.Instantiate() will fail, and both _A_ and _B_'s [[Status]] remain `"uninstantiated"`. _C_'s [[Status]] has become `"instantiated"`, though.</p>
+
+          <p>Finally, consider a case involving evaluation errors. If InnerModuleEvaluation of _C_ succeeds but, thereafter, fails for _B_, for example because _B_ contains code that throws an exception, then the original _A_.Evaluate() will fail. The resulting exception will be recorded in both _A_ and _B_'s [[EvaluationError]] fields, and their [[Status]] will become `"evaluated"`. _C_ will also become `"evaluated"` but, in contrast to _A_ and _B_, will remain without an [[EvaluationError]], as it successfully completed evaluation. Storing the exception ensures that any time a host tries to reuse _A_ or _B_ by calling their Evaluate() method, it will encounter the same exception. (Hosts are not required to reuse Cyclic Module Records; similarly, hosts are not required to expose the exception objects thrown by these  methods. However, the specification enables such uses.)</p>
+
+          <p>The difference here between instantiation and evaluation errors is due to how evaluation must be only performed once, as it can cause side effects; it is thus important to remember whether evaluation has already been performed, even if unsuccessfully. (In the error case, it makes sense to also remember the exception because otherwise subsequent Evaluate() calls would have to synthesize a new one.) Instantiation, on the other hand, is side-effect-free, and thus even if it fails, it can be retried at a later time with no issues.</p>
+
+          <p>Now consider a different type of error condition:</p>
+
+          <emu-figure id="figure-module-graph-missing" caption="A module graph with an unresolvable module">
+            <img alt="A module graph in which module A depends on a missing (unresolvable) module, represented by ???" width="121" height="121" src="img/module-graph-missing.svg">
+          </emu-figure>
+
+          <p>In this scenario, module _A_ declares a dependency on some other module, but no Module Record exists for that module, i.e. HostResolveImportedModule throws an exception when asked for it. This could occur for a variety of reasons, such as the corresponding resource not existing, or the resource existing but ParseModule throwing an exception when trying to parse the resulting source text. Hosts can choose to expose the cause of failure via the exception they throw from HostResolveImportedModule. In any case, this exception causes an instantiation failure, which as before results in _A_'s [[Status]] remaining `"uninstantiated"`.</p>
+
+          <p>Lastly, consider a module graph with a cycle:</p>
+
+          <emu-figure id="figure-module-graph-cycle" caption="A cyclic module graph">
+            <img alt="A module graph in which module A depends on module B and C, but module B also depends on module A" width="181" height="121" src="img/module-graph-cycle.svg">
+          </emu-figure>
+
+          <p>Here we assume that the entry point is module _A_, so that the host proceeds by calling _A_.Instantiate(), which performs InnerModuleInstantiation on _A_. This in turn calls InnerModuleInstantiation on _B_. Because of the cycle, this again triggers InnerModuleInstantiation on _A_, but at this point it is a no-op since _A_.[[Status]] is already `"instantiating"`. _B_.[[Status]] itself remains `"instantiating"` when control gets back to _A_ and InnerModuleInstantiation is triggered on _C_. After this returns with _C_.[[Status]] being `"instantiated"` , both _A_ and _B_ transition from `"instantiating"` to `"instantiated"` together; this is by design, since they form a strongly connected component.</p>
+
+          <p>An analogous story occurs for the evaluation phase of a cyclic module graph, in the success case.</p>
+
+          <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to InnerModuleInstantiation on _A_. However, once we unwind back to the original InnerModuleInstantiation on _A_, it fails during InitializeEnvironment, namely right after _C_.ResolveExport(). The thrown *SyntaxError* exception propagates up to _A_.Instantiate, which resets all modules that are currently on its _stack_ (these are always exactly the modules that are still `"instantiating"`). Hence both _A_ and _B_ become `"uninstantiated"`. Note that _C_ is left as `"instantiated"`.</p>
+
+          <p>Finally, consider a case where _A_ has an evaluation error; for example, its source code throws an exception. In that case, the evaluation-time analog of the above steps still occurs, including the early return from the second call to InnerModuleEvaluation on _A_. However, once we unwind back to the original InnerModuleEvaluation on _A_, it fails by assumption. The exception thrown propagates up to _A_.Evaluate(), which records the error in all modules that are currently on its _stack_ (i.e., the modules that are still `"evaluating"`). Hence both _A_ and _B_ become `"evaluated"` and the exception is recorded in both _A_ and _B_'s [[EvaluationError]] fields, while _C_ is left as `"evaluated"` with no [[EvaluationError]].</p>
+        </emu-clause>
+      </emu-clause>
+
       <emu-clause id="sec-source-text-module-records">
         <h1>Source Text Module Records</h1>
 
         <p>A <dfn id="sourctextmodule-record">Source Text Module Record</dfn> is used to represent information about a module that was defined from ECMAScript source text (<emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>) that was parsed using the goal symbol |Module|. Its fields contain digested information about the names that are imported by the module and its concrete methods use this digest to link, instantiate, and evaluate the module.</p>
 
-        <p>A Source Text Module Record can exist in a module graph with other subclasses of the abstract Module Record type. However, non-source text Module Records must not participate in dependency cycles with Source Text Module Records.</p>
+        <p>A Source Text Module Record can exist in a module graph with other subclasses of the abstract Module Record type, and can participate in cycles with other subclasses of the Cyclic Module Record type.</p>
 
-        <p>In addition to the fields, defined in <emu-xref href="#table-36"></emu-xref>, Source Text Module Records have the additional fields listed in <emu-xref href="#table-38"></emu-xref>. Each of these fields is initially set in ParseModule.</p>
-
+        <p>In addition to the fields defined in <emu-xref href="#table-cyclic-module-fields"></emu-xref>, Source Text Module Records have the additional fields listed in <emu-xref href="#table-38"></emu-xref>. Each of these fields is initially set in ParseModule.</p>
         <emu-table id="table-38" caption="Additional Fields of Source Text Module Records">
           <table>
             <tbody>
@@ -21620,17 +21912,6 @@
               </td>
               <td>
                 The result of parsing the source text of this module using |Module| as the goal symbol.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[RequestedModules]]
-              </td>
-              <td>
-                List of String
-              </td>
-              <td>
-                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module. The List is source code occurrence ordered.
               </td>
             </tr>
             <tr>
@@ -21675,51 +21956,6 @@
               </td>
               <td>
                 A List of ExportEntry records derived from the code of this module that correspond to export * declarations that occur within the module.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[Status]]
-              </td>
-              <td>
-                String
-              </td>
-              <td>
-                Initially `"uninstantiated"`. Transitions to `"instantiating"`, `"instantiated"`, `"evaluating"`, `"evaluated"` (in that order) as the module progresses throughout its lifecycle.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[EvaluationError]]
-              </td>
-              <td>
-                An abrupt completion | *undefined*
-              </td>
-              <td>
-                A completion of type ~throw~ representing the exception that occurred during evaluation.  *undefined* if no exception occurred or if [[Status]] is not `"evaluated"`.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[DFSIndex]]
-              </td>
-              <td>
-                Integer | *undefined*
-              </td>
-              <td>
-                Auxiliary field used during Instantiate and Evaluate only.
-                If [[Status]] is `"instantiating"` or `"evaluating"`, this nonnegative number records the point at which the module was first visited during the ongoing depth-first traversal of the dependency graph.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[DFSAncestorIndex]]
-              </td>
-              <td>
-                Integer | *undefined*
-              </td>
-              <td>
-                Auxiliary field used during Instantiate and Evaluate only. If [[Status]] is `"instantiating"` or `"evaluating"`, this is either the module's own [[DFSIndex]] or that of an "earlier" module in the same strongly connected component.
               </td>
             </tr>
             </tbody>
@@ -22218,264 +22454,83 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-moduledeclarationinstantiation">
-          <h1>Instantiate ( ) Concrete Method</h1>
+        <emu-clause id="sec-source-text-module-record-initialize-environment" aoid="InitializeEnvironment">
+          <h1>InitializeEnvironment ( ) Concrete Method</h1>
 
-          <p>The Instantiate concrete method of a Source Text Module Record implements the corresponding Module Record abstract method.</p>
-          <p>On success, Instantiate transitions this module's [[Status]] from `"uninstantiated"` to `"instantiated"`. On failure, an exception is thrown and this module's [[Status]] remains `"uninstantiated"`.</p>
+          <p>The InitializeEnvironment concrete method of a Source Text Module Record implements the corresponding Cyclic Module Record abstract method.</p>
 
-          <p>This abstract method performs the following steps (most of the work is done by the auxiliary function InnerModuleInstantiation):</p>
+          <p>This abstract method performs the following steps:</p>
 
           <emu-alg>
             1. Let _module_ be this Source Text Module Record.
-            1. Assert: _module_.[[Status]] is not `"instantiating"` or `"evaluating"`.
-            1. Let _stack_ be a new empty List.
-            1. Let _result_ be InnerModuleInstantiation(_module_, _stack_, 0).
-            1. If _result_ is an abrupt completion, then
-              1. For each module _m_ in _stack_, do
-                1. Assert: _m_.[[Status]] is `"instantiating"`.
-                1. Set _m_.[[Status]] to `"uninstantiated"`.
-                1. Set _m_.[[Environment]] to *undefined*.
-                1. Set _m_.[[DFSIndex]] to *undefined*.
-                1. Set _m_.[[DFSAncestorIndex]] to *undefined*.
-              1. Assert: _module_.[[Status]] is `"uninstantiated"`.
-              1. Return _result_.
-            1. Assert: _module_.[[Status]] is `"instantiated"` or `"evaluated"`.
-            1. Assert: _stack_ is empty.
-            1. Return *undefined*.
-          </emu-alg>
-
-          <emu-clause id="sec-innermoduleinstantiation" aoid="InnerModuleInstantiation">
-            <h1>InnerModuleInstantiation ( _module_, _stack_, _index_ )</h1>
-
-            <p>The InnerModuleInstantiation abstract operation is used by Instantiate to perform the actual instantiation process for the Source Text Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as a module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, keep track of the depth-first search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly connected components (SCCs), such that all modules in an SCC transition to `"instantiated"` together.</p>
-
-            <p>This abstract operation performs the following steps:</p>
-
-            <emu-alg>
-              1. If _module_ is not a Source Text Module Record, then
-                1. Perform ? _module_.Instantiate().
-                1. Return _index_.
-              1. If _module_.[[Status]] is `"instantiating"`, `"instantiated"`, or `"evaluated"`, then
-                1. Return _index_.
-              1. Assert: _module_.[[Status]] is `"uninstantiated"`.
-              1. Set _module_.[[Status]] to `"instantiating"`.
-              1. Set _module_.[[DFSIndex]] to _index_.
-              1. Set _module_.[[DFSAncestorIndex]] to _index_.
-              1. Increase _index_ by 1.
-              1. Append _module_ to _stack_.
-              1. For each String _required_ that is an element of _module_.[[RequestedModules]], do
-                1. Let _requiredModule_ be ? HostResolveImportedModule(_module_, _required_).
-                1. Set _index_ to ? InnerModuleInstantiation(_requiredModule_, _stack_, _index_).
-                1. Assert: _requiredModule_.[[Status]] is either `"instantiating"`, `"instantiated"`, or `"evaluated"`.
-                1. Assert: _requiredModule_.[[Status]] is `"instantiating"` if and only if _requiredModule_ is in _stack_.
-                1. If _requiredModule_.[[Status]] is `"instantiating"`, then
-                  1. Assert: _requiredModule_ is a Source Text Module Record.
-                  1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-              1. Perform ? ModuleDeclarationEnvironmentSetup(_module_).
-              1. Assert: _module_ occurs exactly once in _stack_.
-              1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
-              1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], then
-                1. Let _done_ be *false*.
-                1. Repeat, while _done_ is *false*,
-                  1. Let _requiredModule_ be the last element in _stack_.
-                  1. Remove the last element of _stack_.
-                  1. Set _requiredModule_.[[Status]] to `"instantiated"`.
-                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
-              1. Return _index_.
-            </emu-alg>
-          </emu-clause>
-
-          <emu-clause id="sec-moduledeclarationenvironmentsetup" aoid="ModuleDeclarationEnvironmentSetup">
-            <h1>ModuleDeclarationEnvironmentSetup ( _module_ )</h1>
-
-            <p>The ModuleDeclarationEnvironmentSetup abstract operation is used by InnerModuleInstantiation to initialize the Lexical Environment of the module, including resolving all imported bindings.</p>
-
-            <p>This abstract operation performs the following steps:</p>
-
-            <emu-alg>
-              1. For each ExportEntry Record _e_ in _module_.[[IndirectExportEntries]], do
-                1. Let _resolution_ be ? _module_.ResolveExport(_e_.[[ExportName]], &laquo; &raquo;).
+            1. For each ExportEntry Record _e_ in _module_.[[IndirectExportEntries]], do
+              1. Let _resolution_ be ? _module_.ResolveExport(_e_.[[ExportName]], &laquo; &raquo;).
+              1. If _resolution_ is *null* or `"ambiguous"`, throw a *SyntaxError* exception.
+              1. Assert: _resolution_ is a ResolvedBinding Record.
+            1. Assert: All named exports from _module_ are resolvable.
+            1. Let _realm_ be _module_.[[Realm]].
+            1. Assert: _realm_ is not *undefined*.
+            1. Let _env_ be NewModuleEnvironment(_realm_.[[GlobalEnv]]).
+            1. Set _module_.[[Environment]] to _env_.
+            1. Let _envRec_ be _env_'s EnvironmentRecord.
+            1. For each ImportEntry Record _in_ in _module_.[[ImportEntries]], do
+              1. Let _importedModule_ be ! HostResolveImportedModule(_module_, _in_.[[ModuleRequest]]).
+              1. NOTE: The above call cannot fail because imported module requests are a subset of _module_.[[RequestedModules]], and these have been resolved earlier in this algorithm.
+              1. If _in_.[[ImportName]] is `"*"`, then
+                1. Let _namespace_ be ? GetModuleNamespace(_importedModule_).
+                1. Perform ! _envRec_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
+                1. Call _envRec_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+              1. Else,
+                1. Let _resolution_ be ? _importedModule_.ResolveExport(_in_.[[ImportName]], &laquo; &raquo;).
                 1. If _resolution_ is *null* or `"ambiguous"`, throw a *SyntaxError* exception.
-                1. Assert: _resolution_ is a ResolvedBinding Record.
-              1. Assert: All named exports from _module_ are resolvable.
-              1. Let _realm_ be _module_.[[Realm]].
-              1. Assert: _realm_ is not *undefined*.
-              1. Let _env_ be NewModuleEnvironment(_realm_.[[GlobalEnv]]).
-              1. Set _module_.[[Environment]] to _env_.
-              1. Let _envRec_ be _env_'s EnvironmentRecord.
-              1. For each ImportEntry Record _in_ in _module_.[[ImportEntries]], do
-                1. Let _importedModule_ be ! HostResolveImportedModule(_module_, _in_.[[ModuleRequest]]).
-                1. NOTE: The above call cannot fail because imported module requests are a subset of _module_.[[RequestedModules]], and these have been resolved earlier in this algorithm.
-                1. If _in_.[[ImportName]] is `"*"`, then
-                  1. Let _namespace_ be ? GetModuleNamespace(_importedModule_).
-                  1. Perform ! _envRec_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
-                  1. Call _envRec_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+                1. Call _envRec_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+            1. Let _code_ be _module_.[[ECMAScriptCode]].
+            1. Let _varDeclarations_ be the VarScopedDeclarations of _code_.
+            1. Let _declaredVarNames_ be a new empty List.
+            1. For each element _d_ in _varDeclarations_, do
+              1. For each element _dn_ of the BoundNames of _d_, do
+                1. If _dn_ is not an element of _declaredVarNames_, then
+                  1. Perform ! _envRec_.CreateMutableBinding(_dn_, *false*).
+                  1. Call _envRec_.InitializeBinding(_dn_, *undefined*).
+                  1. Append _dn_ to _declaredVarNames_.
+            1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
+            1. For each element _d_ in _lexDeclarations_, do
+              1. For each element _dn_ of the BoundNames of _d_, do
+                1. If IsConstantDeclaration of _d_ is *true*, then
+                  1. Perform ! _envRec_.CreateImmutableBinding(_dn_, *true*).
                 1. Else,
-                  1. Let _resolution_ be ? _importedModule_.ResolveExport(_in_.[[ImportName]], &laquo; &raquo;).
-                  1. If _resolution_ is *null* or `"ambiguous"`, throw a *SyntaxError* exception.
-                  1. Call _envRec_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
-              1. Let _code_ be _module_.[[ECMAScriptCode]].
-              1. Let _varDeclarations_ be the VarScopedDeclarations of _code_.
-              1. Let _declaredVarNames_ be a new empty List.
-              1. For each element _d_ in _varDeclarations_, do
-                1. For each element _dn_ of the BoundNames of _d_, do
-                  1. If _dn_ is not an element of _declaredVarNames_, then
-                    1. Perform ! _envRec_.CreateMutableBinding(_dn_, *false*).
-                    1. Call _envRec_.InitializeBinding(_dn_, *undefined*).
-                    1. Append _dn_ to _declaredVarNames_.
-              1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
-              1. For each element _d_ in _lexDeclarations_, do
-                1. For each element _dn_ of the BoundNames of _d_, do
-                  1. If IsConstantDeclaration of _d_ is *true*, then
-                    1. Perform ! _envRec_.CreateImmutableBinding(_dn_, *true*).
-                  1. Else,
-                    1. Perform ! _envRec_.CreateMutableBinding(_dn_, *false*).
-                  1. If _d_ is a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
-                    1. Let _fo_ be the result of performing InstantiateFunctionObject for _d_ with argument _env_.
-                    1. Call _envRec_.InitializeBinding(_dn_, _fo_).
-              1. Return NormalCompletion(~empty~).
-            </emu-alg>
-          </emu-clause>
+                  1. Perform ! _envRec_.CreateMutableBinding(_dn_, *false*).
+                1. If _d_ is a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
+                  1. Let _fo_ be the result of performing InstantiateFunctionObject for _d_ with argument _env_.
+                  1. Call _envRec_.InitializeBinding(_dn_, _fo_).
+            1. Return NormalCompletion(~empty~).
+          </emu-alg>
         </emu-clause>
+        
+        <emu-clause id="sec-source-text-module-record-execute-module" aoid="ExecuteModule">
+          <h1>ExecuteModule ( ) Concrete Method</h1>
 
-        <emu-clause id="sec-moduleevaluation">
-          <h1>Evaluate ( ) Concrete Method</h1>
+          <p>The ExecuteModule concrete method of a Source Text Module Record implements the corresponding Cyclic Module Record abstract method.</p>
 
-          <p>The Evaluate concrete method of a Source Text Module Record implements the corresponding Module Record abstract method.</p>
-          <p>Evaluate transitions this module's [[Status]] from `"instantiated"` to `"evaluated"`.</p>
-
-          <p>If execution results in an exception, that exception is recorded in the [[EvaluationError]] field and rethrown by future invocations of Evaluate.</p>
-
-          <p>This abstract method performs the following steps (most of the work is done by the auxiliary function InnerModuleEvaluation):</p>
+          <p>This abstract method performs the following steps:</p>
 
           <emu-alg>
             1. Let _module_ be this Source Text Module Record.
-            1. Assert: _module_.[[Status]] is `"instantiated"` or `"evaluated"`.
-            1. Let _stack_ be a new empty List.
-            1. Let _result_ be InnerModuleEvaluation(_module_, _stack_, 0).
-            1. If _result_ is an abrupt completion, then
-              1. For each module _m_ in _stack_, do
-                1. Assert: _m_.[[Status]] is `"evaluating"`.
-                1. Set _m_.[[Status]] to `"evaluated"`.
-                1. Set _m_.[[EvaluationError]] to _result_.
-              1. Assert: _module_.[[Status]] is `"evaluated"` and _module_.[[EvaluationError]] is _result_.
-              1. Return _result_.
-            1. Assert: _module_.[[Status]] is `"evaluated"` and _module_.[[EvaluationError]] is *undefined*.
-            1. Assert: _stack_ is empty.
-            1. Return *undefined*.
+            1. Let _moduleCxt_ be a new ECMAScript code execution context.
+            1. Set the Function of _moduleCxt_ to *null*.
+            1. Assert: _module_.[[Realm]] is not *undefined*.
+            1. Set the Realm of _moduleCxt_ to _module_.[[Realm]].
+            1. Set the ScriptOrModule of _moduleCxt_ to _module_.
+            1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
+            1. Set the VariableEnvironment of _moduleCxt_ to _module_.[[Environment]].
+            1. Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].
+            1. Suspend the currently running execution context.
+            1. Push _moduleCxt_ on to the execution context stack; _moduleCxt_ is now the running execution context.
+            1. Let _result_ be the result of evaluating _module_.[[ECMAScriptCode]].
+            1. Suspend _moduleCxt_ and remove it from the execution context stack.
+            1. Resume the context that is now on the top of the execution context stack as the running execution context.
+            1. Return Completion(_result_).
           </emu-alg>
-
-          <emu-clause id="sec-innermoduleevaluation" aoid="InnerModuleEvaluation">
-            <h1>InnerModuleEvaluation ( _module_, _stack_, _index_ )</h1>
-
-            <p>The InnerModuleEvaluation abstract operation is used by Evaluate to perform the actual evaluation process for the Source Text Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestoreIndex]] fields, are used the same way as in InnerModuleInstantiation.</p>
-
-            <p>This abstract operation performs the following steps:</p>
-
-            <emu-alg>
-              1. If _module_ is not a Source Text Module Record, then
-                1. Perform ? _module_.Evaluate().
-                1. Return _index_.
-              1. If _module_.[[Status]] is `"evaluated"`, then
-                1. If _module_.[[EvaluationError]] is *undefined*, return _index_.
-                1. Otherwise return _module_.[[EvaluationError]].
-              1. If _module_.[[Status]] is `"evaluating"`, return _index_.
-              1. Assert: _module_.[[Status]] is `"instantiated"`.
-              1. Set _module_.[[Status]] to `"evaluating"`.
-              1. Set _module_.[[DFSIndex]] to _index_.
-              1. Set _module_.[[DFSAncestorIndex]] to _index_.
-              1. Increase _index_ by 1.
-              1. Append _module_ to _stack_.
-              1. For each String _required_ that is an element of _module_.[[RequestedModules]], do
-                1. Let _requiredModule_ be ! HostResolveImportedModule(_module_, _required_).
-                1. NOTE: Instantiate must be completed successfully prior to invoking this method, so every requested module is guaranteed to resolve successfully.
-                1. Set _index_ to ? InnerModuleEvaluation(_requiredModule_, _stack_, _index_).
-                1. Assert: _requiredModule_.[[Status]] is either `"evaluating"` or `"evaluated"`.
-                1. Assert: _requiredModule_.[[Status]] is `"evaluating"` if and only if _requiredModule_ is in _stack_.
-                1. If _requiredModule_.[[Status]] is `"evaluating"`, then
-                  1. Assert: _requiredModule_ is a Source Text Module Record.
-                  1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-              1. Perform ? ModuleExecution(_module_).
-              1. Assert: _module_ occurs exactly once in _stack_.
-              1. Assert: _module_.[[DFSAncestorIndex]] is less than or equal to _module_.[[DFSIndex]].
-              1. If _module_.[[DFSAncestorIndex]] equals _module_.[[DFSIndex]], then
-                1. Let _done_ be *false*.
-                1. Repeat, while _done_ is *false*,
-                  1. Let _requiredModule_ be the last element in _stack_.
-                  1. Remove the last element of _stack_.
-                  1. Set _requiredModule_.[[Status]] to `"evaluated"`.
-                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
-              1. Return _index_.
-            </emu-alg>
-          </emu-clause>
-
-          <emu-clause id="sec-moduleexecution" aoid="ModuleExecution">
-            <h1>ModuleExecution ( _module_ )</h1>
-
-            <p>The ModuleExecution abstract operation is used by InnerModuleEvaluation to initialize the execution context of the module and evaluate the module's code within it.</p>
-
-            <p>This abstract operation performs the following steps:</p>
-
-            <emu-alg>
-              1. Let _moduleCxt_ be a new ECMAScript code execution context.
-              1. Set the Function of _moduleCxt_ to *null*.
-              1. Assert: _module_.[[Realm]] is not *undefined*.
-              1. Set the Realm of _moduleCxt_ to _module_.[[Realm]].
-              1. Set the ScriptOrModule of _moduleCxt_ to _module_.
-              1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
-              1. Set the VariableEnvironment of _moduleCxt_ to _module_.[[Environment]].
-              1. Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].
-              1. Suspend the currently running execution context.
-              1. Push _moduleCxt_ on to the execution context stack; _moduleCxt_ is now the running execution context.
-              1. Let _result_ be the result of evaluating _module_.[[ECMAScriptCode]].
-              1. Suspend _moduleCxt_ and remove it from the execution context stack.
-              1. Resume the context that is now on the top of the execution context stack as the running execution context.
-              1. Return Completion(_result_).
-            </emu-alg>
-          </emu-clause>
-        </emu-clause>
-
-        <emu-clause id="sec-example-source-text-module-record-graphs">
-          <h1>Example Source Text Module Record Graphs</h1>
-
-          <p>This non-normative section gives a series of examples of the instantiation and evaluation of a few common module graphs, with a specific focus on how errors can occur.</p>
-
-          <p>First consider the following simple module graph:</p>
-
-          <emu-figure id="figure-module-graph-simple" caption="A simple module graph">
-            <img alt="A module graph in which module A depends on module B" width="121" height="211" src="img/module-graph-simple.svg">
-          </emu-figure>
-
-          <p>Let's first assume that there are no error conditions. When a host first calls _A_.Instantiate(), this will complete successfully by assumption, and recursively instantiate modules _B_ and _C_ as well, such that _A_.[[Status]] = _B_.[[Status]] = _C_.[[Status]] = `"instantiated"`. This preparatory step can be performed at any time. Later, when the host is ready to incur any possible side effects of the modules, it can call _A_.Evaluate(), which will complete successfully (again by assumption), recursively having evaluated first _C_ and then _B_. Each module's [[Status]] at this point will be `"evaluated`".</p>
-
-          <p>Consider then cases involving instantiation errors. If InnerModuleInstantiation of _C_ succeeds but, thereafter, fails for _B_, for example because it imports something that _C_ does not provide, then the original _A_.Instantiate() will fail, and both _A_ and _B_'s [[Status]] remain `"uninstantiated"`. _C_'s [[Status]] has become `"instantiated"`, though.</p>
-
-          <p>Finally, consider a case involving evaluation errors. If InnerModuleEvaluation of _C_ succeeds but, thereafter, fails for _B_, for example because _B_ contains code that throws an exception, then the original _A_.Evaluate() will fail. The resulting exception will be recorded in both _A_ and _B_'s [[EvaluationError]] fields, and their [[Status]] will become `"evaluated"`. _C_ will also become `"evaluated"` but, in contrast to _A_ and _B_, will remain without an [[EvaluationError]], as it successfully completed evaluation. Storing the exception ensures that any time a host tries to reuse _A_ or _B_ by calling their Evaluate() method, it will encounter the same exception. (Hosts are not required to reuse Source Text Module Records; similarly, hosts are not required to expose the exception objects thrown by these  methods. However, the specification enables such uses.)</p>
-
-          <p>The difference here between instantiation and evaluation errors is due to how evaluation must be only performed once, as it can cause side effects; it is thus important to remember whether evaluation has already been performed, even if unsuccessfully. (In the error case, it makes sense to also remember the exception because otherwise subsequent Evaluate() calls would have to synthesize a new one.) Instantiation, on the other hand, is side-effect-free, and thus even if it fails, it can be retried at a later time with no issues.</p>
-
-          <p>Now consider a different type of error condition:</p>
-
-          <emu-figure id="figure-module-graph-missing" caption="A module graph with an unresolvable module">
-            <img alt="A module graph in which module A depends on a missing (unresolvable) module, represented by ???" width="121" height="121" src="img/module-graph-missing.svg">
-          </emu-figure>
-
-          <p>In this scenario, module _A_ declares a dependency on some other module, but no Module Record exists for that module, i.e. HostResolveImportedModule throws an exception when asked for it. This could occur for a variety of reasons, such as the corresponding resource not existing, or the resource existing but ParseModule throwing an exception when trying to parse the resulting source text. Hosts can choose to expose the cause of failure via the exception they throw from HostResolveImportedModule. In any case, this exception causes an instantiation failure, which as before results in _A_'s [[Status]] remaining `"uninstantiated"`.</p>
-
-          <p>Lastly, consider a module graph with a cycle:</p>
-
-          <emu-figure id="figure-module-graph-cycle" caption="A cyclic module graph">
-            <img alt="A module graph in which module A depends on module B and C, but module B also depends on module A" width="181" height="121" src="img/module-graph-cycle.svg">
-          </emu-figure>
-
-          <p>Here we assume that the entry point is module _A_, so that the host proceeds by calling _A_.Instantiate(), which performs InnerModuleInstantiation on _A_. This in turn calls InnerModuleInstantiation on _B_. Because of the cycle, this again triggers InnerModuleInstantiation on _A_, but at this point it is a no-op since _A_.[[Status]] is already `"instantiating"`. _B_.[[Status]] itself remains `"instantiating"` when control gets back to _A_ and InnerModuleInstantiation is triggered on _C_. After this returns with _C_.[[Status]] being `"instantiated"` , both _A_ and _B_ transition from `"instantiating"` to `"instantiated"` together; this is by design, since they form a strongly connected component.</p>
-
-          <p>An analogous story occurs for the evaluation phase of a cyclic module graph, in the success case.</p>
-
-          <p>Now consider a case where _A_ has an instantiation error; for example, it tries to import a binding from _C_ that does not exist. In that case, the above steps still occur, including the early return from the second call to InnerModuleInstantiation on _A_. However, once we unwind back to the original InnerModuleInstantiation on _A_, it fails during ModuleDeclarationEnvironmentSetup, namely right after _C_.ResolveExport(). The thrown *SyntaxError* exception propagates up to _A_.Instantiate, which resets all modules that are currently on its _stack_ (these are always exactly the modules that are still `"instantiating"`). Hence both _A_ and _B_ become `"uninstantiated"`. Note that _C_ is left as `"instantiated"`.</p>
-
-          <p>Finally, consider a case where _A_ has an evaluation error; for example, its source code throws an exception. In that case, the evaluation-time analog of the above steps still occurs, including the early return from the second call to InnerModuleEvaluation on _A_. However, once we unwind back to the original InnerModuleEvaluation on _A_, it fails by assumption. The exception thrown propagates up to _A_.Evaluate(), which records the error in all modules that are currently on its _stack_ (i.e., the modules that are still `"evaluating"`). Hence both _A_ and _B_ become `"evaluated"` and the exception is recorded in both _A_ and _B_'s [[EvaluationError]] fields, while _C_ is left as `"evaluated"` with no [[EvaluationError]].</p>
         </emu-clause>
       </emu-clause>
 
