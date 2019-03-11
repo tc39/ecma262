@@ -3369,7 +3369,7 @@
         <p>When the abstract operation CompletePropertyDescriptor is called with Property Descriptor _Desc_, the following steps are taken:</p>
         <emu-alg>
           1. Assert: _Desc_ is a Property Descriptor.
-          1. Let _like_ be Record { [[Value]]: *undefined*, [[Writable]]: *false*, [[Get]]: *undefined*, [[Set]]: *undefined*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.
+          1. Let _like_ be the Record { [[Value]]: *undefined*, [[Writable]]: *false*, [[Get]]: *undefined*, [[Set]]: *undefined*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.
           1. If IsGenericDescriptor(_Desc_) is *true* or IsDataDescriptor(_Desc_) is *true*, then
             1. If _Desc_ does not have a [[Value]] field, set _Desc_.[[Value]] to _like_.[[Value]].
             1. If _Desc_ does not have a [[Writable]] field, set _Desc_.[[Writable]] to _like_.[[Writable]].
@@ -4888,7 +4888,7 @@
         1. Let _iterator_ be ? Call(_method_, _obj_).
         1. If Type(_iterator_) is not Object, throw a *TypeError* exception.
         1. Let _nextMethod_ be ? GetV(_iterator_, `"next"`).
-        1. Let _iteratorRecord_ be Record { [[Iterator]]: _iterator_, [[NextMethod]]: _nextMethod_, [[Done]]: *false* }.
+        1. Let _iteratorRecord_ be the Record { [[Iterator]]: _iterator_, [[NextMethod]]: _nextMethod_, [[Done]]: *false* }.
         1. Return _iteratorRecord_.
       </emu-alg>
     </emu-clause>
@@ -37021,7 +37021,9 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _asyncIterator_ be ! ObjectCreate(%AsyncFromSyncIteratorPrototype%, &laquo; [[SyncIteratorRecord]] &raquo;).
           1. Set _asyncIterator_.[[SyncIteratorRecord]] to _syncIteratorRecord_.
-          1. Return ? GetIterator(_asyncIterator_, ~async~).
+          1. Let _nextMethod_ be ! Get(_asyncIterator_, `"next"`).
+          1. Let _iteratorRecord_ be the Record { [[Iterator]]: _asyncIterator_, [[NextMethod]]: _nextMethod_, [[Done]]: *false* }.
+          1. Return _iteratorRecord_.
         </emu-alg>
       </emu-clause>
 
@@ -37039,11 +37041,8 @@ THH:mm:ss.sss
           <h1>%AsyncFromSyncIteratorPrototype%.next ( _value_ )</h1>
           <emu-alg>
             1. Let _O_ be the *this* value.
+            1. Assert: Type(_O_) is Object and _O_ has a [[SyncIteratorRecord]] internal slot.
             1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-            1. If Type(_O_) is not Object, or if _O_ does not have a [[SyncIteratorRecord]] internal slot, then
-              1. Let _invalidIteratorError_ be a newly created *TypeError* object.
-              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _invalidIteratorError_ &raquo;).
-              1. Return _promiseCapability_.[[Promise]].
             1. Let _syncIteratorRecord_ be _O_.[[SyncIteratorRecord]].
             1. Let _result_ be IteratorNext(_syncIteratorRecord_, _value_).
             1. IfAbruptRejectPromise(_result_, _promiseCapability_).
@@ -37056,11 +37055,8 @@ THH:mm:ss.sss
 
           <emu-alg>
             1. Let _O_ be the *this* value.
+            1. Assert: Type(_O_) is Object and _O_ has a [[SyncIteratorRecord]] internal slot.
             1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-            1. If Type(_O_) is not Object, or if _O_ does not have a [[SyncIteratorRecord]] internal slot, then
-              1. Let _invalidIteratorError_ be a newly created *TypeError* object.
-              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _invalidIteratorError_ &raquo;).
-              1. Return _promiseCapability_.[[Promise]].
             1. Let _syncIterator_ be _O_.[[SyncIteratorRecord]].[[Iterator]].
             1. Let _return_ be GetMethod(_syncIterator_, `"return"`).
             1. IfAbruptRejectPromise(_return_, _promiseCapability_).
@@ -37082,11 +37078,8 @@ THH:mm:ss.sss
 
           <emu-alg>
             1. Let _O_ be the *this* value.
+            1. Assert: Type(_O_) is Object and _O_ has a [[SyncIteratorRecord]] internal slot.
             1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-            1. If Type(_O_) is not Object, or if _O_ does not have a [[SyncIteratorRecord]] internal slot, then
-              1. Let _invalidIteratorError_ be a newly created *TypeError* object.
-              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _invalidIteratorError_ &raquo;).
-              1. Return _promiseCapability_.[[Promise]].
             1. Let _syncIterator_ be _O_.[[SyncIteratorRecord]].[[Iterator]].
             1. Let _throw_ be GetMethod(_syncIterator_, `"throw"`).
             1. IfAbruptRejectPromise(_throw_, _promiseCapability_).
@@ -37102,16 +37095,10 @@ THH:mm:ss.sss
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-%asyncfromsynciteratorprototype%-@@tostringtag">
-          <h1>%AsyncFromSyncIteratorPrototype% [ @@toStringTag ]</h1>
-          <p>The initial value of the @@toStringTag property is the String value `"Async-from-Sync Iterator"`.</p>
-          <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
-        </emu-clause>
-
         <emu-clause id="sec-async-from-sync-iterator-value-unwrap-functions">
           <h1>Async-from-Sync Iterator Value Unwrap Functions</h1>
 
-          <p>An async-from-sync iterator value unwrap function is an anonymous built-in function that is used by methods of %AsyncFromSyncIteratorPrototype% when processing the `value` field of an <i>IteratorResult</i> object, in order to wait for its value if it is a promise and re-package the result in a new "unwrapped" <i>IteratorResult</i> object. Each async iterator value unwrap function has a [[Done]] internal slot.</p>
+          <p>An async-from-sync iterator value unwrap function is an anonymous built-in function that is used by AsyncFromSyncIteratorContinuation when processing the `value` property of an <i>IteratorResult</i> object, in order to wait for its value if it is a promise and re-package the result in a new "unwrapped" <i>IteratorResult</i> object. Each async-from-sync iterator value unwrap function has a [[Done]] internal slot.</p>
 
           <p>When an async-from-sync iterator value unwrap function is called with argument _value_, the following steps are taken:</p>
 
@@ -37124,7 +37111,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-properties-of-async-from-sync-iterator-instances">
         <h1>Properties of Async-from-Sync Iterator Instances</h1>
-        <p>Async-from-Sync Iterator instances are ordinary objects that inherit properties from the %AsyncFromSyncIteratorPrototype% intrinsic object. Async-from-Sync Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-async-from-sync-iterator-internal-slots"></emu-xref>.</p>
+        <p>Async-from-Sync Iterator instances are ordinary objects that inherit properties from the %AsyncFromSyncIteratorPrototype% intrinsic object. Async-from-Sync Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-async-from-sync-iterator-internal-slots"></emu-xref>. Async-from-Sync Iterator instances are not directly observable from ECMAScript code.</p>
         <emu-table id="table-async-from-sync-iterator-internal-slots" caption="Internal Slots of Async-from-Sync Iterator Instances">
           <table>
             <thead>
