@@ -3858,7 +3858,7 @@
 
   <emu-clause id="sec-ecmascript-specification-types">
     <h1>ECMAScript Specification Types</h1>
-    <p>A specification type corresponds to meta-values that are used within algorithms to describe the semantics of ECMAScript language constructs and ECMAScript language types. The specification types include Reference, List, Completion, Property Descriptor, Lexical Environment, Environment Record, and Data Block. Specification type values are specification artefacts that do not necessarily correspond to any specific entity within an ECMAScript implementation. Specification type values may be used to describe intermediate results of ECMAScript expression evaluation but such values cannot be stored as properties of objects or values of ECMAScript language variables.</p>
+    <p>A specification type corresponds to meta-values that are used within algorithms to describe the semantics of ECMAScript language constructs and ECMAScript language types. The specification types include Reference, List, Completion, Property Descriptor, Lexical Environment, Scope Record, and Data Block. Specification type values are specification artefacts that do not necessarily correspond to any specific entity within an ECMAScript implementation. Specification type values may be used to describe intermediate results of ECMAScript expression evaluation but such values cannot be stored as properties of objects or values of ECMAScript language variables.</p>
 
     <emu-clause id="sec-list-and-record-specification-type">
       <h1>The List and Record Specification Types</h1>
@@ -4086,8 +4086,8 @@
       <emu-note>
         <p>The Reference type is used to explain the behaviour of such operators as `delete`, `typeof`, the assignment operators, the `super` keyword and other language features. For example, the left-hand operand of an assignment is expected to produce a reference.</p>
       </emu-note>
-      <p>A <dfn>Reference</dfn> is a resolved name or property binding. A Reference consists of three components, the base value component, the referenced name component, and the Boolean-valued strict reference flag. The base value component is either *undefined*, an Object, a Boolean, a String, a Symbol, a Number, or an Environment Record. A base value component of *undefined* indicates that the Reference could not be resolved to a binding. The referenced name component is a String or Symbol value.</p>
-      <p>A <dfn id="super-reference">Super Reference</dfn> is a Reference that is used to represent a name binding that was expressed using the super keyword. A Super Reference has an additional thisValue component, and its base value component will never be an Environment Record.</p>
+      <p>A <dfn>Reference</dfn> is a resolved name or property binding. A Reference consists of three components, the base value component, the referenced name component, and the Boolean-valued strict reference flag. The base value component is either *undefined*, an Object, a Boolean, a String, a Symbol, a Number, or a Scope Record. A base value component of *undefined* indicates that the Reference could not be resolved to a binding. The referenced name component is a String or Symbol value.</p>
+      <p>A <dfn id="super-reference">Super Reference</dfn> is a Reference that is used to represent a name binding that was expressed using the super keyword. A Super Reference has an additional thisValue component, and its base value component will never be a Scope Record.</p>
       <p>The following abstract operations are used in this specification to operate on references:</p>
 
       <emu-clause id="sec-getbase" aoid="GetBase" oldids="ao-getbase">
@@ -4159,8 +4159,8 @@
               1. Set _base_ to ! ToObject(_base_).
             1. Return ? _base_.[[Get]](GetReferencedName(_V_), GetThisValue(_V_)).
           1. Else,
-            1. Assert: _base_ is an Environment Record.
-            1. Return ? _base_.GetBindingValue(GetReferencedName(_V_), IsStrictReference(_V_)) (see <emu-xref href="#sec-environment-records"></emu-xref>).
+            1. Assert: _base_ is a Scope Record.
+            1. Return ? _base_.GetBindingValue(GetReferencedName(_V_), IsStrictReference(_V_)) (see <emu-xref href="#sec-scope-records"></emu-xref>).
         </emu-alg>
         <emu-note>
           <p>The object that may be created in step 5.a.ii is not accessible outside of the above abstract operation and the ordinary object [[Get]] internal method. An implementation might choose to avoid the actual creation of the object.</p>
@@ -4187,8 +4187,8 @@
             1. If _succeeded_ is *false* and IsStrictReference(_V_) is *true*, throw a *TypeError* exception.
             1. Return.
           1. Else,
-            1. Assert: _base_ is an Environment Record.
-            1. Return ? _base_.SetMutableBinding(GetReferencedName(_V_), _W_, IsStrictReference(_V_)) (see <emu-xref href="#sec-environment-records"></emu-xref>).
+            1. Assert: _base_ is a Scope Record.
+            1. Return ? _base_.SetMutableBinding(GetReferencedName(_V_), _W_, IsStrictReference(_V_)) (see <emu-xref href="#sec-scope-records"></emu-xref>).
         </emu-alg>
         <emu-note>
           <p>The object that may be created in step 6.a.ii is not accessible outside of the above algorithm and the ordinary object [[Set]] internal method. An implementation might choose to avoid the actual creation of that object.</p>
@@ -4213,7 +4213,7 @@
           1. Assert: Type(_V_) is Reference.
           1. Assert: IsUnresolvableReference(_V_) is *false*.
           1. Let _base_ be GetBase(_V_).
-          1. Assert: _base_ is an Environment Record.
+          1. Assert: _base_ is a Scope Record.
           1. Return _base_.InitializeBinding(GetReferencedName(_V_), _W_).
         </emu-alg>
       </emu-clause>
@@ -4335,9 +4335,9 @@
       </emu-clause>
     </emu-clause>
 
-    <emu-clause id="sec-lexical-environment-and-environment-record-specification-types">
-      <h1>The Lexical Environment and Environment Record Specification Types</h1>
-      <p>The Lexical Environment and Environment Record types are used to explain the behaviour of name resolution in nested functions and blocks. These types and the operations upon them are defined in <emu-xref href="#sec-lexical-environments"></emu-xref>.</p>
+    <emu-clause id="sec-lexical-environment-and-scope-record-specification-types" oldids="sec-lexical-environment-and-environment-record-specification-types">
+      <h1>The Lexical Environment and Scope Record Specification Types</h1>
+      <p>The Lexical Environment and Scope Record types are used to explain the behaviour of name resolution in nested functions and blocks. These types and the operations upon them are defined in <emu-xref href="#sec-lexical-environments"></emu-xref>.</p>
     </emu-clause>
 
     <emu-clause id="sec-data-blocks">
@@ -6083,19 +6083,19 @@
 
   <emu-clause id="sec-lexical-environments">
     <h1>Lexical Environments</h1>
-    <p>A <dfn>Lexical Environment</dfn> is a specification type used to define the association of |Identifier|s to specific variables and functions based upon the lexical nesting structure of ECMAScript code. A Lexical Environment consists of an Environment Record and a possibly null reference to an <em>outer</em> Lexical Environment. Usually a Lexical Environment is associated with some specific syntactic structure of ECMAScript code such as a |FunctionDeclaration|, a |BlockStatement|, or a |Catch| clause of a |TryStatement| and a new Lexical Environment is created each time such code is evaluated.</p>
-    <p>An Environment Record records the identifier bindings that are created within the scope of its associated Lexical Environment. It is referred to as the Lexical Environment's <dfn>EnvironmentRecord</dfn>.</p>
+    <p>A <dfn>Lexical Environment</dfn> is a specification type used to define the association of |Identifier|s to specific variables and functions based upon the lexical nesting structure of ECMAScript code. A Lexical Environment consists of a Scope Record and a possibly null reference to an <em>outer</em> Lexical Environment. Usually a Lexical Environment is associated with some specific syntactic structure of ECMAScript code such as a |FunctionDeclaration|, a |BlockStatement|, or a |Catch| clause of a |TryStatement| and a new Lexical Environment is created each time such code is evaluated.</p>
+    <p>A Scope Record records the identifier bindings that are created within the scope of its associated Lexical Environment. It is referred to as the Lexical Environment's <dfn>EnvironmentRecord</dfn>.</p>
     <p>The outer environment reference is used to model the logical nesting of Lexical Environment values. The outer reference of a (inner) Lexical Environment is a reference to the Lexical Environment that logically surrounds the inner Lexical Environment. An outer Lexical Environment may, of course, have its own outer Lexical Environment. A Lexical Environment may serve as the outer environment for multiple inner Lexical Environments. For example, if a |FunctionDeclaration| contains two nested |FunctionDeclaration|s then the Lexical Environments of each of the nested functions will have as their outer Lexical Environment the Lexical Environment of the current evaluation of the surrounding function.</p>
     <p>A <dfn id="global-environment">global environment</dfn> is a Lexical Environment which does not have an outer environment. The global environment's outer environment reference is *null*. A global environment's EnvironmentRecord may be prepopulated with identifier bindings and includes an associated global object whose properties provide some of the global environment's identifier bindings. As ECMAScript code is executed, additional properties may be added to the global object and the initial properties may be modified.</p>
     <p>A <dfn id="module-environment">module environment</dfn> is a Lexical Environment that contains the bindings for the top level declarations of a |Module|. It also contains the bindings that are explicitly imported by the |Module|. The outer environment of a module environment is a global environment.</p>
     <p>A <dfn id="function-environment">function environment</dfn> is a Lexical Environment that corresponds to the invocation of an ECMAScript function object. A function environment may establish a new `this` binding. A function environment also captures the state necessary to support `super` method invocations.</p>
-    <p>Lexical Environments and Environment Record values are purely specification mechanisms and need not correspond to any specific artefact of an ECMAScript implementation. It is impossible for an ECMAScript program to directly access or manipulate such values.</p>
+    <p>Lexical Environments and Scope Record values are purely specification mechanisms and need not correspond to any specific artefact of an ECMAScript implementation. It is impossible for an ECMAScript program to directly access or manipulate such values.</p>
 
-    <emu-clause id="sec-environment-records">
-      <h1>Environment Records</h1>
-      <p>There are two primary kinds of <dfn>Environment Record</dfn> values used in this specification: <em>declarative Environment Records</em> and <em>object Environment Records</em>. Declarative Environment Records are used to define the effect of ECMAScript language syntactic elements such as |FunctionDeclaration|s, |VariableDeclaration|s, and |Catch| clauses that directly associate identifier bindings with ECMAScript language values. Object Environment Records are used to define the effect of ECMAScript elements such as |WithStatement| that associate identifier bindings with the properties of some object. Global Environment Records and function Environment Records are specializations that are used for specifically for |Script| global declarations and for top-level declarations within functions.</p>
-      <p>For specification purposes Environment Record values are values of the Record specification type and can be thought of as existing in a simple object-oriented hierarchy where Environment Record is an abstract class with three concrete subclasses, declarative Environment Record, object Environment Record, and global Environment Record. Function Environment Records and module Environment Records are subclasses of declarative Environment Record. The abstract class includes the abstract specification methods defined in <emu-xref href="#table-15"></emu-xref>. These abstract methods have distinct concrete algorithms for each of the concrete subclasses.</p>
-      <emu-table id="table-15" caption="Abstract Methods of Environment Records">
+    <emu-clause id="sec-scope-records" oldids="sec-environment-records">
+      <h1>Scope Records</h1>
+      <p>There are two primary kinds of <dfn>Scope Record</dfn> values used in this specification: <em>declarative Scope Records</em> and <em>object Scope Records</em>. Declarative Scope Records are used to define the effect of ECMAScript language syntactic elements such as |FunctionDeclaration|s, |VariableDeclaration|s, and |Catch| clauses that directly associate identifier bindings with ECMAScript language values. Object Scope Records are used to define the effect of ECMAScript elements such as |WithStatement| that associate identifier bindings with the properties of some object. Global Scope Records and function Scope Records are specializations that are used for specifically for |Script| global declarations and for top-level declarations within functions.</p>
+      <p>For specification purposes Scope Record values are values of the Record specification type and can be thought of as existing in a simple object-oriented hierarchy where Scope Record is an abstract class with three concrete subclasses, declarative Scope Record, object Scope Record, and global Scope Record. Function Scope Records and module Scope Records are subclasses of declarative Scope Record. The abstract class includes the abstract specification methods defined in <emu-xref href="#table-15"></emu-xref>. These abstract methods have distinct concrete algorithms for each of the concrete subclasses.</p>
+      <emu-table id="table-15" caption="Abstract Methods of Scope Records">
         <table>
           <tbody>
           <tr>
@@ -6111,7 +6111,7 @@
               HasBinding(N)
             </td>
             <td>
-              Determine if an Environment Record has a binding for the String value _N_. Return *true* if it does and *false* if it does not.
+              Determine if a Scope Record has a binding for the String value _N_. Return *true* if it does and *false* if it does not.
             </td>
           </tr>
           <tr>
@@ -6119,7 +6119,7 @@
               CreateMutableBinding(N, D)
             </td>
             <td>
-              Create a new but uninitialized mutable binding in an Environment Record. The String value _N_ is the text of the bound name. If the Boolean argument _D_ is *true* the binding may be subsequently deleted.
+              Create a new but uninitialized mutable binding in a Scope Record. The String value _N_ is the text of the bound name. If the Boolean argument _D_ is *true* the binding may be subsequently deleted.
             </td>
           </tr>
           <tr>
@@ -6127,7 +6127,7 @@
               CreateImmutableBinding(N, S)
             </td>
             <td>
-              Create a new but uninitialized immutable binding in an Environment Record. The String value _N_ is the text of the bound name. If _S_ is *true* then attempts to set it after it has been initialized will always throw an exception, regardless of the strict mode setting of operations that reference that binding.
+              Create a new but uninitialized immutable binding in a Scope Record. The String value _N_ is the text of the bound name. If _S_ is *true* then attempts to set it after it has been initialized will always throw an exception, regardless of the strict mode setting of operations that reference that binding.
             </td>
           </tr>
           <tr>
@@ -6135,7 +6135,7 @@
               InitializeBinding(N, V)
             </td>
             <td>
-              Set the value of an already existing but uninitialized binding in an Environment Record. The String value _N_ is the text of the bound name. _V_ is the value for the binding and is a value of any ECMAScript language type.
+              Set the value of an already existing but uninitialized binding in a Scope Record. The String value _N_ is the text of the bound name. _V_ is the value for the binding and is a value of any ECMAScript language type.
             </td>
           </tr>
           <tr>
@@ -6143,7 +6143,7 @@
               SetMutableBinding(N, V, S)
             </td>
             <td>
-              Set the value of an already existing mutable binding in an Environment Record. The String value _N_ is the text of the bound name. _V_ is the value for the binding and may be a value of any ECMAScript language type. _S_ is a Boolean flag. If _S_ is *true* and the binding cannot be set throw a *TypeError* exception.
+              Set the value of an already existing mutable binding in a Scope Record. The String value _N_ is the text of the bound name. _V_ is the value for the binding and may be a value of any ECMAScript language type. _S_ is a Boolean flag. If _S_ is *true* and the binding cannot be set throw a *TypeError* exception.
             </td>
           </tr>
           <tr>
@@ -6151,7 +6151,7 @@
               GetBindingValue(N, S)
             </td>
             <td>
-              Returns the value of an already existing binding from an Environment Record. The String value _N_ is the text of the bound name. _S_ is used to identify references originating in strict mode code or that otherwise require strict mode reference semantics. If _S_ is *true* and the binding does not exist throw a *ReferenceError* exception. If the binding exists but is uninitialized a *ReferenceError* is thrown, regardless of the value of _S_.
+              Returns the value of an already existing binding from a Scope Record. The String value _N_ is the text of the bound name. _S_ is used to identify references originating in strict mode code or that otherwise require strict mode reference semantics. If _S_ is *true* and the binding does not exist throw a *ReferenceError* exception. If the binding exists but is uninitialized a *ReferenceError* is thrown, regardless of the value of _S_.
             </td>
           </tr>
           <tr>
@@ -6159,7 +6159,7 @@
               DeleteBinding(N)
             </td>
             <td>
-              Delete a binding from an Environment Record. The String value _N_ is the text of the bound name. If a binding for _N_ exists, remove the binding and return *true*. If the binding exists but cannot be removed return *false*. If the binding does not exist return *true*.
+              Delete a binding from a Scope Record. The String value _N_ is the text of the bound name. If a binding for _N_ exists, remove the binding and return *true*. If the binding exists but cannot be removed return *false*. If the binding does not exist return *true*.
             </td>
           </tr>
           <tr>
@@ -6167,7 +6167,7 @@
               HasThisBinding()
             </td>
             <td>
-              Determine if an Environment Record establishes a `this` binding. Return *true* if it does and *false* if it does not.
+              Determine if a Scope Record establishes a `this` binding. Return *true* if it does and *false* if it does not.
             </td>
           </tr>
           <tr>
@@ -6175,7 +6175,7 @@
               HasSuperBinding()
             </td>
             <td>
-              Determine if an Environment Record establishes a `super` method binding. Return *true* if it does and *false* if it does not.
+              Determine if a Scope Record establishes a `super` method binding. Return *true* if it does and *false* if it does not.
             </td>
           </tr>
           <tr>
@@ -6183,55 +6183,55 @@
               WithBaseObject()
             </td>
             <td>
-              If this Environment Record is associated with a `with` statement, return the with object. Otherwise, return *undefined*.
+              If this Scope Record is associated with a `with` statement, return the with object. Otherwise, return *undefined*.
             </td>
           </tr>
           </tbody>
         </table>
       </emu-table>
 
-      <emu-clause id="sec-declarative-environment-records">
-        <h1>Declarative Environment Records</h1>
-        <p>Each declarative Environment Record is associated with an ECMAScript program scope containing variable, constant, let, class, module, import, and/or function declarations. A declarative Environment Record binds the set of identifiers defined by the declarations contained within its scope.</p>
-        <p>The behaviour of the concrete specification methods for declarative Environment Records is defined by the following algorithms.</p>
+      <emu-clause id="sec-declarative-scope-records" oldids="sec-declarative-environment-records">
+        <h1>Declarative Scope Records</h1>
+        <p>Each declarative Scope Record is associated with an ECMAScript program scope containing variable, constant, let, class, module, import, and/or function declarations. A declarative Scope Record binds the set of identifiers defined by the declarations contained within its scope.</p>
+        <p>The behaviour of the concrete specification methods for declarative Scope Records is defined by the following algorithms.</p>
 
-        <emu-clause id="sec-declarative-environment-records-hasbinding-n">
+        <emu-clause id="sec-declarative-scope-record-hasbinding" oldids="sec-declarative-environment-records-hasbinding-n">
           <h1>HasBinding ( _N_ )</h1>
-          <p>The concrete Environment Record method HasBinding for declarative Environment Records simply determines if the argument identifier is one of the identifiers bound by the record:</p>
+          <p>The concrete Scope Record method HasBinding for declarative Scope Records simply determines if the argument identifier is one of the identifiers bound by the record:</p>
           <emu-alg>
-            1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
+            1. Let _envRec_ be the declarative Scope Record for which the method was invoked.
             1. If _envRec_ has a binding for the name that is the value of _N_, return *true*.
             1. Return *false*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-createmutablebinding-n-d">
+        <emu-clause id="sec-declarative-scope-record-createmutablebinding" oldids="sec-declarative-environment-records-createmutablebinding-n-d">
           <h1>CreateMutableBinding ( _N_, _D_ )</h1>
-          <p>The concrete Environment Record method CreateMutableBinding for declarative Environment Records creates a new mutable binding for the name _N_ that is uninitialized. A binding must not already exist in this Environment Record for _N_. If Boolean argument _D_ has the value *true* the new binding is marked as being subject to deletion.</p>
+          <p>The concrete Scope Record method CreateMutableBinding for declarative Scope Records creates a new mutable binding for the name _N_ that is uninitialized. A binding must not already exist in this Scope Record for _N_. If Boolean argument _D_ has the value *true* the new binding is marked as being subject to deletion.</p>
           <emu-alg>
-            1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
+            1. Let _envRec_ be the declarative Scope Record for which the method was invoked.
             1. Assert: _envRec_ does not already have a binding for _N_.
             1. Create a mutable binding in _envRec_ for _N_ and record that it is uninitialized. If _D_ is *true*, record that the newly created binding may be deleted by a subsequent DeleteBinding call.
             1. Return NormalCompletion(~empty~).
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-createimmutablebinding-n-s">
+        <emu-clause id="sec-declarative-scope-record-createimmutablebinding" oldids="sec-declarative-environment-records-createimmutablebinding-n-s">
           <h1>CreateImmutableBinding ( _N_, _S_ )</h1>
-          <p>The concrete Environment Record method CreateImmutableBinding for declarative Environment Records creates a new immutable binding for the name _N_ that is uninitialized. A binding must not already exist in this Environment Record for _N_. If the Boolean argument _S_ has the value *true* the new binding is marked as a strict binding.</p>
+          <p>The concrete Scope Record method CreateImmutableBinding for declarative Scope Records creates a new immutable binding for the name _N_ that is uninitialized. A binding must not already exist in this Scope Record for _N_. If the Boolean argument _S_ has the value *true* the new binding is marked as a strict binding.</p>
           <emu-alg>
-            1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
+            1. Let _envRec_ be the declarative Scope Record for which the method was invoked.
             1. Assert: _envRec_ does not already have a binding for _N_.
             1. Create an immutable binding in _envRec_ for _N_ and record that it is uninitialized. If _S_ is *true*, record that the newly created binding is a strict binding.
             1. Return NormalCompletion(~empty~).
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-initializebinding-n-v">
+        <emu-clause id="sec-declarative-scope-record-initializebinding" oldids="sec-declarative-environment-records-initializebinding-n-v">
           <h1>InitializeBinding ( _N_, _V_ )</h1>
-          <p>The concrete Environment Record method InitializeBinding for declarative Environment Records is used to set the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. An uninitialized binding for _N_ must already exist.</p>
+          <p>The concrete Scope Record method InitializeBinding for declarative Scope Records is used to set the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. An uninitialized binding for _N_ must already exist.</p>
           <emu-alg>
-            1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
+            1. Let _envRec_ be the declarative Scope Record for which the method was invoked.
             1. Assert: _envRec_ must have an uninitialized binding for _N_.
             1. Set the bound value for _N_ in _envRec_ to _V_.
             1. Record that the binding for _N_ in _envRec_ has been initialized.
@@ -6239,11 +6239,11 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-setmutablebinding-n-v-s">
+        <emu-clause id="sec-declarative-scope-record-setmutablebinding" oldids="sec-declarative-environment-records-setmutablebinding-n-v-s">
           <h1>SetMutableBinding ( _N_, _V_, _S_ )</h1>
-          <p>The concrete Environment Record method SetMutableBinding for declarative Environment Records attempts to change the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. A binding for _N_ normally already exists, but in rare cases it may not. If the binding is an immutable binding, a *TypeError* is thrown if _S_ is *true*.</p>
+          <p>The concrete Scope Record method SetMutableBinding for declarative Scope Records attempts to change the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. A binding for _N_ normally already exists, but in rare cases it may not. If the binding is an immutable binding, a *TypeError* is thrown if _S_ is *true*.</p>
           <emu-alg>
-            1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
+            1. Let _envRec_ be the declarative Scope Record for which the method was invoked.
             1. If _envRec_ does not have a binding for _N_, then
               1. If _S_ is *true*, throw a *ReferenceError* exception.
               1. Perform _envRec_.CreateMutableBinding(_N_, *true*).
@@ -6263,22 +6263,22 @@
           </emu-note>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-getbindingvalue-n-s">
+        <emu-clause id="sec-declarative-scope-record-getbindingvalue" oldids="sec-declarative-environment-records-getbindingvalue-n-s">
           <h1>GetBindingValue ( _N_, _S_ )</h1>
-          <p>The concrete Environment Record method GetBindingValue for declarative Environment Records simply returns the value of its bound identifier whose name is the value of the argument _N_. If the binding exists but is uninitialized a *ReferenceError* is thrown, regardless of the value of _S_.</p>
+          <p>The concrete Scope Record method GetBindingValue for declarative Scope Records simply returns the value of its bound identifier whose name is the value of the argument _N_. If the binding exists but is uninitialized a *ReferenceError* is thrown, regardless of the value of _S_.</p>
           <emu-alg>
-            1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
+            1. Let _envRec_ be the declarative Scope Record for which the method was invoked.
             1. Assert: _envRec_ has a binding for _N_.
             1. If the binding for _N_ in _envRec_ is an uninitialized binding, throw a *ReferenceError* exception.
             1. Return the value currently bound to _N_ in _envRec_.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-deletebinding-n">
+        <emu-clause id="sec-declarative-scope-record-deletebinding" oldids="sec-declarative-environment-records-deletebinding-n">
           <h1>DeleteBinding ( _N_ )</h1>
-          <p>The concrete Environment Record method DeleteBinding for declarative Environment Records can only delete bindings that have been explicitly designated as being subject to deletion.</p>
+          <p>The concrete Scope Record method DeleteBinding for declarative Scope Records can only delete bindings that have been explicitly designated as being subject to deletion.</p>
           <emu-alg>
-            1. Let _envRec_ be the declarative Environment Record for which the method was invoked.
+            1. Let _envRec_ be the declarative Scope Record for which the method was invoked.
             1. Assert: _envRec_ has a binding for the name that is the value of _N_.
             1. If the binding for _N_ in _envRec_ cannot be deleted, return *false*.
             1. Remove the binding for _N_ from _envRec_.
@@ -6286,42 +6286,42 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-hasthisbinding">
+        <emu-clause id="sec-declarative-scope-record-hasthisbinding" oldids="sec-declarative-environment-records-hasthisbinding">
           <h1>HasThisBinding ( )</h1>
-          <p>Regular declarative Environment Records do not provide a `this` binding.</p>
+          <p>Regular declarative Scope Records do not provide a `this` binding.</p>
           <emu-alg>
             1. Return *false*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-hassuperbinding">
+        <emu-clause id="sec-declarative-scope-record-hassuperbinding" oldids="sec-declarative-environment-records-hassuperbinding">
           <h1>HasSuperBinding ( )</h1>
-          <p>Regular declarative Environment Records do not provide a `super` binding.</p>
+          <p>Regular declarative Scope Records do not provide a `super` binding.</p>
           <emu-alg>
             1. Return *false*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-declarative-environment-records-withbaseobject">
+        <emu-clause id="sec-declarative-scope-record-withbaseobject" oldids="sec-declarative-environment-records-withbaseobject">
           <h1>WithBaseObject ( )</h1>
-          <p>Declarative Environment Records always return *undefined* as their WithBaseObject.</p>
+          <p>Declarative Scope Records always return *undefined* as their WithBaseObject.</p>
           <emu-alg>
             1. Return *undefined*.
           </emu-alg>
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-object-environment-records">
-        <h1>Object Environment Records</h1>
-        <p>Each object Environment Record is associated with an object called its <em>binding object</em>. An object Environment Record binds the set of string identifier names that directly correspond to the property names of its binding object. Property keys that are not strings in the form of an |IdentifierName| are not included in the set of bound identifiers. Both own and inherited properties are included in the set regardless of the setting of their [[Enumerable]] attribute. Because properties can be dynamically added and deleted from objects, the set of identifiers bound by an object Environment Record may potentially change as a side-effect of any operation that adds or deletes properties. Any bindings that are created as a result of such a side-effect are considered to be a mutable binding even if the Writable attribute of the corresponding property has the value *false*. Immutable bindings do not exist for object Environment Records.</p>
-        <p>Object Environment Records created for `with` statements (<emu-xref href="#sec-with-statement"></emu-xref>) can provide their binding object as an implicit *this* value for use in function calls. The capability is controlled by a _withEnvironment_ Boolean value that is associated with each object Environment Record. By default, the value of _withEnvironment_ is *false* for any object Environment Record.</p>
-        <p>The behaviour of the concrete specification methods for object Environment Records is defined by the following algorithms.</p>
+      <emu-clause id="sec-object-scope-records" oldids="sec-object-environment-records">
+        <h1>Object Scope Records</h1>
+        <p>Each object Scope Record is associated with an object called its <em>binding object</em>. An object Scope Record binds the set of string identifier names that directly correspond to the property names of its binding object. Property keys that are not strings in the form of an |IdentifierName| are not included in the set of bound identifiers. Both own and inherited properties are included in the set regardless of the setting of their [[Enumerable]] attribute. Because properties can be dynamically added and deleted from objects, the set of identifiers bound by an object Scope Record may potentially change as a side-effect of any operation that adds or deletes properties. Any bindings that are created as a result of such a side-effect are considered to be a mutable binding even if the Writable attribute of the corresponding property has the value *false*. Immutable bindings do not exist for object Scope Records.</p>
+        <p>Object Scope Records created for `with` statements (<emu-xref href="#sec-with-statement"></emu-xref>) can provide their binding object as an implicit *this* value for use in function calls. The capability is controlled by a _withEnvironment_ Boolean value that is associated with each object Scope Record. By default, the value of _withEnvironment_ is *false* for any object Scope Record.</p>
+        <p>The behaviour of the concrete specification methods for object Scope Records is defined by the following algorithms.</p>
 
-        <emu-clause id="sec-object-environment-records-hasbinding-n">
+        <emu-clause id="sec-object-scope-record-hasbinding" oldids="sec-object-environment-records-hasbinding-n">
           <h1>HasBinding ( _N_ )</h1>
-          <p>The concrete Environment Record method HasBinding for object Environment Records determines if its associated binding object has a property whose name is the value of the argument _N_:</p>
+          <p>The concrete Scope Record method HasBinding for object Scope Records determines if its associated binding object has a property whose name is the value of the argument _N_:</p>
           <emu-alg>
-            1. Let _envRec_ be the object Environment Record for which the method was invoked.
+            1. Let _envRec_ be the object Scope Record for which the method was invoked.
             1. Let _bindings_ be the binding object for _envRec_.
             1. Let _foundBinding_ be ? HasProperty(_bindings_, _N_).
             1. If _foundBinding_ is *false*, return *false*.
@@ -6334,11 +6334,11 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-createmutablebinding-n-d">
+        <emu-clause id="sec-object-scope-record-createmutablebinding" oldids="sec-object-environment-records-createmutablebinding-n-d">
           <h1>CreateMutableBinding ( _N_, _D_ )</h1>
-          <p>The concrete Environment Record method CreateMutableBinding for object Environment Records creates in an Environment Record's associated binding object a property whose name is the String value and initializes it to the value *undefined*. If Boolean argument _D_ has the value *true* the new property's [[Configurable]] attribute is set to *true*; otherwise it is set to *false*.</p>
+          <p>The concrete Scope Record method CreateMutableBinding for object Scope Records creates in a Scope Record's associated binding object a property whose name is the String value and initializes it to the value *undefined*. If Boolean argument _D_ has the value *true* the new property's [[Configurable]] attribute is set to *true*; otherwise it is set to *false*.</p>
           <emu-alg>
-            1. Let _envRec_ be the object Environment Record for which the method was invoked.
+            1. Let _envRec_ be the object Scope Record for which the method was invoked.
             1. Let _bindings_ be the binding object for _envRec_.
             1. Return ? DefinePropertyOrThrow(_bindings_, _N_, PropertyDescriptor { [[Value]]: *undefined*, [[Writable]]: *true*, [[Enumerable]]: *true*, [[Configurable]]: _D_ }).
           </emu-alg>
@@ -6347,40 +6347,40 @@
           </emu-note>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-createimmutablebinding-n-s">
+        <emu-clause id="sec-object-scope-record-createimmutablebinding" oldids="sec-object-environment-records-createimmutablebinding-n-s">
           <h1>CreateImmutableBinding ( _N_, _S_ )</h1>
-          <p>The concrete Environment Record method CreateImmutableBinding is never used within this specification in association with object Environment Records.</p>
+          <p>The concrete Scope Record method CreateImmutableBinding is never used within this specification in association with object Scope Records.</p>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-initializebinding-n-v">
+        <emu-clause id="sec-object-scope-record-initializebinding" oldids="sec-object-environment-records-initializebinding-n-v">
           <h1>InitializeBinding ( _N_, _V_ )</h1>
-          <p>The concrete Environment Record method InitializeBinding for object Environment Records is used to set the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. An uninitialized binding for _N_ must already exist.</p>
+          <p>The concrete Scope Record method InitializeBinding for object Scope Records is used to set the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. An uninitialized binding for _N_ must already exist.</p>
           <emu-alg>
-            1. Let _envRec_ be the object Environment Record for which the method was invoked.
+            1. Let _envRec_ be the object Scope Record for which the method was invoked.
             1. Assert: _envRec_ must have an uninitialized binding for _N_.
             1. Record that the binding for _N_ in _envRec_ has been initialized.
             1. Return ? _envRec_.SetMutableBinding(_N_, _V_, *false*).
           </emu-alg>
           <emu-note>
-            <p>In this specification, all uses of CreateMutableBinding for object Environment Records are immediately followed by a call to InitializeBinding for the same name. Hence, implementations do not need to explicitly track the initialization state of individual object Environment Record bindings.</p>
+            <p>In this specification, all uses of CreateMutableBinding for object Scope Records are immediately followed by a call to InitializeBinding for the same name. Hence, implementations do not need to explicitly track the initialization state of individual object Scope Record bindings.</p>
           </emu-note>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-setmutablebinding-n-v-s">
+        <emu-clause id="sec-object-scope-record-setmutablebinding" oldids="sec-object-environment-records-setmutablebinding-n-v-s">
           <h1>SetMutableBinding ( _N_, _V_, _S_ )</h1>
-          <p>The concrete Environment Record method SetMutableBinding for object Environment Records attempts to set the value of the Environment Record's associated binding object's property whose name is the value of the argument _N_ to the value of argument _V_. A property named _N_ normally already exists but if it does not or is not currently writable, error handling is determined by the value of the Boolean argument _S_.</p>
+          <p>The concrete Scope Record method SetMutableBinding for object Scope Records attempts to set the value of the Scope Record's associated binding object's property whose name is the value of the argument _N_ to the value of argument _V_. A property named _N_ normally already exists but if it does not or is not currently writable, error handling is determined by the value of the Boolean argument _S_.</p>
           <emu-alg>
-            1. Let _envRec_ be the object Environment Record for which the method was invoked.
+            1. Let _envRec_ be the object Scope Record for which the method was invoked.
             1. Let _bindings_ be the binding object for _envRec_.
             1. Return ? Set(_bindings_, _N_, _V_, _S_).
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-getbindingvalue-n-s">
+        <emu-clause id="sec-object-scope-record-getbindingvalue" oldids="sec-object-environment-records-getbindingvalue-n-s">
           <h1>GetBindingValue ( _N_, _S_ )</h1>
-          <p>The concrete Environment Record method GetBindingValue for object Environment Records returns the value of its associated binding object's property whose name is the String value of the argument identifier _N_. The property should already exist but if it does not the result depends upon the value of the _S_ argument:</p>
+          <p>The concrete Scope Record method GetBindingValue for object Scope Records returns the value of its associated binding object's property whose name is the String value of the argument identifier _N_. The property should already exist but if it does not the result depends upon the value of the _S_ argument:</p>
           <emu-alg>
-            1. Let _envRec_ be the object Environment Record for which the method was invoked.
+            1. Let _envRec_ be the object Scope Record for which the method was invoked.
             1. Let _bindings_ be the binding object for _envRec_.
             1. Let _value_ be ? HasProperty(_bindings_, _N_).
             1. If _value_ is *false*, then
@@ -6389,48 +6389,48 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-deletebinding-n">
+        <emu-clause id="sec-object-scope-record-deletebinding" oldids="sec-object-environment-records-deletebinding-n">
           <h1>DeleteBinding ( _N_ )</h1>
-          <p>The concrete Environment Record method DeleteBinding for object Environment Records can only delete bindings that correspond to properties of the environment object whose [[Configurable]] attribute have the value *true*.</p>
+          <p>The concrete Scope Record method DeleteBinding for object Scope Records can only delete bindings that correspond to properties of the environment object whose [[Configurable]] attribute have the value *true*.</p>
           <emu-alg>
-            1. Let _envRec_ be the object Environment Record for which the method was invoked.
+            1. Let _envRec_ be the object Scope Record for which the method was invoked.
             1. Let _bindings_ be the binding object for _envRec_.
             1. Return ? _bindings_.[[Delete]](_N_).
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-hasthisbinding">
+        <emu-clause id="sec-object-scope-record-hasthisbinding" oldids="sec-object-environment-records-hasthisbinding">
           <h1>HasThisBinding ( )</h1>
-          <p>Regular object Environment Records do not provide a `this` binding.</p>
+          <p>Regular object Scope Records do not provide a `this` binding.</p>
           <emu-alg>
             1. Return *false*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-hassuperbinding">
+        <emu-clause id="sec-object-scope-record-hassuperbinding" oldids="sec-object-environment-records-hassuperbinding">
           <h1>HasSuperBinding ( )</h1>
-          <p>Regular object Environment Records do not provide a `super` binding.</p>
+          <p>Regular object Scope Records do not provide a `super` binding.</p>
           <emu-alg>
             1. Return *false*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-object-environment-records-withbaseobject">
+        <emu-clause id="sec-object-scope-record-withbaseobject" oldids="sec-object-environment-records-withbaseobject">
           <h1>WithBaseObject ( )</h1>
-          <p>Object Environment Records return *undefined* as their WithBaseObject unless their _withEnvironment_ flag is *true*.</p>
+          <p>Object Scope Records return *undefined* as their WithBaseObject unless their _withEnvironment_ flag is *true*.</p>
           <emu-alg>
-            1. Let _envRec_ be the object Environment Record for which the method was invoked.
+            1. Let _envRec_ be the object Scope Record for which the method was invoked.
             1. If the _withEnvironment_ flag of _envRec_ is *true*, return the binding object for _envRec_.
             1. Otherwise, return *undefined*.
           </emu-alg>
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-function-environment-records">
-        <h1>Function Environment Records</h1>
-        <p>A <dfn>function Environment Record</dfn> is a declarative Environment Record that is used to represent the top-level scope of a function and, if the function is not an |ArrowFunction|, provides a `this` binding. If a function is not an |ArrowFunction| function and references `super`, its function Environment Record also contains the state that is used to perform `super` method invocations from within the function.</p>
-        <p>Function Environment Records have the additional state fields listed in <emu-xref href="#table-16"></emu-xref>.</p>
-        <emu-table id="table-16" caption="Additional Fields of Function Environment Records">
+      <emu-clause id="sec-function-scope-records" oldids="sec-function-environment-records">
+        <h1>Function Scope Records</h1>
+        <p>A <dfn>function Scope Record</dfn> is a declarative Scope Record that is used to represent the top-level scope of a function and, if the function is not an |ArrowFunction|, provides a `this` binding. If a function is not an |ArrowFunction| function and references `super`, its function Scope Record also contains the state that is used to perform `super` method invocations from within the function.</p>
+        <p>Function Scope Records have the additional state fields listed in <emu-xref href="#table-16"></emu-xref>.</p>
+        <emu-table id="table-16" caption="Additional Fields of Function Scope Records">
           <table>
             <tbody>
             <tr>
@@ -6474,7 +6474,7 @@
                 Object
               </td>
               <td>
-                The function object whose invocation caused this Environment Record to be created.
+                The function object whose invocation caused this Scope Record to be created.
               </td>
             </tr>
             <tr>
@@ -6496,14 +6496,14 @@
                 Object | *undefined*
               </td>
               <td>
-                If this Environment Record was created by the [[Construct]] internal method, [[NewTarget]] is the value of the [[Construct]] _newTarget_ parameter. Otherwise, its value is *undefined*.
+                If this Scope Record was created by the [[Construct]] internal method, [[NewTarget]] is the value of the [[Construct]] _newTarget_ parameter. Otherwise, its value is *undefined*.
               </td>
             </tr>
             </tbody>
           </table>
         </emu-table>
-        <p>Function Environment Records support all of the declarative Environment Record methods listed in <emu-xref href="#table-15"></emu-xref> and share the same specifications for all of those methods except for HasThisBinding and HasSuperBinding. In addition, function Environment Records support the methods listed in <emu-xref href="#table-17"></emu-xref>:</p>
-        <emu-table id="table-17" caption="Additional Methods of Function Environment Records">
+        <p>Function Scope Records support all of the declarative Scope Record methods listed in <emu-xref href="#table-15"></emu-xref> and share the same specifications for all of those methods except for HasThisBinding and HasSuperBinding. In addition, function Scope Records support the methods listed in <emu-xref href="#table-17"></emu-xref>:</p>
+        <emu-table id="table-17" caption="Additional Methods of Function Scope Records">
           <table>
             <tbody>
             <tr>
@@ -6527,7 +6527,7 @@
                 GetThisBinding()
               </td>
               <td>
-                Return the value of this Environment Record's `this` binding. Throws a *ReferenceError* if the `this` binding has not been initialized.
+                Return the value of this Scope Record's `this` binding. Throws a *ReferenceError* if the `this` binding has not been initialized.
               </td>
             </tr>
             <tr>
@@ -6535,18 +6535,18 @@
                 GetSuperBase()
               </td>
               <td>
-                Return the object that is the base for `super` property accesses bound in this Environment Record. The object is derived from this Environment Record's [[HomeObject]] field. The value *undefined* indicates that `super` property accesses will produce runtime errors.
+                Return the object that is the base for `super` property accesses bound in this Scope Record. The object is derived from this Scope Record's [[HomeObject]] field. The value *undefined* indicates that `super` property accesses will produce runtime errors.
               </td>
             </tr>
             </tbody>
           </table>
         </emu-table>
-        <p>The behaviour of the additional concrete specification methods for function Environment Records is defined by the following algorithms:</p>
+        <p>The behaviour of the additional concrete specification methods for function Scope Records is defined by the following algorithms:</p>
 
         <emu-clause id="sec-bindthisvalue">
           <h1>BindThisValue ( _V_ )</h1>
           <emu-alg>
-            1. Let _envRec_ be the function Environment Record for which the method was invoked.
+            1. Let _envRec_ be the function Scope Record for which the method was invoked.
             1. Assert: _envRec_.[[ThisBindingStatus]] is not ~lexical~.
             1. If _envRec_.[[ThisBindingStatus]] is ~initialized~, throw a *ReferenceError* exception.
             1. Set _envRec_.[[ThisValue]] to _V_.
@@ -6555,27 +6555,27 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-function-environment-records-hasthisbinding">
+        <emu-clause id="sec-function-scope-record-hasthisbinding" oldids="sec-function-environment-records-hasthisbinding">
           <h1>HasThisBinding ( )</h1>
           <emu-alg>
-            1. Let _envRec_ be the function Environment Record for which the method was invoked.
+            1. Let _envRec_ be the function Scope Record for which the method was invoked.
             1. If _envRec_.[[ThisBindingStatus]] is ~lexical~, return *false*; otherwise, return *true*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-function-environment-records-hassuperbinding">
+        <emu-clause id="sec-function-scope-record-hassuperbinding" oldids="sec-function-environment-records-hassuperbinding">
           <h1>HasSuperBinding ( )</h1>
           <emu-alg>
-            1. Let _envRec_ be the function Environment Record for which the method was invoked.
+            1. Let _envRec_ be the function Scope Record for which the method was invoked.
             1. If _envRec_.[[ThisBindingStatus]] is ~lexical~, return *false*.
             1. If _envRec_.[[HomeObject]] has the value *undefined*, return *false*; otherwise, return *true*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-function-environment-records-getthisbinding">
+        <emu-clause id="sec-function-scope-record-getthisbinding" oldids="sec-function-environment-records-getthisbinding">
           <h1>GetThisBinding ( )</h1>
           <emu-alg>
-            1. Let _envRec_ be the function Environment Record for which the method was invoked.
+            1. Let _envRec_ be the function Scope Record for which the method was invoked.
             1. Assert: _envRec_.[[ThisBindingStatus]] is not ~lexical~.
             1. If _envRec_.[[ThisBindingStatus]] is ~uninitialized~, throw a *ReferenceError* exception.
             1. Return _envRec_.[[ThisValue]].
@@ -6585,7 +6585,7 @@
         <emu-clause id="sec-getsuperbase">
           <h1>GetSuperBase ( )</h1>
           <emu-alg>
-            1. Let _envRec_ be the function Environment Record for which the method was invoked.
+            1. Let _envRec_ be the function Scope Record for which the method was invoked.
             1. Let _home_ be _envRec_.[[HomeObject]].
             1. If _home_ has the value *undefined*, return *undefined*.
             1. Assert: Type(_home_) is Object.
@@ -6594,13 +6594,13 @@
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-global-environment-records">
-        <h1>Global Environment Records</h1>
-        <p>A global Environment Record is used to represent the outer most scope that is shared by all of the ECMAScript |Script| elements that are processed in a common realm. A global Environment Record provides the bindings for built-in globals (clause <emu-xref href="#sec-global-object"></emu-xref>), properties of the global object, and for all top-level declarations (<emu-xref href="#sec-block-static-semantics-toplevellexicallyscopeddeclarations"></emu-xref>, <emu-xref href="#sec-block-static-semantics-toplevelvarscopeddeclarations"></emu-xref>) that occur within a |Script|.</p>
-        <p>A global Environment Record is logically a single record but it is specified as a composite encapsulating an object Environment Record and a declarative Environment Record. The object Environment Record has as its base object the global object of the associated Realm Record. This global object is the value returned by the global Environment Record's GetThisBinding concrete method. The object Environment Record component of a global Environment Record contains the bindings for all built-in globals (clause <emu-xref href="#sec-global-object"></emu-xref>) and all bindings introduced by a |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, or |VariableStatement| contained in global code. The bindings for all other ECMAScript declarations in global code are contained in the declarative Environment Record component of the global Environment Record.</p>
-        <p>Properties may be created directly on a global object. Hence, the object Environment Record component of a global Environment Record may contain both bindings created explicitly by |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, or |VariableDeclaration| declarations and bindings created implicitly as properties of the global object. In order to identify which bindings were explicitly created using declarations, a global Environment Record maintains a list of the names bound using its CreateGlobalVarBinding and CreateGlobalFunctionBinding concrete methods.</p>
-        <p>Global Environment Records have the additional fields listed in <emu-xref href="#table-18"></emu-xref> and the additional methods listed in <emu-xref href="#table-19"></emu-xref>.</p>
-        <emu-table id="table-18" caption="Additional Fields of Global Environment Records">
+      <emu-clause id="sec-global-scope-records" oldids="sec-global-environment-records">
+        <h1>Global Scope Records</h1>
+        <p>A global Scope Record is used to represent the outer most scope that is shared by all of the ECMAScript |Script| elements that are processed in a common realm. A global Scope Record provides the bindings for built-in globals (clause <emu-xref href="#sec-global-object"></emu-xref>), properties of the global object, and for all top-level declarations (<emu-xref href="#sec-block-static-semantics-toplevellexicallyscopeddeclarations"></emu-xref>, <emu-xref href="#sec-block-static-semantics-toplevelvarscopeddeclarations"></emu-xref>) that occur within a |Script|.</p>
+        <p>A global Scope Record is logically a single record but it is specified as a composite encapsulating an object Scope Record and a declarative Scope Record. The object Scope Record has as its base object the global object of the associated Realm Record. This global object is the value returned by the global Scope Record's GetThisBinding concrete method. The object Scope Record component of a global Scope Record contains the bindings for all built-in globals (clause <emu-xref href="#sec-global-object"></emu-xref>) and all bindings introduced by a |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, or |VariableStatement| contained in global code. The bindings for all other ECMAScript declarations in global code are contained in the declarative Scope Record component of the global Scope Record.</p>
+        <p>Properties may be created directly on a global object. Hence, the object Scope Record component of a global Scope Record may contain both bindings created explicitly by |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, or |VariableDeclaration| declarations and bindings created implicitly as properties of the global object. In order to identify which bindings were explicitly created using declarations, a global Scope Record maintains a list of the names bound using its CreateGlobalVarBinding and CreateGlobalFunctionBinding concrete methods.</p>
+        <p>Global Scope Records have the additional fields listed in <emu-xref href="#table-18"></emu-xref> and the additional methods listed in <emu-xref href="#table-19"></emu-xref>.</p>
+        <emu-table id="table-18" caption="Additional Fields of Global Scope Records">
           <table>
             <tbody>
             <tr>
@@ -6619,7 +6619,7 @@
                 [[ObjectRecord]]
               </td>
               <td>
-                Object Environment Record
+                Object Scope Record
               </td>
               <td>
                 Binding object is the global object. It contains global built-in bindings as well as |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, and |VariableDeclaration| bindings in global code for the associated realm.
@@ -6641,7 +6641,7 @@
                 [[DeclarativeRecord]]
               </td>
               <td>
-                Declarative Environment Record
+                Declarative Scope Record
               </td>
               <td>
                 Contains bindings for all declarations in global code for the associated realm code except for |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, and |VariableDeclaration| _bindings_.
@@ -6661,7 +6661,7 @@
             </tbody>
           </table>
         </emu-table>
-        <emu-table id="table-19" caption="Additional Methods of Global Environment Records">
+        <emu-table id="table-19" caption="Additional Methods of Global Scope Records">
           <table>
             <tbody>
             <tr>
@@ -6677,7 +6677,7 @@
                 GetThisBinding()
               </td>
               <td>
-                Return the value of this Environment Record's `this` binding.
+                Return the value of this Scope Record's `this` binding.
               </td>
             </tr>
             <tr>
@@ -6685,7 +6685,7 @@
                 HasVarDeclaration (N)
               </td>
               <td>
-                Determines if the argument identifier has a binding in this Environment Record that was created using a |VariableDeclaration|, |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, or |AsyncGeneratorDeclaration|.
+                Determines if the argument identifier has a binding in this Scope Record that was created using a |VariableDeclaration|, |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, or |AsyncGeneratorDeclaration|.
               </td>
             </tr>
             <tr>
@@ -6693,7 +6693,7 @@
                 HasLexicalDeclaration (N)
               </td>
               <td>
-                Determines if the argument identifier has a binding in this Environment Record that was created using a lexical declaration such as a |LexicalDeclaration| or a |ClassDeclaration|.
+                Determines if the argument identifier has a binding in this Scope Record that was created using a lexical declaration such as a |LexicalDeclaration| or a |ClassDeclaration|.
               </td>
             </tr>
             <tr>
@@ -6725,7 +6725,7 @@
                 CreateGlobalVarBinding(N, D)
               </td>
               <td>
-                Used to create and initialize to *undefined* a global `var` binding in the [[ObjectRecord]] component of a global Environment Record. The binding will be a mutable binding. The corresponding global object property will have attribute values appropriate for a `var`. The String value _N_ is the bound name. If _D_ is *true* the binding may be deleted. Logically equivalent to CreateMutableBinding followed by a SetMutableBinding but it allows var declarations to receive special treatment.
+                Used to create and initialize to *undefined* a global `var` binding in the [[ObjectRecord]] component of a global Scope Record. The binding will be a mutable binding. The corresponding global object property will have attribute values appropriate for a `var`. The String value _N_ is the bound name. If _D_ is *true* the binding may be deleted. Logically equivalent to CreateMutableBinding followed by a SetMutableBinding but it allows var declarations to receive special treatment.
               </td>
             </tr>
             <tr>
@@ -6733,19 +6733,19 @@
                 CreateGlobalFunctionBinding(N, V, D)
               </td>
               <td>
-                Create and initialize a global `function` binding in the [[ObjectRecord]] component of a global Environment Record. The binding will be a mutable binding. The corresponding global object property will have attribute values appropriate for a `function`. The String value _N_ is the bound name. _V_ is the initialization value. If the Boolean argument _D_ is *true* the binding may be deleted. Logically equivalent to CreateMutableBinding followed by a SetMutableBinding but it allows function declarations to receive special treatment.
+                Create and initialize a global `function` binding in the [[ObjectRecord]] component of a global Scope Record. The binding will be a mutable binding. The corresponding global object property will have attribute values appropriate for a `function`. The String value _N_ is the bound name. _V_ is the initialization value. If the Boolean argument _D_ is *true* the binding may be deleted. Logically equivalent to CreateMutableBinding followed by a SetMutableBinding but it allows function declarations to receive special treatment.
               </td>
             </tr>
             </tbody>
           </table>
         </emu-table>
-        <p>The behaviour of the concrete specification methods for global Environment Records is defined by the following algorithms.</p>
+        <p>The behaviour of the concrete specification methods for global Scope Records is defined by the following algorithms.</p>
 
-        <emu-clause id="sec-global-environment-records-hasbinding-n">
+        <emu-clause id="sec-global-scope-record-hasbinding" oldids="sec-global-environment-records-hasbinding-n">
           <h1>HasBinding ( _N_ )</h1>
-          <p>The concrete Environment Record method HasBinding for global Environment Records simply determines if the argument identifier is one of the identifiers bound by the record:</p>
+          <p>The concrete Scope Record method HasBinding for global Scope Records simply determines if the argument identifier is one of the identifiers bound by the record:</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
             1. If _DclRec_.HasBinding(_N_) is *true*, return *true*.
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
@@ -6753,47 +6753,47 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-createmutablebinding-n-d">
+        <emu-clause id="sec-global-scope-record-createmutablebinding" oldids="sec-global-environment-records-createmutablebinding-n-d">
           <h1>CreateMutableBinding ( _N_, _D_ )</h1>
-          <p>The concrete Environment Record method CreateMutableBinding for global Environment Records creates a new mutable binding for the name _N_ that is uninitialized. The binding is created in the associated DeclarativeRecord. A binding for _N_ must not already exist in the DeclarativeRecord. If Boolean argument _D_ has the value *true* the new binding is marked as being subject to deletion.</p>
+          <p>The concrete Scope Record method CreateMutableBinding for global Scope Records creates a new mutable binding for the name _N_ that is uninitialized. The binding is created in the associated DeclarativeRecord. A binding for _N_ must not already exist in the DeclarativeRecord. If Boolean argument _D_ has the value *true* the new binding is marked as being subject to deletion.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
             1. If _DclRec_.HasBinding(_N_) is *true*, throw a *TypeError* exception.
             1. Return _DclRec_.CreateMutableBinding(_N_, _D_).
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-createimmutablebinding-n-s">
+        <emu-clause id="sec-global-scope-record-createimmutablebinding" oldids="sec-global-environment-records-createimmutablebinding-n-s">
           <h1>CreateImmutableBinding ( _N_, _S_ )</h1>
-          <p>The concrete Environment Record method CreateImmutableBinding for global Environment Records creates a new immutable binding for the name _N_ that is uninitialized. A binding must not already exist in this Environment Record for _N_. If the Boolean argument _S_ has the value *true* the new binding is marked as a strict binding.</p>
+          <p>The concrete Scope Record method CreateImmutableBinding for global Scope Records creates a new immutable binding for the name _N_ that is uninitialized. A binding must not already exist in this Scope Record for _N_. If the Boolean argument _S_ has the value *true* the new binding is marked as a strict binding.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
             1. If _DclRec_.HasBinding(_N_) is *true*, throw a *TypeError* exception.
             1. Return _DclRec_.CreateImmutableBinding(_N_, _S_).
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-initializebinding-n-v">
+        <emu-clause id="sec-global-scope-record-initializebinding" oldids="sec-global-environment-records-initializebinding-n-v">
           <h1>InitializeBinding ( _N_, _V_ )</h1>
-          <p>The concrete Environment Record method InitializeBinding for global Environment Records is used to set the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. An uninitialized binding for _N_ must already exist.</p>
+          <p>The concrete Scope Record method InitializeBinding for global Scope Records is used to set the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. An uninitialized binding for _N_ must already exist.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
             1. If _DclRec_.HasBinding(_N_) is *true*, then
               1. Return _DclRec_.InitializeBinding(_N_, _V_).
-            1. Assert: If the binding exists, it must be in the object Environment Record.
+            1. Assert: If the binding exists, it must be in the object Scope Record.
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
             1. Return ? _ObjRec_.InitializeBinding(_N_, _V_).
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-setmutablebinding-n-v-s">
+        <emu-clause id="sec-global-scope-record-setmutablebinding" oldids="sec-global-environment-records-setmutablebinding-n-v-s">
           <h1>SetMutableBinding ( _N_, _V_, _S_ )</h1>
-          <p>The concrete Environment Record method SetMutableBinding for global Environment Records attempts to change the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. If the binding is an immutable binding, a *TypeError* is thrown if _S_ is *true*. A property named _N_ normally already exists but if it does not or is not currently writable, error handling is determined by the value of the Boolean argument _S_.</p>
+          <p>The concrete Scope Record method SetMutableBinding for global Scope Records attempts to change the bound value of the current binding of the identifier whose name is the value of the argument _N_ to the value of argument _V_. If the binding is an immutable binding, a *TypeError* is thrown if _S_ is *true*. A property named _N_ normally already exists but if it does not or is not currently writable, error handling is determined by the value of the Boolean argument _S_.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
             1. If _DclRec_.HasBinding(_N_) is *true*, then
               1. Return _DclRec_.SetMutableBinding(_N_, _V_, _S_).
@@ -6802,11 +6802,11 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-getbindingvalue-n-s">
+        <emu-clause id="sec-global-scope-record-getbindingvalue" oldids="sec-global-environment-records-getbindingvalue-n-s">
           <h1>GetBindingValue ( _N_, _S_ )</h1>
-          <p>The concrete Environment Record method GetBindingValue for global Environment Records returns the value of its bound identifier whose name is the value of the argument _N_. If the binding is an uninitialized binding throw a *ReferenceError* exception. A property named _N_ normally already exists but if it does not or is not currently writable, error handling is determined by the value of the Boolean argument _S_.</p>
+          <p>The concrete Scope Record method GetBindingValue for global Scope Records returns the value of its bound identifier whose name is the value of the argument _N_. If the binding is an uninitialized binding throw a *ReferenceError* exception. A property named _N_ normally already exists but if it does not or is not currently writable, error handling is determined by the value of the Boolean argument _S_.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
             1. If _DclRec_.HasBinding(_N_) is *true*, then
               1. Return _DclRec_.GetBindingValue(_N_, _S_).
@@ -6815,11 +6815,11 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-deletebinding-n">
+        <emu-clause id="sec-global-scope-record-deletebinding" oldids="sec-global-environment-records-deletebinding-n">
           <h1>DeleteBinding ( _N_ )</h1>
-          <p>The concrete Environment Record method DeleteBinding for global Environment Records can only delete bindings that have been explicitly designated as being subject to deletion.</p>
+          <p>The concrete Scope Record method DeleteBinding for global Scope Records can only delete bindings that have been explicitly designated as being subject to deletion.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
             1. If _DclRec_.HasBinding(_N_) is *true*, then
               1. Return _DclRec_.DeleteBinding(_N_).
@@ -6836,41 +6836,41 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-hasthisbinding">
+        <emu-clause id="sec-global-scope-record-hasthisbinding" oldids="sec-global-environment-records-hasthisbinding">
           <h1>HasThisBinding ( )</h1>
           <emu-alg>
             1. Return *true*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-hassuperbinding">
+        <emu-clause id="sec-global-scope-record-hassuperbinding" oldids="sec-global-environment-records-hassuperbinding">
           <h1>HasSuperBinding ( )</h1>
           <emu-alg>
             1. Return *false*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-withbaseobject">
+        <emu-clause id="sec-global-scope-record-withbaseobject" oldids="sec-global-environment-records-withbaseobject">
           <h1>WithBaseObject ( )</h1>
-          <p>Global Environment Records always return *undefined* as their WithBaseObject.</p>
+          <p>Global Scope Records always return *undefined* as their WithBaseObject.</p>
           <emu-alg>
             1. Return *undefined*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-global-environment-records-getthisbinding">
+        <emu-clause id="sec-global-scope-record-getthisbinding" oldids="sec-global-environment-records-getthisbinding">
           <h1>GetThisBinding ( )</h1>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Return _envRec_.[[GlobalThisValue]].
           </emu-alg>
         </emu-clause>
 
         <emu-clause id="sec-hasvardeclaration">
           <h1>HasVarDeclaration ( _N_ )</h1>
-          <p>The concrete Environment Record method HasVarDeclaration for global Environment Records determines if the argument identifier has a binding in this record that was created using a |VariableStatement| or a |FunctionDeclaration|:</p>
+          <p>The concrete Scope Record method HasVarDeclaration for global Scope Records determines if the argument identifier has a binding in this record that was created using a |VariableStatement| or a |FunctionDeclaration|:</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _varDeclaredNames_ be _envRec_.[[VarNames]].
             1. If _varDeclaredNames_ contains _N_, return *true*.
             1. Return *false*.
@@ -6879,9 +6879,9 @@
 
         <emu-clause id="sec-haslexicaldeclaration">
           <h1>HasLexicalDeclaration ( _N_ )</h1>
-          <p>The concrete Environment Record method HasLexicalDeclaration for global Environment Records determines if the argument identifier has a binding in this record that was created using a lexical declaration such as a |LexicalDeclaration| or a |ClassDeclaration|:</p>
+          <p>The concrete Scope Record method HasLexicalDeclaration for global Scope Records determines if the argument identifier has a binding in this record that was created using a lexical declaration such as a |LexicalDeclaration| or a |ClassDeclaration|:</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
             1. Return _DclRec_.HasBinding(_N_).
           </emu-alg>
@@ -6889,9 +6889,9 @@
 
         <emu-clause id="sec-hasrestrictedglobalproperty">
           <h1>HasRestrictedGlobalProperty ( _N_ )</h1>
-          <p>The concrete Environment Record method HasRestrictedGlobalProperty for global Environment Records determines if the argument identifier is the name of a property of the global object that must not be shadowed by a global lexical binding:</p>
+          <p>The concrete Scope Record method HasRestrictedGlobalProperty for global Scope Records determines if the argument identifier is the name of a property of the global object that must not be shadowed by a global lexical binding:</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
             1. Let _globalObject_ be the binding object for _ObjRec_.
             1. Let _existingProp_ be ? _globalObject_.[[GetOwnProperty]](_N_).
@@ -6906,9 +6906,9 @@
 
         <emu-clause id="sec-candeclareglobalvar">
           <h1>CanDeclareGlobalVar ( _N_ )</h1>
-          <p>The concrete Environment Record method CanDeclareGlobalVar for global Environment Records determines if a corresponding CreateGlobalVarBinding call would succeed if called for the same argument _N_. Redundant var declarations and var declarations for pre-existing global object properties are allowed.</p>
+          <p>The concrete Scope Record method CanDeclareGlobalVar for global Scope Records determines if a corresponding CreateGlobalVarBinding call would succeed if called for the same argument _N_. Redundant var declarations and var declarations for pre-existing global object properties are allowed.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
             1. Let _globalObject_ be the binding object for _ObjRec_.
             1. Let _hasProperty_ be ? HasOwnProperty(_globalObject_, _N_).
@@ -6919,9 +6919,9 @@
 
         <emu-clause id="sec-candeclareglobalfunction">
           <h1>CanDeclareGlobalFunction ( _N_ )</h1>
-          <p>The concrete Environment Record method CanDeclareGlobalFunction for global Environment Records determines if a corresponding CreateGlobalFunctionBinding call would succeed if called for the same argument _N_.</p>
+          <p>The concrete Scope Record method CanDeclareGlobalFunction for global Scope Records determines if a corresponding CreateGlobalFunctionBinding call would succeed if called for the same argument _N_.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
             1. Let _globalObject_ be the binding object for _ObjRec_.
             1. Let _existingProp_ be ? _globalObject_.[[GetOwnProperty]](_N_).
@@ -6934,9 +6934,9 @@
 
         <emu-clause id="sec-createglobalvarbinding">
           <h1>CreateGlobalVarBinding ( _N_, _D_ )</h1>
-          <p>The concrete Environment Record method CreateGlobalVarBinding for global Environment Records creates and initializes a mutable binding in the associated object Environment Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is reused and assumed to be initialized.</p>
+          <p>The concrete Scope Record method CreateGlobalVarBinding for global Scope Records creates and initializes a mutable binding in the associated object Scope Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is reused and assumed to be initialized.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
             1. Let _globalObject_ be the binding object for _ObjRec_.
             1. Let _hasProperty_ be ? HasOwnProperty(_globalObject_, _N_).
@@ -6953,9 +6953,9 @@
 
         <emu-clause id="sec-createglobalfunctionbinding">
           <h1>CreateGlobalFunctionBinding ( _N_, _V_, _D_ )</h1>
-          <p>The concrete Environment Record method CreateGlobalFunctionBinding for global Environment Records creates and initializes a mutable binding in the associated object Environment Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is replaced.</p>
+          <p>The concrete Scope Record method CreateGlobalFunctionBinding for global Scope Records creates and initializes a mutable binding in the associated object Scope Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is replaced.</p>
           <emu-alg>
-            1. Let _envRec_ be the global Environment Record for which the method was invoked.
+            1. Let _envRec_ be the global Scope Record for which the method was invoked.
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
             1. Let _globalObject_ be the binding object for _ObjRec_.
             1. Let _existingProp_ be ? _globalObject_.[[GetOwnProperty]](_N_).
@@ -6977,11 +6977,11 @@
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-module-environment-records">
-        <h1>Module Environment Records</h1>
-        <p>A module Environment Record is a declarative Environment Record that is used to represent the outer scope of an ECMAScript |Module|. In additional to normal mutable and immutable bindings, module Environment Records also provide immutable import bindings which are bindings that provide indirect access to a target binding that exists in another Environment Record.</p>
-        <p>Module Environment Records support all of the declarative Environment Record methods listed in <emu-xref href="#table-15"></emu-xref> and share the same specifications for all of those methods except for GetBindingValue, DeleteBinding, HasThisBinding and GetThisBinding. In addition, module Environment Records support the methods listed in <emu-xref href="#table-20"></emu-xref>:</p>
-        <emu-table id="table-20" caption="Additional Methods of Module Environment Records">
+      <emu-clause id="sec-module-scope-records" oldids="sec-module-environment-records">
+        <h1>Module Scope Records</h1>
+        <p>A module Scope Record is a declarative Scope Record that is used to represent the outer scope of an ECMAScript |Module|. In additional to normal mutable and immutable bindings, module Scope Records also provide immutable import bindings which are bindings that provide indirect access to a target binding that exists in another Scope Record.</p>
+        <p>Module Scope Records support all of the declarative Scope Record methods listed in <emu-xref href="#table-15"></emu-xref> and share the same specifications for all of those methods except for GetBindingValue, DeleteBinding, HasThisBinding and GetThisBinding. In addition, module Scope Records support the methods listed in <emu-xref href="#table-20"></emu-xref>:</p>
+        <emu-table id="table-20" caption="Additional Methods of Module Scope Records">
           <table>
             <tbody>
             <tr>
@@ -6997,7 +6997,7 @@
                 CreateImportBinding(N, M, N2)
               </td>
               <td>
-                Create an immutable indirect binding in a module Environment Record. The String value _N_ is the text of the bound name. _M_ is a Module Record, and _N2_ is a binding that exists in M's module Environment Record.
+                Create an immutable indirect binding in a module Scope Record. The String value _N_ is the text of the bound name. _M_ is a Module Record, and _N2_ is a binding that exists in M's module Scope Record.
               </td>
             </tr>
             <tr>
@@ -7005,20 +7005,20 @@
                 GetThisBinding()
               </td>
               <td>
-                Return the value of this Environment Record's `this` binding.
+                Return the value of this Scope Record's `this` binding.
               </td>
             </tr>
             </tbody>
           </table>
         </emu-table>
-        <p>The behaviour of the additional concrete specification methods for module Environment Records are defined by the following algorithms:</p>
+        <p>The behaviour of the additional concrete specification methods for module Scope Records are defined by the following algorithms:</p>
 
-        <emu-clause id="sec-module-environment-records-getbindingvalue-n-s">
+        <emu-clause id="sec-module-scope-record-getbindingvalue" oldids="sec-module-environment-records-getbindingvalue-n-s">
           <h1>GetBindingValue ( _N_, _S_ )</h1>
-          <p>The concrete Environment Record method GetBindingValue for module Environment Records returns the value of its bound identifier whose name is the value of the argument _N_. However, if the binding is an indirect binding the value of the target binding is returned. If the binding exists but is uninitialized a *ReferenceError* is thrown.</p>
+          <p>The concrete Scope Record method GetBindingValue for module Scope Records returns the value of its bound identifier whose name is the value of the argument _N_. However, if the binding is an indirect binding the value of the target binding is returned. If the binding exists but is uninitialized a *ReferenceError* is thrown.</p>
           <emu-alg>
             1. Assert: _S_ is *true*.
-            1. Let _envRec_ be the module Environment Record for which the method was invoked.
+            1. Let _envRec_ be the module Scope Record for which the method was invoked.
             1. Assert: _envRec_ has a binding for _N_.
             1. If the binding for _N_ is an indirect binding, then
               1. Let _M_ and _N2_ be the indirection values provided when this binding for _N_ was created.
@@ -7034,26 +7034,26 @@
           </emu-note>
         </emu-clause>
 
-        <emu-clause id="sec-module-environment-records-deletebinding-n">
+        <emu-clause id="sec-module-scope-record-deletebinding" oldids="sec-module-environment-records-deletebinding-n">
           <h1>DeleteBinding ( _N_ )</h1>
-          <p>The concrete Environment Record method DeleteBinding for module Environment Records refuses to delete bindings.</p>
+          <p>The concrete Scope Record method DeleteBinding for module Scope Records refuses to delete bindings.</p>
           <emu-alg>
             1. Assert: This method is never invoked. See <emu-xref href="#sec-delete-operator-static-semantics-early-errors"></emu-xref>.
           </emu-alg>
           <emu-note>
-            <p>Module Environment Records are only used within strict code and an early error rule prevents the delete operator, in strict code, from being applied to a Reference that would resolve to a module Environment Record binding. See <emu-xref href="#sec-delete-operator-static-semantics-early-errors"></emu-xref>.</p>
+            <p>Module Scope Records are only used within strict code and an early error rule prevents the delete operator, in strict code, from being applied to a Reference that would resolve to a module Scope Record binding. See <emu-xref href="#sec-delete-operator-static-semantics-early-errors"></emu-xref>.</p>
           </emu-note>
         </emu-clause>
 
-        <emu-clause id="sec-module-environment-records-hasthisbinding">
+        <emu-clause id="sec-module-scope-record-hasthisbinding" oldids="sec-module-environment-records-hasthisbinding">
           <h1>HasThisBinding ( )</h1>
-          <p>Module Environment Records provide a `this` binding.</p>
+          <p>Module Scope Records provide a `this` binding.</p>
           <emu-alg>
             1. Return *true*.
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-module-environment-records-getthisbinding">
+        <emu-clause id="sec-module-scope-record-getthisbinding" oldids="sec-module-environment-records-getthisbinding">
           <h1>GetThisBinding ( )</h1>
           <emu-alg>
             1. Return *undefined*.
@@ -7062,9 +7062,9 @@
 
         <emu-clause id="sec-createimportbinding">
           <h1>CreateImportBinding ( _N_, _M_, _N2_ )</h1>
-          <p>The concrete Environment Record method CreateImportBinding for module Environment Records creates a new initialized immutable indirect binding for the name _N_. A binding must not already exist in this Environment Record for _N_. _M_ is a Module Record, and _N2_ is the name of a binding that exists in M's module Environment Record. Accesses to the value of the new binding will indirectly access the bound value of the target binding.</p>
+          <p>The concrete Scope Record method CreateImportBinding for module Scope Records creates a new initialized immutable indirect binding for the name _N_. A binding must not already exist in this Scope Record for _N_. _M_ is a Module Record, and _N2_ is the name of a binding that exists in M's module Scope Record. Accesses to the value of the new binding will indirectly access the bound value of the target binding.</p>
           <emu-alg>
-            1. Let _envRec_ be the module Environment Record for which the method was invoked.
+            1. Let _envRec_ be the module Scope Record for which the method was invoked.
             1. Assert: _envRec_ does not already have a binding for _N_.
             1. Assert: _M_ is a Module Record.
             1. Assert: When _M_.[[Environment]] is instantiated it will have a direct binding for _N2_.
@@ -7100,7 +7100,7 @@
         <p>When the abstract operation NewDeclarativeEnvironment is called with a Lexical Environment as argument _E_ the following steps are performed:</p>
         <emu-alg>
           1. Let _env_ be a new Lexical Environment.
-          1. Let _envRec_ be a new declarative Environment Record containing no bindings.
+          1. Let _envRec_ be a new declarative Scope Record containing no bindings.
           1. Set _env_'s EnvironmentRecord to _envRec_.
           1. Set the outer lexical environment reference of _env_ to _E_.
           1. Return _env_.
@@ -7112,7 +7112,7 @@
         <p>When the abstract operation NewObjectEnvironment is called with an Object _O_ and a Lexical Environment _E_ as arguments, the following steps are performed:</p>
         <emu-alg>
           1. Let _env_ be a new Lexical Environment.
-          1. Let _envRec_ be a new object Environment Record containing _O_ as the binding object.
+          1. Let _envRec_ be a new object Scope Record containing _O_ as the binding object.
           1. Set _env_'s EnvironmentRecord to _envRec_.
           1. Set the outer lexical environment reference of _env_ to _E_.
           1. Return _env_.
@@ -7126,7 +7126,7 @@
           1. Assert: _F_ is an ECMAScript function.
           1. Assert: Type(_newTarget_) is Undefined or Object.
           1. Let _env_ be a new Lexical Environment.
-          1. Let _envRec_ be a new function Environment Record containing no bindings.
+          1. Let _envRec_ be a new function Scope Record containing no bindings.
           1. Set _envRec_.[[FunctionObject]] to _F_.
           1. If _F_.[[ThisMode]] is ~lexical~, set _envRec_.[[ThisBindingStatus]] to ~lexical~.
           1. Else, set _envRec_.[[ThisBindingStatus]] to ~uninitialized~.
@@ -7144,9 +7144,9 @@
         <p>When the abstract operation NewGlobalEnvironment is called with arguments _G_ and _thisValue_, the following steps are performed:</p>
         <emu-alg>
           1. Let _env_ be a new Lexical Environment.
-          1. Let _objRec_ be a new object Environment Record containing _G_ as the binding object.
-          1. Let _dclRec_ be a new declarative Environment Record containing no bindings.
-          1. Let _globalRec_ be a new global Environment Record.
+          1. Let _objRec_ be a new object Scope Record containing _G_ as the binding object.
+          1. Let _dclRec_ be a new declarative Scope Record containing no bindings.
+          1. Let _globalRec_ be a new global Scope Record.
           1. Set _globalRec_.[[ObjectRecord]] to _objRec_.
           1. Set _globalRec_.[[GlobalThisValue]] to _thisValue_.
           1. Set _globalRec_.[[DeclarativeRecord]] to _dclRec_.
@@ -7162,7 +7162,7 @@
         <p>When the abstract operation NewModuleEnvironment is called with a Lexical Environment argument _E_ the following steps are performed:</p>
         <emu-alg>
           1. Let _env_ be a new Lexical Environment.
-          1. Let _envRec_ be a new module Environment Record containing no bindings.
+          1. Let _envRec_ be a new module Scope Record containing no bindings.
           1. Set _env_'s EnvironmentRecord to _envRec_.
           1. Set the outer lexical environment reference of _env_ to _E_.
           1. Return _env_.
@@ -7443,7 +7443,7 @@
 
     <emu-clause id="sec-getthisenvironment" aoid="GetThisEnvironment">
       <h1>GetThisEnvironment ( )</h1>
-      <p>The abstract operation GetThisEnvironment finds the Environment Record that currently supplies the binding of the keyword `this`. GetThisEnvironment performs the following steps:</p>
+      <p>The abstract operation GetThisEnvironment finds the Scope Record that currently supplies the binding of the keyword `this`. GetThisEnvironment performs the following steps:</p>
       <emu-alg>
         1. Let _lex_ be the running execution context's LexicalEnvironment.
         1. Repeat,
@@ -8421,13 +8421,13 @@
             1. If _thisArgument_ is *undefined* or *null*, then
               1. Let _globalEnv_ be _calleeRealm_.[[GlobalEnv]].
               1. Let _globalEnvRec_ be _globalEnv_'s EnvironmentRecord.
-              1. Assert: _globalEnvRec_ is a global Environment Record.
+              1. Assert: _globalEnvRec_ is a global Scope Record.
               1. Let _thisValue_ be _globalEnvRec_.[[GlobalThisValue]].
             1. Else,
               1. Let _thisValue_ be ! ToObject(_thisArgument_).
               1. NOTE: ToObject produces wrapper objects using _calleeRealm_.
           1. Let _envRec_ be _localEnv_'s EnvironmentRecord.
-          1. Assert: _envRec_ is a function Environment Record.
+          1. Assert: _envRec_ is a function Scope Record.
           1. Assert: The next step never returns an abrupt completion because _envRec_.[[ThisBindingStatus]] is not ~initialized~.
           1. Return _envRec_.BindThisValue(_thisValue_).
         </emu-alg>
@@ -8636,7 +8636,7 @@
     <emu-clause id="sec-functiondeclarationinstantiation" aoid="FunctionDeclarationInstantiation">
       <h1>FunctionDeclarationInstantiation ( _func_, _argumentsList_ )</h1>
       <emu-note>
-        <p>When an execution context is established for evaluating an ECMAScript function a new function Environment Record is created and bindings for each formal parameter are instantiated in that Environment Record. Each declaration in the function body is also instantiated. If the function's formal parameters do not include any default value initializers then the body declarations are instantiated in the same Environment Record as the parameters. If default value parameter initializers exist, a second Environment Record is created for the body declarations. Formal parameters and functions are initialized as part of FunctionDeclarationInstantiation. All other bindings are initialized during evaluation of the function body.</p>
+        <p>When an execution context is established for evaluating an ECMAScript function a new function Scope Record is created and bindings for each formal parameter are instantiated in that Scope Record. Each declaration in the function body is also instantiated. If the function's formal parameters do not include any default value initializers then the body declarations are instantiated in the same Scope Record as the parameters. If default value parameter initializers exist, a second Scope Record is created for the body declarations. Formal parameters and functions are initialized as part of FunctionDeclarationInstantiation. All other bindings are initialized during evaluation of the function body.</p>
       </emu-note>
       <p>FunctionDeclarationInstantiation is performed as follows using arguments _func_ and _argumentsList_. _func_ is the function object for which the execution context is being established.</p>
       <!--
@@ -8714,7 +8714,7 @@
           1. Let _varEnv_ be _env_.
           1. Let _varEnvRec_ be _envRec_.
         1. Else,
-          1. NOTE: A separate Environment Record is needed to ensure that closures created by expressions in the formal parameter list do not have visibility of declarations in the function body.
+          1. NOTE: A separate Scope Record is needed to ensure that closures created by expressions in the formal parameter list do not have visibility of declarations in the function body.
           1. Let _varEnv_ be NewDeclarativeEnvironment(_env_).
           1. Let _varEnvRec_ be _varEnv_'s EnvironmentRecord.
           1. Set the VariableEnvironment of _calleeContext_ to _varEnv_.
@@ -8731,7 +8731,7 @@
         1. NOTE: Annex <emu-xref href="#sec-web-compat-functiondeclarationinstantiation"></emu-xref> adds additional steps at this point.
         1. If _strict_ is *false*, then
           1. Let _lexEnv_ be NewDeclarativeEnvironment(_varEnv_).
-          1. NOTE: Non-strict functions use a separate lexical Environment Record for top-level lexical declarations so that a direct eval can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions because a strict direct eval always places all declarations into a new Environment Record.
+          1. NOTE: Non-strict functions use a separate lexical Scope Record for top-level lexical declarations so that a direct eval can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions because a strict direct eval always places all declarations into a new Scope Record.
         1. Else, let _lexEnv_ be _varEnv_.
         1. Let _lexEnvRec_ be _lexEnv_'s EnvironmentRecord.
         1. Set the LexicalEnvironment of _calleeContext_ to _lexEnv_.
@@ -9258,7 +9258,7 @@
 
       <emu-clause id="sec-createmappedargumentsobject" aoid="CreateMappedArgumentsObject">
         <h1>CreateMappedArgumentsObject ( _func_, _formals_, _argumentsList_, _env_ )</h1>
-        <p>The abstract operation CreateMappedArgumentsObject is called with object _func_, Parse Node _formals_, List _argumentsList_, and Environment Record _env_. The following steps are performed:</p>
+        <p>The abstract operation CreateMappedArgumentsObject is called with object _func_, Parse Node _formals_, List _argumentsList_, and Scope Record _env_. The following steps are performed:</p>
         <emu-alg>
           1. Assert: _formals_ does not contain a rest parameter, any binding patterns, or any initializers. It may contain duplicate identifiers.
           1. Let _len_ be the number of elements in _argumentsList_.
@@ -9299,7 +9299,7 @@
 
         <emu-clause id="sec-makearggetter" aoid="MakeArgGetter">
           <h1>MakeArgGetter ( _name_, _env_ )</h1>
-          <p>The abstract operation MakeArgGetter called with String _name_ and Environment Record _env_ creates a built-in function object that when executed returns the value bound for _name_ in _env_. It performs the following steps:</p>
+          <p>The abstract operation MakeArgGetter called with String _name_ and Scope Record _env_ creates a built-in function object that when executed returns the value bound for _name_ in _env_. It performs the following steps:</p>
           <emu-alg>
             1. Let _steps_ be the steps of an ArgGetter function as specified below.
             1. Let _getter_ be ! CreateBuiltinFunction(_steps_, &laquo; [[Name]], [[Env]] &raquo;).
@@ -9321,7 +9321,7 @@
 
         <emu-clause id="sec-makeargsetter" aoid="MakeArgSetter">
           <h1>MakeArgSetter ( _name_, _env_ )</h1>
-          <p>The abstract operation MakeArgSetter called with String _name_ and Environment Record _env_ creates a built-in function object that when executed sets the value bound for _name_ in _env_. It performs the following steps:</p>
+          <p>The abstract operation MakeArgSetter called with String _name_ and Scope Record _env_ creates a built-in function object that when executed sets the value bound for _name_ in _env_. It performs the following steps:</p>
           <emu-alg>
             1. Let _steps_ be the steps of an ArgSetter function as specified below.
             1. Let _setter_ be ! CreateBuiltinFunction(_steps_, &laquo; [[Name]], [[Env]] &raquo;).
@@ -13667,7 +13667,7 @@
             1. If IsPropertyReference(_ref_) is *true*, then
               1. Let _thisValue_ be GetThisValue(_ref_).
             1. Else,
-              1. Assert: the base of _ref_ is an Environment Record.
+              1. Assert: the base of _ref_ is a Scope Record.
               1. Let _refEnv_ be GetBase(_ref_).
               1. Let _thisValue_ be _refEnv_.WithBaseObject().
           1. Else,
@@ -13724,7 +13724,7 @@
         <p>The abstract operation GetSuperConstructor performs the following steps:</p>
         <emu-alg>
           1. Let _envRec_ be GetThisEnvironment().
-          1. Assert: _envRec_ is a function Environment Record.
+          1. Assert: _envRec_ is a function Scope Record.
           1. Let _activeFunction_ be _envRec_.[[FunctionObject]].
           1. Assert: _activeFunction_ is an ECMAScript function object.
           1. Let _superConstructor_ be ! _activeFunction_.[[GetPrototypeOf]]().
@@ -14085,7 +14085,7 @@
             1. If _deleteStatus_ is *false* and IsStrictReference(_ref_) is *true*, throw a *TypeError* exception.
             1. Return _deleteStatus_.
           1. Else,
-            1. Assert: _ref_ is a Reference to an Environment Record binding.
+            1. Assert: _ref_ is a Reference to a Scope Record binding.
             1. Let _bindings_ be GetBase(_ref_).
             1. Return ? _bindings_.DeleteBinding(GetReferencedName(_ref_)).
         </emu-alg>
@@ -16039,7 +16039,7 @@
     <emu-clause id="sec-blockdeclarationinstantiation" aoid="BlockDeclarationInstantiation">
       <h1>Runtime Semantics: BlockDeclarationInstantiation ( _code_, _env_ )</h1>
       <emu-note>
-        <p>When a |Block| or |CaseBlock| is evaluated a new declarative Environment Record is created and bindings for each block scoped variable, constant, function, or class declared in the block are instantiated in the Environment Record.</p>
+        <p>When a |Block| or |CaseBlock| is evaluated a new declarative Scope Record is created and bindings for each block scoped variable, constant, function, or class declared in the block are instantiated in the Scope Record.</p>
       </emu-note>
       <p>BlockDeclarationInstantiation is performed as follows using arguments _code_ and _env_. _code_ is the Parse Node corresponding to the body of the block. _env_ is the Lexical Environment in which bindings are to be created.</p>
       <!--
@@ -16049,7 +16049,7 @@
       -->
       <emu-alg>
         1. Let _envRec_ be _env_'s EnvironmentRecord.
-        1. Assert: _envRec_ is a declarative Environment Record.
+        1. Assert: _envRec_ is a declarative Scope Record.
         1. Let _declarations_ be the LexicallyScopedDeclarations of _code_.
         1. For each element _d_ in _declarations_, do
           1. For each element _dn_ of the BoundNames of _d_, do
@@ -16285,7 +16285,7 @@
           1. Return ? PutValue(_lhs_, _value_).
         </emu-alg>
         <emu-note>
-          <p>If a |VariableDeclaration| is nested within a with statement and the |BindingIdentifier| in the |VariableDeclaration| is the same as a property name of the binding object of the with statement's object Environment Record, then step 6 will assign _value_ to the property instead of assigning to the VariableEnvironment binding of the |Identifier|.</p>
+          <p>If a |VariableDeclaration| is nested within a with statement and the |BindingIdentifier| in the |VariableDeclaration| is the same as a property name of the binding object of the with statement's object Scope Record, then step 6 will assign _value_ to the property instead of assigning to the VariableEnvironment binding of the |Identifier|.</p>
         </emu-note>
         <emu-grammar>VariableDeclaration : BindingPattern Initializer</emu-grammar>
         <emu-alg>
@@ -17570,7 +17570,7 @@
         <emu-grammar>ForDeclaration : LetOrConst ForBinding</emu-grammar>
         <emu-alg>
           1. Let _envRec_ be _environment_'s EnvironmentRecord.
-          1. Assert: _envRec_ is a declarative Environment Record.
+          1. Assert: _envRec_ is a declarative Scope Record.
           1. For each element _name_ of the BoundNames of |ForBinding|, do
             1. If IsConstantDeclaration of |LetOrConst| is *true*, then
               1. Perform ! _envRec_.CreateImmutableBinding(_name_, *true*).
@@ -17916,7 +17916,7 @@
         `with` `(` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
     </emu-grammar>
     <emu-note>
-      <p>The `with` statement adds an object Environment Record for a computed object to the lexical environment of the running execution context. It then executes a statement using this augmented lexical environment. Finally, it restores the original lexical environment.</p>
+      <p>The `with` statement adds an object Scope Record for a computed object to the lexical environment of the running execution context. It then executes a statement using this augmented lexical environment. Finally, it restores the original lexical environment.</p>
     </emu-note>
 
     <emu-clause id="sec-with-statement-static-semantics-early-errors">
@@ -19344,7 +19344,7 @@
         1. Return _result_.
       </emu-alg>
       <emu-note>
-        <p>The new Environment Record created in step 6 is only used if the |BindingElement| contains a direct eval.</p>
+        <p>The new Scope Record created in step 6 is only used if the |BindingElement| contains a direct eval.</p>
       </emu-note>
       <emu-grammar>FunctionRestParameter : BindingRestElement</emu-grammar>
       <emu-alg>
@@ -19362,7 +19362,7 @@
         1. Return _result_.
       </emu-alg>
       <emu-note>
-        <p>The new Environment Record created in step 6 is only used if the |BindingRestElement| contains a direct eval.</p>
+        <p>The new Scope Record created in step 6 is only used if the |BindingRestElement| contains a direct eval.</p>
       </emu-note>
     </emu-clause>
 
@@ -21998,7 +21998,7 @@
       -->
       <emu-alg>
         1. Let _envRec_ be _env_'s EnvironmentRecord.
-        1. Assert: _envRec_ is a global Environment Record.
+        1. Assert: _envRec_ is a global Scope Record.
         1. Let _lexNames_ be the LexicallyDeclaredNames of _script_.
         1. Let _varNames_ be the VarDeclaredNames of _script_.
         1. For each _name_ in _lexNames_, do
@@ -22516,7 +22516,7 @@
                 Link()
               </td>
               <td>
-                <p>Prepare the module for evaluation by transitively resolving all module dependencies and creating a module Environment Record.</p>
+                <p>Prepare the module for evaluation by transitively resolving all module dependencies and creating a module Scope Record.</p>
               </td>
             </tr>
             <tr>
@@ -24444,7 +24444,7 @@
           1. Let _evalRealm_ be the current Realm Record.
           1. Perform ? HostEnsureCanCompileStrings(_callerRealm_, _evalRealm_).
           1. Let _thisEnvRec_ be ! GetThisEnvironment().
-          1. If _thisEnvRec_ is a function Environment Record, then
+          1. If _thisEnvRec_ is a function Scope Record, then
             1. Let _F_ be _thisEnvRec_.[[FunctionObject]].
             1. Let _inFunction_ be *true*.
             1. Let _inMethod_ be _thisEnvRec_.HasSuperBinding().
@@ -24516,7 +24516,7 @@
           1. Let _lexEnvRec_ be _lexEnv_'s EnvironmentRecord.
           1. Let _varEnvRec_ be _varEnv_'s EnvironmentRecord.
           1. If _strict_ is *false*, then
-            1. If _varEnvRec_ is a global Environment Record, then
+            1. If _varEnvRec_ is a global Scope Record, then
               1. For each _name_ in _varNames_, do
                 1. If _varEnvRec_.HasLexicalDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
                 1. NOTE: `eval` will not create a global var declaration that would be shadowed by a global lexical declaration.
@@ -24524,7 +24524,7 @@
             1. Assert: The following loop will terminate.
             1. Repeat, while _thisLex_ is not the same as _varEnv_,
               1. Let _thisEnvRec_ be _thisLex_'s EnvironmentRecord.
-              1. If _thisEnvRec_ is not an object Environment Record, then
+              1. If _thisEnvRec_ is not an object Scope Record, then
                 1. NOTE: The environment of with statements cannot contain any lexical declaration so it doesn't need to be checked for var/let hoisting conflicts.
                 1. For each _name_ in _varNames_, do
                   1. If _thisEnvRec_.HasBinding(_name_) is *true*, then
@@ -24540,7 +24540,7 @@
               1. NOTE: If there are multiple function declarations for the same name, the last declaration is used.
               1. Let _fn_ be the sole element of the BoundNames of _d_.
               1. If _fn_ is not an element of _declaredFunctionNames_, then
-                1. If _varEnvRec_ is a global Environment Record, then
+                1. If _varEnvRec_ is a global Scope Record, then
                   1. Let _fnDefinable_ be ? _varEnvRec_.CanDeclareGlobalFunction(_fn_).
                   1. If _fnDefinable_ is *false*, throw a *TypeError* exception.
                 1. Append _fn_ to _declaredFunctionNames_.
@@ -24551,12 +24551,12 @@
             1. If _d_ is a |VariableDeclaration|, a |ForBinding|, or a |BindingIdentifier|, then
               1. For each String _vn_ in the BoundNames of _d_, do
                 1. If _vn_ is not an element of _declaredFunctionNames_, then
-                  1. If _varEnvRec_ is a global Environment Record, then
+                  1. If _varEnvRec_ is a global Scope Record, then
                     1. Let _vnDefinable_ be ? _varEnvRec_.CanDeclareGlobalVar(_vn_).
                     1. If _vnDefinable_ is *false*, throw a *TypeError* exception.
                   1. If _vn_ is not an element of _declaredVarNames_, then
                     1. Append _vn_ to _declaredVarNames_.
-          1. NOTE: No abnormal terminations occur after this algorithm step unless _varEnvRec_ is a global Environment Record and the global object is a Proxy exotic object.
+          1. NOTE: No abnormal terminations occur after this algorithm step unless _varEnvRec_ is a global Scope Record and the global object is a Proxy exotic object.
           1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _body_.
           1. For each element _d_ in _lexDeclarations_, do
             1. NOTE: Lexically declared names are only instantiated here but not initialized.
@@ -24568,7 +24568,7 @@
           1. For each Parse Node _f_ in _functionsToInitialize_, do
             1. Let _fn_ be the sole element of the BoundNames of _f_.
             1. Let _fo_ be InstantiateFunctionObject of _f_ with argument _lexEnv_.
-            1. If _varEnvRec_ is a global Environment Record, then
+            1. If _varEnvRec_ is a global Scope Record, then
               1. Perform ? _varEnvRec_.CreateGlobalFunctionBinding(_fn_, _fo_, *true*).
             1. Else,
               1. Let _bindingExists_ be _varEnvRec_.HasBinding(_fn_).
@@ -24579,7 +24579,7 @@
               1. Else,
                 1. Perform ! _varEnvRec_.SetMutableBinding(_fn_, _fo_, *false*).
           1. For each String _vn_ in _declaredVarNames_, in list order, do
-            1. If _varEnvRec_ is a global Environment Record, then
+            1. If _varEnvRec_ is a global Scope Record, then
               1. Perform ? _varEnvRec_.CreateGlobalVarBinding(_vn_, *true*).
             1. Else,
               1. Let _bindingExists_ be _varEnvRec_.HasBinding(_vn_).
@@ -42485,11 +42485,11 @@ THH:mm:ss.sss
                 1. Assert: The following loop will terminate.
                 1. Repeat, while _thisLex_ is not the same as _varEnv_,
                   1. Let _thisEnvRec_ be _thisLex_'s EnvironmentRecord.
-                  1. If _thisEnvRec_ is not an object Environment Record, then
+                  1. If _thisEnvRec_ is not an object Scope Record, then
                     1. If _thisEnvRec_.HasBinding(_F_) is *true*, then
                       1. Let _bindingExists_ be *true*.
                   1. Set _thisLex_ to _thisLex_'s outer environment reference.
-                1. If _bindingExists_ is *false* and _varEnvRec_ is a global Environment Record, then
+                1. If _bindingExists_ is *false* and _varEnvRec_ is a global Scope Record, then
                   1. If _varEnvRec_.HasLexicalDeclaration(_F_) is *false*, then
                     1. Let _fnDefinable_ be ? _varEnvRec_.CanDeclareGlobalVar(_F_).
                   1. Else,
@@ -42498,7 +42498,7 @@ THH:mm:ss.sss
                   1. Let _fnDefinable_ be *true*.
                 1. If _bindingExists_ is *false* and _fnDefinable_ is *true*, then
                   1. If _declaredFunctionOrVarNames_ does not contain _F_, then
-                    1. If _varEnvRec_ is a global Environment Record, then
+                    1. If _varEnvRec_ is a global Scope Record, then
                       1. Perform ? _varEnvRec_.CreateGlobalVarBinding(_F_, *true*).
                     1. Else,
                       1. Let _bindingExists_ be _varEnvRec_.HasBinding(_F_).
@@ -42588,11 +42588,11 @@ THH:mm:ss.sss
       <p>This modified behaviour also applies to `var` and `function` declarations introduced by direct eval calls contained within the |Block| of a |Catch| clause. This change is accomplished by modifying the algorithm of <emu-xref href="#sec-evaldeclarationinstantiation"></emu-xref> as follows:</p>
       <p>Step 5.d.ii.2.a.i is replaced by:</p>
       <emu-alg type="i">
-        1. If _thisEnvRec_ is not the Environment Record for a |Catch| clause, throw a *SyntaxError* exception.
+        1. If _thisEnvRec_ is not the Scope Record for a |Catch| clause, throw a *SyntaxError* exception.
       </emu-alg>
       <p>Step 9.d.ii.4.b.i.i is replaced by:</p>
       <emu-alg type="i">
-        1. If _thisEnvRec_ is not the Environment Record for a |Catch| clause, let _bindingExists_ be *true*.
+        1. If _thisEnvRec_ is not the Scope Record for a |Catch| clause, let _bindingExists_ be *true*.
       </emu-alg>
     </emu-annex>
 
