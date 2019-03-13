@@ -6083,10 +6083,9 @@
 
   <emu-clause id="sec-lexical-environments">
     <h1>Lexical Environments</h1>
-    <p>A <dfn>Lexical Environment</dfn> is a specification type used to define the association of |Identifier|s to specific variables and functions based upon the lexical nesting structure of ECMAScript code. A Lexical Environment consists of a Scope Record and a possibly null reference to an <em>outer</em> Lexical Environment. Usually a Lexical Environment is associated with some specific syntactic structure of ECMAScript code such as a |FunctionDeclaration|, a |BlockStatement|, or a |Catch| clause of a |TryStatement| and a new Lexical Environment is created each time such code is evaluated.</p>
-    <p>A Scope Record records the identifier bindings that are created within the scope of its associated Lexical Environment. It is referred to as the Lexical Environment's <dfn>ScopeRecord</dfn>.</p>
-    <p>The outer environment reference is used to model the logical nesting of Lexical Environment values. The outer reference of a (inner) Lexical Environment is a reference to the Lexical Environment that logically surrounds the inner Lexical Environment. An outer Lexical Environment may, of course, have its own outer Lexical Environment. A Lexical Environment may serve as the outer environment for multiple inner Lexical Environments. For example, if a |FunctionDeclaration| contains two nested |FunctionDeclaration|s then the Lexical Environments of each of the nested functions will have as their outer Lexical Environment the Lexical Environment of the current evaluation of the surrounding function.</p>
-    <p>A <dfn id="global-environment">global environment</dfn> is a Lexical Environment which does not have an outer environment. The global environment's outer environment reference is *null*. A global environment's ScopeRecord may be prepopulated with identifier bindings and includes an associated global object whose properties provide some of the global environment's identifier bindings. As ECMAScript code is executed, additional properties may be added to the global object and the initial properties may be modified.</p>
+    <p>A <dfn>Lexical Environment</dfn> is a specification type used to define the association of |Identifier|s to specific variables and functions based upon the lexical nesting structure of ECMAScript code. Usually a Lexical Environment is associated with some specific syntactic structure of ECMAScript code such as a |FunctionDeclaration|, a |BlockStatement|, or a |Catch| clause of a |TryStatement| and a new Lexical Environment is created each time such code is evaluated.</p>
+    <p>A Lexical Environment is represented as a Record with two fields: [[ScopeRecord]] and [[OuterEnv]]. The [[ScopeRecord]] field is a Scope Record, which records the identifier bindings that are created within the scope of its associated Lexical Environment. The [[OuterEnv]] field is either null, or a reference to an outer Lexical Environment. This reference is used to model the logical nesting of Lexical Environment values. The outer reference of a (inner) Lexical Environment is a reference to the Lexical Environment that logically surrounds the inner Lexical Environment. An outer Lexical Environment may, of course, have its own outer Lexical Environment. A Lexical Environment may serve as the outer environment for multiple inner Lexical Environments. For example, if a |FunctionDeclaration| contains two nested |FunctionDeclaration|s then the Lexical Environments of each of the nested functions will have as their outer Lexical Environment the Lexical Environment of the current evaluation of the surrounding function.</p>
+    <p>A <dfn id="global-environment">global environment</dfn> is a Lexical Environment which does not have an outer environment. The global environment's [[OuterEnv]] field is *null*. A global environment's [[ScopeRecord]] may be prepopulated with identifier bindings and includes an associated global object whose properties provide some of the global environment's identifier bindings. As ECMAScript code is executed, additional properties may be added to the global object and the initial properties may be modified.</p>
     <p>A <dfn id="module-environment">module environment</dfn> is a Lexical Environment that contains the bindings for the top level declarations of a |Module|. It also contains the bindings that are explicitly imported by the |Module|. The outer environment of a module environment is a global environment.</p>
     <p>A <dfn id="function-environment">function environment</dfn> is a Lexical Environment that corresponds to the invocation of an ECMAScript function object. A function environment may establish a new `this` binding. A function environment also captures the state necessary to support `super` method invocations.</p>
     <p>Lexical Environments and Scope Record values are purely specification mechanisms and need not correspond to any specific artefact of an ECMAScript implementation. It is impossible for an ECMAScript program to directly access or manipulate such values.</p>
@@ -7024,7 +7023,7 @@
               1. Let _M_ and _N2_ be the indirection values provided when this binding for _N_ was created.
               1. Let _targetEnv_ be _M_.[[Environment]].
               1. If _targetEnv_ is *undefined*, throw a *ReferenceError* exception.
-              1. Let _targetScope_ be _targetEnv_'s ScopeRecord.
+              1. Let _targetScope_ be _targetEnv_.[[ScopeRecord]].
               1. Return ? _targetScope_.GetBindingValue(_N2_, *true*).
             1. If the binding for _N_ in _scope_ is an uninitialized binding, throw a *ReferenceError* exception.
             1. Return the value currently bound to _N_ in _scope_.
@@ -7085,12 +7084,12 @@
         <emu-alg>
           1. If _lex_ is the value *null*, then
             1. Return a value of type Reference whose base value component is *undefined*, whose referenced name component is _name_, and whose strict reference flag is _strict_.
-          1. Let _scope_ be _lex_'s ScopeRecord.
+          1. Let _scope_ be _lex_.[[ScopeRecord]].
           1. Let _exists_ be ? _scope_.HasBinding(_name_).
           1. If _exists_ is *true*, then
             1. Return a value of type Reference whose base value component is _scope_, whose referenced name component is _name_, and whose strict reference flag is _strict_.
           1. Else,
-            1. Let _outer_ be the value of _lex_'s outer environment reference.
+            1. Let _outer_ be _lex_.[[OuterEnv]].
             1. Return ? GetIdentifierReference(_outer_, _name_, _strict_).
         </emu-alg>
       </emu-clause>
@@ -7099,11 +7098,8 @@
         <h1>NewDeclarativeEnvironment ( _E_ )</h1>
         <p>When the abstract operation NewDeclarativeEnvironment is called with a Lexical Environment as argument _E_ the following steps are performed:</p>
         <emu-alg>
-          1. Let _env_ be a new Lexical Environment.
           1. Let _scope_ be a new declarative Scope Record containing no bindings.
-          1. Set _env_'s ScopeRecord to _scope_.
-          1. Set the outer lexical environment reference of _env_ to _E_.
-          1. Return _env_.
+          1. Return Lexical Environment { [[ScopeRecord]]: _scope_, [[OuterEnv]]: _E_ }.
         </emu-alg>
       </emu-clause>
 
@@ -7111,11 +7107,8 @@
         <h1>NewObjectEnvironment ( _O_, _E_ )</h1>
         <p>When the abstract operation NewObjectEnvironment is called with an Object _O_ and a Lexical Environment _E_ as arguments, the following steps are performed:</p>
         <emu-alg>
-          1. Let _env_ be a new Lexical Environment.
           1. Let _scope_ be a new object Scope Record containing _O_ as the binding object.
-          1. Set _env_'s ScopeRecord to _scope_.
-          1. Set the outer lexical environment reference of _env_ to _E_.
-          1. Return _env_.
+          1. Return Lexical Environment { [[ScopeRecord]]: _scope_, [[OuterEnv]]: _E_ }.
         </emu-alg>
       </emu-clause>
 
@@ -7125,7 +7118,6 @@
         <emu-alg>
           1. Assert: _F_ is an ECMAScript function.
           1. Assert: Type(_newTarget_) is Undefined or Object.
-          1. Let _env_ be a new Lexical Environment.
           1. Let _scope_ be a new function Scope Record containing no bindings.
           1. Set _scope_.[[FunctionObject]] to _F_.
           1. If _F_.[[ThisMode]] is ~lexical~, set _scope_.[[ThisBindingStatus]] to ~lexical~.
@@ -7133,9 +7125,7 @@
           1. Let _home_ be _F_.[[HomeObject]].
           1. Set _scope_.[[HomeObject]] to _home_.
           1. Set _scope_.[[NewTarget]] to _newTarget_.
-          1. Set _env_'s ScopeRecord to _scope_.
-          1. Set the outer lexical environment reference of _env_ to _F_.[[Environment]].
-          1. Return _env_.
+          1. Return Lexical Environment { [[ScopeRecord]]: _scope_, [[OuterEnv]]: _F_.[[Environment]] }.
         </emu-alg>
       </emu-clause>
 
@@ -7143,7 +7133,6 @@
         <h1>NewGlobalEnvironment ( _G_, _thisValue_ )</h1>
         <p>When the abstract operation NewGlobalEnvironment is called with arguments _G_ and _thisValue_, the following steps are performed:</p>
         <emu-alg>
-          1. Let _env_ be a new Lexical Environment.
           1. Let _objScope_ be a new object Scope Record containing _G_ as the binding object.
           1. Let _dclScope_ be a new declarative Scope Record containing no bindings.
           1. Let _globalScope_ be a new global Scope Record.
@@ -7151,9 +7140,7 @@
           1. Set _globalScope_.[[GlobalThisValue]] to _thisValue_.
           1. Set _globalScope_.[[DeclarativeScope]] to _dclScope_.
           1. Set _globalScope_.[[VarNames]] to a new empty List.
-          1. Set _env_'s ScopeRecord to _globalScope_.
-          1. Set the outer lexical environment reference of _env_ to *null*.
-          1. Return _env_.
+          1. Return Lexical Environment { [[ScopeRecord]]: _globalScope_, [[OuterEnv]]: *null* }.
         </emu-alg>
       </emu-clause>
 
@@ -7161,11 +7148,8 @@
         <h1>NewModuleEnvironment ( _E_ )</h1>
         <p>When the abstract operation NewModuleEnvironment is called with a Lexical Environment argument _E_ the following steps are performed:</p>
         <emu-alg>
-          1. Let _env_ be a new Lexical Environment.
           1. Let _scope_ be a new module Scope Record containing no bindings.
-          1. Set _env_'s ScopeRecord to _scope_.
-          1. Set the outer lexical environment reference of _env_ to _E_.
-          1. Return _env_.
+          1. Return Lexical Environment { [[ScopeRecord]]: _scope_, [[OuterEnv]]: _E_ }.
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -7382,7 +7366,7 @@
             VariableEnvironment
           </td>
           <td>
-            Identifies the Lexical Environment whose ScopeRecord holds bindings created by |VariableStatement|s within this execution context.
+            Identifies the Lexical Environment whose [[ScopeRecord]] holds bindings created by |VariableStatement|s within this execution context.
           </td>
         </tr>
         </tbody>
@@ -7447,10 +7431,10 @@
       <emu-alg>
         1. Let _lex_ be the running execution context's LexicalEnvironment.
         1. Repeat,
-          1. Let _scope_ be _lex_'s ScopeRecord.
+          1. Let _scope_ be _lex_.[[ScopeRecord]].
           1. Let _exists_ be _scope_.HasThisBinding().
           1. If _exists_ is *true*, return _scope_.
-          1. Let _outer_ be the value of _lex_'s outer environment reference.
+          1. Let _outer_ be _lex_.[[OuterEnv]].
           1. Assert: _outer_ is not *null*.
           1. Set _lex_ to _outer_.
       </emu-alg>
@@ -8420,13 +8404,13 @@
           1. Else,
             1. If _thisArgument_ is *undefined* or *null*, then
               1. Let _globalEnv_ be _calleeRealm_.[[GlobalEnv]].
-              1. Let _globalScope_ be _globalEnv_'s ScopeRecord.
+              1. Let _globalScope_ be _globalEnv_.[[ScopeRecord]].
               1. Assert: _globalScope_ is a global Scope Record.
               1. Let _thisValue_ be _globalScope_.[[GlobalThisValue]].
             1. Else,
               1. Let _thisValue_ be ! ToObject(_thisArgument_).
               1. NOTE: ToObject produces wrapper objects using _calleeRealm_.
-          1. Let _scope_ be _localEnv_'s ScopeRecord.
+          1. Let _scope_ be _localEnv_.[[ScopeRecord]].
           1. Assert: _scope_ is a function Scope Record.
           1. Assert: The next step never returns an abrupt completion because _scope_.[[ThisBindingStatus]] is not ~initialized~.
           1. Return _scope_.BindThisValue(_thisValue_).
@@ -8456,7 +8440,7 @@
         1. Assert: _calleeContext_ is now the running execution context.
         1. If _kind_ is ~base~, perform OrdinaryCallBindThis(_F_, _calleeContext_, _thisArgument_).
         1. Let _constructorEnv_ be the LexicalEnvironment of _calleeContext_.
-        1. Let _scope_ be _constructorEnv_'s ScopeRecord.
+        1. Let _scope_ be _constructorEnv_.[[ScopeRecord]].
         1. Let _result_ be OrdinaryCallEvaluateBody(_F_, _argumentsList_).
         1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
         1. If _result_.[[Type]] is ~return~, then
@@ -8647,7 +8631,7 @@
       <emu-alg>
         1. Let _calleeContext_ be the running execution context.
         1. Let _env_ be the LexicalEnvironment of _calleeContext_.
-        1. Let _scope_ be _env_'s ScopeRecord.
+        1. Let _scope_ be _env_.[[ScopeRecord]].
         1. Let _code_ be _func_.[[ECMAScriptCode]].
         1. Let _strict_ be _func_.[[Strict]].
         1. Let _formals_ be _func_.[[FormalParameters]].
@@ -8716,7 +8700,7 @@
         1. Else,
           1. NOTE: A separate Scope Record is needed to ensure that closures created by expressions in the formal parameter list do not have visibility of declarations in the function body.
           1. Let _varEnv_ be NewDeclarativeEnvironment(_env_).
-          1. Let _varScope_ be _varEnv_'s ScopeRecord.
+          1. Let _varScope_ be _varEnv_.[[ScopeRecord]].
           1. Set the VariableEnvironment of _calleeContext_ to _varEnv_.
           1. Let _instantiatedVarNames_ be a new empty List.
           1. For each _n_ in _varNames_, do
@@ -8733,7 +8717,7 @@
           1. Let _lexEnv_ be NewDeclarativeEnvironment(_varEnv_).
           1. NOTE: Non-strict functions use a separate lexical Scope Record for top-level lexical declarations so that a direct eval can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions because a strict direct eval always places all declarations into a new Scope Record.
         1. Else, let _lexEnv_ be _varEnv_.
-        1. Let _lexScope_ be _lexEnv_'s ScopeRecord.
+        1. Let _lexScope_ be _lexEnv_.[[ScopeRecord]].
         1. Set the LexicalEnvironment of _calleeContext_ to _lexEnv_.
         1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
         1. For each element _d_ in _lexDeclarations_, do
@@ -9656,7 +9640,7 @@
             1. Return ? GetModuleNamespace(_targetModule_).
           1. Let _targetEnv_ be _targetModule_.[[Environment]].
           1. If _targetEnv_ is *undefined*, throw a *ReferenceError* exception.
-          1. Let _targetScope_ be _targetEnv_'s ScopeRecord.
+          1. Let _targetScope_ be _targetEnv_.[[ScopeRecord]].
           1. Return ? _targetScope_.GetBindingValue(_binding_.[[BindingName]], *true*).
         </emu-alg>
         <emu-note>
@@ -12347,7 +12331,7 @@
         <emu-alg>
           1. Assert: Type(_name_) is String.
           1. If _environment_ is not *undefined*, then
-            1. Let _scope_ be the ScopeRecord component of _environment_.
+            1. Let _scope_ be _environment_.[[ScopeRecord]].
             1. Perform _scope_.InitializeBinding(_name_, _value_).
             1. Return NormalCompletion(*undefined*).
           1. Else,
@@ -16048,7 +16032,7 @@
                  #sec-web-compat-blockdeclarationinstantiation accordingly.
       -->
       <emu-alg>
-        1. Let _scope_ be _env_'s ScopeRecord.
+        1. Let _scope_ be _env_.[[ScopeRecord]].
         1. Assert: _scope_ is a declarative Scope Record.
         1. Let _declarations_ be the LexicallyScopedDeclarations of _code_.
         1. For each element _d_ in _declarations_, do
@@ -17278,7 +17262,7 @@
         <emu-alg>
           1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
           1. Let _loopEnv_ be NewDeclarativeEnvironment(_oldEnv_).
-          1. Let _loopScope_ be _loopEnv_'s ScopeRecord.
+          1. Let _loopScope_ be _loopEnv_.[[ScopeRecord]].
           1. Let _isConst_ be IsConstantDeclaration of |LexicalDeclaration|.
           1. Let _boundNames_ be the BoundNames of |LexicalDeclaration|.
           1. For each element _dn_ of _boundNames_, do
@@ -17325,11 +17309,11 @@
         <emu-alg>
           1. If _perIterationBindings_ has any elements, then
             1. Let _lastIterationEnv_ be the running execution context's LexicalEnvironment.
-            1. Let _lastIterationScope_ be _lastIterationEnv_'s ScopeRecord.
-            1. Let _outer_ be _lastIterationEnv_'s outer environment reference.
+            1. Let _lastIterationScope_ be _lastIterationEnv_.[[ScopeRecord]].
+            1. Let _outer_ be _lastIterationEnv_.[[OuterEnv]].
             1. Assert: _outer_ is not *null*.
             1. Let _thisIterationEnv_ be NewDeclarativeEnvironment(_outer_).
-            1. Let _thisIterationScope_ be _thisIterationEnv_'s ScopeRecord.
+            1. Let _thisIterationScope_ be _thisIterationEnv_.[[ScopeRecord]].
             1. For each element _bn_ of _perIterationBindings_, do
               1. Perform ! _thisIterationScope_.CreateMutableBinding(_bn_, *false*).
               1. Let _lastValue_ be ? _lastIterationScope_.GetBindingValue(_bn_, *true*).
@@ -17569,7 +17553,7 @@
         <p>With parameter _environment_.</p>
         <emu-grammar>ForDeclaration : LetOrConst ForBinding</emu-grammar>
         <emu-alg>
-          1. Let _scope_ be _environment_'s ScopeRecord.
+          1. Let _scope_ be _environment_.[[ScopeRecord]].
           1. Assert: _scope_ is a declarative Scope Record.
           1. For each element _name_ of the BoundNames of |ForBinding|, do
             1. If IsConstantDeclaration of |LetOrConst| is *true*, then
@@ -17647,7 +17631,7 @@
           1. If _TDZnames_ is not an empty List, then
             1. Assert: _TDZnames_ has no duplicate entries.
             1. Let _TDZ_ be NewDeclarativeEnvironment(_oldEnv_).
-            1. Let _TDZScope_ be _TDZ_'s ScopeRecord.
+            1. Let _TDZScope_ be _TDZ_.[[ScopeRecord]].
             1. For each string _name_ in _TDZnames_, do
               1. Perform ! _TDZScope_.CreateMutableBinding(_name_, *false*).
             1. Set the running execution context's LexicalEnvironment to _TDZ_.
@@ -17991,7 +17975,7 @@
         1. Let _obj_ be ? ToObject(? GetValue(_val_)).
         1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
         1. Let _newEnv_ be NewObjectEnvironment(_obj_, _oldEnv_).
-        1. Set the _withEnvironment_ flag of _newEnv_'s ScopeRecord to *true*.
+        1. Set the _withEnvironment_ flag of _newEnv_.[[ScopeRecord]] to *true*.
         1. Set the running execution context's LexicalEnvironment to _newEnv_.
         1. Let _C_ be the result of evaluating |Statement|.
         1. Set the running execution context's LexicalEnvironment to _oldEnv_.
@@ -18863,7 +18847,7 @@
       <emu-alg>
         1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
         1. Let _catchEnv_ be NewDeclarativeEnvironment(_oldEnv_).
-        1. Let _catchScope_ be _catchEnv_'s ScopeRecord.
+        1. Let _catchScope_ be _catchEnv_.[[ScopeRecord]].
         1. For each element _argName_ of the BoundNames of |CatchParameter|, do
           1. Perform ! _catchScope_.CreateMutableBinding(_argName_, *false*).
         1. Set the running execution context's LexicalEnvironment to _catchEnv_.
@@ -19428,7 +19412,7 @@
       <emu-alg>
         1. Let _outer_ be the running execution context's LexicalEnvironment.
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outer_).
-        1. Let _scope_ be _funcEnv_'s ScopeRecord.
+        1. Let _scope_ be _funcEnv_.[[ScopeRecord]].
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform _scope_.CreateImmutableBinding(_name_, *false*).
         1. Let _closure_ be FunctionCreate(~Normal~, |FormalParameters|, |FunctionBody|, _funcEnv_).
@@ -20155,7 +20139,7 @@
       <emu-alg>
         1. Let _outer_ be the running execution context's LexicalEnvironment.
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outer_).
-        1. Let _scope_ be _funcEnv_'s ScopeRecord.
+        1. Let _scope_ be _funcEnv_.[[ScopeRecord]].
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform _scope_.CreateImmutableBinding(_name_, *false*).
         1. Let _closure_ be GeneratorFunctionCreate(~Normal~, |FormalParameters|, |GeneratorBody|, _funcEnv_).
@@ -20494,7 +20478,7 @@
       <emu-alg>
         1. Let _outer_ be the running execution context's LexicalEnvironment.
         1. Let _funcEnv_ be ! NewDeclarativeEnvironment(_outer_).
-        1. Let _scope_ be _funcEnv_'s ScopeRecord.
+        1. Let _scope_ be _funcEnv_.[[ScopeRecord]].
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform ! _scope_.CreateImmutableBinding(_name_).
         1. Let _closure_ be ! AsyncGeneratorFunctionCreate(~Normal~, |FormalParameters|, |AsyncGeneratorBody|, _funcEnv_).
@@ -20764,7 +20748,7 @@
       <emu-alg>
         1. Let _lex_ be the LexicalEnvironment of the running execution context.
         1. Let _classEnv_ be NewDeclarativeEnvironment(_lex_).
-        1. Let _classScope_ be _classEnv_'s ScopeRecord.
+        1. Let _classScope_ be _classEnv_.[[ScopeRecord]].
         1. If _classBinding_ is not *undefined*, then
           1. Perform _classScope_.CreateImmutableBinding(_classBinding_, *true*).
         1. If |ClassHeritage_opt| is not present, then
@@ -21159,7 +21143,7 @@
       <emu-alg>
         1. Let _outer_ be the LexicalEnvironment of the running execution context.
         1. Let _funcEnv_ be ! NewDeclarativeEnvironment(_outer_).
-        1. Let _scope_ be _funcEnv_'s ScopeRecord.
+        1. Let _scope_ be _funcEnv_.[[ScopeRecord]].
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform ! _scope_.CreateImmutableBinding(_name_).
         1. Let _closure_ be ! AsyncFunctionCreate(~Normal~, |FormalParameters|, |AsyncFunctionBody|, _funcEnv_).
@@ -21997,7 +21981,7 @@
                  #sec-web-compat-globaldeclarationinstantiation accordingly.
       -->
       <emu-alg>
-        1. Let _scope_ be _env_'s ScopeRecord.
+        1. Let _scope_ be _env_.[[ScopeRecord]].
         1. Assert: _scope_ is a global Scope Record.
         1. Let _lexNames_ be the LexicallyDeclaredNames of _script_.
         1. Let _varNames_ be the VarDeclaredNames of _script_.
@@ -23456,7 +23440,7 @@
             1. Assert: _realm_ is not *undefined*.
             1. Let _env_ be NewModuleEnvironment(_realm_.[[GlobalEnv]]).
             1. Set _module_.[[Environment]] to _env_.
-            1. Let _scope_ be _env_'s ScopeRecord.
+            1. Let _scope_ be _env_.[[ScopeRecord]].
             1. For each ImportEntry Record _in_ in _module_.[[ImportEntries]], do
               1. Let _importedModule_ be ! HostResolveImportedModule(_module_, _in_.[[ModuleRequest]]).
               1. NOTE: The above call cannot fail because imported module requests are a subset of _module_.[[RequestedModules]], and these have been resolved earlier in this algorithm.
@@ -24513,8 +24497,8 @@
         <emu-alg>
           1. Let _varNames_ be the VarDeclaredNames of _body_.
           1. Let _varDeclarations_ be the VarScopedDeclarations of _body_.
-          1. Let _lexScope_ be _lexEnv_'s ScopeRecord.
-          1. Let _varScope_ be _varEnv_'s ScopeRecord.
+          1. Let _lexScope_ be _lexEnv_.[[ScopeRecord]].
+          1. Let _varScope_ be _varEnv_.[[ScopeRecord]].
           1. If _strict_ is *false*, then
             1. If _varScope_ is a global Scope Record, then
               1. For each _name_ in _varNames_, do
@@ -24523,7 +24507,7 @@
             1. Let _thisLex_ be _lexEnv_.
             1. Assert: The following loop will terminate.
             1. Repeat, while _thisLex_ is not the same as _varEnv_,
-              1. Let _thisScope_ be _thisLex_'s ScopeRecord.
+              1. Let _thisScope_ be _thisLex_.[[ScopeRecord]].
               1. If _thisScope_ is not an object Scope Record, then
                 1. NOTE: The environment of with statements cannot contain any lexical declaration so it doesn't need to be checked for var/let hoisting conflicts.
                 1. For each _name_ in _varNames_, do
@@ -24531,7 +24515,7 @@
                     1. Throw a *SyntaxError* exception.
                     1. NOTE: Annex <emu-xref href="#sec-variablestatements-in-catch-blocks"></emu-xref> defines alternate semantics for the above step.
                   1. NOTE: A direct eval will not hoist var declaration over a like-named lexical declaration.
-              1. Set _thisLex_ to _thisLex_'s outer environment reference.
+              1. Set _thisLex_ to _thisLex_.[[OuterEnv]].
           1. Let _functionsToInitialize_ be a new empty List.
           1. Let _declaredFunctionNames_ be a new empty List.
           1. For each _d_ in _varDeclarations_, in reverse list order, do
@@ -42432,9 +42416,9 @@ THH:mm:ss.sss
                   1. Append _F_ to _instantiatedVarNames_.
                 1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                   1. Let _fenv_ be the running execution context's VariableEnvironment.
-                  1. Let _fScope_ be _fenv_'s ScopeRecord.
+                  1. Let _fScope_ be _fenv_.[[ScopeRecord]].
                   1. Let _benv_ be the running execution context's LexicalEnvironment.
-                  1. Let _bScope_ be _benv_'s ScopeRecord.
+                  1. Let _bScope_ be _benv_.[[ScopeRecord]].
                   1. Let _fobj_ be ! _bScope_.GetBindingValue(_F_, *false*).
                   1. Perform ! _fScope_.SetMutableBinding(_F_, _fobj_, *false*).
                   1. Return NormalCompletion(~empty~).
@@ -42461,9 +42445,9 @@ THH:mm:ss.sss
                       1. Append _F_ to _declaredFunctionOrVarNames_.
                     1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                       1. Let _genv_ be the running execution context's VariableEnvironment.
-                      1. Let _gScope_ be _genv_'s ScopeRecord.
+                      1. Let _gScope_ be _genv_.[[ScopeRecord]].
                       1. Let _benv_ be the running execution context's LexicalEnvironment.
-                      1. Let _bScope_ be _benv_'s ScopeRecord.
+                      1. Let _bScope_ be _benv_.[[ScopeRecord]].
                       1. Let _fobj_ be ! _bScope_.GetBindingValue(_F_, *false*).
                       1. Perform ? _gScope_.SetMutableBinding(_F_, _fobj_, *false*).
                       1. Return NormalCompletion(~empty~).
@@ -42484,11 +42468,11 @@ THH:mm:ss.sss
                 1. Let _thisLex_ be _lexEnv_.
                 1. Assert: The following loop will terminate.
                 1. Repeat, while _thisLex_ is not the same as _varEnv_,
-                  1. Let _thisScope_ be _thisLex_'s ScopeRecord.
+                  1. Let _thisScope_ be _thisLex_.[[ScopeRecord]].
                   1. If _thisScope_ is not an object Scope Record, then
                     1. If _thisScope_.HasBinding(_F_) is *true*, then
                       1. Let _bindingExists_ be *true*.
-                  1. Set _thisLex_ to _thisLex_'s outer environment reference.
+                  1. Set _thisLex_ to _thisLex_.[[OuterEnv]].
                 1. If _bindingExists_ is *false* and _varScope_ is a global Scope Record, then
                   1. If _varScope_.HasLexicalDeclaration(_F_) is *false*, then
                     1. Let _fnDefinable_ be ? _varScope_.CanDeclareGlobalVar(_F_).
@@ -42508,9 +42492,9 @@ THH:mm:ss.sss
                     1. Append _F_ to _declaredFunctionOrVarNames_.
                   1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                     1. Let _genv_ be the running execution context's VariableEnvironment.
-                    1. Let _gScope_ be _genv_'s ScopeRecord.
+                    1. Let _gScope_ be _genv_.[[ScopeRecord]].
                     1. Let _benv_ be the running execution context's LexicalEnvironment.
-                    1. Let _bScope_ be _benv_'s ScopeRecord.
+                    1. Let _bScope_ be _benv_.[[ScopeRecord]].
                     1. Let _fobj_ be ! _bScope_.GetBindingValue(_F_, *false*).
                     1. Perform ? _gScope_.SetMutableBinding(_F_, _fobj_, *false*).
                     1. Return NormalCompletion(~empty~).
