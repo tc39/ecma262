@@ -1003,6 +1003,17 @@
             </tr>
             <tr>
               <td>
+                @@matchAll
+              </td>
+              <td>
+                `"Symbol.matchAll"`
+              </td>
+              <td>
+                A regular expression method that returns an iterator, that yields matches of the regular expression against a string. Called by the <emu-xhref="#sec-string.prototype.matchall">`String.prototype.matchAll`</emu-xref> method.
+              </td>
+            </tr>
+            <tr>
+              <td>
                 @@replace
               </td>
               <td>
@@ -25164,6 +25175,12 @@
         <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
       </emu-clause>
 
+      <emu-clause id="sec-symbol.matchall">
+        <h1>Symbol.matchAll</h1>
+        <p>The initial value of *Symbol.matchAll* is the well-known symbol @@matchAll (<emu-xref href="#table-2"></emu-xref>).</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
+
       <emu-clause id="sec-symbol.prototype">
         <h1>Symbol.prototype</h1>
         <p>The initial value of `Symbol.prototype` is the intrinsic object %SymbolPrototype%.</p>
@@ -28457,6 +28474,26 @@ THH:mm:ss.sss
         </emu-note>
       </emu-clause>
 
+      <emu-clause id="sec-string-prototype-matchall">
+        <h1>String.prototype.matchAll ( _regexp_ )</h1>
+
+        <p>Performs a regular expression match of the String representing the *this* value against _regexp_ and returns an iterator. Each iteration result’s value is an Array object containing the results of the match, or *null* if the String did not match.</p>
+
+        <p>When the `matchAll` method is called, the following steps are taken:</p>
+        <emu-alg>
+          1. Let _O_ be ? RequireObjectCoercible(*this* value).
+          1. If _regexp_ is neither *undefined* nor *null*, then
+            1. Let _matcher_ be ? GetMethod(_regexp_, @@matchAll).
+            1. If _matcher_ is not *undefined*, then
+              1. Return ? Call(_matcher_, _regexp_, &laquo; _O_ &raquo;).
+          1. Let _S_ be ? ToString(_O_).
+          1. Let _rx_ be ? RegExpCreate(_regexp_, `"g"`).
+          1. Return ? Invoke(_rx_, @@matchAll, &laquo; _S_ &raquo;).
+        </emu-alg>
+        <emu-note>The `matchAll` function is intentionally generic, it does not require that its *this* value be a String object. Therefore, it can be transferred to other kinds of objects for use as a method.</emu-note>
+        <emu-note>Similarly to `String.prototype.split`, `String.prototype.matchAll` is designed to typically act without mutating its inputs.</emu-note>
+      </emu-clause>
+
       <emu-clause id="sec-string.prototype.normalize">
         <h1>String.prototype.normalize ( [ _form_ ] )</h1>
         <p>When the `normalize` method is called with one argument _form_, the following steps are taken:</p>
@@ -31079,6 +31116,46 @@ THH:mm:ss.sss
         </emu-note>
       </emu-clause>
 
+      <emu-clause id="sec-regexp-prototype-matchall">
+        <h1>RegExp.prototype [ @@matchAll ] ( _string_ )</h1>
+
+        <p>When the `@@matchAll` method is called with argument _string_, the following steps are taken:</p>
+        <emu-alg>
+          1. Let _R_ be the *this* value.
+          1. If Type(_R_) is not Object, throw a *TypeError* exception.
+          1. Let _S_ be ? ToString(_string_).
+          1. Let _C_ be ? SpeciesConstructor(_R_, %RegExp%).
+          1. Let _flags_ be ? ToString(? Get(_R_, `"flags"`)).
+          1. Let _matcher_ be ? Construct(_C_, &laquo; _R_, _flags_ &raquo;).
+          1. Let _lastIndex_ be ? ToLength(? Get(_R_, `"lastIndex"`)).
+          1. Perform ? Set(_matcher_, `"lastIndex"`, _lastIndex_, *true*).
+          1. If _flags_ contains `"g"`, let _global_ be *true*.
+          1. Else, let _global_ be *false*.
+          1. If _flags_ contains `"u"`, let _fullUnicode_ be *true*.
+          1. Else, let _fullUnicode_ be *false*.
+          1. Return ! CreateRegExpStringIterator(_matcher_, _S_, _global_, _fullUnicode_).
+        </emu-alg>
+        <p>The value of the *name* property of this function is *"[Symbol.matchAll]"*.</p>
+
+        <emu-clause id="sec-createregexpstringiterator" aoid="CreateRegExpStringIterator">
+          <h1>CreateRegExpStringIterator ( _R_, _S_, _global_, _fullUnicode_ )</h1>
+
+          <p>The abstract operation _CreateRegExpStringIterator_ is used to create such iterator objects. It performs the following steps:</p>
+          <emu-alg>
+            1. Assert: Type(_S_) is String.
+            1. Assert: Type(_global_) is Boolean.
+            1. Assert: Type(_fullUnicode_) is Boolean.
+            1. Let _iterator_ be ObjectCreate(<emu-xref href="#%RegExpStringIteratorPrototype%">%RegExpStringIteratorPrototype%</emu-xref>, &laquo; [[IteratingRegExp]], [[IteratedString]], [[Global]], [[Unicode]], [[Done]] &raquo;).
+            1. Set _iterator_.[[IteratingRegExp]] to _R_.
+            1. Set _iterator_.[[IteratedString]] to _S_.
+            1. Set _iterator_.[[Global]] to _global_.
+            1. Set _iterator_.[[Unicode]] to _fullUnicode_.
+            1. Set _iterator_.[[Done]] to *false*.
+            1. Return _iterator_.
+          </emu-alg>
+        </emu-clause>
+      </emu-clause>
+
       <emu-clause id="sec-get-regexp.prototype.multiline">
         <h1>get RegExp.prototype.multiline</h1>
         <p>`RegExp.prototype.multiline` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps:</p>
@@ -31339,6 +31416,90 @@ THH:mm:ss.sss
       <emu-clause id="sec-lastindex">
         <h1>lastIndex</h1>
         <p>The value of the `lastIndex` property specifies the String index at which to start the next match. It is coerced to an integer when used (see <emu-xref href="#sec-regexpbuiltinexec"></emu-xref>). This property shall have the attributes { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-regexp-string-iterator-objects">
+      <h1>RegExp String Iterator Objects</h1>
+      <p>A RegExp String Iterator is an object, that represents a specific iteration over some specific String instance object, matching against some specific RegExp instance object. There is not a named constructor for RegExp String Iterator objects. Instead, RegExp String iterator objects are created by calling certain methods of RegExp instance objects.</p>
+
+      <emu-clause id="%RegExpStringIteratorPrototype%">
+        <h1>The %RegExpStringIteratorPrototype% Object</h1>
+
+        <p>All RegExp String Iterator Objects inherit properties from the <emu-xref href="#%RegExpStringIteratorPrototype%">%RegExpStringIteratorPrototype%</emu-xref> intrinsic object. The %RegExpStringIteratorPrototype% object is an ordinary object and its [[Prototype]] <a href="https://tc39.github.io/ecma262/#sec-object-internal-methods-and-internal-slots">internal slot</a> is the <a href="https://tc39.github.io/ecma262/#sec-%iteratorprototype%-object">%IteratorPrototype% intrinsic object</a>. In addition, %RegExpStringIteratorPrototype% has the following properties:</p>
+
+        <emu-clause id="%RegExpStringIteratorPrototype%.next">
+          <h1>%RegExpStringIteratorPrototype%.next ( )</h1>
+          <emu-alg>
+            1. Let _O_ be the *this* value.
+            1. If Type(_O_) is not Object, throw a *TypeError* exception.
+            1. If _O_ does not have all of the internal slots of a RegExp String Iterator Object Instance (see <emu-xref href="#PropertiesOfRegExpStringIteratorInstances"></emu-xref>), throw a *TypeError* exception.
+            1. If _O_.[[Done]] is *true*, then
+              1. Return ! CreateIterResultObject(*undefined*, *true*).
+            1. Let _R_ be _O_.[[IteratingRegExp]].
+            1. Let _S_ be _O_.[[IteratedString]].
+            1. Let _global_ be _O_.[[Global]].
+            1. Let _fullUnicode_ be _O_.[[Unicode]].
+            1. Let _match_ be ? RegExpExec(_R_, _S_).
+            1. If _match_ is *null*, then
+              1. Set _O_.[[Done]] to *true*.
+              1. Return ! CreateIterResultObject(*undefined*, *true*).
+            1. Else,
+              1. If _global_ is *true*,
+                1. Let _matchStr_ be ? ToString(? Get(_match_, *"0"*)).
+                1. If _matchStr_ is the empty string,
+                  1. Let _thisIndex_ be ? ToLength(? Get(_R_, *"lastIndex"*)).
+                  1. Let _nextIndex_ be ! AdvanceStringIndex(_S_, _thisIndex_, _fullUnicode_).
+                  1. Perform ? Set(_R_, *"lastIndex"*, _nextIndex_, *true*).
+                1. Return ! CreateIterResultObject(_match_, *false*).
+              1. Else,
+                1. Set _O_.[[Done]] to *true*.
+                1. Return ! CreateIterResultObject(_match_, *false*).
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="%RegExpStringIteratorPrototype%[@@toStringTag]">
+          <h1>%RegExpStringIteratorPrototype%[ @@toStringTag ]</h1>
+          <p>The initial value of the _@@toStringTag_ property is the String value *"RegExp String Iterator"*.</p>
+          <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+        </emu-clause>
+
+        <emu-clause id="PropertiesOfRegExpStringIteratorInstances">
+          <h1>Properties of RegExp String Iterator Instances</h1>
+          <p>RegExp String Iterator instances are ordinary objects that inherit properties from the <emu-xref href="#%RegExpStringIteratorPrototype%">%RegExpStringIteratorPrototype%</emu-xref> intrinsic object. RegExp String Iterator instances are initially created with the internal slots listed in <a href="#table-1">Table 1</a>.</p>
+          <figure>
+            <figcaption><span id="table-1">Table 1</span> &ndash; Internal Slots of RegExp String Iterator Instances</figcaption>
+            <table class="real-table">
+              <tbody>
+                <tr>
+                  <th>Internal Slot</th>
+                  <th>Description</th>
+                </tr>
+                <tr>
+                  <td>[[IteratingRegExp]]</td>
+                  <td>The regular expression used for iteration. IsRegExp([[IteratingRegExp]]) is initially *true*.</td>
+                </tr>
+                <tr>
+                  <td>[[IteratedString]]</td>
+                  <td>The String value being iterated upon.</td>
+                </tr>
+                <tr>
+                  <td>[[Global]]</td>
+                  <td>A Boolean value to indicate whether the [[IteratingRegExp]] is global or not.</td>
+                </tr>
+                <tr>
+                  <td>[[Unicode]]</td>
+                  <td>A Boolean value to indicate whether the [[IteratingRegExp]] is in Unicode mode or not.</td>
+                </tr>
+                <tr>
+                  <td>[[Done]]</td>
+                  <td>A Boolean value to indicate whether the iteration is complete or not.</td>
+                </tr>
+                <tr>
+              </tbody>
+            </table>
+          </figure>
+        </emu-clause>
       </emu-clause>
     </emu-clause>
   </emu-clause>
