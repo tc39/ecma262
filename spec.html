@@ -12510,7 +12510,7 @@
               1. Let _evalText_ be the first element of _argList_.
               1. If the source code matching this |CallExpression| is strict mode code, let _strictCaller_ be *true*. Otherwise let _strictCaller_ be *false*.
               1. Let _evalRealm_ be the current Realm Record.
-              1. Perform ? HostEnsureCanCompileStrings(_evalRealm_, _evalRealm_).
+              1. Perform ? HostEnsureCanCompileStrings(_evalRealm_, _evalRealm_, Script, _evalText_).
               1. Return ? PerformEval(_evalText_, _evalRealm_, _strictCaller_, *true*).
           1. Let _thisCall_ be this |CallExpression|.
           1. Let _tailCall_ be IsInTailPosition(_thisCall_).
@@ -23365,7 +23365,7 @@
         1. Let _callerContext_ be the second to top element of the execution context stack.
         1. Let _callerRealm_ be _callerContext_'s Realm.
         1. Let _calleeRealm_ be the current Realm Record.
-        1. Perform ? HostEnsureCanCompileStrings(_callerRealm_, _calleeRealm_).
+        1. Perform ? HostEnsureCanCompileStrings(_callerRealm_, _calleeRealm_, Script, _x_).
         1. Return ? PerformEval(_x_, _calleeRealm_, *false*, *false*).
       </emu-alg>
 
@@ -23449,11 +23449,17 @@
       </emu-clause>
 
       <emu-clause id="sec-hostensurecancompilestrings" aoid="HostEnsureCanCompileStrings">
-        <h1>HostEnsureCanCompileStrings ( _callerRealm_, _calleeRealm_ )</h1>
+        <h1>HostEnsureCanCompileStrings ( _callerRealm_, _calleeRealm_[, _goal_[, _bodyText_]] )</h1>
 
         <p>HostEnsureCanCompileStrings is an implementation-defined abstract operation that allows host environments to block certain ECMAScript functions which allow developers to compile strings into ECMAScript code.</p>
 
         <p>An implementation of HostEnsureCanCompileStrings may complete normally or abruptly. Any abrupt completions will be propagated to its callers. The default implementation of HostEnsureCanCompileStrings is to unconditionally return an empty normal completion.</p>
+
+        <emu-note>
+          <p>_goal_ is the production which will be used to parse _bodyText_.  For example, if called via %Function% it might be the grammar symbol |FunctionBody[~Yield, ~Await]| and from %eval% it might be the grammar symbol |Script|.</p>
+        </emu-note>
+
+        <p>Implementations of HostEnsureCanCompileStrings should not coerce _bodyText_ to a string since callers will later do that and HostEnsureCanCompileStrings must not base security decisions on both coercions producing the same string.  Clients may base security decisions on internal slots.</p>
       </emu-clause>
 
       <emu-clause id="sec-evaldeclarationinstantiation" aoid="EvalDeclarationInstantiation">
@@ -24673,7 +24679,6 @@
             1. Let _callerContext_ be the second to top element of the execution context stack.
             1. Let _callerRealm_ be _callerContext_'s Realm.
             1. Let _calleeRealm_ be the current Realm Record.
-            1. Perform ? HostEnsureCanCompileStrings(_callerRealm_, _calleeRealm_).
             1. If _newTarget_ is *undefined*, set _newTarget_ to _constructor_.
             1. If _kind_ is `"normal"`, then
               1. Let _goal_ be the grammar symbol |FunctionBody[~Yield, ~Await]|.
@@ -24693,9 +24698,12 @@
               1. Let _parameterGoal_ be the grammar symbol |FormalParameters[+Yield, +Await]|.
               1. Let _fallbackProto_ be `"%AsyncGenerator%"`.
             1. Let _argCount_ be the number of elements in _args_.
-            1. Let _P_ be the empty String.
             1. If _argCount_ = 0, let _bodyText_ be the empty String.
-            1. Else if _argCount_ = 1, let _bodyText_ be _args_[0].
+            1. Else _argCount_ &ge; 1,
+              1. Let _bodyText_ be _args_[_argCount_ - 1].
+            1. Perform ? HostEnsureCanCompileStrings(_callerRealm_, _calleeRealm_, _goal_, _bodyText_).
+            1. Let _P_ be the empty String.
+            1. If _argCount_ = 1, let _bodyText_ be _args_[0].
             1. Else _argCount_ &gt; 1,
               1. Let _firstArg_ be _args_[0].
               1. Set _P_ to ? ToString(_firstArg_).
@@ -24705,7 +24713,6 @@
                 1. Let _nextArgString_ be ? ToString(_nextArg_).
                 1. Set _P_ to the string-concatenation of the previous value of _P_, `","` (a comma), and _nextArgString_.
                 1. Increase _k_ by 1.
-              1. Let _bodyText_ be _args_[_k_].
             1. Set _bodyText_ to ? ToString(_bodyText_).
             1. Let _parameters_ be the result of parsing _P_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, using _parameterGoal_ as the goal symbol. Throw a *SyntaxError* exception if the parse fails.
             1. Let _body_ be the result of parsing _bodyText_, interpreted as UTF-16 encoded Unicode text as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, using _goal_ as the goal symbol. Throw a *SyntaxError* exception if the parse fails.
