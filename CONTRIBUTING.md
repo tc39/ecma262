@@ -11,7 +11,7 @@ To file an issue, go to the ecma262 [issues page](https://github.com/tc39/ecma26
 To make a pull request (PR), [fork](https://help.github.com/articles/fork-a-repo/) the [ecma262](https://github.com/tc39/ecma262), apply changes to the spec.html, and upload it to your fork on GitHub, using the web interface to file a pull request. Locally, to see how your change renders in HTML, use [ecmarkup](https://github.com/bterlson/ecmarkup) to build spec.html into an actual HTML file.
 
 Commits in pull requests should have a first line which starts with a tag, followed by a colon, indicating which type of patch they are:
-  * Normative: changes impacting JavaScript developers in some way
+  * Normative: any changes that affect behavior required to correctly evaluate some ECMAScript source text (such as a script or module)
   * Editorial: any non-normative changes to spec text including typo fixes, changes to the document style, etc.
   * Markup: non-visible changes to markup in the spec
   * Meta: changes to documents about this repository (e.g. readme.md or contributing.md) and other supporting documents or scripts (e.g. package.json, design documents, etc.)
