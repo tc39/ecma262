@@ -9342,6 +9342,26 @@
         1. Return the code point _cp_.
       </emu-alg>
     </emu-clause>
+
+    <emu-clause id="sec-codepointat" aoid="CodePointAt">
+      <h1>Static Semantics: CodePointAt ( _string_, _position_ )</h1>
+      <p>The abstract operation CodePointAt interprets a String _string_ as a sequence of UTF-16 encoded code points, as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, and reads from it a single code point starting with the code unit at index _position_. When called, the following steps are performed:</p>
+      <emu-alg>
+        1. Let _size_ be the length of _string_.
+        1. Assert: _position_ &ge; 0 and _position_ &lt; _size_.
+        1. Let _first_ be the code unit at index _position_ within _string_.
+        1. Let _cp_ be the code point whose numeric value is that of _first_.
+        1. If _first_ is not a <emu-xref href="#leading-surrogate"></emu-xref> or <emu-xref href="#trailing-surrogate"></emu-xref>, then
+          1. Return a new Record { [[CodePoint]]: _cp_, [[CodeUnitCount]]: 1, [[IsUnpairedSurrogate]]: *false* }.
+        1. If _first_ is a <emu-xref href="#trailing-surrogate"></emu-xref> or _position_ + 1 = _size_, then
+          1. Return a new Record { [[CodePoint]]: _cp_, [[CodeUnitCount]]: 1, [[IsUnpairedSurrogate]]: *true* }.
+        1. Let _second_ be the code unit at index _position_ + 1 within _string_.
+        1. If _second_ is not a <emu-xref href="#trailing-surrogate"></emu-xref>, then
+          1. Return a new Record { [[CodePoint]]: _cp_, [[CodeUnitCount]]: 1, [[IsUnpairedSurrogate]]: *true* }.
+        1. Set _cp_ to ! UTF16Decode(_first_, _second_).
+        1. Return a new Record { [[CodePoint]]: _cp_, [[CodeUnitCount]]: 2, [[IsUnpairedSurrogate]]: *false* }.
+      </emu-alg>
+    </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-types-of-source-code">
@@ -23706,25 +23726,18 @@
               1. If _k_ equals _strLen_, return _R_.
               1. Let _C_ be the code unit at index _k_ within _string_.
               1. If _C_ is in _unescapedSet_, then
-                1. Let _S_ be the String value containing only the code unit _C_.
-                1. Set _R_ to the string-concatenation of the previous value of _R_ and _S_.
+                1. Set _k_ to _k_ + 1.
+                1. Set _R_ to the string-concatenation of the previous value of _R_ and _C_.
               1. Else,
-                1. If _C_ is a <emu-xref href="#trailing-surrogate"></emu-xref>, throw a *URIError* exception.
-                1. If _C_ is not a <emu-xref href="#leading-surrogate"></emu-xref>, then
-                  1. Let _V_ be the code point with the same numeric value as code unit _C_.
-                1. Else,
-                  1. Increase _k_ by 1.
-                  1. If _k_ equals _strLen_, throw a *URIError* exception.
-                  1. Let _kChar_ be the code unit at index _k_ within _string_.
-                  1. If _kChar_ is not a <emu-xref href="#trailing-surrogate"></emu-xref>, throw a *URIError* exception.
-                  1. Let _V_ be UTF16Decode(_C_, _kChar_).
-                1. Let _Octets_ be the List of octets resulting by applying the UTF-8 transformation to _V_.
+                1. Let _cp_ be ! CodePointAt(_string_, _k_).
+                1. If _cp_.[[IsUnpairedSurrogate]] is *true*, throw a *URIError* exception.
+                1. Set _k_ to _k_ + _cp_.[[CodeUnitCount]].
+                1. Let _Octets_ be the List of octets resulting by applying the UTF-8 transformation to _cp_.[[CodePoint]].
                 1. For each element _octet_ of _Octets_ in List order, do
-                  1. Let _S_ be the string-concatenation of:
+                  1. Set _R_ to the string-concatenation of:
+                    * the previous value of _R_
                     * `"%"`
                     * the String representation of _octet_, formatted as a two-digit uppercase hexadecimal number, padded to the left with a zero if necessary
-                  1. Set _R_ to the string-concatenation of the previous value of _R_ and _S_.
-              1. Increase _k_ by 1.
           </emu-alg>
         </emu-clause>
 
@@ -28309,12 +28322,8 @@ THH:mm:ss.sss
           1. Let _position_ be ? ToInteger(_pos_).
           1. Let _size_ be the length of _S_.
           1. If _position_ &lt; 0 or _position_ &ge; _size_, return *undefined*.
-          1. Let _first_ be the code unit at index _position_ within the String _S_.
-          1. If _first_ is not a <emu-xref href="#leading-surrogate"></emu-xref> or if _position_ + 1 = _size_, return the numeric value of _first_.
-          1. Let _second_ be the code unit at index _position_ + 1 within the String _S_.
-          1. If _second_ is not a <emu-xref href="#trailing-surrogate"></emu-xref>, return the numeric value of _first_.
-          1. Let _cp_ be UTF16Decode(_first_, _second_).
-          1. Return the code point value of _cp_.
+          1. Let _cp_ be ! CodePointAt(_S_, _position_).
+          1. Return _cp_.[[CodePoint]].
         </emu-alg>
         <emu-note>
           <p>The `codePointAt` function is intentionally generic; it does not require that its *this* value be a String object. Therefore it can be transferred to other kinds of objects for use as a method.</p>
@@ -29113,14 +29122,9 @@ THH:mm:ss.sss
             1. If _position_ &ge; _len_, then
               1. Set _O_.[[IteratedString]] to *undefined*.
               1. Return CreateIterResultObject(*undefined*, *true*).
-            1. Let _first_ be the code unit at index _position_ within _s_.
-            1. If _first_ is not a <emu-xref href="#leading-surrogate"></emu-xref> or if _position_ + 1 = _len_, let _resultString_ be the String value consisting of the single code unit _first_.
-            1. Else,
-              1. Let _second_ be the code unit at index _position_ + 1 within the String _s_.
-              1. If _second_ is not a <emu-xref href="#trailing-surrogate"></emu-xref>, let _resultString_ be the String value consisting of the single code unit _first_.
-              1. Else, let _resultString_ be the string-concatenation of the code unit _first_ and the code unit _second_.
-            1. Let _resultSize_ be the number of code units in _resultString_.
-            1. Set _O_.[[StringIteratorNextIndex]] to _position_ + _resultSize_.
+            1. Let _cp_ be ! CodePointAt(_s_, _position_).
+            1. Let _resultString_ be the String value containing _cp_.[[CodeUnitCount]] consecutive code units from _s_ beginning with the code unit at index _position_.
+            1. Set _O_.[[StringIteratorNextIndex]] to _position_ + _cp_.[[CodeUnitCount]].
             1. Return CreateIterResultObject(_resultString_, *false*).
           </emu-alg>
         </emu-clause>
@@ -31016,11 +31020,8 @@ THH:mm:ss.sss
             1. If _unicode_ is *false*, return _index_ + 1.
             1. Let _length_ be the number of code units in _S_.
             1. If _index_ + 1 &ge; _length_, return _index_ + 1.
-            1. Let _first_ be the code unit at index _index_ within _S_.
-            1. If _first_ is not a <emu-xref href="#leading-surrogate"></emu-xref>, return _index_ + 1.
-            1. Let _second_ be the code unit at index _index_ + 1 within _S_.
-            1. If _second_ is not a <emu-xref href="#trailing-surrogate"></emu-xref>, return _index_ + 1.
-            1. Return _index_ + 2.
+            1. Let _cp_ be ! CodePointAt(_S_, _index_).
+            1. Return _index_ + _cp_.[[CodeUnitCount]].
           </emu-alg>
         </emu-clause>
       </emu-clause>
