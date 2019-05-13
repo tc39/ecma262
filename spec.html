@@ -1353,7 +1353,7 @@
         <p><emu-xref href="#table-5"></emu-xref> summarizes the <em>essential internal methods</em> used by this specification that are applicable to all objects created or manipulated by ECMAScript code. Every object must have algorithms for all of the essential internal methods. However, all objects do not necessarily use the same algorithms for those methods.</p>
         <p>The &ldquo;Signature&rdquo; column of <emu-xref href="#table-5"></emu-xref> and other similar tables describes the invocation pattern for each internal method. The invocation pattern always includes a parenthesized list of descriptive parameter names. If a parameter name is the same as an ECMAScript type name then the name describes the required type of the parameter value. If an internal method explicitly returns a value, its parameter list is followed by the symbol &ldquo;&rarr;&rdquo; and the type name of the returned value. The type names used in signatures refer to the types defined in clause <emu-xref href="#sec-ecmascript-data-types-and-values"></emu-xref> augmented by the following additional names. &ldquo;<em>any</em>&rdquo; means the value may be any ECMAScript language type.</p>
         <p>In addition to its parameters, an internal method always has access to the object that is the target of the method invocation.</p>
-        <p>An internal method implicitly returns a Completion Record.</p>
+        <p>An internal method implicitly returns a Completion Record, either a normal completion that wraps a value of the return type shown in its invocation pattern, or a throw completion.</p>
         <emu-table id="table-5" caption="Essential Internal Methods">
           <table>
             <tbody>
@@ -1555,10 +1555,19 @@
             All references to <em>SameValue</em> are according to the definition of the SameValue algorithm.
           </li>
         </ul>
+        <h2>Return value:</h2>
+        <p>The value returned by any internal method must be a Completion Record with either:</p>
+        <ul>
+          <li>[[Type]] = ~normal~, [[Target]] = ~empty~, and [[Value]] = a value of the "normal return type" shown below for that internal method, or</li>
+          <li>[[Type]] = ~throw~, [[Target]] = ~empty~, and [[Value]] = any ECMAScript language value.</li>
+        </ul>
+        <emu-note>
+          <p>An internal method must not return a completion with [[Type]] = ~continue~, ~break~, or ~return~.</p>
+        </emu-note>
         <h2>[[GetPrototypeOf]] ( )</h2>
         <ul>
           <li>
-            The Type of the return value must be either Object or Null.
+            The normal return type is either Object or Null.
           </li>
           <li>
             If target is non-extensible, and [[GetPrototypeOf]] returns a value _V_, then any future calls to [[GetPrototypeOf]] should return the SameValue as _V_.
@@ -1570,7 +1579,7 @@
         <h2>[[SetPrototypeOf]] ( _V_ )</h2>
         <ul>
           <li>
-            The Type of the return value must be Boolean.
+            The normal return type is Boolean.
           </li>
           <li>
             If target is non-extensible, [[SetPrototypeOf]] must return *false*, unless _V_ is the SameValue as the target's observed [[GetPrototypeOf]] value.
@@ -1579,7 +1588,7 @@
         <h2>[[IsExtensible]] ( )</h2>
         <ul>
           <li>
-            The Type of the return value must be Boolean.
+            The normal return type is Boolean.
           </li>
           <li>
             If [[IsExtensible]] returns *false*, all future calls to [[IsExtensible]] on the target must return *false*.
@@ -1588,7 +1597,7 @@
         <h2>[[PreventExtensions]] ( )</h2>
         <ul>
           <li>
-            The Type of the return value must be Boolean.
+            The normal return type is Boolean.
           </li>
           <li>
             If [[PreventExtensions]] returns *true*, all future calls to [[IsExtensible]] on the target must return *false* and the target is now considered non-extensible.
@@ -1597,7 +1606,7 @@
         <h2>[[GetOwnProperty]] ( _P_ )</h2>
         <ul>
           <li>
-            The Type of the return value must be either Property Descriptor or Undefined.
+            The normal return type is either Property Descriptor or Undefined.
           </li>
           <li>
             If the Type of the return value is Property Descriptor, the return value must be a <emu-xref href="#sec-completepropertydescriptor">complete property descriptor</emu-xref>.
@@ -1621,7 +1630,7 @@
         <h2>[[DefineOwnProperty]] ( _P_, _Desc_ )</h2>
         <ul>
           <li>
-            The Type of the return value must be Boolean.
+            The normal return type is Boolean.
           </li>
           <li>
             [[DefineOwnProperty]] must return *false* if _P_ has previously been observed as a non-configurable own property of the target, unless either:
@@ -1641,7 +1650,7 @@
         <h2>[[HasProperty]] ( _P_ )</h2>
         <ul>
           <li>
-            The Type of the return value must be Boolean.
+            The normal return type is Boolean.
           </li>
           <li>
             If _P_ was previously observed as a non-configurable own data or accessor property of the target, [[HasProperty]] must return *true*.
@@ -1650,7 +1659,7 @@
         <h2>[[Get]] ( _P_, _Receiver_ )</h2>
         <ul>
           <li>
-            The return value must be an ECMAScript language value.
+            The normal return type is any ECMAScript language type.
           </li>
           <li>
             If _P_ was previously observed as a non-configurable, non-writable own data property of the target with value _V_, then [[Get]] must return the SameValue as _V_.
@@ -1662,7 +1671,7 @@
         <h2>[[Set]] ( _P_, _V_, _Receiver_ )</h2>
         <ul>
           <li>
-            The Type of the return value must be Boolean.
+            The normal return type is Boolean.
           </li>
           <li>
             If _P_ was previously observed as a non-configurable, non-writable own data property of the target, then [[Set]] must return *false* unless _V_ is the SameValue as _P_'s [[Value]] attribute.
@@ -1674,7 +1683,7 @@
         <h2>[[Delete]] ( _P_ )</h2>
         <ul>
           <li>
-            The Type of the return value must be Boolean.
+            The normal return type is Boolean.
           </li>
           <li>
             If _P_ was previously observed as a non-configurable own data or accessor property of the target, [[Delete]] must return *false*.
@@ -1683,7 +1692,7 @@
         <h2>[[OwnPropertyKeys]] ( )</h2>
         <ul>
           <li>
-            The return value must be a List.
+            The normal return type is List.
           </li>
           <li>
             The returned List must not contain any duplicate entries.
@@ -1701,13 +1710,13 @@
         <h2>[[Call]] ( )</h2>
         <ul>
           <li>
-            The return value must be an ECMAScript language value.
+            The normal return type is any ECMAScript language type.
           </li>
         </ul>
         <h2>[[Construct]] ( )</h2>
         <ul>
           <li>
-            The Type of the return value must be Object.
+            The normal return type is Object.
           </li>
         </ul>
       </emu-clause>
