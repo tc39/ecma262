@@ -28095,40 +28095,40 @@
 
       <emu-clause id="sec-local-time-zone-adjustment">
         <h1>LocalTZA ( _t_, _isUTC_ )</h1>
-        <p>LocalTZA( _t_, _isUTC_ ) is an implementation-defined algorithm that returns the local time zone adjustment, or offset, in milliseconds. The local political rules for standard time and daylight saving time in effect at _t_ should be used to determine the result in the way specified in this section.</p>
-        <p>When _isUTC_ is true, <emu-eqn>LocalTZA( _t_<sub>UTC</sub>, true )</emu-eqn> should return the offset of the local time zone from UTC measured in milliseconds at time represented by time value <emu-eqn>_t_<sub>UTC</sub></emu-eqn>. When the result is added to <emu-eqn>_t_<sub>UTC</sub></emu-eqn>, it should yield the corresponding Number <emu-eqn>_t_<sub>local</sub></emu-eqn>.</p>
-        <p>When _isUTC_ is false, <emu-eqn>LocalTZA( _t_<sub>local</sub>, false )</emu-eqn> should return the offset of the local time zone from UTC measured in milliseconds at local time represented by Number <emu-eqn>_t_<sub>local</sub></emu-eqn>. When the result is subtracted from <emu-eqn>_t_<sub>local</sub></emu-eqn>, it should yield the corresponding time value <emu-eqn>_t_<sub>UTC</sub></emu-eqn>.</p>
-        <p>Input _t_ is nominally a time value but may be any Number value. This can occur when _isUTC_ is false and _t_<sub>local</sub> represents a time value that is already offset outside of the time value range at the range boundaries. The algorithm must not limit _t_<sub>local</sub> to the time value range, so that such inputs are supported.</p>
-        <p>When <emu-eqn>_t_<sub>local</sub></emu-eqn> represents local time repeating multiple times at a negative time zone transition (e.g. when the daylight saving time ends or the time zone offset is decreased due to a time zone rule change) or skipped local time at a positive time zone transitions (e.g. when the daylight saving time starts or the time zone offset is increased due to a time zone rule change), <emu-eqn>_t_<sub>local</sub></emu-eqn> must be interpreted using the time zone offset before the transition.</p>
-        <p>If an implementation does not support a conversion described above or if political rules for time _t_ are not available within the implementation, the result must be 0.</p>
+        <p>LocalTZA is an implementation-defined abstract operation that returns the local time zone UTC offset (in milliseconds) at a particular instant indicated by its arguments. The result should be dependent upon political rules regarding standard time and daylight saving time in effect at that instant.</p>
+        <p>When _isUTC_ is *true*, <dfn>LocalTZA( _t_, *true* )</dfn> interprets _t_ as a time value representing an instant in time. It returns the offset of the local time zone from UTC in milliseconds at that instant. When the result is added to _t_, it should yield the time value for which UTC date and time of day are equal to the local date and time of day at time value _t_.</p>
+        <p>When _isUTC_ is *false*, <dfn>LocalTZA( _t_, *false* )</dfn> interprets _t_ as a time value representing a date and time of day. It returns the offset of the local time zone from UTC in milliseconds at the smallest (closest to negative infinity) time value _tv_ for which the local date and time of day at _tv_ + 1 is greater than the UTC date and time of day at _t_. When the result is subtracted from _t_, it should yield the smallest time value for which the local date and time of day are equal to the UTC date and time of day at _t_. If no such time value exists because of local times skipped by positive time zone transitions (e.g. when the daylight saving time starts or the time zone adjustment is increased due to a time zone rule change), then subtracting the result from _t_ should instead yield the time value for which local date and time of day in the UTC offset applicable before the transition are equal to the UTC date and time of day at _t_.</p>
+        <p>Input _t_ is nominally a time value but may be any Number value. This can occur when _isUTC_ is *false* and _t_ represents a time value that is already offset outside of the time value range at the range boundaries. The algorithm must not limit _t_ to the time value range, so that such inputs are supported.</p>
+        <p>If an implementation does not support a conversion described above or if political rules for time _t_ are not available within the implementation, LocalTZA( _t_, _isUTC_ ) returns *+0* (equivalent to no local UTC offset).</p>
         <emu-note>
           <p>It is recommended that implementations use the time zone information of the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a>.</p>
-          <p>1:30 AM on November 5, 2017 in America/New_York is repeated twice (fall backward), but it must be interpreted as 1:30 AM UTC-04 instead of 1:30 AM UTC-05. LocalTZA(TimeClip(MakeDate(MakeDay(2017, 10, 5), MakeTime(1, 30, 0, 0))), false) is <emu-eqn>-4 &times; msPerHour</emu-eqn>.</p>
-          <p>2:30 AM on March 12, 2017 in America/New_York does not exist, but it must be interpreted as 2:30 AM UTC-05 (equivalent to 3:30 AM UTC-04). LocalTZA(TimeClip(MakeDate(MakeDay(2017, 2, 12), MakeTime(2, 30, 0, 0))), false) is <emu-eqn>-5 &times; msPerHour</emu-eqn>.</p>
+          <p>The above requirements ensure that ambiguities and impossibilities due to local times repeating at a negative time zone transition (e.g. when the daylight saving time ends or the time zone adjustment is decreased due to a time zone rule change) or being skipped at a positive time zone transition (e.g. when the daylight saving time starts or the time zone adjustment is increased due to a time zone rule change) are resolved by using the UTC offset in effect before the transition.</p>
+          <p>In the America/New_York time zone, 1:30 AM on November 5, 2017 is repeated (because one hour of local times starting with 1:00 AM occur once before and once after the "fall backward" negative daylight saving time transition from UTC-04 to UTC-05). LocalTZA(TimeClip(MakeDate(MakeDay(2017, 10, 5), MakeTime(1, 30, 0, 0))), *false*) returns <emu-eqn>-4 &times; msPerHour</emu-eqn>, corresponding to the pre-transition offset.</p>
+          <p>In the America/New_York time zone, 2:30 AM on March 12, 2017 in America/New_York does not exist (because one hour of local times starting with 2:00 AM are skipped by the "spring forward" positive daylight saving time transition from UTC-05 to UTC-04). LocalTZA(TimeClip(MakeDate(MakeDay(2017, 2, 12), MakeTime(2, 30, 0, 0))), *false*) returns <emu-eqn>-5 &times; msPerHour</emu-eqn>, corresponding to an interpretation of the input as 2:30 AM UTC-05 despite that instant following the local time zone transition to UTC-04 (in which it is 3:30 AM UTC-04).</p>
           <p>Local time zone offset values may be positive <i>or</i> negative.</p>
         </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-localtime" aoid="LocalTime">
         <h1>LocalTime ( _t_ )</h1>
-        <p>The abstract operation LocalTime with argument _t_ converts _t_ from UTC to local time by performing the following steps:</p>
+        <p>The abstract operation LocalTime is used to calculate a time value with UTC date and time of day equal to the local date and time of day at its argument _t_, effectively converting _t_ from representing an instant in time to representing a date and time of day. It performs the following steps:</p>
         <emu-alg>
           1. Return _t_ + LocalTZA(_t_, *true*).
         </emu-alg>
         <emu-note>
-          <p>Two different input time values <emu-eqn>_t_<sub>UTC</sub></emu-eqn> are converted to the same local time <emu-eqn>t<sub>local</sub></emu-eqn> at a negative time zone transition when there are repeated times (e.g. the daylight saving time ends or the time zone adjustment is decreased.).</p>
-          <p><emu-eqn>LocalTime(UTC(_t_<sub>local</sub>))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_<sub>local</sub></emu-eqn>. Correspondingly, <emu-eqn>UTC(LocalTime(_t_<sub>UTC</sub>))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_<sub>UTC</sub></emu-eqn>.</p>
+          <p>Both members of every pair of distinct time values corresponding to the same repeated local date and time of day near a negative time zone transition (e.g. when the daylight saving time ends or the time zone adjustment is decreased due to a time zone rule change) are mapped to the same time value by this operation.</p>
+          <p><emu-eqn>LocalTime(UTC(_t_))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_</emu-eqn>. Correspondingly, <emu-eqn>UTC(LocalTime(_t_))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_</emu-eqn>.</p>
         </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-utc-t" aoid="UTC">
         <h1>UTC ( _t_ )</h1>
-        <p>The abstract operation UTC with argument _t_ converts _t_ from local time to UTC by performing the following steps:</p>
+        <p>The abstract operation UTC is used to calculate a time value with local date and time of day corresponding to the UTC date and time of day at its argument _t_, effectively converting _t_ from representing a date and time of day to representing an instant in time. It performs the following steps:</p>
         <emu-alg>
           1. Return _t_ - LocalTZA(_t_, *false*).
         </emu-alg>
         <emu-note>
-          <p><emu-eqn>UTC(LocalTime(_t_<sub>UTC</sub>))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_<sub>UTC</sub></emu-eqn>. Correspondingly, <emu-eqn>LocalTime(UTC(_t_<sub>local</sub>))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_<sub>local</sub></emu-eqn>.</p>
+          <p><emu-eqn>UTC(LocalTime(_t_))</emu-eqn> is not necessarily always equal to _t_. <emu-eqn>LocalTime(UTC(_t_))</emu-eqn> is not necessarily always equal to _t_.</p>
         </emu-note>
       </emu-clause>
 
