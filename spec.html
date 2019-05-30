@@ -28047,7 +28047,23 @@
 
       <emu-clause id="sec-month-number">
         <h1>Month Number</h1>
-        <p>Months are identified by an integer in the range 0 to 11, inclusive. The mapping MonthFromTime(_t_) from a time value _t_ to a month number is defined by:</p>
+        <p>Months are identified by an integer in the range 0 to 11, inclusive. A month value of 0 specifies January; 1 specifies February; 2 specifies March; 3 specifies April; 4 specifies May; 5 specifies June; 6 specifies July; 7 specifies August; 8 specifies September; 9 specifies October; 10 specifies November; and 11 specifies December.</p>
+        <p>The position of a month _m_ within a year depends upon whether or not the year is a leap year:</p>
+        <emu-eqn id="eqn-DaysWithinYearBeforeMonth" aoid="DaysWithinYearBeforeMonth">DaysWithinYearBeforeMonth(_m_, _inLeapYear_)
+          = 0 if _m_ = 0
+          = 31 if _m_ = 1
+          = 59 + _inLeapYear_ if _m_ = 2
+          = 90 + _inLeapYear_ if _m_ = 3
+          = 120 + _inLeapYear_ if _m_ = 4
+          = 151 + _inLeapYear_ if _m_ = 5
+          = 181 + _inLeapYear_ if _m_ = 6
+          = 212 + _inLeapYear_ if _m_ = 7
+          = 243 + _inLeapYear_ if _m_ = 8
+          = 273 + _inLeapYear_ if _m_ = 9
+          = 304 + _inLeapYear_ if _m_ = 10
+          = 334 + _inLeapYear_ if _m_ = 11
+        </emu-eqn>
+        <p>The mapping MonthFromTime(_t_) from a time value _t_ to a month number is defined by:</p>
         <emu-eqn id="eqn-MonthFromTime" aoid="MonthFromTime">MonthFromTime(_t_)
           = 0 if 0 &le; DayWithinYear(_t_) &lt; 31
           = 1 if 31 &le; DayWithinYear(_t_) &lt; 59 + InLeapYear(_t_)
@@ -28064,7 +28080,7 @@
         </emu-eqn>
         <p>where</p>
         <emu-eqn id="eqn-DayWithinYear" aoid="DayWithinYear">DayWithinYear(_t_) = Day(_t_) - DayFromYear(YearFromTime(_t_))</emu-eqn>
-        <p>A month value of 0 specifies January; 1 specifies February; 2 specifies March; 3 specifies April; 4 specifies May; 5 specifies June; 6 specifies July; 7 specifies August; 8 specifies September; 9 specifies October; 10 specifies November; and 11 specifies December. Note that <emu-eqn>MonthFromTime(0) = 0</emu-eqn>, corresponding to Thursday, 01 January, 1970.</p>
+        <p>Note that <emu-eqn>MonthFromTime(0) = 0</emu-eqn>, corresponding to Thursday, 01 January, 1970.</p>
       </emu-clause>
 
       <emu-clause id="sec-date-number">
@@ -28169,11 +28185,14 @@
           1. If _year_ is not finite or _month_ is not finite or _date_ is not finite, return *NaN*.
           1. Let _y_ be ! ToInteger(_year_).
           1. Let _m_ be ! ToInteger(_month_).
-          1. Let _dt_ be ! ToInteger(_date_).
-          1. Let _ym_ be _y_ + floor(_m_ / 12).
-          1. Let _mn_ be _m_ modulo 12.
-          1. Find a value _t_ such that YearFromTime(_t_) is _ym_ and MonthFromTime(_t_) is _mn_ and DateFromTime(_t_) is 1; but if this is not possible (because some argument is out of range), return *NaN*.
-          1. Return Day(_t_) + _dt_ - 1.
+          1. Let _d_ be ! ToInteger(_date_).
+          1. Let _wholeYears_ be _y_ `+` floor(_m_ / 12), performing the arithmetic according to IEEE 754-2008 rules (that is, as if using the ECMAScript `+` operator).
+          1. If _wholeYears_ is not finite, return *NaN*.
+          1. Let _monthWithinYear_ be _m_ modulo 12.
+          1. Let _inLeapYear_ be InLeapYear(TimeFromYear(_wholeYears_)).
+          1. Let _day_ be DayFromYear(_wholeYears_) `+` DaysWithinYearBeforeMonth(_monthWithinYear_, _inLeapYear_) `+` _d_ `-` 1, performing the arithmetic according to IEEE 754-2008 rules (that is, as if using the ECMAScript operators `+` and `-`).
+          1. If _day_ is not finite, return *NaN*.
+          1. Return _day_.
         </emu-alg>
       </emu-clause>
 
@@ -28182,7 +28201,9 @@
         <p>The abstract operation MakeDate calculates a number of milliseconds from its two arguments, which must be ECMAScript Number values. This operator functions as follows:</p>
         <emu-alg>
           1. If _day_ is not finite or _time_ is not finite, return *NaN*.
-          1. Return _day_ &times; msPerDay + _time_.
+          1. Let _tv_ be _day_ `*` msPerDay `+` _time_, performing the arithmetic according to IEEE 754-2008 rules (that is, as if using the ECMAScript operators `*` and `+`).
+          1. If _tv_ is not finite, return *NaN*.
+          1. Return _tv_.
         </emu-alg>
       </emu-clause>
 
