@@ -28015,24 +28015,23 @@
 
       <emu-clause id="sec-day-number-and-time-within-day">
         <h1>Day Number and Time within Day</h1>
-        <p>A given time value _t_ belongs to day number</p>
+        <p>A given time value _t_ identifies a <dfn>day number</dfn> and a specific time within the day.</p>
         <emu-eqn id="eqn-Day" aoid="Day">Day(_t_) = floor(_t_ / msPerDay)</emu-eqn>
+        <emu-eqn id="eqn-TimeWithinDay" aoid="TimeWithinDay">TimeWithinDay(_t_) = _t_ modulo msPerDay</emu-eqn>
         <p>where the number of milliseconds per day is</p>
         <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = 86400000</emu-eqn>
-        <p>The remainder is called the time within the day:</p>
-        <emu-eqn id="eqn-TimeWithinDay" aoid="TimeWithinDay">TimeWithinDay(_t_) = _t_ modulo msPerDay</emu-eqn>
       </emu-clause>
 
       <emu-clause id="sec-year-number">
         <h1>Year Number</h1>
-        <p>ECMAScript uses a proleptic Gregorian calendar to map a day number to a year number and to determine the month and date within that year. In this calendar, leap years are precisely those which are (divisible by 4) and ((not divisible by 100) or (divisible by 400)). The number of days in year number _y_ is therefore defined by</p>
+        <p>ECMAScript uses a proleptic Gregorian calendar in which common years have 365 days and leap years (those that are divisible by 4 but not divisible by 100 and those that are divisible by 400) have 366 days by means of adding a 29th day to February. The number of days in year number _y_ is therefore defined by:</p>
         <emu-eqn id="eqn-DaysInYear" aoid="DaysInYear">DaysInYear(_y_)
           = 365 if (_y_ modulo 4) &ne; 0
           = 366 if (_y_ modulo 4) = 0 and (_y_ modulo 100) &ne; 0
           = 365 if (_y_ modulo 100) = 0 and (_y_ modulo 400) &ne; 0
           = 366 if (_y_ modulo 400) = 0
         </emu-eqn>
-        <p>All non-leap years have 365 days with the usual number of days per month and leap years have an extra day in February. The day number of the first day of year _y_ is given by:</p>
+        <p>The day number of the first day of year _y_ changes by 365 days for every year of difference between _y_ and 1970 plus one day for each of those that is a leap year, and is defined as:</p>
         <emu-eqn id="eqn-DaysFromYear" aoid="DayFromYear">DayFromYear(_y_) = 365 &times; (_y_ - 1970) + floor((_y_ - 1969) / 4) - floor((_y_ - 1901) / 100) + floor((_y_ - 1601) / 400)</emu-eqn>
         <p>The time value of the start of a year is:</p>
         <emu-eqn id="eqn-TimeFromYear" aoid="TimeFromYear">TimeFromYear(_y_) = msPerDay &times; DayFromYear(_y_)</emu-eqn>
@@ -28112,12 +28111,14 @@
       <emu-clause id="sec-local-time-zone-adjustment">
         <h1>LocalTZA ( _t_, _isUTC_ )</h1>
         <p>LocalTZA is an implementation-defined abstract operation that returns the local time zone UTC offset (in milliseconds) at a particular instant indicated by its arguments. The result should be dependent upon political rules regarding standard time and daylight saving time in effect at that instant.</p>
+        <emu-note>
+          <p>It is recommended that implementations use the time zone information of the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a>.</p>
+        </emu-note>
         <p>When _isUTC_ is *true*, <dfn>LocalTZA( _t_, *true* )</dfn> interprets _t_ as a time value representing an instant in time. It returns the offset of the local time zone from UTC in milliseconds at that instant. When the result is added to _t_, it should yield the time value for which UTC date and time of day are equal to the local date and time of day at time value _t_.</p>
         <p>When _isUTC_ is *false*, <dfn>LocalTZA( _t_, *false* )</dfn> interprets _t_ as a time value representing a date and time of day. It returns the offset of the local time zone from UTC in milliseconds at the smallest (closest to negative infinity) time value _tv_ for which the local date and time of day at _tv_ + 1 is greater than the UTC date and time of day at _t_. When the result is subtracted from _t_, it should yield the smallest time value for which the local date and time of day are equal to the UTC date and time of day at _t_. If no such time value exists because of local times skipped by positive time zone transitions (e.g. when the daylight saving time starts or the time zone adjustment is increased due to a time zone rule change), then subtracting the result from _t_ should instead yield the time value for which local date and time of day in the UTC offset applicable before the transition are equal to the UTC date and time of day at _t_.</p>
         <p>Input _t_ is nominally a time value but may be any Number value. This can occur when _isUTC_ is *false* and _t_ represents a time value that is already offset outside of the time value range at the range boundaries. The algorithm must not limit _t_ to the time value range, so that such inputs are supported.</p>
         <p>If an implementation does not support a conversion described above or if political rules for time _t_ are not available within the implementation, LocalTZA( _t_, _isUTC_ ) returns *+0* (equivalent to no local UTC offset).</p>
         <emu-note>
-          <p>It is recommended that implementations use the time zone information of the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a>.</p>
           <p>The above requirements ensure that ambiguities and impossibilities due to local times repeating at a negative time zone transition (e.g. when the daylight saving time ends or the time zone adjustment is decreased due to a time zone rule change) or being skipped at a positive time zone transition (e.g. when the daylight saving time starts or the time zone adjustment is increased due to a time zone rule change) are resolved by using the UTC offset in effect before the transition.</p>
           <p>In the America/New_York time zone, 1:30 AM on November 5, 2017 is repeated (because one hour of local times starting with 1:00 AM occur once before and once after the "fall backward" negative daylight saving time transition from UTC-04 to UTC-05). LocalTZA(TimeClip(MakeDate(MakeDay(2017, 10, 5), MakeTime(1, 30, 0, 0))), *false*) returns <emu-eqn>-4 &times; msPerHour</emu-eqn>, corresponding to the pre-transition offset.</p>
           <p>In the America/New_York time zone, 2:30 AM on March 12, 2017 in America/New_York does not exist (because one hour of local times starting with 2:00 AM are skipped by the "spring forward" positive daylight saving time transition from UTC-05 to UTC-04). LocalTZA(TimeClip(MakeDate(MakeDay(2017, 2, 12), MakeTime(2, 30, 0, 0))), *false*) returns <emu-eqn>-5 &times; msPerHour</emu-eqn>, corresponding to an interpretation of the input as 2:30 AM UTC-05 despite that instant following the local time zone transition to UTC-04 (in which it is 3:30 AM UTC-04).</p>
@@ -28165,22 +28166,22 @@
       </emu-clause>
 
       <emu-clause id="sec-maketime" aoid="MakeTime">
-        <h1>MakeTime ( _hour_, _min_, _sec_, _ms_ )</h1>
-        <p>The abstract operation MakeTime calculates a number of milliseconds from its four arguments, which must be ECMAScript Number values. This operator functions as follows:</p>
+        <h1>MakeTime ( _hour_, _min_, _sec_, _millisec_ )</h1>
+        <p>The abstract operation MakeTime calculates a number of milliseconds from its four arguments, which must be ECMAScript Number values. It performs the following steps:</p>
         <emu-alg>
-          1. If _hour_ is not finite or _min_ is not finite or _sec_ is not finite or _ms_ is not finite, return *NaN*.
+          1. If _hour_ is not finite or _min_ is not finite or _sec_ is not finite or _millisec_ is not finite, return *NaN*.
           1. Let _h_ be ! ToInteger(_hour_).
           1. Let _m_ be ! ToInteger(_min_).
           1. Let _s_ be ! ToInteger(_sec_).
-          1. Let _milli_ be ! ToInteger(_ms_).
-          1. Let _t_ be _h_ `*` msPerHour `+` _m_ `*` msPerMinute `+` _s_ `*` msPerSecond `+` _milli_, performing the arithmetic according to IEEE 754-2008 rules (that is, as if using the ECMAScript operators `*` and `+`).
+          1. Let _ms_ be ! ToInteger(_millisec_).
+          1. Let _t_ be _h_ `*` msPerHour `+` _m_ `*` msPerMinute `+` _s_ `*` msPerSecond `+` _ms_, performing the arithmetic according to IEEE 754-2008 rules (that is, as if using the ECMAScript operators `*` and `+`).
           1. Return _t_.
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-makeday" aoid="MakeDay">
         <h1>MakeDay ( _year_, _month_, _date_ )</h1>
-        <p>The abstract operation MakeDay calculates a number of days from its three arguments, which must be ECMAScript Number values. This operator functions as follows:</p>
+        <p>The abstract operation MakeDay calculates a number of days from its three arguments, which must be ECMAScript Number values. It performs the following steps:</p>
         <emu-alg>
           1. If _year_ is not finite or _month_ is not finite or _date_ is not finite, return *NaN*.
           1. Let _y_ be ! ToInteger(_year_).
@@ -28198,7 +28199,7 @@
 
       <emu-clause id="sec-makedate" aoid="MakeDate">
         <h1>MakeDate ( _day_, _time_ )</h1>
-        <p>The abstract operation MakeDate calculates a number of milliseconds from its two arguments, which must be ECMAScript Number values. This operator functions as follows:</p>
+        <p>The abstract operation MakeDate calculates a number of milliseconds from its two arguments, which must be ECMAScript Number values. It performs the following steps:</p>
         <emu-alg>
           1. If _day_ is not finite or _time_ is not finite, return *NaN*.
           1. Let _tv_ be _day_ `*` msPerDay `+` _time_, performing the arithmetic according to IEEE 754-2008 rules (that is, as if using the ECMAScript operators `*` and `+`).
@@ -28209,7 +28210,7 @@
 
       <emu-clause id="sec-timeclip" aoid="TimeClip">
         <h1>TimeClip ( _time_ )</h1>
-        <p>The abstract operation TimeClip calculates a number of milliseconds from its argument, which must be an ECMAScript Number value. This operator functions as follows:</p>
+        <p>The abstract operation TimeClip calculates a number of milliseconds from its argument, which must be an ECMAScript Number value. It performs the following steps:</p>
         <emu-alg>
           1. If _time_ is not finite, return *NaN*.
           1. If abs(_time_) &gt; 8.64 &times; 10<sup>15</sup>, return *NaN*.
