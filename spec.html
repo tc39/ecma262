@@ -28003,7 +28003,7 @@
       <emu-clause id="sec-time-values-and-time-range">
         <h1>Time Values and Time Range</h1>
         <p>An ECMAScript <dfn>time value</dfn> is a Number, either a finite integer representing an instant in time to millisecond precision or *NaN* representing no specific instant.
-        <p>Time is measured in ECMAScript as milliseconds since midnight at the beginning of 01 January, 1970 UTC. Time in ECMAScript does not observe leap seconds; they are ignored. Time calculations assume each and every day contains exactly <emu-eqn>60 &times; 60 &times; 24 &times; 1000 = 86,400,000</emu-eqn> milliseconds, to align with the POSIX specification of each and every day containing exactly 86,400 seconds.</p>
+        <p>Time is measured in ECMAScript as milliseconds since midnight at the beginning of 01 January, 1970 UTC. Time in ECMAScript does not observe leap seconds; they are ignored. Time calculations assume each and every day contains exactly <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = 60 &times; 60 &times; 24 &times; 1000 = 86,400,000</emu-eqn> milliseconds, to align with the POSIX specification of each and every day containing exactly 86,400 seconds.</p>
         <p>A Number can exactly represent all integers from -9,007,199,254,740,992 to 9,007,199,254,740,992 (<emu-xref href="#sec-number.min_safe_integer"></emu-xref> and <emu-xref href="#sec-number.max_safe_integer"></emu-xref>). A time value used for the [[DateValue]] internal slot of a Date instance supports a slightly smaller range of -8,640,000,000,000,000 to 8,640,000,000,000,000 milliseconds (exactly -100,000,000 days to 100,000,000 days relative to midnight at the beginning of 01 January, 1970 UTC).</p>
         <p>The exact moment of midnight at the beginning of 01 January, 1970 UTC is represented by the time value *+0*.</p>
         <emu-note>
@@ -28018,20 +28018,11 @@
         <p>A given time value _t_ identifies a <dfn>day number</dfn> and a specific time within the day.</p>
         <emu-eqn id="eqn-Day" aoid="Day">Day(_t_) = floor(_t_ / msPerDay)</emu-eqn>
         <emu-eqn id="eqn-TimeWithinDay" aoid="TimeWithinDay">TimeWithinDay(_t_) = _t_ modulo msPerDay</emu-eqn>
-        <p>where the number of milliseconds per day is</p>
-        <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = 86400000</emu-eqn>
       </emu-clause>
 
       <emu-clause id="sec-year-number">
         <h1>Year Number</h1>
-        <p>ECMAScript uses a proleptic Gregorian calendar in which common years have 365 days and leap years (those that are divisible by 4 but not divisible by 100 and those that are divisible by 400) have 366 days by means of adding a 29th day to February. The number of days in year number _y_ is therefore defined by:</p>
-        <emu-eqn id="eqn-DaysInYear" aoid="DaysInYear">DaysInYear(_y_)
-          = 365 if (_y_ modulo 4) &ne; 0
-          = 366 if (_y_ modulo 4) = 0 and (_y_ modulo 100) &ne; 0
-          = 365 if (_y_ modulo 100) = 0 and (_y_ modulo 400) &ne; 0
-          = 366 if (_y_ modulo 400) = 0
-        </emu-eqn>
-        <p>The day number of the first day of year _y_ changes by 365 days for every year of difference between _y_ and 1970 plus one day for each of those that is a leap year, and is defined as:</p>
+        <p>ECMAScript uses a proleptic Gregorian calendar in which common years have 365 days and leap years (those that are divisible by 4 but not divisible by 100 and those that are divisible by 400) have 366 days by means of adding a 29th day to February. The day number of the first day of year _y_ changes by 365 days for every year of difference between _y_ and 1970 plus one day for each of those that is a leap year, and is defined as:</p>
         <emu-eqn id="eqn-DaysFromYear" aoid="DayFromYear">DayFromYear(_y_) = 365 &times; (_y_ - 1970) + floor((_y_ - 1969) / 4) - floor((_y_ - 1901) / 100) + floor((_y_ - 1601) / 400)</emu-eqn>
         <p>The time value of the start of a year is:</p>
         <emu-eqn id="eqn-TimeFromYear" aoid="TimeFromYear">TimeFromYear(_y_) = msPerDay &times; DayFromYear(_y_)</emu-eqn>
@@ -28039,8 +28030,10 @@
         <emu-eqn id="eqn-YearFromTime" aoid="YearFromTime">YearFromTime(_t_) = the largest integer _y_ (closest to positive infinity) such that TimeFromYear(_y_) &le; _t_</emu-eqn>
         <p>The leap-year function is 1 for a time value within a leap year and otherwise is zero:</p>
         <emu-eqn id="eqn-InLeapYear" aoid="InLeapYear">InLeapYear(_t_)
-          = 0 if DaysInYear(YearFromTime(_t_)) = 365
-          = 1 if DaysInYear(YearFromTime(_t_)) = 366
+          = 1 if (YearFromTime(_t_) modulo 4) = 0 and (YearFromTime(_t_) modulo 100) &ne; 0
+          = 1 if (YearFromTime(_t_) modulo 400) = 0
+          = 0 if (YearFromTime(_t_) modulo 4) &ne; 0
+          = 0 if (YearFromTime(_t_) modulo 100) = 0 and (YearFromTime(_t_) modulo 400) &ne; 0
         </emu-eqn>
       </emu-clause>
 
@@ -28062,21 +28055,26 @@
           = 304 + _inLeapYear_ if _m_ = 10
           = 334 + _inLeapYear_ if _m_ = 11
         </emu-eqn>
-        <p>The mapping MonthFromTime(_t_) from a time value _t_ to a month number is defined by:</p>
-        <emu-eqn id="eqn-MonthFromTime" aoid="MonthFromTime">MonthFromTime(_t_)
-          = 0 if 0 &le; DayWithinYear(_t_) &lt; 31
-          = 1 if 31 &le; DayWithinYear(_t_) &lt; 59 + InLeapYear(_t_)
-          = 2 if 59 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 90 + InLeapYear(_t_)
-          = 3 if 90 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 120 + InLeapYear(_t_)
-          = 4 if 120 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 151 + InLeapYear(_t_)
-          = 5 if 151 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 181 + InLeapYear(_t_)
-          = 6 if 181 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 212 + InLeapYear(_t_)
-          = 7 if 212 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 243 + InLeapYear(_t_)
-          = 8 if 243 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 273 + InLeapYear(_t_)
-          = 9 if 273 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 304 + InLeapYear(_t_)
-          = 10 if 304 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 334 + InLeapYear(_t_)
-          = 11 if 334 + InLeapYear(_t_) &le; DayWithinYear(_t_) &lt; 365 + InLeapYear(_t_)
-        </emu-eqn>
+        <emu-clause id="sec-MonthFromTime" aoid="MonthFromTime" oldids="eqn-MonthFromTime">
+          <h1>MonthFromTime ( _t_ )</h1>
+          <p>The abstract operation MonthFromTime maps a time value _t_ to a month number. It performs the following steps:</p>
+          <emu-alg>
+            1. Let _day_ be DayWithinYear(_t_).
+            1. Let _inLeapYear_ be InLeapYear(_t_).
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(1, _inLeapYear_), return 0.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(2, _inLeapYear_), return 1.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(3, _inLeapYear_), return 2.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(4, _inLeapYear_), return 3.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(5, _inLeapYear_), return 4.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(6, _inLeapYear_), return 5.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(7, _inLeapYear_), return 6.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(8, _inLeapYear_), return 7.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(9, _inLeapYear_), return 8.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(10, _inLeapYear_), return 9.
+            1. If _day_ &lt; DaysWithinYearBeforeMonth(11, _inLeapYear_), return 10.
+            1. Return 11.
+          </emu-alg>
+        </emu-clause>
         <p>where</p>
         <emu-eqn id="eqn-DayWithinYear" aoid="DayWithinYear">DayWithinYear(_t_) = Day(_t_) - DayFromYear(YearFromTime(_t_))</emu-eqn>
         <p>Note that <emu-eqn>MonthFromTime(0) = 0</emu-eqn>, corresponding to Thursday, 01 January, 1970.</p>
@@ -28085,20 +28083,7 @@
       <emu-clause id="sec-date-number">
         <h1>Date Number</h1>
         <p>A date number is identified by an integer in the range 1 through 31, inclusive. The mapping DateFromTime(_t_) from a time value _t_ to a date number is defined by:</p>
-        <emu-eqn aoid="DateFromTime">DateFromTime(_t_)
-          = DayWithinYear(_t_) + 1 if MonthFromTime(_t_) = 0
-          = DayWithinYear(_t_) - 30 if MonthFromTime(_t_) = 1
-          = DayWithinYear(_t_) - 58 - InLeapYear(_t_) if MonthFromTime(_t_) = 2
-          = DayWithinYear(_t_) - 89 - InLeapYear(_t_) if MonthFromTime(_t_) = 3
-          = DayWithinYear(_t_) - 119 - InLeapYear(_t_) if MonthFromTime(_t_) = 4
-          = DayWithinYear(_t_) - 150 - InLeapYear(_t_) if MonthFromTime(_t_) = 5
-          = DayWithinYear(_t_) - 180 - InLeapYear(_t_) if MonthFromTime(_t_) = 6
-          = DayWithinYear(_t_) - 211 - InLeapYear(_t_) if MonthFromTime(_t_) = 7
-          = DayWithinYear(_t_) - 242 - InLeapYear(_t_) if MonthFromTime(_t_) = 8
-          = DayWithinYear(_t_) - 272 - InLeapYear(_t_) if MonthFromTime(_t_) = 9
-          = DayWithinYear(_t_) - 303 - InLeapYear(_t_) if MonthFromTime(_t_) = 10
-          = DayWithinYear(_t_) - 333 - InLeapYear(_t_) if MonthFromTime(_t_) = 11
-        </emu-eqn>
+        <emu-eqn aoid="DateFromTime">DateFromTime(_t_) = DayWithinYear(_t_) - DaysWithinYearBeforeMonth(MonthFromTime(_t_), InLeapYear(_t_)) + 1</emu-eqn>
       </emu-clause>
 
       <emu-clause id="sec-week-day">
