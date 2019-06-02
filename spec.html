@@ -21708,17 +21708,6 @@
                   Auxiliary field used during Instantiate and Evaluate only. If [[Status]] is `"instantiating"` or `"evaluating"`, this is either the module's own [[DFSIndex]] or that of an "earlier" module in the same strongly connected component.
                 </td>
               </tr>
-              <tr>
-                <td>
-                  [[RequestedModules]]
-                </td>
-                <td>
-                  List of String
-                </td>
-                <td>
-                  A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module. The List is source code occurrence ordered.
-                </td>
-              </tr>
             </tbody>
           </table>
         </emu-table>
@@ -21748,6 +21737,14 @@
                 </td>
                 <td>
                   Initialize the execution context of the module and evaluate the module's code within it.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  GetRequestedModules()
+                </td>
+                <td>
+                  Returns a List of Module Records constituting the modules imported from this module. The List is source code occurrence ordered.
                 </td>
               </tr>
             </tbody>
@@ -21800,8 +21797,8 @@
               1. Set _module_.[[DFSAncestorIndex]] to _index_.
               1. Set _index_ to _index_ + 1.
               1. Append _module_ to _stack_.
-              1. For each String _required_ that is an element of _module_.[[RequestedModules]], do
-                1. Let _requiredModule_ be ? HostResolveImportedModule(_module_, _required_).
+              1. Let _requiredModules_ be _module_.GetRequestedModules().
+              1. For each element _requiredModule_ of _requiredModules_ in List order, do
                 1. Set _index_ to ? InnerModuleInstantiation(_requiredModule_, _stack_, _index_).
                 1. If _requiredModule_ is a Cyclic Module Record, then
                   1. Assert: _requiredModule_.[[Status]] is either `"instantiating"`, `"instantiated"`, or `"evaluated"`.
@@ -21872,9 +21869,8 @@
               1. Set _module_.[[DFSAncestorIndex]] to _index_.
               1. Set _index_ to _index_ + 1.
               1. Append _module_ to _stack_.
-              1. For each String _required_ that is an element of _module_.[[RequestedModules]], do
-                1. Let _requiredModule_ be ! HostResolveImportedModule(_module_, _required_).
-                1. NOTE: Instantiate must be completed successfully prior to invoking this method, so every requested module is guaranteed to resolve successfully.
+              1. Let _requiredModules_ be _module_.GetRequestedModules().
+              1. For each element _requiredModule_ of _requiredModules_ in List order, do
                 1. Set _index_ to ? InnerModuleEvaluation(_requiredModule_, _stack_, _index_).
                 1. If _requiredModule_ is a Cyclic Module Record, then
                   1. Assert: _requiredModule_.[[Status]] is either `"evaluating"` or `"evaluated"`.
@@ -21971,6 +21967,17 @@
               </td>
               <td>
                 The result of parsing the source text of this module using |Module| as the goal symbol.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[RequestedModules]]
+              </td>
+              <td>
+                List of String
+              </td>
+              <td>
+                A List of all the |ModuleSpecifier| strings used by the module represented by this record to request the importation of a module. The List is source code occurrence ordered.
               </td>
             </tr>
             <tr>
@@ -22594,6 +22601,23 @@
             1. Suspend _moduleCxt_ and remove it from the execution context stack.
             1. Resume the context that is now on the top of the execution context stack as the running execution context.
             1. Return Completion(_result_).
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-source-text-module-record-get-requested-modules" aoid="GetRequestedModules">
+          <h1>GetRequestedModules ( ) Concrete Method</h1>
+
+          <p>The GetRequestedModules concrete method of a Source Text Module Record implements the corresponding Cyclic Module Record abstract method.</p>
+
+          <p>This abstract method performs the following steps:</p>
+
+          <emu-alg>
+            1. Let _module_ be this Source Text Module Record.
+            1. Let _requestedModules_ be an empty List of Abstract Module Records.
+            1. For each String _requested_ that is an element of _module_.[[RequestedModules]], do
+              1. Let _requestedModule_ be ? HostResolveImportedModule(_module_, _requested_).
+              1. Append _requestedModule_ to _requestedModules_.
+            1. Return _requestedModules_.
           </emu-alg>
         </emu-clause>
       </emu-clause>
