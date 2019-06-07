@@ -787,68 +787,97 @@
 
       <emu-clause id="sec-returnifabrupt" aoid="ReturnIfAbrupt">
         <h1>ReturnIfAbrupt</h1>
-        <p>Algorithms steps that say or are otherwise equivalent to:</p>
+        <p>An algorithm step that says:</p>
         <emu-alg>
-          1. ReturnIfAbrupt(_argument_).
+          1. *[before]* ReturnIfAbrupt(_argument_) *[after]*
         </emu-alg>
-        <p>mean the same thing as:</p>
+        <p>is equivalent to the sequence of steps:</p>
         <emu-alg>
           1. If _argument_ is an abrupt completion, return _argument_.
-          1. Else if _argument_ is a Completion Record, set _argument_ to _argument_.[[Value]].
+          1. Else, if _argument_ is a Completion Record, set _argument_ to _argument_.[[Value]].
+          1. *[before]* _argument_ *[after]*
         </emu-alg>
-        <p>Algorithms steps that say or are otherwise equivalent to:</p>
+        <p>where</p>
+        <ul>
+          <li>*[before]*, if present, is any algorithm text that does not contain ReturnIfAbrupt.
+          <li>*[after]*, if present, is any algorithm text.
+          <li>_argument_ is any variable.
+        </ul>
+
+        <p>An algorithm step that says:</p>
         <emu-alg>
-          1. ReturnIfAbrupt(AbstractOperation()).
+          1. *[before]* ReturnIfAbrupt(AbstractOperation(*[arguments]*)) *[after]*
         </emu-alg>
-        <p>mean the same thing as:</p>
+        <p>is equivalent to the sequence of steps:</p>
         <emu-alg>
-          1. Let _hygienicTemp_ be AbstractOperation().
+          1. Let _hygienicTemp_ be AbstractOperation(*[arguments]*).
+          1. If _hygienicTemp_ is an abrupt completion, return _hygienicTemp_.
+          1. Else, if _hygienicTemp_ is a Completion Record, set _hygienicTemp_ to _hygienicTemp_.[[Value]].
+          1. *[before]* _hygienicTemp_ *[after]*
+        </emu-alg>
+        <p>where</p>
+        <ul>
+          <li>*[before]*, if present, is any algorithm text that does not contain ReturnIfAbrupt.
+          <li>*[after]*, if present, is any algorithm text.
+          <li>*[arguments]*, if present, is any algorithm text that provides an argument list to AbstractOperation.
+          <li>AbstractOperation is any abstract operation reference, regardless of the notation used to refer to it.
+          <li>_hygienicTemp_ is ephemeral and visible only in the steps pertaining to ReturnIfAbrupt.
+        </ul>
+
+        <p>For example, an algorithm step that says:</p>
+        <emu-alg>
+          1. Let _result_ be _someValue_ if ReturnIfAbrupt(_someValue_.OperationName(_firstArgument_, _secondArgument_)) is *true*, and _someOtherValue_ otherwise.
+        </emu-alg>
+        <p>is equivalent to the sequence of steps:</p>
+        <emu-alg>
+          1. Let _hygienicTemp_ be _someValue_.OperationName(_firstArgument_, _secondArgument_).
           1. If _hygienicTemp_ is an abrupt completion, return _hygienicTemp_.
           1. Else if _hygienicTemp_ is a Completion Record, set _hygienicTemp_ to _hygienicTemp_.[[Value]].
+          1. Let _result_ be _someValue_ if _hygienicTemp_ is *true*, and _someOtherValue_ otherwise.
         </emu-alg>
-        <p>Where _hygienicTemp_ is ephemeral and visible only in the steps pertaining to ReturnIfAbrupt.</p>
-        <p>Algorithms steps that say or are otherwise equivalent to:</p>
-        <emu-alg>
-          1. Let _result_ be AbstractOperation(ReturnIfAbrupt(_argument_)).
-        </emu-alg>
-        <p>mean the same thing as:</p>
-        <emu-alg>
-          1. If _argument_ is an abrupt completion, return _argument_.
-          1. If _argument_ is a Completion Record, set _argument_ to _argument_.[[Value]].
-          1. Let _result_ be AbstractOperation(_argument_).
-        </emu-alg>
+
+        <p>Note that the resulting steps of ReturnIfAbrupt expansion may themselves contain ReturnIfAbrupt. In these cases, expansion can be applied to the resulting steps until the steps no longer contain ReturnIfAbrupt.</p>
       </emu-clause>
+
       <emu-clause id="sec-returnifabrupt-shorthands">
         <h1>ReturnIfAbrupt Shorthands</h1>
-        <p>Invocations of abstract operations and syntax-directed operations that are prefixed by `?` indicate that ReturnIfAbrupt should be applied to the resulting Completion Record. For example, the step:</p>
+        <p>Invocations of abstract operations may be prefixed by `?` as shorthand for applying the ReturnIfAbrupt expansion.</p>
         <emu-alg>
           1. ? OperationName().
         </emu-alg>
-        <p>is equivalent to the following step:</p>
+        <p>is equivalent to</p>
         <emu-alg>
           1. ReturnIfAbrupt(OperationName()).
         </emu-alg>
-        <p>Similarly, for method application style, the step:</p>
+        <p>wherever it appears. Similarly, prefix `?` may be used to apply the ReturnIfAbrupt expansion to the result of applying a syntax-directed operation.</p>
         <emu-alg>
-          1. ? _someValue_.OperationName().
+          1. Let _result_ be ? SyntaxDirectedOperation of |NonTerminal| with arguments _firstArgument_ and _secondArgument_.
         </emu-alg>
-        <p>is equivalent to:</p>
+        <p>is equivalent to the sequence of steps:</p>
         <emu-alg>
-          1. ReturnIfAbrupt(_someValue_.OperationName()).
+          1. Let _result_ be SyntaxDirectedOperation of |NonTerminal| with arguments _firstArgument_ and _secondArgument_.
+          1. ReturnIfAbrupt(_result_).
         </emu-alg>
-        <p>Similarly, prefix `!` is used to indicate that the following invocation of an abstract or syntax-directed operation will never return an abrupt completion and that the resulting Completion Record's [[Value]] field should be used in place of the return value of the operation. For example, the step:</p>
+
+        <p>Invocations of abstract operations may be prefixed by `!` to indicate that the result will never be an abrupt completion and that the resulting Completion Record's [[Value]] field should be used in place of the return value of the operation.</p>
         <emu-alg>
           1. Let _val_ be ! OperationName().
         </emu-alg>
-        <p>is equivalent to the following steps:</p>
+        <p>is equivalent to the sequence of steps:</p>
         <emu-alg>
           1. Let _val_ be OperationName().
           1. Assert: _val_ is never an abrupt completion.
           1. If _val_ is a Completion Record, set _val_ to _val_.[[Value]].
         </emu-alg>
-        <p>Syntax-directed operations for runtime semantics make use of this shorthand by placing `!` or `?` before the invocation of the operation:</p>
+        <p>Similarly, syntax-directed operations may make use of this shorthand by placing `!` before the invocation of the operation:</p>
         <emu-alg>
-          1. Perform ! SyntaxDirectedOperation of |NonTerminal|.
+          1. Let _result_ be the result of performing ! SyntaxDirectedOperation for |NonTerminal|.
+        </emu-alg>
+        <p>is equivalent to the sequence of steps:</p>
+        <emu-alg>
+          1. Let _result_ be SyntaxDirectedOperation of |NonTerminal|.
+          1. Assert: _result_ is never an abrupt completion.
+          1. If _result_ is a Completion Record, set _result_ to _result_.[[Value]].
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -7411,7 +7440,8 @@
           1. If Type(_result_.[[Value]]) is Object, return NormalCompletion(_result_.[[Value]]).
           1. If _kind_ is `"base"`, return NormalCompletion(_thisArgument_).
           1. If _result_.[[Value]] is not *undefined*, throw a *TypeError* exception.
-        1. Else, ReturnIfAbrupt(_result_).
+        1. Else,
+          1. ReturnIfAbrupt(_result_).
         1. Return ? _envRec_.GetThisBinding().
       </emu-alg>
     </emu-clause>
