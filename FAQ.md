@@ -99,4 +99,4 @@ The list of operations that execute will go something like the following:
 
 If the exported bindings were copied between **Even.js** and **Odd.js** rather than aliased, the body of `isEven` would have received a copy of the uninitialized value for `isOdd`.
 
-[proposal-process-document]: https://tc39.github.io/process-document/
+[proposal-process-document]: https://tc39.es/process-document/

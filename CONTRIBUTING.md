@@ -1,5 +1,5 @@
 ### Contributing to ECMAScript
-Contributors to ECMAScript and TC39 are expected to follow our [Code of Conduct](https://tc39.github.io/code-of-conduct/).
+Contributors to ECMAScript and TC39 are expected to follow our [Code of Conduct](https://tc39.es/code-of-conduct/).
 
 If you are not an Ecma member, any non-trivial contributions require signing a legal agreement with Ecma. See the section "Required Legal Agreements" below for details.
 
@@ -28,14 +28,14 @@ If you are changing the signature or behavior of an existing construct, please c
 * [HTML Standard](https://html.spec.whatwg.org/) — [file an issue](https://github.com/whatwg/html/issues/new)
 
 #### New feature proposals
-TC39 is open to accepting new feature requests for ECMAScript, referred to as "proposals". Proposals go through a four-stage process which is documented in the [TC39 process document](https://tc39.github.io/process-document/).
+TC39 is open to accepting new feature requests for ECMAScript, referred to as "proposals". Proposals go through a four-stage process which is documented in the [TC39 process document](https://tc39.es/process-document/).
 
 Feature requests for future versions of ECMAScript should not be made in this repository. Instead, they are developed in separate GitHub repositories, which are then merged into the main repository once they have received "Stage 4".
 
 ##### Creating a new proposal
 To make a feature request, document the problem and a sketch of the solution with others in the community, including TC39 members. One place to do this is the [es-discuss mailing list](https://esdiscuss.org); another is the IRC channel #tc39 on Freenode ([instructions](https://freenode.net/kb/answer/chat)).
 
-Your goal will be to convince others that your proposal is a useful addition to the language and recruit TC39 members to help turn your request into a proposal and shepherd it into the language. Once a proposal is introduced to the committee, new features are considered by the committee according to the [TC39 process document](https://tc39.github.io/process-document/).
+Your goal will be to convince others that your proposal is a useful addition to the language and recruit TC39 members to help turn your request into a proposal and shepherd it into the language. Once a proposal is introduced to the committee, new features are considered by the committee according to the [TC39 process document](https://tc39.es/process-document/).
 
 ##### TC39 meetings and champions
 If you have a new proposal you want to get into the language, you first need a TC39 "champion": a member of the committee who will make the case for the proposal at [in-person TC39 meetings](https://github.com/tc39/agendas/blob/master/2017/11.md#dates-and-locations-of-future-meetings) and help it move through the process. If you are a TC39 member, you can be a champion; otherwise, find a TC39 member to work with for this (e.g., through es-discuss or #tc39). Proposals may have multiple champions (a "champion group").
@@ -56,7 +56,7 @@ To track what's going on with a particular proposal, you can look in issues and 
 #### Required legal agreements
 People associated with Ecma member organizations have a legal agreement in place with Ecma to ensure that intellectual property rights (IPR) of their contributions are appropriately licensed to be available to all ECMAScript programmers and implementers. For non-members to contribute, you are required to make these rights available by signing a Contributor License Agreement (CLA) for non-trivial contributions.
 
-If you wish to submit a proposal or make a significant PR, and you are not a representative of a TC39 member, please [register as a TC39 RFTG contributor](https://tc39.github.io/agreements/contributor/).
+If you wish to submit a proposal or make a significant PR, and you are not a representative of a TC39 member, please [register as a TC39 RFTG contributor](https://tc39.es/agreements/contributor/).
 
 Ecma TC39 accepts contributions from non-member individuals who have accepted the TC39 copyright and patent policies. Currently all ECMAScript related technical work is done by the TC39 RF TG (Royalty Free Task Group), for which the following IPR policies apply:
 
