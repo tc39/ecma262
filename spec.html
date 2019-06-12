@@ -39611,6 +39611,125 @@ THH:mm:ss.sss
         </emu-clause>
       </emu-clause>
 
+      <emu-clause id="sec-promise.allsettled">
+        <h1>Promise.allSettled ( _iterable_ )</h1>
+        <p>The `allSettled` function returns a promise that is fulfilled with an array of promise state snapshots, but only after all the original promises have settled, i.e. become either fulfilled or rejected. It resolves all elements of the passed iterable to promises as it runs this algorithm.</p>
+        <emu-alg>
+          1. Let _C_ be the *this* value.
+          1. Let _promiseCapability_ be ? NewPromiseCapability(_C_).
+          1. Let _iteratorRecord_ be GetIterator(_iterable_).
+          1. IfAbruptRejectPromise(_iteratorRecord_, _promiseCapability_).
+          1. Let _result_ be PerformPromiseAllSettled(_iteratorRecord_, _C_, _promiseCapability_).
+          1. If _result_ is an abrupt completion, then
+            1. If _iteratorRecord_.[[Done]] is *false*, set _result_ to IteratorClose(_iteratorRecord_, _result_).
+            1. IfAbruptRejectPromise(_result_, _promiseCapability_).
+          1. Return Completion(_result_).
+        </emu-alg>
+        <emu-note>
+          <p>The `allSettled` function requires its *this* value to be a constructor function that supports the parameter conventions of the `Promise` constructor.</p>
+        </emu-note>
+
+        <emu-clause id="sec-performpromiseallsettled" aoid="PerformPromiseAllSettled">
+          <h1>Runtime Semantics: PerformPromiseAllSettled ( _iteratorRecord_, _constructor_, _resultCapability_ )</h1>
+          <p>When the PerformPromiseAllSettled abstract operation is called with arguments _iteratorRecord_, _constructor_, and _resultCapability_, the following steps are taken:</p>
+          <emu-alg>
+            1. Assert: ! IsConstructor(_constructor_) is *true*.
+            1. Assert: _resultCapability_ is a PromiseCapability Record.
+            1. Let _values_ be a new empty List.
+            1. Let _remainingElementsCount_ be a new Record { [[Value]]: 1 }.
+            1. Let _index_ be 0.
+            1. Let _promiseResolve_ be ? Get(_constructor_, `"resolve"`).
+            1. If IsCallable(_promiseResolve_) is *false*, throw a *TypeError* exception.
+            1. Repeat,
+              1. Let _next_ be IteratorStep(_iteratorRecord_).
+              1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
+              1. ReturnIfAbrupt(_next_).
+              1. If _next_ is *false*, then
+                1. Set _iteratorRecord_.[[Done]] to *true*.
+                1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+                1. If _remainingElementsCount_.[[Value]] is 0, then
+                  1. Let _valuesArray_ be ! CreateArrayFromList(_values_).
+                  1. Perform ? Call(_resultCapability_.[[Resolve]], *undefined*, &laquo; _valuesArray_ &raquo;).
+                1. Return _resultCapability_.[[Promise]].
+              1. Let _nextValue_ be IteratorValue(_next_).
+              1. If _nextValue_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
+              1. ReturnIfAbrupt(_nextValue_).
+              1. Append *undefined* to _values_.
+              1. Let _nextPromise_ be ? Call(_promiseResolve_, _constructor_, &laquo; _nextValue_ &raquo;).
+              1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-promise.allsettled-resolve-element-functions" title></emu-xref>.
+              1. Let _resolveElement_ be ! CreateBuiltinFunction(_steps_, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
+              1. Let _alreadyCalled_ be a new Record { [[Value]]: *false* }.
+              1. Set _resolveElement_.[[AlreadyCalled]] to _alreadyCalled_.
+              1. Set _resolveElement_.[[Index]] to _index_.
+              1. Set _resolveElement_.[[Values]] to _values_.
+              1. Set _resolveElement_.[[Capability]] to _resultCapability_.
+              1. Set _resolveElement_.[[RemainingElements]] to _remainingElementsCount_.
+              1. Let _rejectSteps_ be the algorithm steps defined in <emu-xref href="#sec-promise.allsettled-reject-element-functions" title></emu-xref>.
+              1. Let _rejectElement_ be ! CreateBuiltinFunction(_rejectSteps_, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
+              1. Set _rejectElement_.[[AlreadyCalled]] to _alreadyCalled_.
+              1. Set _rejectElement_.[[Index]] to _index_.
+              1. Set _rejectElement_.[[Values]] to _values_.
+              1. Set _rejectElement_.[[Capability]] to _resultCapability_.
+              1. Set _rejectElement_.[[RemainingElements]] to _remainingElementsCount_.
+              1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] + 1.
+              1. Perform ? Invoke(_nextPromise_, `"then"`, &laquo; _resolveElement_, _rejectElement_ &raquo;).
+              1. Increase _index_ by 1.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-promise.allsettled-resolve-element-functions">
+          <h1>`Promise.allSettled` Resolve Element Functions</h1>
+          <p>A `Promise.allSettled` resolve element function is an anonymous built-in function that is used to resolve a specific `Promise.allSettled` element. Each `Promise.allSettled` resolve element function has [[Index]], [[Values]], [[Capability]], [[RemainingElements]], and [[AlreadyCalled]] internal slots.</p>
+          <p>When a `Promise.allSettled` resolve element function is called with argument _x_, the following steps are taken:</p>
+          <emu-alg>
+            1. Let _F_ be the active function object.
+            1. Let _alreadyCalled_ be _F_.[[AlreadyCalled]].
+            1. If _alreadyCalled_.[[Value]] is *true*, return *undefined*.
+            1. Set _alreadyCalled_.[[Value]] to *true*.
+            1. Let _index_ be _F_.[[Index]].
+            1. Let _values_ be _F_.[[Values]].
+            1. Let _promiseCapability_ be _F_.[[Capability]].
+            1. Let _remainingElementsCount_ be _F_.[[RemainingElements]].
+            1. Let _obj_ be ! ObjectCreate(%Object.prototype%).
+            1. Perform ! CreateDataProperty(_obj_, `"status"`, `"fulfilled"`).
+            1. Perform ! CreateDataProperty(_obj_, `"value"`, _x_).
+            1. Set _values_[_index_] to be _obj_.
+            1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+            1. If _remainingElementsCount_.[[Value]] is 0, then
+              1. Let _valuesArray_ be ! CreateArrayFromList(_values_).
+              1. Return ? Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _valuesArray_ &raquo;).
+            1. Return *undefined*.
+          </emu-alg>
+          <p>The `"length"` property of a `Promise.allSettled` resolve element function is 1.</p>
+        </emu-clause>
+
+        <emu-clause id="sec-promise.allsettled-reject-element-functions">
+          <h1>`Promise.allSettled` Reject Element Functions</h1>
+          <p>A `Promise.allSettled` reject element function is an anonymous built-in function that is used to reject a specific `Promise.allSettled` element. Each `Promise.allSettled` reject element function has [[Index]], [[Values]], [[Capability]], [[RemainingElements]], and [[AlreadyCalled]] internal slots.</p>
+          <p>When a `Promise.allSettled` reject element function is called with argument _x_, the following steps are taken:</p>
+          <emu-alg>
+            1. Let _F_ be the active function object.
+            1. Let _alreadyCalled_ be _F_.[[AlreadyCalled]].
+            1. If _alreadyCalled_.[[Value]] is *true*, return *undefined*.
+            1. Set _alreadyCalled_.[[Value]] to *true*.
+            1. Let _index_ be _F_.[[Index]].
+            1. Let _values_ be _F_.[[Values]].
+            1. Let _promiseCapability_ be _F_.[[Capability]].
+            1. Let _remainingElementsCount_ be _F_.[[RemainingElements]].
+            1. Let _obj_ be ! ObjectCreate(%Object.prototype%).
+            1. Perform ! CreateDataProperty(_obj_, `"status"`, `"rejected"`).
+            1. Perform ! CreateDataProperty(_obj_, `"reason"`, _x_).
+            1. Set _values_[_index_] to be _obj_.
+            1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+            1. If _remainingElementsCount_.[[Value]] is 0, then
+              1. Let _valuesArray_ be ! CreateArrayFromList(_values_).
+              1. Return ? Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _valuesArray_ &raquo;).
+            1. Return *undefined*.
+          </emu-alg>
+          <p>The `"length"` property of a `Promise.allSettled` reject element function is 1.</p>
+        </emu-clause>
+      </emu-clause>
+
       <emu-clause id="sec-promise.prototype">
         <h1>Promise.prototype</h1>
         <p>The initial value of `Promise.prototype` is %Promise.prototype%.</p>
