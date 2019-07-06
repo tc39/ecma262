@@ -32614,20 +32614,15 @@ THH:mm:ss.sss
           1. If _comparefn_ is not *undefined* and IsCallable(_comparefn_) is *false*, throw a *TypeError* exception.
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _len_ be ? ToLength(? Get(_obj_, `"length"`)).
+          1. Let _objIsSparse_ be ObjectIsSparse(_obj_, _len_).
         </emu-alg>
-        <p>Within this specification of the `sort` method, an object, _obj_, is said to be <em>sparse</em> if the following algorithm returns *true*:</p>
-        <emu-alg>
-          1. For each integer _i_ in the range 0 &le; _i_ &lt; _len_, do
-            1. Let _elem_ be _obj_.[[GetOwnProperty]](! ToString(_i_)).
-            1. If _elem_ is *undefined*, return *true*.
-          1. Return *false*.
-        </emu-alg>
+
         <p>The <em>sort order</em> is the ordering, after completion of this function, of the <emu-xref href="#integer-index">integer-indexed</emu-xref> property values of _obj_ whose integer indexes are less than _len_. The result of the `sort` function is then determined as follows:</p>
         <p>If _comparefn_ is not *undefined* and is not a consistent comparison function for the elements of this array (see below), the sort order is implementation-defined. The sort order is also implementation-defined if _comparefn_ is *undefined* and SortCompare does not act as a consistent comparison function.</p>
         <p>Let _proto_ be _obj_.[[GetPrototypeOf]](). If _proto_ is not *null* and there exists an integer _j_ such that all of the conditions below are satisfied then the sort order is implementation-defined:</p>
         <ul>
           <li>
-            _obj_ is sparse
+            _objIsSparse_ is *true*
           </li>
           <li>
             0 &le; _j_ &lt; _len_
@@ -32636,7 +32631,7 @@ THH:mm:ss.sss
             HasProperty(_proto_, ToString(_j_)) is *true*.
           </li>
         </ul>
-        <p>The sort order is also implementation-defined if _obj_ is sparse and any of the following conditions are true:</p>
+        <p>The sort order is also implementation-defined if _objIsSparse_ is *true* and any of the following conditions are true:</p>
         <ul>
           <li>
             IsExtensible(_obj_) is *false*.
@@ -32665,7 +32660,7 @@ THH:mm:ss.sss
           1. Perform an implementation-dependent sequence of calls to the [[Get]] and [[Set]] internal methods of _obj_, to the DeletePropertyOrThrow and HasOwnProperty abstract operation with _obj_ as the first argument, and to SortCompare (described below), such that:
             * The property key argument for each call to [[Get]], [[Set]], HasOwnProperty, or DeletePropertyOrThrow is the string representation of a nonnegative integer less than _len_.
             * The arguments for calls to SortCompare are values returned by a previous call to the [[Get]] internal method, unless the properties accessed by those previous calls did not exist according to HasOwnProperty. If both prospective arguments to SortCompare correspond to non-existent properties, use *+0* instead of calling SortCompare. If only the first prospective argument is non-existent use +1. If only the second prospective argument is non-existent use -1.
-            * If _obj_ is not sparse then DeletePropertyOrThrow must not be called.
+            * If _objIsSparse_ is *false* then DeletePropertyOrThrow must not be called.
             * If any [[Set]] call returns *false* a *TypeError* exception is thrown.
             * If an abrupt completion is returned from any of these operations, it is immediately returned as the value of this function.
           1. Return _obj_.
@@ -32710,6 +32705,18 @@ THH:mm:ss.sss
         <emu-note>
           <p>The `sort` function is intentionally generic; it does not require that its *this* value be an Array object. Therefore, it can be transferred to other kinds of objects for use as a method.</p>
         </emu-note>
+
+        <emu-clause id="sec-objectissparse" aoid="ObjectIsSparse">
+          <h1>Runtime Semantics: ObjectIsSparse ( _obj_, _len_ )</h1>
+          <emu-alg>
+            1. Assert: _obj_ is an Object.
+            1. Assert: _len_ is a nonnegative integer.
+            1. For each integer _i_ in the range 0 &le; _i_ &lt; _len_, do
+              1. Let _elem_ be _obj_.[[GetOwnProperty]](! ToString(_i_)).
+              1. If _elem_ is *undefined*, return *true*.
+            1. Return *false*.
+          </emu-alg>
+        </emu-clause>
 
         <emu-clause id="sec-sortcompare" aoid="SortCompare">
           <h1>Runtime Semantics: SortCompare ( _x_, _y_ )</h1>
@@ -33835,6 +33842,7 @@ THH:mm:ss.sss
           1. Let _obj_ be the *this* value.
           1. Let _buffer_ be ? ValidateTypedArray(_obj_).
           1. Let _len_ be _obj_.[[ArrayLength]].
+          1. Let _objIsSparse_ be *false*.
         </emu-alg>
         <p>The implementation-defined sort order condition for exotic objects is not applied by %TypedArray%`.prototype.sort`.</p>
         <p>The following version of SortCompare is used by %TypedArray%`.prototype.sort`. It performs a numeric comparison rather than the string comparison used in <emu-xref href="#sec-array.prototype.sort"></emu-xref>. SortCompare has access to the _comparefn_ and _buffer_ values of the current invocation of the `sort` method.</p>
