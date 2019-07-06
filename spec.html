@@ -32609,54 +32609,22 @@ THH:mm:ss.sss
       <emu-clause id="sec-array.prototype.sort">
         <h1>Array.prototype.sort ( _comparefn_ )</h1>
         <p>The elements of this array are sorted. The sort must be stable (that is, elements that compare equal must remain in their original order). If _comparefn_ is not *undefined*, it should be a function that accepts two arguments _x_ and _y_ and returns a negative value if _x_ &lt; _y_, zero if _x_ = _y_, or a positive value if _x_ &gt; _y_.</p>
-        <p>Upon entry, the following steps are performed to initialize evaluation of the `sort` function:</p>
         <emu-alg>
           1. If _comparefn_ is not *undefined* and IsCallable(_comparefn_) is *false*, throw a *TypeError* exception.
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _len_ be ? ToLength(? Get(_obj_, `"length"`)).
           1. Let _objIsSparse_ be ObjectIsSparse(_obj_, _len_).
-        </emu-alg>
-
-        <p>The <em>sort order</em> is the ordering, after completion of this function, of the <emu-xref href="#integer-index">integer-indexed</emu-xref> property values of _obj_ whose integer indexes are less than _len_. The result of the `sort` function is then determined as follows:</p>
-        <p>If _comparefn_ is not *undefined* and is not a consistent comparison function for the elements of this array (see below), the sort order is implementation-defined. The sort order is also implementation-defined if _comparefn_ is *undefined* and SortCompare does not act as a consistent comparison function.</p>
-        <p>Let _proto_ be _obj_.[[GetPrototypeOf]](). If _proto_ is not *null* and there exists an integer _j_ such that all of the conditions below are satisfied then the sort order is implementation-defined:</p>
-        <ul>
-          <li>
-            _objIsSparse_ is *true*
-          </li>
-          <li>
-            0 &le; _j_ &lt; _len_
-          </li>
-          <li>
-            HasProperty(_proto_, ToString(_j_)) is *true*.
-          </li>
-        </ul>
-        <p>The sort order is also implementation-defined if _objIsSparse_ is *true* and any of the following conditions are true:</p>
-        <ul>
-          <li>
-            IsExtensible(_obj_) is *false*.
-          </li>
-          <li>
-            Any integer index property of _obj_ whose name is a nonnegative integer less than _len_ is a data property whose [[Configurable]] attribute is *false*.
-          </li>
-        </ul>
-        <p>The sort order is also implementation-defined if any of the following conditions are true:</p>
-        <ul>
-          <li>
-            If _obj_ is an exotic object (including Proxy exotic objects) whose behaviour for [[Get]], [[Set]], [[Delete]], and [[GetOwnProperty]] is not the ordinary object implementation of these internal methods.
-          </li>
-          <li>
-            If any index property of _obj_ whose name is a nonnegative integer less than _len_ is an accessor property or is a data property whose [[Writable]] attribute is *false*.
-          </li>
-          <li>
-            If _comparefn_ is *undefined* and the application of ToString to any value passed as an argument to SortCompare modifies _obj_ or any object on _obj_'s prototype chain.
-          </li>
-          <li>
-            If _comparefn_ is *undefined* and all applications of ToString, to any specific value passed as an argument to SortCompare, do not produce the same result.
-          </li>
-        </ul>
-        <p>The following steps are taken:</p>
-        <emu-alg>
+          1. Let _proto_ be _obj_.[[GetPrototypeOf]]().
+          1. Let _sortOrderIsImplementationDefined_ be *true* if any of the following conditions are satisfied, and let it be *false* otherwise:
+            * _comparefn_ is not *undefined* and is not a consistent comparison function for the elements of this array (see below).
+            * _comparefn_ is *undefined* and SortCompare does not act as a consistent comparison function.
+            * _objIsSparse_ is *true* and _proto_ is not *null* and there exists a nonnegative integer _j_ less than _len_ such that HasProperty(_proto_, ToString(_j_)) is *true*.
+            * _objIsSparse_ is *true* and IsExtensible(_obj_) is *false*.
+            * _objIsSparse_ is *true* and any integer index property of _obj_ whose name is a nonnegative integer less than _len_ is a data property whose [[Configurable]] attribute is *false*.
+            * _obj_ is an exotic object (including Proxy exotic objects) whose behaviour for [[Get]], [[Set]], [[Delete]], and [[GetOwnProperty]] is not the ordinary object implementation of these internal methods.
+            * any index property of _obj_ whose name is a nonnegative integer less than _len_ is an accessor property or is a data property whose [[Writable]] attribute is *false*.
+            * _comparefn_ is *undefined* and the application of ToString to any value passed as an argument to SortCompare modifies _obj_ or any object on _obj_'s prototype chain.
+            * _comparefn_ is *undefined* and all applications of ToString, to any specific value passed as an argument to SortCompare, do not produce the same result.
           1. Perform an implementation-dependent sequence of calls to the [[Get]] and [[Set]] internal methods of _obj_, to the DeletePropertyOrThrow and HasOwnProperty abstract operation with _obj_ as the first argument, and to SortCompare (described below), such that:
             * The property key argument for each call to [[Get]], [[Set]], HasOwnProperty, or DeletePropertyOrThrow is the string representation of a nonnegative integer less than _len_.
             * The arguments for calls to SortCompare are values returned by a previous call to the [[Get]] internal method, unless the properties accessed by those previous calls did not exist according to HasOwnProperty. If both prospective arguments to SortCompare correspond to non-existent properties, use *+0* instead of calling SortCompare. If only the first prospective argument is non-existent use +1. If only the second prospective argument is non-existent use -1.
@@ -32665,7 +32633,7 @@ THH:mm:ss.sss
             * If an abrupt completion is returned from any of these operations, it is immediately returned as the value of this function.
           1. Return _obj_.
         </emu-alg>
-        <p>Unless the sort order is specified above to be implementation-defined, the returned object must have the following two characteristics:</p>
+        <p>The <em>sort order</em> is the ordering, after completion of this function, of the <emu-xref href="#integer-index">integer-indexed</emu-xref> property values of _obj_ whose integer indexes are less than _len_. If _sortOrderIsImplementationDefined_ is *true*, the sort order is implementation-defined. Otherwise, the returned object must have the following two characteristics:</p>
         <ul>
           <li>
             There must be some mathematical permutation &pi; of the nonnegative integers less than _len_, such that for every nonnegative integer _j_ less than _len_, if property <emu-eqn>old[_j_]</emu-eqn> existed, then <emu-eqn>new[&pi;(_j_)]</emu-eqn> is exactly the same value as <emu-eqn>old[_j_]</emu-eqn>. But if property <emu-eqn>old[_j_]</emu-eqn> did not exist, then <emu-eqn>new[&pi;(_j_)]</emu-eqn> does not exist.
