@@ -16,6 +16,7 @@ Proposals follow [the TC39 process](https://tc39.es/process-document/) and are t
 
 * [Finished Proposals](https://github.com/tc39/proposals/blob/master/finished-proposals.md)
 * [Active Proposals](https://github.com/tc39/proposals)
+* [Stage 1 Proposals](https://github.com/tc39/proposals/blob/master/stage-1-proposals.md)
 * [Stage 0 Proposals](https://github.com/tc39/proposals/blob/master/stage-0-proposals.md)
 * [Inactive Proposals](https://github.com/tc39/proposals/blob/master/inactive-proposals.md)
 
