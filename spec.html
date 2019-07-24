@@ -10987,7 +10987,7 @@
         `&lt;&lt;` `&gt;&gt;` `&gt;&gt;&gt;`
         `&amp;` `|` `^`
         `!` `~`
-        `&amp;&amp;` `||`
+        `&amp;&amp;` `||` `??`
         `?` `:`
         `=` `+=` `-=` `*=` `%=` `**=` `&lt;&lt;=` `&gt;&gt;=` `&gt;&gt;&gt;=` `&amp;=` `|=` `^=`
         `=&gt;`
@@ -15123,6 +15123,17 @@
       LogicalORExpression[In, Yield, Await] :
         LogicalANDExpression[?In, ?Yield, ?Await]
         LogicalORExpression[?In, ?Yield, ?Await] `||` LogicalANDExpression[?In, ?Yield, ?Await]
+
+      CoalesceExpression[In, Yield, Await] :
+        CoalesceExpressionHead[?In, ?Yield, ?Await] `??` BitwiseORExpression[?In, ?Yield, ?Await]
+
+      CoalesceExpressionHead[In, Yield, Await] :
+        CoalesceExpression[?In, ?Yield, ?Await]
+        BitwiseORExpression[?In, ?Yield, ?Await]
+
+      ShortCircuitExpression[In, Yield, Await] :
+        LogicalORExpression[?In, ?Yield, ?Await]
+        CoalesceExpression[?In, ?Yield, ?Await]
     </emu-grammar>
     <emu-note>
       <p>The value produced by a `&amp;&amp;` or `||` operator is not necessarily of type Boolean. The value produced will always be the value of one of the two operand expressions.</p>
@@ -15135,6 +15146,8 @@
         LogicalANDExpression : LogicalANDExpression `&amp;&amp;` BitwiseORExpression
 
         LogicalORExpression : LogicalORExpression `||` LogicalANDExpression
+
+        CoalesceExpression : CoalesceExpressionHead `??` BitwiseORExpression
       </emu-grammar>
       <emu-alg>
         1. Return *false*.
@@ -15148,6 +15161,8 @@
         LogicalANDExpression : LogicalANDExpression `&amp;&amp;` BitwiseORExpression
 
         LogicalORExpression : LogicalORExpression `||` LogicalANDExpression
+
+        CoalesceExpression : CoalesceExpressionHead `??` BitwiseORExpression
       </emu-grammar>
       <emu-alg>
         1. Return ~invalid~.
@@ -15174,6 +15189,15 @@
         1. Let _rref_ be the result of evaluating |LogicalANDExpression|.
         1. Return ? GetValue(_rref_).
       </emu-alg>
+      <emu-grammar>CoalesceExpression : CoalesceExpressionHead `??` BitwiseORExpression</emu-grammar>
+      <emu-alg>
+        1. Let _lref_ be the result of evaluating |CoalesceExpressionHead|.
+        1. Let _lval_ be ? GetValue(_lref_).
+        1. If _lval_ is *undefined* or *null*,
+          1. Let _rref_ be the result of evaluating |BitwiseORExpression|.
+          1. Return ? GetValue(_rref_).
+        1. Otherwise, return _lval_.
+      </emu-alg>
     </emu-clause>
   </emu-clause>
 
@@ -15182,8 +15206,8 @@
     <h2>Syntax</h2>
     <emu-grammar type="definition">
       ConditionalExpression[In, Yield, Await] :
-        LogicalORExpression[?In, ?Yield, ?Await]
-        LogicalORExpression[?In, ?Yield, ?Await] `?` AssignmentExpression[+In, ?Yield, ?Await] `:` AssignmentExpression[?In, ?Yield, ?Await]
+        ShortCircuitExpression[?In, ?Yield, ?Await]
+        ShortCircuitExpression[?In, ?Yield, ?Await] `?` AssignmentExpression[+In, ?Yield, ?Await] `:` AssignmentExpression[?In, ?Yield, ?Await]
     </emu-grammar>
     <emu-note>
       <p>The grammar for a |ConditionalExpression| in ECMAScript is slightly different from that in C and Java, which each allow the second subexpression to be an |Expression| but restrict the third expression to be a |ConditionalExpression|. The motivation for this difference in ECMAScript is to allow an assignment expression to be governed by either arm of a conditional and to eliminate the confusing and fairly useless case of a comma expression as the centre expression.</p>
@@ -15192,7 +15216,7 @@
     <emu-clause id="sec-conditional-operator-static-semantics-isfunctiondefinition">
       <h1>Static Semantics: IsFunctionDefinition</h1>
       <emu-see-also-para op="IsFunctionDefinition"></emu-see-also-para>
-      <emu-grammar>ConditionalExpression : LogicalORExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
+      <emu-grammar>ConditionalExpression : ShortCircuitExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
       <emu-alg>
         1. Return *false*.
       </emu-alg>
@@ -15201,7 +15225,7 @@
     <emu-clause oldids="sec-conditional-operator-static-semantics-isvalidsimpleassignmenttarget" id="sec-conditional-operator-static-semantics-assignmenttargettype">
       <h1>Static Semantics: AssignmentTargetType</h1>
       <emu-see-also-para op="AssignmentTargetType"></emu-see-also-para>
-      <emu-grammar>ConditionalExpression : LogicalORExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
+      <emu-grammar>ConditionalExpression : ShortCircuitExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
       <emu-alg>
         1. Return ~invalid~.
       </emu-alg>
@@ -15209,9 +15233,9 @@
 
     <emu-clause id="sec-conditional-operator-runtime-semantics-evaluation">
       <h1>Runtime Semantics: Evaluation</h1>
-      <emu-grammar>ConditionalExpression : LogicalORExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
+      <emu-grammar>ConditionalExpression : ShortCircuitExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
       <emu-alg>
-        1. Let _lref_ be the result of evaluating |LogicalORExpression|.
+        1. Let _lref_ be the result of evaluating |ShortCircuitExpression|.
         1. Let _lval_ be ! ToBoolean(? GetValue(_lref_)).
         1. If _lval_ is *true*, then
           1. Let _trueRef_ be the result of evaluating the first |AssignmentExpression|.
@@ -21914,7 +21938,7 @@
         <emu-alg>
           1. Return HasCallInTailPosition of |AssignmentExpression| with argument _call_.
         </emu-alg>
-        <emu-grammar>ConditionalExpression : LogicalORExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
+        <emu-grammar>ConditionalExpression : ShortCircuitExpression `?` AssignmentExpression `:` AssignmentExpression</emu-grammar>
         <emu-alg>
           1. Let _has_ be HasCallInTailPosition of the first |AssignmentExpression| with argument _call_.
           1. If _has_ is *true*, return *true*.
@@ -21927,6 +21951,10 @@
         <emu-grammar>LogicalORExpression : LogicalORExpression `||` LogicalANDExpression</emu-grammar>
         <emu-alg>
           1. Return HasCallInTailPosition of |LogicalANDExpression| with argument _call_.
+        </emu-alg>
+        <emu-grammar>CoalesceExpression : CoalesceExpressionHead `??` BitwiseORExpression</emu-grammar>
+        <emu-alg>
+          1. Return HasCallInTailPosition of |BitwiseORExpression| with argument _call_.
         </emu-alg>
         <emu-grammar>
           CallExpression :
@@ -41417,6 +41445,9 @@ THH:mm:ss.sss
     <emu-prodref name=BitwiseORExpression></emu-prodref>
     <emu-prodref name=LogicalANDExpression></emu-prodref>
     <emu-prodref name=LogicalORExpression></emu-prodref>
+    <emu-prodref name=CoalesceExpression></emu-prodref>
+    <emu-prodref name=CoalesceExpressionHead></emu-prodref>
+    <emu-prodref name=ShortCircuitExpression></emu-prodref>
     <emu-prodref name=ConditionalExpression></emu-prodref>
     <emu-prodref name=AssignmentExpression></emu-prodref>
     <p>In certain circumstances when processing an instance of the production <emu-prodref name=AssignmentExpression a=assignment></emu-prodref> the following grammar is used to refine the interpretation of |LeftHandSideExpression|:</p>
