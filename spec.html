@@ -10973,7 +10973,11 @@
     <h1>Punctuators</h1>
     <h2>Syntax</h2>
     <emu-grammar type="definition">
-      Punctuator :: one of
+      OptionalChainingPunctuator ::
+        `?.` [lookahead &lt;! DecimalDigit]
+        OtherPunctuator
+
+      OtherPunctuator :: one of
         `{` `(` `)` `[` `]`
         `.` `...` `;` `,`
         `&lt;` `&gt;` `&lt;=` `&gt;=`
@@ -10987,6 +10991,10 @@
         `?` `:`
         `=` `+=` `-=` `*=` `%=` `**=` `&lt;&lt;=` `&gt;&gt;=` `&gt;&gt;&gt;=` `&amp;=` `|=` `^=`
         `=&gt;`
+
+      Punctuator ::
+        OptionalChainingPunctuator
+        OtherPunctuator
 
       DivPunctuator ::
         `/`
@@ -13387,9 +13395,25 @@
         ArgumentList[?Yield, ?Await] `,` AssignmentExpression[+In, ?Yield, ?Await]
         ArgumentList[?Yield, ?Await] `,` `...` AssignmentExpression[+In, ?Yield, ?Await]
 
+      OptionalExpression[Yield, Await] :
+        MemberExpression[?Yield, ?Await] OptionalChain[?Yield, ?Await]
+        CallExpression[?Yield, ?Await] OptionalChain[?Yield, ?Await]
+        OptionalExpression[?Yield, ?Await] OptionalChain[?Yield, ?Await]
+
+      OptionalChain[Yield, Await] :
+        `?.` Arguments[?Yield, ?Await]
+        `?.` `[` Expression[+In, ?Yield, ?Await] `]`
+        `?.` IdentifierName
+        `?.` TemplateLiteral[?Yield, ?Await, +Tagged]
+        OptionalChain[?Yield, ?Await] Arguments[?Yield, ?Await]
+        OptionalChain[?Yield, ?Await]  `[` Expression[+In, ?Yield, ?Await] `]`
+        OptionalChain[?Yield, ?Await] `.` IdentifierName
+        OptionalChain[?Yield, ?Await] TemplateLiteral[?Yield, ?Await, +Tagged]
+
       LeftHandSideExpression[Yield, Await] :
         NewExpression[?Yield, ?Await]
         CallExpression[?Yield, ?Await]
+        OptionalExpression[?Yield, ?Await]
     </emu-grammar>
     <h2>Supplemental Syntax</h2>
     <p>When processing an instance of the production <emu-grammar>CallExpression : CoverCallExpressionAndAsyncArrowHead</emu-grammar> the interpretation of |CoverCallExpressionAndAsyncArrowHead| is refined using the following grammar:</p>
@@ -13400,6 +13424,33 @@
 
     <emu-clause id="sec-static-semantics">
       <h1>Static Semantics</h1>
+
+      <emu-clause id="sec-left-hand-side-expressions-static-semantics-early-errors">
+        <h1>Static Semantics: Early Errors</h1>
+        <emu-grammar>
+          OptionalChain[Yield, Await] :
+            `?.` TemplateLiteral[?Yield, ?Await, +Tagged]
+            OptionalChain[?Yield, ?Await] TemplateLiteral[?Yield, ?Await, +Tagged]
+        </emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if any code matches this production.
+          </li>
+        </ul>
+        <emu-note>
+          <p>This production exists in order to prevent automatic semicolon insertion rules (<emu-xref href="#sec-automatic-semicolon-insertion"></emu-xref>) from being applied to the following code:</p>
+          <pre><code class="javascript">
+            a?.b
+            `c`
+          </code></pre>
+          <p>so that it would be interpreted as two valid statements. The purpose is to maintain consistency with similar code without optional chaining operator:</p>
+          <pre><code class="javascript">
+            a.b
+            `c`
+          </code></pre>
+          <p>which is a valid statement and where automatic semicolon insertion does not apply.</p>
+        </emu-note>
+      </emu-clause>
 
       <emu-clause id="sec-left-hand-side-expressions-static-semantics-coveredcallexpression">
         <h1>Static Semantics: CoveredCallExpression</h1>
@@ -13436,6 +13487,19 @@
           1. If _symbol_ is an |Identifier| and StringValue of _symbol_ is the same value as the StringValue of |IdentifierName|, return *true*.
           1. Return *false*.
         </emu-alg>
+        <emu-grammar>OptionalChain : `?.` IdentifierName</emu-grammar>
+        <emu-alg>
+          1. If _symbol_ is a |ReservedWord|, return *false*.
+          1. If _symbol_ is an |Identifier| and StringValue of _symbol_ is the same value as the StringValue of |IdentifierName|, return *true*.
+          1. Return *false*.
+        </emu-alg>
+        <emu-grammar>OptionalChain : OptionalChain `.` IdentifierName</emu-grammar>
+        <emu-alg>
+          1. If |OptionalChain| Contains _symbol_ is *true*, return *true*.
+          1. If _symbol_ is a |ReservedWord|, return *false*.
+          1. If _symbol_ is an |Identifier| and StringValue of _symbol_ is the same value as the StringValue of |IdentifierName|, return *true*.
+          1. Return *false*.
+        </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-static-semantics-static-semantics-isfunctiondefinition">
@@ -13455,6 +13519,7 @@
 
           LeftHandSideExpression :
             CallExpression
+            OptionalExpression
         </emu-grammar>
         <emu-alg>
           1. Return *false*.
@@ -13483,6 +13548,7 @@
 
           LeftHandSideExpression :
             CallExpression
+            OptionalExpression
         </emu-grammar>
         <emu-alg>
           1. Return *false*.
@@ -13506,6 +13572,7 @@
 
           LeftHandSideExpression :
             CallExpression
+            OptionalExpression
         </emu-grammar>
         <emu-alg>
           1. Return *false*.
@@ -13545,6 +13612,9 @@
 
           NewTarget :
             `new` `.` `target`
+
+          LeftHandSideExpression :
+            OptionalExpression
         </emu-grammar>
         <emu-alg>
           1. Return ~invalid~.
@@ -13592,27 +13662,51 @@
         <emu-alg>
           1. Let _baseReference_ be the result of evaluating |MemberExpression|.
           1. Let _baseValue_ be ? GetValue(_baseReference_).
-          1. Let _propertyNameReference_ be the result of evaluating |Expression|.
-          1. Let _propertyNameValue_ be ? GetValue(_propertyNameReference_).
-          1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
-          1. Let _propertyKey_ be ? ToPropertyKey(_propertyNameValue_).
           1. If the code matched by this |MemberExpression| is strict mode code, let _strict_ be *true*; else let _strict_ be *false*.
-          1. Return a value of type Reference whose base value component is _bv_, whose referenced name component is _propertyKey_, and whose strict reference flag is _strict_.
+          1. Return ? EvaluatePropertyAccessWithExpressionKey(_baseValue_, |Expression|, _strict_).
         </emu-alg>
         <emu-grammar>MemberExpression : MemberExpression `.` IdentifierName</emu-grammar>
         <emu-alg>
           1. Let _baseReference_ be the result of evaluating |MemberExpression|.
           1. Let _baseValue_ be ? GetValue(_baseReference_).
-          1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
-          1. Let _propertyNameString_ be StringValue of |IdentifierName|.
           1. If the code matched by this |MemberExpression| is strict mode code, let _strict_ be *true*; else let _strict_ be *false*.
-          1. Return a value of type Reference whose base value component is _bv_, whose referenced name component is _propertyNameString_, and whose strict reference flag is _strict_.
+          1. Return ? EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
         </emu-alg>
         <emu-grammar>CallExpression : CallExpression `[` Expression `]`</emu-grammar>
-        <p>Is evaluated in exactly the same manner as <emu-grammar>MemberExpression : MemberExpression `[` Expression `]`</emu-grammar> except that the contained |CallExpression| is evaluated in step 1.</p>
+        <emu-alg>
+          1. Let _baseReference_ be the result of evaluating |CallExpression|.
+          1. Let _baseValue_ be ? GetValue(_baseReference_).
+          1. If the code matched by this |CallExpression| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. Return ? EvaluatePropertyAccessWithExpressionKey(_baseValue_, |Expression|, _strict_).
+        </emu-alg>
         <emu-grammar>CallExpression : CallExpression `.` IdentifierName</emu-grammar>
-        <p>Is evaluated in exactly the same manner as <emu-grammar>MemberExpression : MemberExpression `.` IdentifierName</emu-grammar> except that the contained |CallExpression| is evaluated in step 1.</p>
+        <emu-alg>
+          1. Let _baseReference_ be the result of evaluating |CallExpression|.
+          1. Let _baseValue_ be ? GetValue(_baseReference_).
+          1. If the code matched by this |CallExpression| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. Return ? EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
+        </emu-alg>
       </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-evaluate-expression-key-property-access" aoid="EvaluatePropertyAccessWithExpressionKey">
+      <h1>Runtime Semantics: EvaluatePropertyAccessWithExpressionKey( _baseValue_, _expression_, _strict_ )</h1>
+      <p>The abstract operation EvaluatePropertyAccessWithExpressionKey takes as arguments a value _baseValue_, a Parse Node _expression_, and a Boolean argument _strict_. It performs the following steps:</p>
+      <emu-alg>
+        1. Let _propertyNameReference_ be the result of evaluating _expression_.
+        1. Let _propertyNameValue_ be ? GetValue(_propertyNameReference_).
+        1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
+        1. Let _propertyKey_ be ? ToPropertyKey(_propertyNameValue_).
+        1. Return a value of type Reference whose base value component is _bv_, whose referenced name component is _propertyKey_, and whose strict reference flag is _strict_.
+    </emu-clause>
+    <emu-clause id="sec-evaluate-identifier-key-property-access" aoid="EvaluatePropertyAccessWithIdentifierKey">
+      <h1>Runtime Semantics: EvaluatePropertyAccessWithIdentifierKey( _baseValue_, _identifierName_, _strict_ )</h1>
+      <p>The abstract operation EvaluatePropertyAccessWithIdentifierKey takes as arguments a value _baseValue_, a Parse Node _identifierName_, and a Boolean argument _strict_. It performs the following steps:</p>
+      <emu-alg>
+        1. Assert: _identifierName_ is an |IdentifierName|
+        1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
+        1. Let _propertyNameString_ be StringValue of _identifierName_.
+        1. Return a value of type Reference whose base value component is _bv_, whose referenced name component is _propertyNameString_, and whose strict reference flag is _strict_.
     </emu-clause>
 
     <emu-clause id="sec-new-operator">
@@ -13659,7 +13753,7 @@
           1. Let _arguments_ be the |Arguments| of _expr_.
           1. Let _ref_ be the result of evaluating _memberExpr_.
           1. Let _func_ be ? GetValue(_ref_).
-          1. If Type(_ref_) is Reference and IsPropertyReference(_ref_) is *false* and GetReferencedName(_ref_) is *"eval"*, then
+          1. If Type(_ref_) is Reference, IsPropertyReference(_ref_) is *false*, and GetReferencedName(_ref_) is *"eval"*, then
             1. If SameValue(_func_, %eval%) is *true*, then
               1. Let _argList_ be ? ArgumentListEvaluation of _arguments_.
               1. If _argList_ has no elements, return *undefined*.
@@ -13818,6 +13912,92 @@
             1. If _next_ is *false*, return _precedingArgs_.
             1. Let _nextArg_ be ? IteratorValue(_next_).
             1. Append _nextArg_ as the last element of _precedingArgs_.
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-optional-chains">
+      <h1>Optional Chains</h1>
+      <emu-note>An optional chain is a chain of one or more property accesses and function calls, the first of which begins with the token `?.`.</emu-note>
+      <emu-clause id="sec-optional-chaining-evaluation">
+        <h1>Runtime Semantics: Evaluation</h1>
+        <emu-grammar>
+          OptionalExpression :
+            MemberExpression OptionalChain
+        </emu-grammar>
+        <emu-alg>
+          1. Let _baseReference_ be the result of evaluating |MemberExpression|.
+          1. Let _baseValue_ be ? GetValue(_baseReference_).
+          1. If _baseValue_ is *undefined* or *null*, then
+            1. Return *undefined*.
+          1. Return the result of performing ChainEvaluation of |OptionalChain| with arguments _baseValue_ and _baseReference_.
+        </emu-alg>
+        <emu-grammar>
+          OptionalExpression :
+            CallExpression OptionalChain
+        </emu-grammar>
+        <emu-alg>
+          1. Let _baseReference_ be the result of evaluating |CallExpression|.
+          1. Let _baseValue_ be ? GetValue(_baseReference_).
+          1. If _baseValue_ is *undefined* or *null*, then
+            1. Return *undefined*.
+          1. Return the result of performing ChainEvaluation of |OptionalChain| with arguments _baseValue_ and _baseReference_.
+        </emu-alg>
+        <emu-grammar>
+          OptionalExpression :
+            OptionalExpression OptionalChain
+        </emu-grammar>
+        <emu-alg>
+          1. Let _baseReference_ be the result of evaluating |OptionalExpression|.
+          1. Let _baseValue_ be ? GetValue(_baseReference_).
+          1. If _baseValue_ is *undefined* or *null*, then
+            1. Return *undefined*.
+          1. Return the result of performing ChainEvaluation of |OptionalChain| with arguments _baseValue_ and _baseReference_.
+        </emu-alg>
+      </emu-clause>
+      <emu-clause id="sec-optional-chaining-chain-evaluation">
+        <h1>Runtime Semantics: ChainEvaluation</h1>
+        <p>With parameters _baseValue_ and _baseReference_.</p>
+        <emu-grammar>OptionalChain : `?.` Arguments</emu-grammar>
+        <emu-alg>
+          1. Let _thisChain_ be this |OptionalChain|.
+          1. Let _tailCall_ be IsInTailPosition(_thisChain_).
+          1. Return ? EvaluateCall(_baseValue_, _baseReference_, |Arguments|, _tailCall_).
+        </emu-alg>
+        <emu-grammar>OptionalChain : `?.` `[` Expression `]`</emu-grammar>
+        <emu-alg>
+          1. If the code matched by this |OptionalChain| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. Return ? EvaluatePropertyAccessWithExpressionKey(_baseValue_, |Expression|, _strict_).
+        </emu-alg>
+        <emu-grammar>OptionalChain : `?.` IdentifierName</emu-grammar>
+        <emu-alg>
+          1. If the code matched by this |OptionalChain| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. Return ? EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
+        </emu-alg>
+        <emu-grammar>OptionalChain : OptionalChain Arguments</emu-grammar>
+        <emu-alg>
+          1. Let _optionalChain_ be |OptionalChain|.
+          1. Let _newReference_ be ? ChainEvaluation of _optionalChain_ with arguments _baseValue_ and _baseReference_.
+          1. Let _newValue_ be ? GetValue(_newReference_).
+          1. Let _thisChain_ be this |OptionalChain|.
+          1. Let _tailCall_ be IsInTailPosition(_thisChain_).
+          1. Return ? EvaluateCall(_newValue_, _newReference_, |Arguments|, _tailCall_).
+        </emu-alg>
+        <emu-grammar>OptionalChain : OptionalChain `[` Expression `]`</emu-grammar>
+        <emu-alg>
+          1. Let _optionalChain_ be |OptionalChain|.
+          1. Let _newReference_ be ? ChainEvaluation of _optionalChain_ with arguments _baseValue_ and _baseReference_.
+          1. Let _newValue_ be ? GetValue(_newReference_).
+          1. If the code matched by this |OptionalChain| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. Return ? EvaluatePropertyAccessWithExpressionKey(_newValue_, |Expression|, _strict_).
+        </emu-alg>
+        <emu-grammar>OptionalChain : OptionalChain `.` IdentifierName</emu-grammar>
+        <emu-alg>
+          1. Let _optionalChain_ be |OptionalChain|.
+          1. Let _newReference_ be ? ChainEvaluation of _optionalChain_ with arguments _baseValue_ and _baseReference_.
+          1. Let _newValue_ be ? GetValue(_newReference_).
+          1. If the code matched by this |OptionalChain| is strict mode code, let _strict_ be *true*, else let _strict_ be *false*.
+          1. Return ? EvaluatePropertyAccessWithIdentifierKey(_newValue_, |IdentifierName|, _strict_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -21756,6 +21936,34 @@
         </emu-grammar>
         <emu-alg>
           1. If this |CallExpression| is _call_, return *true*.
+          1. Return *false*.
+        </emu-alg>
+        <emu-grammar>
+          OptionalExpression :
+            MemberExpression OptionalChain
+            CallExpression OptionalChain
+            OptionalExpression OptionalChain
+        </emu-grammar>
+        <emu-alg>
+          1. Return HasCallInTailPosition of |OptionalChain| with argument _call_.
+        </emu-alg>
+        <emu-grammar>
+          OptionalChain :
+            `?.` `[` Expression `]`
+            `?.` IdentifierName
+            OptionalChain `[` Expression `]`
+            OptionalChain `.` IdentifierName
+        </emu-grammar>
+        <emu-alg>
+          1. Return *false*.
+        </emu-alg>
+        <emu-grammar>
+          OptionalChain :
+            `?.` Arguments
+            OptionalChain Arguments
+        </emu-grammar>
+        <emu-alg>
+          1. If this |OptionalChain| is _call_, return *true*.
           1. Return *false*.
         </emu-alg>
         <emu-grammar>
