@@ -16239,7 +16239,7 @@
       </emu-grammar>
     </emu-clause>
 
-    <emu-clause id="sec-literals-numeric-literals">
+    <emu-clause id="sec-literals-numeric-literals" oldids="sec-additional-syntax-numeric-literals">
       <h1>Numeric Literals</h1>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
@@ -16251,6 +16251,7 @@
           DecimalBigIntegerLiteral
           NonDecimalIntegerLiteral[+Sep]
           NonDecimalIntegerLiteral[+Sep] BigIntLiteralSuffix
+          LegacyOctalIntegerLiteral
 
         DecimalBigIntegerLiteral ::
           `0` BigIntLiteralSuffix
@@ -16274,6 +16275,7 @@
           `0`
           NonZeroDigit
           NonZeroDigit NumericLiteralSeparator? DecimalDigits[+Sep]
+          NonOctalDecimalIntegerLiteral
 
         DecimalDigits[Sep] ::
           DecimalDigit
@@ -16318,8 +16320,24 @@
           OctalDigits[?Sep] OctalDigit
           [+Sep] OctalDigits[+Sep] NumericLiteralSeparator OctalDigit
 
+        LegacyOctalIntegerLiteral ::
+          `0` OctalDigit
+          LegacyOctalIntegerLiteral OctalDigit
+
+        NonOctalDecimalIntegerLiteral ::
+          `0` NonOctalDigit
+          LegacyOctalLikeDecimalIntegerLiteral NonOctalDigit
+          NonOctalDecimalIntegerLiteral DecimalDigit
+
+        LegacyOctalLikeDecimalIntegerLiteral ::
+          `0` OctalDigit
+          LegacyOctalLikeDecimalIntegerLiteral OctalDigit
+
         OctalDigit :: one of
           `0` `1` `2` `3` `4` `5` `6` `7`
+
+        NonOctalDigit :: one of
+          `8` `9`
 
         HexIntegerLiteral[Sep] ::
           `0x` HexDigits[?Sep]
@@ -16337,9 +16355,21 @@
       <emu-note>
         <p>For example: `3in` is an error and not the two input elements `3` and `in`.</p>
       </emu-note>
-      <p>A conforming implementation, when processing strict mode code, must not extend, as described in <emu-xref href="#sec-additional-syntax-numeric-literals"></emu-xref>, the syntax of |NumericLiteral| to include <emu-xref href="#prod-annexB-LegacyOctalIntegerLiteral"></emu-xref>, nor extend the syntax of |DecimalIntegerLiteral| to include <emu-xref href="#prod-annexB-NonOctalDecimalIntegerLiteral"></emu-xref>.</p>
 
-      <emu-clause id="sec-static-semantics-mv">
+      <emu-clause id="sec-numeric-literals-early-errors">
+        <h1>Static Semantics: Early Errors</h1>
+        <emu-grammar>
+          NumericLiteral :: LegacyOctalIntegerLiteral
+
+          DecimalIntegerLiteral :: NonOctalDecimalIntegerLiteral
+        </emu-grammar>
+        <ul>
+          <li>It is a Syntax Error if the source code matching this production is strict mode code.</li>
+        </ul>
+        <emu-note>In non-strict code, this syntax is Legacy.</emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-static-semantics-mv" oldids="sec-additional-syntax-numeric-literals-status-semantics">
         <h1>Static Semantics: MV</h1>
         <p>A numeric literal stands for a value of the Number type or the BigInt type.</p>
         <ul>
@@ -16434,10 +16464,10 @@
             The MV of <emu-grammar>DecimalDigit :: `7`</emu-grammar> or of <emu-grammar>NonZeroDigit :: `7`</emu-grammar> or of <emu-grammar>HexDigit :: `7`</emu-grammar> or of <emu-grammar>OctalDigit :: `7`</emu-grammar> is 7.
           </li>
           <li>
-            The MV of <emu-grammar>DecimalDigit :: `8`</emu-grammar> or of <emu-grammar>NonZeroDigit :: `8`</emu-grammar> or of <emu-grammar>HexDigit :: `8`</emu-grammar> is 8.
+            The MV of <emu-grammar>DecimalDigit :: `8`</emu-grammar> or of <emu-grammar>NonZeroDigit :: `8`</emu-grammar> or of <emu-grammar>NonOctalDigit :: `8`</emu-grammar> or of <emu-grammar>HexDigit :: `8`</emu-grammar> is 8.
           </li>
           <li>
-            The MV of <emu-grammar>DecimalDigit :: `9`</emu-grammar> or of <emu-grammar>NonZeroDigit :: `9`</emu-grammar> or of <emu-grammar>HexDigit :: `9`</emu-grammar> is 9.
+            The MV of <emu-grammar>DecimalDigit :: `9`</emu-grammar> or of <emu-grammar>NonZeroDigit :: `9`</emu-grammar> or of <emu-grammar>NonOctalDigit :: `9`</emu-grammar> or of <emu-grammar>HexDigit :: `9`</emu-grammar> is 9.
           </li>
           <li>
             The MV of <emu-grammar>HexDigit :: `a`</emu-grammar> or of <emu-grammar>HexDigit :: `A`</emu-grammar> is 10.
@@ -16488,6 +16518,27 @@
             The MV of <emu-grammar>OctalDigits :: OctalDigits NumericLiteralSeparator OctalDigit</emu-grammar> is (the MV of |OctalDigits| &times; 8) plus the MV of |OctalDigit|.
           </li>
           <li>
+            The MV of <emu-grammar>LegacyOctalIntegerLiteral :: `0` OctalDigit</emu-grammar> is the MV of |OctalDigit|.
+          </li>
+          <li>
+            The MV of <emu-grammar>LegacyOctalIntegerLiteral :: LegacyOctalIntegerLiteral OctalDigit</emu-grammar> is (the MV of |LegacyOctalIntegerLiteral| times 8) plus the MV of |OctalDigit|.
+          </li>
+          <li>
+            The MV of <emu-grammar>NonOctalDecimalIntegerLiteral :: `0` NonOctalDigit</emu-grammar> is the MV of |NonOctalDigit|.
+          </li>
+          <li>
+            The MV of <emu-grammar>NonOctalDecimalIntegerLiteral :: LegacyOctalLikeDecimalIntegerLiteral NonOctalDigit</emu-grammar> is (the MV of |LegacyOctalLikeDecimalIntegerLiteral| times 10) plus the MV of |NonOctalDigit|.
+          </li>
+          <li>
+            The MV of <emu-grammar>NonOctalDecimalIntegerLiteral :: NonOctalDecimalIntegerLiteral DecimalDigit</emu-grammar> is (the MV of |NonOctalDecimalIntegerLiteral| times 10) plus the MV of |DecimalDigit|.
+          </li>
+          <li>
+            The MV of <emu-grammar>LegacyOctalLikeDecimalIntegerLiteral :: `0` OctalDigit</emu-grammar> is the MV of |OctalDigit|.
+          </li>
+          <li>
+            The MV of <emu-grammar>LegacyOctalLikeDecimalIntegerLiteral :: LegacyOctalLikeDecimalIntegerLiteral OctalDigit</emu-grammar> is (the MV of |LegacyOctalLikeDecimalIntegerLiteral| times 10) plus the MV of |OctalDigit|.
+          </li>
+          <li>
             The MV of <emu-grammar>HexIntegerLiteral :: `0x` HexDigits</emu-grammar> is the MV of |HexDigits|.
           </li>
           <li>
@@ -16514,6 +16565,10 @@
         <emu-grammar>NumericLiteral :: NonDecimalIntegerLiteral</emu-grammar>
         <emu-alg>
           1. Return 𝔽(MV of |NonDecimalIntegerLiteral|).
+        </emu-alg>
+        <emu-grammar>NumericLiteral :: LegacyOctalIntegerLiteral</emu-grammar>
+        <emu-alg>
+          1. Return 𝔽(MV of |LegacyOctalIntegerLiteral|).
         </emu-alg>
         <emu-grammar>NumericLiteral :: NonDecimalIntegerLiteral BigIntLiteralSuffix</emu-grammar>
         <emu-alg>
@@ -27034,7 +27089,7 @@
         The Syntactic Grammar must not be extended in any manner that allows the token `:` to immediately follow source text that matches the |BindingIdentifier| nonterminal symbol.
       </li>
       <li>
-        When processing strict mode code, the syntax of |NumericLiteral| must not be extended to include <emu-xref href="#prod-annexB-LegacyOctalIntegerLiteral"></emu-xref> and the syntax of |DecimalIntegerLiteral| must not be extended to include <emu-xref href="#prod-annexB-NonOctalDecimalIntegerLiteral"></emu-xref> as described in <emu-xref href="#sec-additional-syntax-numeric-literals"></emu-xref>.
+        When processing strict mode code, an implementation must not relax the early error rules of <emu-xref href="#sec-numeric-literals-early-errors"></emu-xref>.
       </li>
       <li>
         |TemplateCharacter| must not be extended to include <emu-xref href="#prod-annexB-LegacyOctalEscapeSequence"></emu-xref> or <emu-xref href="#prod-annexB-NonOctalDecimalEscapeSequence"></emu-xref> as defined in <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref>.
@@ -44972,7 +45027,11 @@ THH:mm:ss.sss
     <emu-prodref name="BinaryDigit"></emu-prodref>
     <emu-prodref name="OctalIntegerLiteral"></emu-prodref>
     <emu-prodref name="OctalDigits"></emu-prodref>
+    <emu-prodref name="LegacyOctalIntegerLiteral"></emu-prodref>
+    <emu-prodref name="NonOctalDecimalIntegerLiteral"></emu-prodref>
+    <emu-prodref name="LegacyOctalLikeDecimalIntegerLiteral"></emu-prodref>
     <emu-prodref name="OctalDigit"></emu-prodref>
+    <emu-prodref name="NonOctalDigit"></emu-prodref>
     <emu-prodref name="HexIntegerLiteral"></emu-prodref>
     <emu-prodref name="HexDigits"></emu-prodref>
     <emu-prodref name="HexDigit"></emu-prodref>
@@ -45332,78 +45391,6 @@ THH:mm:ss.sss
 
   <emu-annex id="sec-additional-syntax">
     <h1>Additional Syntax</h1>
-
-    <emu-annex id="sec-additional-syntax-numeric-literals">
-      <h1>Numeric Literals</h1>
-      <p>The syntax and semantics of <emu-xref href="#sec-literals-numeric-literals"></emu-xref> is extended as follows except that this extension is not allowed for strict mode code:</p>
-      <h2>Syntax</h2>
-      <emu-grammar type="definition">
-        NumericLiteral ::
-          DecimalLiteral
-          DecimalBigIntegerLiteral
-          NonDecimalIntegerLiteral[+Sep]
-          NonDecimalIntegerLiteral[+Sep] BigIntLiteralSuffix
-          LegacyOctalIntegerLiteral
-
-        LegacyOctalIntegerLiteral ::
-          `0` OctalDigit
-          LegacyOctalIntegerLiteral OctalDigit
-
-        DecimalIntegerLiteral ::
-          `0`
-          NonZeroDigit
-          NonZeroDigit NumericLiteralSeparator? DecimalDigits[+Sep]
-          NonOctalDecimalIntegerLiteral
-
-        NonOctalDecimalIntegerLiteral ::
-          `0` NonOctalDigit
-          LegacyOctalLikeDecimalIntegerLiteral NonOctalDigit
-          NonOctalDecimalIntegerLiteral DecimalDigit
-
-        LegacyOctalLikeDecimalIntegerLiteral ::
-          `0` OctalDigit
-          LegacyOctalLikeDecimalIntegerLiteral OctalDigit
-
-        NonOctalDigit :: one of
-          `8` `9`
-      </emu-grammar>
-
-      <emu-annex id="sec-additional-syntax-numeric-literals-status-semantics">
-      <h1>Static Semantics</h1>
-      <ul>
-        <li>
-          The MV of <emu-grammar>LegacyOctalIntegerLiteral :: `0` OctalDigit</emu-grammar> is the MV of |OctalDigit|.
-        </li>
-        <li>
-          The MV of <emu-grammar>LegacyOctalIntegerLiteral :: LegacyOctalIntegerLiteral OctalDigit</emu-grammar> is (the MV of |LegacyOctalIntegerLiteral| times 8) plus the MV of |OctalDigit|.
-        </li>
-        <li>
-          The MV of <emu-grammar>DecimalIntegerLiteral :: NonOctalDecimalIntegerLiteral</emu-grammar> is the MV of |NonOctalDecimalIntegerLiteral|.
-        </li>
-        <li>
-          The MV of <emu-grammar>NonOctalDecimalIntegerLiteral :: `0` NonOctalDigit</emu-grammar> is the MV of |NonOctalDigit|.
-        </li>
-        <li>
-          The MV of <emu-grammar>NonOctalDecimalIntegerLiteral :: LegacyOctalLikeDecimalIntegerLiteral NonOctalDigit</emu-grammar> is (the MV of |LegacyOctalLikeDecimalIntegerLiteral| times 10) plus the MV of |NonOctalDigit|.
-        </li>
-        <li>
-          The MV of <emu-grammar>NonOctalDecimalIntegerLiteral :: NonOctalDecimalIntegerLiteral DecimalDigit</emu-grammar> is (the MV of |NonOctalDecimalIntegerLiteral| times 10) plus the MV of |DecimalDigit|.
-        </li>
-        <li>
-          The MV of <emu-grammar>LegacyOctalLikeDecimalIntegerLiteral :: `0` OctalDigit</emu-grammar> is the MV of |OctalDigit|.
-        </li>
-        <li>
-          The MV of <emu-grammar>LegacyOctalLikeDecimalIntegerLiteral :: LegacyOctalLikeDecimalIntegerLiteral OctalDigit</emu-grammar> is (the MV of |LegacyOctalLikeDecimalIntegerLiteral| times 10) plus the MV of |OctalDigit|.
-        </li>
-        <li>
-          The MV of <emu-grammar>NonOctalDigit :: `8`</emu-grammar> is 8.
-        </li>
-        <li>
-          The MV of <emu-grammar>NonOctalDigit :: `9`</emu-grammar> is 9.
-        </li>
-      </ul>
-      </emu-annex>
-    </emu-annex>
 
     <emu-annex id="sec-additional-syntax-string-literals">
       <h1>String Literals</h1>
@@ -46549,7 +46536,7 @@ THH:mm:ss.sss
       `implements`, `interface`, `let`, `package`, `private`, `protected`, `public`, `static`, and `yield` are reserved words within strict mode code. (<emu-xref href="#sec-keywords-and-reserved-words"></emu-xref>).
     </li>
     <li>
-      A conforming implementation, when processing strict mode code, must not extend, as described in <emu-xref href="#sec-additional-syntax-numeric-literals"></emu-xref>, the syntax of |NumericLiteral| to include <emu-xref href="#prod-annexB-LegacyOctalIntegerLiteral"></emu-xref>, nor extend the syntax of |DecimalIntegerLiteral| to include <emu-xref href="#prod-annexB-NonOctalDecimalIntegerLiteral"></emu-xref>.
+      A conforming implementation, when processing strict mode code, must disallow instances of the productions <emu-grammar>NumericLiteral :: LegacyOctalIntegerLiteral</emu-grammar> and <emu-grammar>DecimalIntegerLiteral :: NonOctalDecimalIntegerLiteral</emu-grammar>.
     </li>
     <li>
       A conforming implementation, when processing strict mode code, may not extend the syntax of |EscapeSequence| to include <emu-xref href="#prod-annexB-LegacyOctalEscapeSequence"></emu-xref> or <emu-xref href="#prod-annexB-NonOctalDecimalEscapeSequence"></emu-xref> as described in <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref>.
