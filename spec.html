@@ -520,7 +520,7 @@
     <emu-clause id="sec-lexical-and-regexp-grammars">
       <h1>The Lexical and RegExp Grammars</h1>
       <p>A <em>lexical grammar</em> for ECMAScript is given in clause <emu-xref href="#sec-ecmascript-language-lexical-grammar"></emu-xref>. This grammar has as its terminal symbols Unicode code points that conform to the rules for |SourceCharacter| defined in <emu-xref href="#sec-source-text"></emu-xref>. It defines a set of productions, starting from the goal symbol |InputElementDiv|, |InputElementTemplateTail|, or |InputElementRegExp|, or |InputElementRegExpOrTemplateTail|, that describe how sequences of such code points are translated into a sequence of input elements.</p>
-      <p>Input elements other than white space and comments form the terminal symbols for the syntactic grammar for ECMAScript and are called ECMAScript <em>tokens</em>. These tokens are the reserved words, identifiers, literals, and punctuators of the ECMAScript language. Moreover, line terminators, although not considered to be tokens, also become part of the stream of input elements and guide the process of automatic semicolon insertion (<emu-xref href="#sec-automatic-semicolon-insertion"></emu-xref>). Simple white space and single-line comments are discarded and do not appear in the stream of input elements for the syntactic grammar. A |MultiLineComment| (that is, a comment of the form `/*`&hellip;`*/` regardless of whether it spans more than one line) is likewise simply discarded if it contains no line terminator; but if a |MultiLineComment| contains one or more line terminators, then it is replaced by a single line terminator, which becomes part of the stream of input elements for the syntactic grammar.</p>
+      <p>Input elements other than white space and comments form the terminal symbols for the syntactic grammar for ECMAScript and are called ECMAScript <em>tokens</em>. These tokens are the reserved words, identifiers, literals, and punctuators of the ECMAScript language. Moreover, line terminators, although not considered to be tokens, also become part of the stream of input elements and guide the process of automatic semicolon insertion (<emu-xref href="#sec-automatic-semicolon-insertion"></emu-xref>). Simple white space and single-line comments are discarded and do not appear in the stream of input elements for the syntactic grammar. A |MultiLineComment| (that is, a comment of the form `/*`&hellip;`*/` that spans more than one line) is replaced by a single line terminator, which becomes part of the stream of input elements for the syntactic grammar.</p>
       <p>A <em>RegExp grammar</em> for ECMAScript is given in <emu-xref href="#sec-patterns"></emu-xref>. This grammar also has as its terminal symbols the code points as defined by |SourceCharacter|. It defines a set of productions, starting from the goal symbol |Pattern|, that describe how sequences of code points are translated into regular expression patterns.</p>
       <p>Productions of the lexical and RegExp grammars are distinguished by having two colons &ldquo;<b>::</b>&rdquo; as separating punctuation. The lexical and RegExp grammars share some productions.</p>
     </emu-clause>
@@ -16018,7 +16018,7 @@
   <emu-clause id="sec-line-terminators">
     <h1>Line Terminators</h1>
     <p>Like white space code points, line terminator code points are used to improve source text readability and to separate tokens (indivisible lexical units) from each other. However, unlike white space code points, line terminators have some influence over the behaviour of the syntactic grammar. In general, line terminators may occur between any two tokens, but there are a few places where they are forbidden by the syntactic grammar. Line terminators also affect the process of automatic semicolon insertion (<emu-xref href="#sec-automatic-semicolon-insertion"></emu-xref>). A line terminator cannot occur within any token except a |StringLiteral|, |Template|, or |TemplateSubstitutionTail|. &lt;LF&gt; and &lt;CR&gt; line terminators cannot occur within a |StringLiteral| token except as part of a |LineContinuation|.</p>
-    <p>A line terminator can occur within a |MultiLineComment| but cannot occur within a |SingleLineComment|.</p>
+    <p>A line terminator must occur within a |MultiLineComment| but cannot occur within a |SingleLineDelimitedComment| or a |SingleLineComment|.</p>
     <p>Line terminators are included in the set of white space code points that are matched by the `\\s` class in regular expressions.</p>
     <p>The ECMAScript line terminator code points are listed in <emu-xref href="#table-line-terminator-code-points"></emu-xref>.</p>
     <emu-table id="table-line-terminator-code-points" caption="Line Terminator Code Points" oldids="table-33">
@@ -16104,15 +16104,21 @@
     <h1>Comments</h1>
     <p>Comments can be either single or multi-line. Multi-line comments cannot nest.</p>
     <p>Because a single-line comment can contain any Unicode code point except a |LineTerminator| code point, and because of the general rule that a token is always as long as possible, a single-line comment always consists of all code points from the `//` marker to the end of the line. However, the |LineTerminator| at the end of the line is not considered to be part of the single-line comment; it is recognized separately by the lexical grammar and becomes part of the stream of input elements for the syntactic grammar. This point is very important, because it implies that the presence or absence of single-line comments does not affect the process of automatic semicolon insertion (see <emu-xref href="#sec-automatic-semicolon-insertion"></emu-xref>).</p>
-    <p>Comments behave like white space and are discarded except that, if a |MultiLineComment| contains a line terminator code point, then the entire comment is considered to be a |LineTerminator| for purposes of parsing by the syntactic grammar.</p>
+    <p>Comments behave like white space and are discarded except that a |MultiLineComment| or a |SingleLineHTMLCloseComment| is considered to be a |LineTerminator| for purposes of parsing by the syntactic grammar.</p>
     <h2>Syntax</h2>
     <emu-grammar type="definition">
       Comment ::
         MultiLineComment
         SingleLineComment
+        SingleLineHTMLOpenComment
+        SingleLineHTMLCloseComment
+        SingleLineDelimitedComment
 
       MultiLineComment ::
-        `/*` MultiLineCommentChars? `*/`
+        `/*` FirstCommentLine? LineTerminator MultiLineCommentChars? `*/` HTMLCloseComment?
+
+      FirstCommentLine ::
+        SingleLineDelimitedCommentChars
 
       MultiLineCommentChars ::
         MultiLineNotAsteriskChar MultiLineCommentChars?
@@ -16131,13 +16137,59 @@
       SingleLineComment ::
         `//` SingleLineCommentChars?
 
+      SingleLineHTMLOpenComment ::
+        `&lt;!--` SingleLineCommentChars?
+
+      SingleLineHTMLCloseComment ::
+        LineTerminatorSequence HTMLCloseComment
+
+      HTMLCloseComment ::
+        WhiteSpaceSequence? SingleLineDelimitedCommentSequence? `--&gt;` SingleLineCommentChars?
+
+      SingleLineDelimitedCommentSequence ::
+        SingleLineDelimitedComment WhiteSpaceSequence? SingleLineDelimitedCommentSequence?
+
+      WhiteSpaceSequence ::
+        WhiteSpace WhiteSpaceSequence?
+
       SingleLineCommentChars ::
         SingleLineCommentChar SingleLineCommentChars?
 
       SingleLineCommentChar ::
         SourceCharacter but not LineTerminator
+
+      SingleLineDelimitedComment ::
+        `/*` SingleLineDelimitedCommentChars? `*/`
+
+      SingleLineDelimitedCommentChars ::
+        SingleLineNotAsteriskChar SingleLineDelimitedCommentChars?
+        `*` SingleLinePostAsteriskCommentChars?
+
+      SingleLineNotAsteriskChar ::
+        SourceCharacter but not one of `*` or LineTerminator
+
+      SingleLinePostAsteriskCommentChars ::
+        SingleLineNotForwardSlashOrAsteriskChar SingleLineDelimitedCommentChars?
+        `*` SingleLinePostAsteriskCommentChars?
+
+      SingleLineNotForwardSlashOrAsteriskChar ::
+        SourceCharacter but not one of `/` or `*` or LineTerminator
     </emu-grammar>
-    <p>A number of productions in this section are given alternative definitions in section <emu-xref href="#sec-html-like-comments"></emu-xref></p>
+
+    <emu-clause id="sec-comments-early-errors">
+      <h1>Static Semantics: Early Errors</h1>
+      <emu-grammar>
+        SingleLineHTMLOpenComment ::
+          `&lt;!--` SingleLineCommentChars?
+
+        HTMLCloseComment ::
+          WhiteSpaceSequence? SingleLineDelimitedCommentSequence? `--&gt;` SingleLineCommentChars?
+      </emu-grammar>
+      <ul>
+        <li>It is a Syntax Error if a |Module| contains the source code matching this production.</li>
+      </ul>
+      <emu-note>In a |Script|, this syntax is allowed, but deprecated.</emu-note>
+    </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-tokens">
@@ -28297,9 +28349,6 @@
       </li>
       <li>
         When processing strict mode code, the extensions defined in <emu-xref href="#sec-labelled-function-declarations"></emu-xref>, <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics"></emu-xref>, <emu-xref href="#sec-functiondeclarations-in-ifstatement-statement-clauses"></emu-xref>, and <emu-xref href="#sec-initializers-in-forin-statement-heads"></emu-xref> must not be supported.
-      </li>
-      <li>
-        When parsing for the |Module| goal symbol, the lexical grammar extensions defined in <emu-xref href="#sec-html-like-comments"></emu-xref> must not be supported.
       </li>
       <!-- The following is so that in the future we can potentially add new arguments or support ArgumentList. -->
       <li>
@@ -46088,13 +46137,24 @@ THH:mm:ss.sss
     <emu-prodref name="LineTerminatorSequence"></emu-prodref>
     <emu-prodref name="Comment"></emu-prodref>
     <emu-prodref name="MultiLineComment"></emu-prodref>
+    <emu-prodref name="FirstCommentLine"></emu-prodref>
     <emu-prodref name="MultiLineCommentChars"></emu-prodref>
     <emu-prodref name="PostAsteriskCommentChars"></emu-prodref>
     <emu-prodref name="MultiLineNotAsteriskChar"></emu-prodref>
     <emu-prodref name="MultiLineNotForwardSlashOrAsteriskChar"></emu-prodref>
     <emu-prodref name="SingleLineComment"></emu-prodref>
+    <emu-prodref name="SingleLineHTMLOpenComment"></emu-prodref>
+    <emu-prodref name="SingleLineHTMLCloseComment"></emu-prodref>
+    <emu-prodref name="HTMLCloseComment"></emu-prodref>
+    <emu-prodref name="SingleLineDelimitedCommentSequence"></emu-prodref>
+    <emu-prodref name="WhiteSpaceSequence"></emu-prodref>
     <emu-prodref name="SingleLineCommentChars"></emu-prodref>
     <emu-prodref name="SingleLineCommentChar"></emu-prodref>
+    <emu-prodref name="SingleLineDelimitedComment"></emu-prodref>
+    <emu-prodref name="SingleLineDelimitedCommentChars"></emu-prodref>
+    <emu-prodref name="SingleLineNotAsteriskChar"></emu-prodref>
+    <emu-prodref name="SingleLinePostAsteriskCommentChars"></emu-prodref>
+    <emu-prodref name="SingleLineNotForwardSlashOrAsteriskChar"></emu-prodref>
     <emu-prodref name="CommonToken"></emu-prodref>
     <emu-prodref name="PrivateIdentifier"></emu-prodref>
     <emu-prodref name="IdentifierName"></emu-prodref>
@@ -46506,55 +46566,7 @@ THH:mm:ss.sss
 
     <emu-annex id="sec-html-like-comments">
       <h1>HTML-like Comments</h1>
-      <p>The syntax and semantics of <emu-xref href="#sec-comments"></emu-xref> is extended as follows except that this extension is not allowed when parsing source code using the goal symbol |Module|:</p>
-      <h2>Syntax</h2>
-      <emu-grammar type="definition">
-        Comment ::
-          MultiLineComment
-          SingleLineComment
-          SingleLineHTMLOpenComment
-          SingleLineHTMLCloseComment
-          SingleLineDelimitedComment
-
-        MultiLineComment ::
-          `/*` FirstCommentLine? LineTerminator MultiLineCommentChars? `*/` HTMLCloseComment?
-
-        FirstCommentLine ::
-          SingleLineDelimitedCommentChars
-
-        SingleLineHTMLOpenComment ::
-          `&lt;!--` SingleLineCommentChars?
-
-        SingleLineHTMLCloseComment ::
-          LineTerminatorSequence HTMLCloseComment
-
-        SingleLineDelimitedComment ::
-          `/*` SingleLineDelimitedCommentChars? `*/`
-
-        HTMLCloseComment ::
-          WhiteSpaceSequence? SingleLineDelimitedCommentSequence? `--&gt;` SingleLineCommentChars?
-
-        SingleLineDelimitedCommentChars ::
-          SingleLineNotAsteriskChar SingleLineDelimitedCommentChars?
-          `*` SingleLinePostAsteriskCommentChars?
-
-        SingleLineNotAsteriskChar ::
-          SourceCharacter but not one of `*` or LineTerminator
-
-        SingleLinePostAsteriskCommentChars ::
-          SingleLineNotForwardSlashOrAsteriskChar SingleLineDelimitedCommentChars?
-          `*` SingleLinePostAsteriskCommentChars?
-
-        SingleLineNotForwardSlashOrAsteriskChar ::
-          SourceCharacter but not one of `/` or `*` or LineTerminator
-
-        WhiteSpaceSequence ::
-          WhiteSpace WhiteSpaceSequence?
-
-        SingleLineDelimitedCommentSequence ::
-          SingleLineDelimitedComment WhiteSpaceSequence? SingleLineDelimitedCommentSequence?
-      </emu-grammar>
-      <p>Similar to a |MultiLineComment| that contains a line terminator code point, a |SingleLineHTMLCloseComment| is considered to be a |LineTerminator| for purposes of parsing by the syntactic grammar.</p>
+      <p>The HTML-like comment syntax used to be normative optional outside |Module|s.</p>
     </emu-annex>
 
     <emu-annex id="sec-regular-expressions-patterns">
