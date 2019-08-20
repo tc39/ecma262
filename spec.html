@@ -28336,7 +28336,7 @@
         The behaviour of built-in methods which are specified in ECMA-402, such as those named `toLocaleString`, must not be extended except as specified in ECMA-402.
       </li>
       <li>
-        The RegExp pattern grammars in <emu-xref href="#sec-syntax-for-patterns"></emu-xref> and <emu-xref href="#sec-regular-expressions-patterns"></emu-xref> must not be extended to recognize any of the source characters A-Z or a-z as |IdentityEscape[+UnicodeMode]| when the <sub>[UnicodeMode]</sub> grammar parameter is present.
+        The RegExp pattern grammars in <emu-xref href="#sec-syntax-for-patterns"></emu-xref> must not be extended to recognize any of the source characters A-Z or a-z as |IdentityEscape| when the <sub>[UnicodeMode]</sub> grammar parameter is present.
       </li>
       <li>
         The Syntactic Grammar must not be extended in any manner that allows the token `:` to immediately follow source text that matches the |BindingIdentifier| nonterminal symbol.
@@ -34243,6 +34243,7 @@ THH:mm:ss.sss
     <emu-clause id="sec-syntax-for-patterns" oldids="sec-patterns">
       <h1>Syntax for Patterns</h1>
       <p>The `RegExp` constructor applies the following grammar to the input pattern String. An error occurs if the grammar cannot interpret the String as an expansion of |Pattern|.</p>
+      <p>Some of these productions (indicated by &ldquo;<b>::!</b>&rdquo;) introduce ambiguities that are broken by the ordering of alternatives. When parsing using such productions, each alternative is considered only if previous alternatives do not match.</p>
       <h2>Patterns</h2>
       <emu-grammar type="definition">
         Pattern[UnicodeMode, N] ::
@@ -34256,20 +34257,29 @@ THH:mm:ss.sss
           [empty]
           Alternative[?UnicodeMode, ?N] Term[?UnicodeMode, ?N]
 
-        Term[UnicodeMode, N] ::
-          Assertion[?UnicodeMode, ?N]
-          Atom[?UnicodeMode, ?N]
-          Atom[?UnicodeMode, ?N] Quantifier
+        Term[UnicodeMode, N] ::!
+          [+UnicodeMode] Assertion[+UnicodeMode, ?N]
+          [+UnicodeMode] Atom[+UnicodeMode, ?N] Quantifier
+          [+UnicodeMode] Atom[+UnicodeMode, ?N]
+          [~UnicodeMode] QuantifiableAssertion[?N] Quantifier
+          [~UnicodeMode] Assertion[~UnicodeMode, ?N]
+          [~UnicodeMode] ExtendedAtom[?N] Quantifier
+          [~UnicodeMode] ExtendedAtom[?N]
 
         Assertion[UnicodeMode, N] ::
           `^`
           `$`
           `\` `b`
           `\` `B`
-          `(` `?` `=` Disjunction[?UnicodeMode, ?N] `)`
-          `(` `?` `!` Disjunction[?UnicodeMode, ?N] `)`
+          [+UnicodeMode] `(` `?` `=` Disjunction[+UnicodeMode, ?N] `)`
+          [+UnicodeMode] `(` `?` `!` Disjunction[+UnicodeMode, ?N] `)`
+          [~UnicodeMode] QuantifiableAssertion[?N]
           `(` `?` `&lt;=` Disjunction[?UnicodeMode, ?N] `)`
           `(` `?` `&lt;!` Disjunction[?UnicodeMode, ?N] `)`
+
+        QuantifiableAssertion[N] ::
+          `(` `?` `=` Disjunction[~UnicodeMode, ?N] `)`
+          `(` `?` `!` Disjunction[~UnicodeMode, ?N] `)`
 
         Quantifier ::
           QuantifierPrefix
@@ -34283,6 +34293,16 @@ THH:mm:ss.sss
           `{` DecimalDigits[~Sep] `,` `}`
           `{` DecimalDigits[~Sep] `,` DecimalDigits[~Sep] `}`
 
+        ExtendedAtom[N] ::!
+          `.`
+          `\` AtomEscape[~UnicodeMode, ?N]
+          `\` [lookahead == `c`]
+          CharacterClass[~UnicodeMode]
+          `(` Disjunction[~UnicodeMode, ?N] `)`
+          `(` `?` `:` Disjunction[~UnicodeMode, ?N] `)`
+          InvalidBracedQuantifier
+          ExtendedPatternCharacter
+
         Atom[UnicodeMode, N] ::
           PatternCharacter
           `.`
@@ -34290,6 +34310,14 @@ THH:mm:ss.sss
           CharacterClass[?UnicodeMode]
           `(` GroupSpecifier[?UnicodeMode] Disjunction[?UnicodeMode, ?N] `)`
           `(` `?` `:` Disjunction[?UnicodeMode, ?N] `)`
+
+        InvalidBracedQuantifier ::
+          `{` DecimalDigits[~Sep] `}`
+          `{` DecimalDigits[~Sep] `,` `}`
+          `{` DecimalDigits[~Sep] `,` DecimalDigits[~Sep] `}`
+
+        ExtendedPatternCharacter ::
+          SourceCharacter but not one of `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `|`
 
         PatternCharacter ::
           SourceCharacter but not SyntaxCharacter
@@ -34352,23 +34380,30 @@ THH:mm:ss.sss
           `-`
           ClassAtomNoDash[?UnicodeMode]
 
-        ClassAtomNoDash[UnicodeMode] ::
+        ClassAtomNoDash[UnicodeMode, N] ::!
           SourceCharacter but not one of `\` or `]` or `-`
-          `\` ClassEscape[?UnicodeMode]
+          `\` ClassEscape[?UnicodeMode, ?N]
+          `\` [lookahead == `c`]
       </emu-grammar>
 
       <h2>Escapes</h2>
       <emu-grammar type="definition">
-        ClassEscape[UnicodeMode] ::
+        ClassEscape[UnicodeMode, N] ::!
           `b`
           [+UnicodeMode] `-`
+          [~UnicodeMode] `c` ClassControlLetter
           CharacterClassEscape[?UnicodeMode]
-          CharacterEscape[?UnicodeMode]
+          CharacterEscape[?UnicodeMode, ?N]
 
-        AtomEscape[UnicodeMode, N] ::
-          DecimalEscape
+        ClassControlLetter ::
+          DecimalDigit
+          `_`
+
+        AtomEscape[UnicodeMode, N] ::!
+          [+UnicodeMode] DecimalEscape
+          [~UnicodeMode] DecimalEscape [> but only if the CapturingGroupNumber of |DecimalEscape| is &le; _NcapturingParens_]
           CharacterClassEscape[?UnicodeMode]
-          CharacterEscape[?UnicodeMode]
+          CharacterEscape[?UnicodeMode, ?N]
           [+N] `k` GroupName[?UnicodeMode]
 
         DecimalEscape ::
@@ -34411,13 +34446,14 @@ THH:mm:ss.sss
           ControlLetter
           `_`
 
-        CharacterEscape[UnicodeMode] ::
+        CharacterEscape[UnicodeMode, N] ::!
           ControlEscape
           `c` ControlLetter
           `0` [lookahead &notin; DecimalDigit]
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?UnicodeMode]
-          IdentityEscape[?UnicodeMode]
+          [~UnicodeMode] LegacyOctalEscapeSequence
+          IdentityEscape[?UnicodeMode, ?N]
 
         ControlEscape :: one of
           `f` `n` `r` `t` `v`
@@ -34445,25 +34481,36 @@ THH:mm:ss.sss
         HexNonSurrogate ::
           Hex4Digits [> but only if the MV of |Hex4Digits| is not in the inclusive range 0xD800 to 0xDFFF]
 
-        IdentityEscape[UnicodeMode] ::
+        IdentityEscape[UnicodeMode, N] ::
           [+UnicodeMode] SyntaxCharacter
           [+UnicodeMode] `/`
-          [~UnicodeMode] SourceCharacter but not UnicodeIDContinue
+          [~UnicodeMode] SourceCharacterIdentityEscape[?N]
+
+        SourceCharacterIdentityEscape[N] ::
+          [~N] SourceCharacter but not `c`
+          [+N] SourceCharacter but not one of `c` or `k`
       </emu-grammar>
+      <emu-note>
+        <p>Patterns that use the following productions are allowed, but deprecated:</p>
+        <emu-grammar>
+          Term ::! QuantifiableAssertion Quantifier
+
+          ExtendedAtom ::! `\` [lookahead == `c`]
+
+          ClassAtomNoDash ::! `\` [lookahead == `c`]
+
+          ClassEscape ::! `c` ClassControlLetter
+
+          CharacterEscape ::! LegacyOctalEscapeSequence
+        </emu-grammar>
+      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-static-semantics-for-patterns">
       <h1>Static Semantics for Patterns</h1>
 
-      <emu-note>
-        <p>A number of productions in this section are given alternative definitions in section <emu-xref href="#sec-regular-expressions-patterns"></emu-xref>.</p>
-      </emu-note>
-
-      <emu-clause id="sec-patterns-static-semantics-early-errors">
+      <emu-clause id="sec-patterns-static-semantics-early-errors" oldids="sec-patterns-static-semantics-early-errors-annexb">
         <h1>Static Semantics: Early Errors</h1>
-        <emu-note>
-          <p>This section is amended in <emu-xref href="#sec-patterns-static-semantics-early-errors-annexb"></emu-xref>.</p>
-        </emu-note>
         <emu-grammar>Pattern :: Disjunction</emu-grammar>
         <ul>
           <li>
@@ -34477,6 +34524,12 @@ THH:mm:ss.sss
         <ul>
           <li>
             It is a Syntax Error if the MV of the first |DecimalDigits| is larger than the MV of the second |DecimalDigits|.
+          </li>
+        </ul>
+        <emu-grammar>ExtendedAtom ::! InvalidBracedQuantifier</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if any source text matches this rule.
           </li>
         </ul>
         <emu-grammar>RegExpIdentifierStart :: `\` RegExpUnicodeEscapeSequence</emu-grammar>
@@ -34506,7 +34559,7 @@ THH:mm:ss.sss
         <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *true* or IsCharacterClass of the second |ClassAtom| is *true*.
+            It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *true* or IsCharacterClass of the second |ClassAtom| is *true* and this production has a <sub>[UnicodeMode]</sub> parameter.
           </li>
           <li>
             It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *false* and IsCharacterClass of the second |ClassAtom| is *false* and the CharacterValue of the first |ClassAtom| is larger than the CharacterValue of the second |ClassAtom|.
@@ -34515,19 +34568,19 @@ THH:mm:ss.sss
         <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *true* or IsCharacterClass of |ClassAtom| is *true*.
+            It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *true* or IsCharacterClass of |ClassAtom| is *true* and this production has a <sub>[UnicodeMode]</sub> parameter.
           </li>
           <li>
             It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *false* and IsCharacterClass of |ClassAtom| is *false* and the CharacterValue of |ClassAtomNoDash| is larger than the CharacterValue of |ClassAtom|.
           </li>
         </ul>
-        <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar>
+        <emu-grammar>AtomEscape ::! DecimalEscape</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if the CapturingGroupNumber of |DecimalEscape| is larger than _NcapturingParens_ (<emu-xref href="#sec-notation"></emu-xref>).
           </li>
         </ul>
-        <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar>
+        <emu-grammar>AtomEscape ::! `k` GroupName</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if the enclosing |Pattern| does not contain a |GroupSpecifier| with an enclosed |RegExpIdentifierName| whose CapturingGroupName equals the CapturingGroupName of the |RegExpIdentifierName| of this production's |GroupName|.
@@ -34554,9 +34607,6 @@ THH:mm:ss.sss
         <h1>Static Semantics: CapturingGroupNumber</h1>
         <dl class="header">
         </dl>
-        <emu-note>
-          <p>This section is amended in <emu-xref href="#sec-patterns-static-semantics-early-errors-annexb"></emu-xref>.</p>
-        </emu-note>
         <emu-grammar>DecimalEscape :: NonZeroDigit</emu-grammar>
         <emu-alg>
           1. Return the MV of |NonZeroDigit|.
@@ -34569,40 +34619,36 @@ THH:mm:ss.sss
         <p>The definitions of &ldquo;the MV of |NonZeroDigit|&rdquo; and &ldquo;the MV of |DecimalDigits|&rdquo; are in <emu-xref href="#sec-literals-numeric-literals"></emu-xref>.</p>
       </emu-clause>
 
-      <emu-clause id="sec-patterns-static-semantics-is-character-class" type="sdo">
+      <emu-clause id="sec-patterns-static-semantics-is-character-class" type="sdo" oldids="sec-patterns-static-semantics-is-character-class-annexb">
         <h1>Static Semantics: IsCharacterClass</h1>
         <dl class="header">
         </dl>
-        <emu-note>
-          <p>This section is amended in <emu-xref href="#sec-patterns-static-semantics-is-character-class-annexb"></emu-xref>.</p>
-        </emu-note>
         <emu-grammar>
           ClassAtom :: `-`
 
-          ClassAtomNoDash :: SourceCharacter but not one of `\` or `]` or `-`
+          ClassAtomNoDash ::! SourceCharacter but not one of `\` or `]` or `-`
 
-          ClassEscape :: `b`
+          ClassAtomNoDash ::! `\` [lookahead == `c`]
 
-          ClassEscape :: `-`
+          ClassEscape ::! `b`
 
-          ClassEscape :: CharacterEscape
+          ClassEscape ::! `-`
+
+          ClassEscape ::! CharacterEscape
         </emu-grammar>
         <emu-alg>
           1. Return *false*.
         </emu-alg>
-        <emu-grammar>ClassEscape :: CharacterClassEscape</emu-grammar>
+        <emu-grammar>ClassEscape ::! CharacterClassEscape</emu-grammar>
         <emu-alg>
           1. Return *true*.
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-patterns-static-semantics-character-value" type="sdo">
+      <emu-clause id="sec-patterns-static-semantics-character-value" type="sdo" oldids="sec-patterns-static-semantics-character-value-annexb">
         <h1>Static Semantics: CharacterValue</h1>
         <dl class="header">
         </dl>
-        <emu-note>
-          <p>This section is amended in <emu-xref href="#sec-patterns-static-semantics-character-value-annexb"></emu-xref>.</p>
-        </emu-note>
         <emu-grammar>
           ClassAtom :: `-`
         </emu-grammar>
@@ -34610,25 +34656,37 @@ THH:mm:ss.sss
           1. Return the code point value of U+002D (HYPHEN-MINUS).
         </emu-alg>
         <emu-grammar>
-          ClassAtomNoDash :: SourceCharacter but not one of `\` or `]` or `-`
+          ClassAtomNoDash ::! SourceCharacter but not one of `\` or `]` or `-`
         </emu-grammar>
         <emu-alg>
           1. Let _ch_ be the code point matched by |SourceCharacter|.
           1. Return the code point value of _ch_.
         </emu-alg>
         <emu-grammar>
-          ClassEscape :: `b`
+          ClassAtomNoDash ::! `\` [lookahead == `c`]
+        </emu-grammar>
+        <emu-alg>
+          1. Return the code point value of U+005C (REVERSE SOLIDUS).
+        </emu-alg>
+        <emu-grammar>
+          ClassEscape ::! `b`
         </emu-grammar>
         <emu-alg>
           1. Return the code point value of U+0008 (BACKSPACE).
         </emu-alg>
         <emu-grammar>
-          ClassEscape :: `-`
+          ClassEscape ::! `-`
         </emu-grammar>
         <emu-alg>
           1. Return the code point value of U+002D (HYPHEN-MINUS).
         </emu-alg>
-        <emu-grammar>CharacterEscape :: ControlEscape</emu-grammar>
+        <emu-grammar>ClassEscape ::! `c` ClassControlLetter</emu-grammar>
+        <emu-alg>
+          1. Let _ch_ be the code point matched by |ClassControlLetter|.
+          1. Let _i_ be _ch_'s code point value.
+          1. Return the remainder of dividing _i_ by 32.
+        </emu-alg>
+        <emu-grammar>CharacterEscape ::! ControlEscape</emu-grammar>
         <emu-alg>
           1. Return the code point value according to <emu-xref href="#table-controlescape-code-point-values"></emu-xref>.
         </emu-alg>
@@ -34740,22 +34798,26 @@ THH:mm:ss.sss
             </tbody>
           </table>
         </emu-table>
-        <emu-grammar>CharacterEscape :: `c` ControlLetter</emu-grammar>
+        <emu-grammar>CharacterEscape ::! `c` ControlLetter</emu-grammar>
         <emu-alg>
           1. Let _ch_ be the code point matched by |ControlLetter|.
           1. Let _i_ be _ch_'s code point value.
           1. Return the remainder of dividing _i_ by 32.
         </emu-alg>
-        <emu-grammar>CharacterEscape :: `0` [lookahead &notin; DecimalDigit]</emu-grammar>
+        <emu-grammar>CharacterEscape ::! `0` [lookahead &notin; DecimalDigit]</emu-grammar>
         <emu-alg>
           1. Return the code point value of U+0000 (NULL).
         </emu-alg>
         <emu-note>
           <p>`\\0` represents the &lt;NUL&gt; character and cannot be followed by a decimal digit.</p>
         </emu-note>
-        <emu-grammar>CharacterEscape :: HexEscapeSequence</emu-grammar>
+        <emu-grammar>CharacterEscape ::! HexEscapeSequence</emu-grammar>
         <emu-alg>
           1. Return the MV of |HexEscapeSequence|.
+        </emu-alg>
+        <emu-grammar>CharacterEscape ::! LegacyOctalEscapeSequence</emu-grammar>
+        <emu-alg>
+          1. Return the MV of |LegacyOctalEscapeSequence| (see <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref>).
         </emu-alg>
         <emu-grammar>RegExpUnicodeEscapeSequence :: `u` HexLeadSurrogate `\u` HexTrailSurrogate</emu-grammar>
         <emu-alg>
@@ -34868,7 +34930,7 @@ THH:mm:ss.sss
       </emu-clause>
     </emu-clause>
 
-    <emu-clause id="sec-runtime-semantics-for-patterns" oldids="sec-pattern-semantics">
+    <emu-clause id="sec-runtime-semantics-for-patterns" oldids="sec-pattern-semantics,sec-regular-expression-patterns-semantics">
       <h1>Runtime Semantics for Patterns</h1>
       <p>A regular expression pattern is converted into an Abstract Closure using the process described below. An implementation is encouraged to use more efficient algorithms than the ones listed below, as long as the results are the same. The Abstract Closure is used as the value of a RegExp object's [[RegExpMatcher]] internal slot.</p>
       <p>A |Pattern| is either a BMP pattern or a Unicode pattern depending upon whether or not its associated flags contain a `u`. A BMP pattern matches against a String interpreted as consisting of a sequence of 16-bit values that are Unicode code points in the range of the Basic Multilingual Plane. A Unicode pattern matches against a String interpreted as consisting of Unicode code points encoded using UTF-16. In the context of describing the behaviour of a BMP pattern &ldquo;character&rdquo; means a single 16-bit Unicode BMP code point. In the context of describing the behaviour of a Unicode pattern &ldquo;character&rdquo; means a UTF-16 encoded code point (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>). In either context, &ldquo;character value&rdquo; means the numeric value of the corresponding non-encoded code point.</p>
@@ -35023,18 +35085,18 @@ THH:mm:ss.sss
       <emu-clause id="sec-term">
         <h1>Term</h1>
         <p>With parameter _direction_.</p>
-        <p>The production <emu-grammar>Term :: Assertion</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>Term ::! Assertion</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return the Matcher that is the result of evaluating |Assertion|.
         </emu-alg>
         <emu-note>
           <p>The resulting Matcher is independent of _direction_.</p>
         </emu-note>
-        <p>The production <emu-grammar>Term :: Atom</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>Term ::! Atom</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return the Matcher that is the result of evaluating |Atom| with argument _direction_.
         </emu-alg>
-        <p>The production <emu-grammar>Term :: Atom Quantifier</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>Term ::! Atom Quantifier</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Atom| with argument _direction_ to obtain a Matcher _m_.
           1. Evaluate |Quantifier| to obtain the three results: a non-negative integer _min_, a non-negative integer (or +&infin;) _max_, and Boolean _greedy_.
@@ -35046,6 +35108,11 @@ THH:mm:ss.sss
             1. Assert: _c_ is a Continuation.
             1. Return ! RepeatMatcher(_m_, _min_, _max_, _greedy_, _x_, _c_, _parenIndex_, _parenCount_).
         </emu-alg>
+        <p>----</p>
+        <p>In the above algorithm, references to <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> are to be interpreted as meaning <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> or <emu-grammar>ExtendedAtom ::! `(` Disjunction `)`</emu-grammar> .</p>
+        <p>The production <emu-grammar>Term ::! QuantifiableAssertion Quantifier</emu-grammar> evaluates the same as the production <emu-grammar>Term ::! Atom Quantifier</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
+        <p>The production <emu-grammar>Term ::! ExtendedAtom Quantifier</emu-grammar> evaluates the same as the production <emu-grammar>Term ::! Atom Quantifier</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
+        <p>The production <emu-grammar>Term ::! ExtendedAtom</emu-grammar> evaluates the same as the production <emu-grammar>Term ::! Atom</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
 
         <emu-clause id="sec-runtime-semantics-repeatmatcher-abstract-operation" type="abstract operation">
           <h1>
@@ -35203,6 +35270,11 @@ THH:mm:ss.sss
             1. If _r_ is not ~failure~, return ~failure~.
             1. Return _c_(_x_).
         </emu-alg>
+        <p>The production <emu-grammar>Assertion :: QuantifiableAssertion</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Evaluate |QuantifiableAssertion| to obtain a Matcher _m_.
+          1. Return _m_.
+        </emu-alg>
         <p>The production <emu-grammar>Assertion :: `(` `?` `&lt;=` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Disjunction| with -1 as its _direction_ argument to obtain a Matcher _m_.
@@ -35233,6 +35305,8 @@ THH:mm:ss.sss
             1. If _r_ is not ~failure~, return ~failure~.
             1. Return _c_(_x_).
         </emu-alg>
+        <p>----</p>
+        <p>The evaluation rules for the <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar> and <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar> productions are also used for the |QuantifiableAssertion| productions, but with |QuantifiableAssertion| substituted for |Assertion|.</p>
 
         <emu-clause id="sec-runtime-semantics-iswordchar-abstract-operation" type="abstract operation">
           <h1>
@@ -35312,6 +35386,11 @@ THH:mm:ss.sss
         <emu-alg>
           1. Return the Matcher that is the result of evaluating |AtomEscape| with argument _direction_.
         </emu-alg>
+        <p>The production <emu-grammar>ExtendedAtom ::! `\` [lookahead == `c`]</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _A_ be the CharSet containing the single character `\\` U+005C (REVERSE SOLIDUS).
+          1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
+        </emu-alg>
         <p>The production <emu-grammar>Atom :: CharacterClass</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |CharacterClass| to obtain a CharSet _A_ and a Boolean _invert_.
@@ -35345,6 +35424,14 @@ THH:mm:ss.sss
         <emu-alg>
           1. Return the Matcher that is the result of evaluating |Disjunction| with argument _direction_.
         </emu-alg>
+        <p>The production <emu-grammar>ExtendedAtom ::! ExtendedPatternCharacter</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _ch_ be the character represented by |ExtendedPatternCharacter|.
+          1. Let _A_ be a one-element CharSet containing the character _ch_.
+          1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
+        </emu-alg>
+        <p>----</p>
+        <p>The evaluation rules for the |Atom| productions except for <emu-grammar>Atom :: PatternCharacter</emu-grammar> are also used for the |ExtendedAtom| productions, but with |ExtendedAtom| substituted for |Atom|.</p>
 
         <emu-clause id="sec-runtime-semantics-charactersetmatcher-abstract-operation" type="abstract operation">
           <h1>
@@ -35516,9 +35603,27 @@ THH:mm:ss.sss
           1. Evaluate the first |ClassAtom| to obtain a CharSet _A_.
           1. Evaluate the second |ClassAtom| to obtain a CharSet _B_.
           1. Evaluate |ClassRanges| to obtain a CharSet _C_.
-          1. Let _D_ be ! CharacterRange(_A_, _B_).
+          1. Let _D_ be ! CharacterRangeOrUnion(_A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
+
+        <emu-clause id="sec-runtime-semantics-characterrangeorunion-abstract-operation" type="abstract operation">
+          <h1>
+            CharacterRangeOrUnion (
+              _A_: a CharSet,
+              _B_: a CharSet,
+            )
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. If _Unicode_ is *false*, then
+              1. If _A_ does not contain exactly one character or _B_ does not contain exactly one character, then
+                1. Let _C_ be the CharSet containing the single character `-` U+002D (HYPHEN-MINUS).
+                1. Return the union of CharSets _A_, _B_ and _C_.
+            1. Return ! CharacterRange(_A_, _B_).
+          </emu-alg>
+        </emu-clause>
 
         <emu-clause id="sec-runtime-semantics-characterrange-abstract-operation" type="abstract operation">
           <h1>
@@ -35558,7 +35663,7 @@ THH:mm:ss.sss
           1. Evaluate |ClassAtomNoDash| to obtain a CharSet _A_.
           1. Evaluate |ClassAtom| to obtain a CharSet _B_.
           1. Evaluate |ClassRanges| to obtain a CharSet _C_.
-          1. Let _D_ be ! CharacterRange(_A_, _B_).
+          1. Let _D_ be ! CharacterRangeOrUnion(_A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
         <emu-note>
@@ -35586,25 +35691,32 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-classatomnodash">
         <h1>ClassAtomNoDash</h1>
-        <p>The production <emu-grammar>ClassAtomNoDash :: SourceCharacter but not one of `\` or `]` or `-`</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>ClassAtomNoDash ::! SourceCharacter but not one of `\` or `]` or `-`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return the CharSet containing the character matched by |SourceCharacter|.
         </emu-alg>
-        <p>The production <emu-grammar>ClassAtomNoDash :: `\` ClassEscape</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>ClassAtomNoDash ::! `\` ClassEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Return the CharSet that is the result of evaluating |ClassEscape|.
         </emu-alg>
+        <p>The production <emu-grammar>ClassAtomNoDash ::! `\` [lookahead == `c`]</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Return the CharSet containing the single character `\\` U+005C (REVERSE SOLIDUS).
+        </emu-alg>
+        <emu-note>This production can only be reached from the sequence `\c` within a character class where it is not followed by an acceptable control character.</emu-note>
       </emu-clause>
 
       <emu-clause id="sec-classescape">
         <h1>ClassEscape</h1>
         <p>The |ClassEscape| productions evaluate as follows:</p>
         <emu-grammar>
-          ClassEscape :: `b`
+          ClassEscape ::! `b`
 
-          ClassEscape :: `-`
+          ClassEscape ::! `-`
 
-          ClassEscape :: CharacterEscape
+          ClassEscape ::! `c` ClassControlLetter
+
+          ClassEscape ::! CharacterEscape
         </emu-grammar>
         <emu-alg>
           1. Let _cv_ be the CharacterValue of this |ClassEscape|.
@@ -35612,7 +35724,7 @@ THH:mm:ss.sss
           1. Return the CharSet containing the single character _c_.
         </emu-alg>
         <emu-grammar>
-          ClassEscape :: CharacterClassEscape
+          ClassEscape ::! CharacterClassEscape
         </emu-grammar>
         <emu-alg>
           1. Return the CharSet that is the result of evaluating |CharacterClassEscape|.
@@ -35625,13 +35737,13 @@ THH:mm:ss.sss
       <emu-clause id="sec-atomescape">
         <h1>AtomEscape</h1>
         <p>With parameter _direction_.</p>
-        <p>The production <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>AtomEscape ::! DecimalEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |DecimalEscape| to obtain an integer _n_.
           1. Assert: _n_ &le; _NcapturingParens_.
           1. Return ! BackreferenceMatcher(_n_, _direction_).
         </emu-alg>
-        <p>The production <emu-grammar>AtomEscape :: CharacterClassEscape</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>AtomEscape ::! CharacterClassEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |CharacterClassEscape| to obtain a CharSet _A_.
           1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
@@ -35639,13 +35751,13 @@ THH:mm:ss.sss
         <emu-note>
           <p>An escape sequence of the form `\\` followed by a non-zero decimal number _n_ matches the result of the _n_<sup>th</sup> set of capturing parentheses (<emu-xref href="#sec-notation"></emu-xref>). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_<sup>th</sup> one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
         </emu-note>
-        <p>The production <emu-grammar>AtomEscape :: CharacterEscape</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>AtomEscape ::! CharacterEscape</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |CharacterEscape| to obtain a character _ch_.
           1. Let _A_ be a one-element CharSet containing the character _ch_.
           1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
         </emu-alg>
-        <p>The production <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar> evaluates as follows:</p>
+        <p>The production <emu-grammar>AtomEscape ::! `k` GroupName</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Search the enclosing |Pattern| for an instance of a |GroupSpecifier| containing a |RegExpIdentifierName| which has a CapturingGroupName equal to the CapturingGroupName of the |RegExpIdentifierName| contained in |GroupName|.
           1. Assert: A unique such |GroupSpecifier| is found.
@@ -35752,12 +35864,13 @@ THH:mm:ss.sss
         <h1>CharacterEscape</h1>
         <p>The |CharacterEscape| productions evaluate as follows:</p>
         <emu-grammar>
-          CharacterEscape ::
+          CharacterEscape ::!
             ControlEscape
             `c` ControlLetter
             `0` [lookahead &notin; DecimalDigit]
             HexEscapeSequence
             RegExpUnicodeEscapeSequence
+            LegacyOctalEscapeSequence
             IdentityEscape
         </emu-grammar>
         <emu-alg>
@@ -46520,9 +46633,13 @@ THH:mm:ss.sss
     <emu-prodref name="Alternative"></emu-prodref>
     <emu-prodref name="Term"></emu-prodref>
     <emu-prodref name="Assertion"></emu-prodref>
+    <emu-prodref name="QuantifiableAssertion"></emu-prodref>
     <emu-prodref name="Quantifier"></emu-prodref>
     <emu-prodref name="QuantifierPrefix"></emu-prodref>
+    <emu-prodref name="ExtendedAtom"></emu-prodref>
     <emu-prodref name="Atom"></emu-prodref>
+    <emu-prodref name="InvalidBracedQuantifier"></emu-prodref>
+    <emu-prodref name="ExtendedPatternCharacter"></emu-prodref>
     <emu-prodref name="PatternCharacter"></emu-prodref>
     <emu-prodref name="SyntaxCharacter"></emu-prodref>
     <emu-prodref name="GroupSpecifier"></emu-prodref>
@@ -46539,6 +46656,7 @@ THH:mm:ss.sss
     <emu-prodref name="ClassAtom"></emu-prodref>
     <emu-prodref name="ClassAtomNoDash"></emu-prodref>
     <emu-prodref name="ClassEscape"></emu-prodref>
+    <emu-prodref name="ClassControlLetter"></emu-prodref>
     <emu-prodref name="AtomEscape"></emu-prodref>
     <emu-prodref name="DecimalEscape"></emu-prodref>
     <emu-prodref name="CharacterClassEscape"></emu-prodref>
@@ -46558,6 +46676,7 @@ THH:mm:ss.sss
     <emu-prodref name="HexTrailSurrogate"></emu-prodref>
     <emu-prodref name="HexNonSurrogate"></emu-prodref>
     <emu-prodref name="IdentityEscape"></emu-prodref>
+    <emu-prodref name="SourceCharacterIdentityEscape"></emu-prodref>
   </emu-annex>
 </emu-annex>
 
@@ -46579,252 +46698,7 @@ THH:mm:ss.sss
 
     <emu-annex id="sec-regular-expressions-patterns">
       <h1>Regular Expressions Patterns</h1>
-      <p>The syntax of <emu-xref href="#sec-syntax-for-patterns"></emu-xref> is modified and extended as follows. These changes introduce ambiguities that are broken by the ordering of grammar productions and by contextual information. When parsing using the following grammar, each alternative is considered only if previous production alternatives do not match.</p>
-      <p>This alternative pattern grammar and semantics only changes the syntax and semantics of BMP patterns. The following grammar extensions include productions parameterized with the [UnicodeMode] parameter. However, none of these extensions change the syntax of Unicode patterns recognized when parsing with the [UnicodeMode] parameter present on the goal symbol.</p>
-      <h2>Syntax</h2>
-      <emu-grammar type="definition">
-        Term[UnicodeMode, N] ::
-          [+UnicodeMode] Assertion[+UnicodeMode, ?N]
-          [+UnicodeMode] Atom[+UnicodeMode, ?N] Quantifier
-          [+UnicodeMode] Atom[+UnicodeMode, ?N]
-          [~UnicodeMode] QuantifiableAssertion[?N] Quantifier
-          [~UnicodeMode] Assertion[~UnicodeMode, ?N]
-          [~UnicodeMode] ExtendedAtom[?N] Quantifier
-          [~UnicodeMode] ExtendedAtom[?N]
-
-        Assertion[UnicodeMode, N] ::
-          `^`
-          `$`
-          `\` `b`
-          `\` `B`
-          [+UnicodeMode] `(` `?` `=` Disjunction[+UnicodeMode, ?N] `)`
-          [+UnicodeMode] `(` `?` `!` Disjunction[+UnicodeMode, ?N] `)`
-          [~UnicodeMode] QuantifiableAssertion[?N]
-          `(` `?` `&lt;=` Disjunction[?UnicodeMode, ?N] `)`
-          `(` `?` `&lt;!` Disjunction[?UnicodeMode, ?N] `)`
-
-        QuantifiableAssertion[N] ::
-          `(` `?` `=` Disjunction[~UnicodeMode, ?N] `)`
-          `(` `?` `!` Disjunction[~UnicodeMode, ?N] `)`
-
-        ExtendedAtom[N] ::
-          `.`
-          `\` AtomEscape[~UnicodeMode, ?N]
-          `\` [lookahead == `c`]
-          CharacterClass[~UnicodeMode]
-          `(` Disjunction[~UnicodeMode, ?N] `)`
-          `(` `?` `:` Disjunction[~UnicodeMode, ?N] `)`
-          InvalidBracedQuantifier
-          ExtendedPatternCharacter
-
-        InvalidBracedQuantifier ::
-          `{` DecimalDigits[~Sep] `}`
-          `{` DecimalDigits[~Sep] `,` `}`
-          `{` DecimalDigits[~Sep] `,` DecimalDigits[~Sep] `}`
-
-        ExtendedPatternCharacter ::
-          SourceCharacter but not one of `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `|`
-
-        AtomEscape[UnicodeMode, N] ::
-          [+UnicodeMode] DecimalEscape
-          [~UnicodeMode] DecimalEscape [> but only if the CapturingGroupNumber of |DecimalEscape| is &le; _NcapturingParens_]
-          CharacterClassEscape[?UnicodeMode]
-          CharacterEscape[?UnicodeMode, ?N]
-          [+N] `k` GroupName[?UnicodeMode]
-
-        CharacterEscape[UnicodeMode, N] ::
-          ControlEscape
-          `c` ControlLetter
-          `0` [lookahead &notin; DecimalDigit]
-          HexEscapeSequence
-          RegExpUnicodeEscapeSequence[?UnicodeMode]
-          [~UnicodeMode] LegacyOctalEscapeSequence
-          IdentityEscape[?UnicodeMode, ?N]
-
-        IdentityEscape[UnicodeMode, N] ::
-          [+UnicodeMode] SyntaxCharacter
-          [+UnicodeMode] `/`
-          [~UnicodeMode] SourceCharacterIdentityEscape[?N]
-
-        SourceCharacterIdentityEscape[N] ::
-          [~N] SourceCharacter but not `c`
-          [+N] SourceCharacter but not one of `c` or `k`
-
-        ClassAtomNoDash[UnicodeMode, N] ::
-          SourceCharacter but not one of `\` or `]` or `-`
-          `\` ClassEscape[?UnicodeMode, ?N]
-          `\` [lookahead == `c`]
-
-        ClassEscape[UnicodeMode, N] ::
-          `b`
-          [+UnicodeMode] `-`
-          [~UnicodeMode] `c` ClassControlLetter
-          CharacterClassEscape[?UnicodeMode]
-          CharacterEscape[?UnicodeMode, ?N]
-
-        ClassControlLetter ::
-          DecimalDigit
-          `_`
-      </emu-grammar>
-      <emu-note>
-        <p>When the same left-hand sides occurs with both [+UnicodeMode] and [\~UnicodeMode] guards it is to control the disambiguation priority.</p>
-      </emu-note>
-
-      <emu-annex id="sec-patterns-static-semantics-early-errors-annexb">
-        <h1>Static Semantics: Early Errors</h1>
-        <p>The semantics of <emu-xref href="#sec-patterns-static-semantics-early-errors"></emu-xref> is extended as follows:</p>
-        <emu-grammar>ExtendedAtom :: InvalidBracedQuantifier</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if any source text matches this rule.
-          </li>
-        </ul>
-        <p>Additionally, the rules for the following productions are modified with the addition of the <ins>highlighted</ins> text:</p>
-        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *true* or IsCharacterClass of the second |ClassAtom| is *true* <ins>and this production has a <sub>[UnicodeMode]</sub> parameter</ins>.
-          </li>
-          <li>
-            It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *false* and IsCharacterClass of the second |ClassAtom| is *false* and the CharacterValue of the first |ClassAtom| is larger than the CharacterValue of the second |ClassAtom|.
-          </li>
-        </ul>
-        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *true* or IsCharacterClass of |ClassAtom| is *true* <ins>and this production has a <sub>[UnicodeMode]</sub> parameter</ins>.
-          </li>
-          <li>
-            It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *false* and IsCharacterClass of |ClassAtom| is *false* and the CharacterValue of |ClassAtomNoDash| is larger than the CharacterValue of |ClassAtom|.
-          </li>
-        </ul>
-      </emu-annex>
-
-      <emu-annex id="sec-patterns-static-semantics-is-character-class-annexb">
-        <h1>Static Semantics: IsCharacterClass</h1>
-        <p>The semantics of <emu-xref href="#sec-patterns-static-semantics-is-character-class"></emu-xref> is extended as follows:</p>
-        <emu-grammar>
-          ClassAtomNoDash :: `\` [lookahead == `c`]
-        </emu-grammar>
-        <emu-alg>
-          1. Return *false*.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-patterns-static-semantics-character-value-annexb">
-        <h1>Static Semantics: CharacterValue</h1>
-        <p>The semantics of <emu-xref href="#sec-patterns-static-semantics-character-value"></emu-xref> is extended as follows:</p>
-        <emu-grammar>
-          ClassAtomNoDash :: `\` [lookahead == `c`]
-        </emu-grammar>
-        <emu-alg>
-          1. Return the code point value of U+005C (REVERSE SOLIDUS).
-        </emu-alg>
-        <emu-grammar>ClassEscape :: `c` ClassControlLetter</emu-grammar>
-        <emu-alg>
-          1. Let _ch_ be the code point matched by |ClassControlLetter|.
-          1. Let _i_ be _ch_'s code point value.
-          1. Return the remainder of dividing _i_ by 32.
-        </emu-alg>
-        <emu-grammar>CharacterEscape :: LegacyOctalEscapeSequence</emu-grammar>
-        <emu-alg>
-          1. Return the MV of |LegacyOctalEscapeSequence| (see <emu-xref href="#sec-string-literals-static-semantics-mv"></emu-xref>).
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-regular-expression-patterns-semantics">
-        <h1>Pattern Semantics</h1>
-        <p>The semantics of <emu-xref href="#sec-runtime-semantics-for-patterns"></emu-xref> is extended as follows:</p>
-        <p>Within <emu-xref href="#sec-term"></emu-xref> reference to &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; are to be interpreted as meaning &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; or &ldquo;<emu-grammar>ExtendedAtom :: `(` Disjunction `)`</emu-grammar> &rdquo;.</p>
-
-        <p>Term (<emu-xref href="#sec-term"></emu-xref>) includes the following additional evaluation rules:</p>
-        <p>The production <emu-grammar>Term :: QuantifiableAssertion Quantifier</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
-        <p>The production <emu-grammar>Term :: ExtendedAtom Quantifier</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
-        <p>The production <emu-grammar>Term :: ExtendedAtom</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
-
-        <p>Assertion (<emu-xref href="#sec-assertion"></emu-xref>) includes the following additional evaluation rule:</p>
-        <p>The production <emu-grammar>Assertion :: QuantifiableAssertion</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Evaluate |QuantifiableAssertion| to obtain a Matcher _m_.
-          1. Return _m_.
-        </emu-alg>
-
-        <p>Assertion (<emu-xref href="#sec-assertion"></emu-xref>) evaluation rules for the <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar> and <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar> productions are also used for the |QuantifiableAssertion| productions, but with |QuantifiableAssertion| substituted for |Assertion|.</p>
-
-        <p>Atom (<emu-xref href="#sec-atom"></emu-xref>) evaluation rules for the |Atom| productions except for <emu-grammar>Atom :: PatternCharacter</emu-grammar> are also used for the |ExtendedAtom| productions, but with |ExtendedAtom| substituted for |Atom|. The following evaluation rules, with parameter _direction_, are also added:</p>
-        <p>The production <emu-grammar>ExtendedAtom :: `\` [lookahead == `c`]</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Let _A_ be the CharSet containing the single character `\\` U+005C (REVERSE SOLIDUS).
-          1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
-        </emu-alg>
-        <p>The production <emu-grammar>ExtendedAtom :: ExtendedPatternCharacter</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Let _ch_ be the character represented by |ExtendedPatternCharacter|.
-          1. Let _A_ be a one-element CharSet containing the character _ch_.
-          1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
-        </emu-alg>
-
-        <p>CharacterEscape (<emu-xref href="#sec-characterescape"></emu-xref>) includes the following additional evaluation rule:</p>
-        <p>The production <emu-grammar>CharacterEscape :: LegacyOctalEscapeSequence</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Let _cv_ be the CharacterValue of this |CharacterEscape|.
-          1. Return the character whose character value is _cv_.
-        </emu-alg>
-
-        <p>NonemptyClassRanges (<emu-xref href="#sec-nonemptyclassranges"></emu-xref>) modifies the following evaluation rule:</p>
-        <p>The production <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Evaluate the first |ClassAtom| to obtain a CharSet _A_.
-          1. Evaluate the second |ClassAtom| to obtain a CharSet _B_.
-          1. Evaluate |ClassRanges| to obtain a CharSet _C_.
-          1. Let _D_ be ! CharacterRangeOrUnion(_A_, _B_).
-          1. Return the union of _D_ and _C_.
-        </emu-alg>
-
-        <p>NonemptyClassRangesNoDash (<emu-xref href="#sec-nonemptyclassrangesnodash"></emu-xref>) modifies the following evaluation rule:</p>
-        <p>The production <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Evaluate |ClassAtomNoDash| to obtain a CharSet _A_.
-          1. Evaluate |ClassAtom| to obtain a CharSet _B_.
-          1. Evaluate |ClassRanges| to obtain a CharSet _C_.
-          1. Let _D_ be ! CharacterRangeOrUnion(_A_, _B_).
-          1. Return the union of _D_ and _C_.
-        </emu-alg>
-
-        <p>ClassEscape (<emu-xref href="#sec-classescape"></emu-xref>) includes the following additional evaluation rule:</p>
-        <p>The production <emu-grammar>ClassEscape :: `c` ClassControlLetter</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Let _cv_ be the CharacterValue of this |ClassEscape|.
-          1. Let _c_ be the character whose character value is _cv_.
-          1. Return the CharSet containing the single character _c_.
-        </emu-alg>
-
-        <p>ClassAtomNoDash (<emu-xref href="#sec-classatomnodash"></emu-xref>) includes the following additional evaluation rule:</p>
-        <p>The production <emu-grammar>ClassAtomNoDash :: `\` [lookahead == `c`]</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Return the CharSet containing the single character `\\` U+005C (REVERSE SOLIDUS).
-        </emu-alg>
-
-        <emu-note>This production can only be reached from the sequence `\c` within a character class where it is not followed by an acceptable control character.</emu-note>
-
-        <emu-annex id="sec-runtime-semantics-characterrangeorunion-abstract-operation" type="abstract operation">
-          <h1>
-            CharacterRangeOrUnion (
-              _A_: a CharSet,
-              _B_: a CharSet,
-            )
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. If _Unicode_ is *false*, then
-              1. If _A_ does not contain exactly one character or _B_ does not contain exactly one character, then
-                1. Let _C_ be the CharSet containing the single character `-` U+002D (HYPHEN-MINUS).
-                1. Return the union of CharSets _A_, _B_ and _C_.
-            1. Return ! CharacterRange(_A_, _B_).
-          </emu-alg>
-        </emu-annex>
-      </emu-annex>
+      <p>Some of the syntax and semantics of BMP patterns ([~UnicodeMode]) used to be normative optional.</p>
     </emu-annex>
   </emu-annex>
 
