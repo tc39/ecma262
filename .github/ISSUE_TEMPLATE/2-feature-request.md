@@ -1,15 +1,18 @@
 ---
-name: "\U0001F680 Feature request"
+name: "\U0001F680 Feature request is not here"
 about: Suggest an idea for ECMA-262
 
 ---
 
-TC39 is open to accepting new feature requests for ECMAScript, referred to as
-"proposals". Proposals go through a four-stage process which is documented in
-the [TC39 process document](https://tc39.es/process-document/).
+This repository is only for handling issues with the specification itself.
 
-Feature requests for future versions of ECMAScript should not be made in this
-repository. Instead, they are developed in separate GitHub repositories, which
-are then merged into the main repository once they have received "Stage 4".
+New ideas, suggestions and discussions about future versions of ECMAScript should not be made in this repository.   
 
-Please see [CONTRIBUTING.md](/CONTRIBUTING.md) for more details.
+Feature Requests are developed in separate GitHub repositories,
+which are then merged into the main repository once they have received "Stage 4". 
+
+This four-stage process is documented in the [TC39 process document](https://tc39.es/process-document/).
+
+TC39 is open to accepting new feature requests for ECMAScript, referred to as "proposals". 
+
+To contribute visit [CONTRIBUTING.md](/CONTRIBUTING.md) for more details.
