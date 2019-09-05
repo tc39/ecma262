@@ -6,7 +6,7 @@ about: Suggest an idea for ECMA-262
 
 This repository is only for handling issues with the specification itself.
 
-New ideas, suggestions and discussions about future versions of ECMAScript should not be made in this repository.   
+New ideas, suggestions, and discussions about future versions of ECMAScript should not be made in this repository.
 
 Feature Requests are developed in separate GitHub repositories,
 which are then merged into the main repository once they have received "Stage 4". 
