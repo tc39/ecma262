@@ -15,4 +15,4 @@ This four-stage process is documented in the [TC39 process document](https://tc3
 
 TC39 is open to accepting new feature requests for ECMAScript, referred to as "proposals". 
 
-To contribute visit [CONTRIBUTING.md](/CONTRIBUTING.md) for more details.
+To contribute visit [CONTRIBUTING.md](/CONTRIBUTING.md#new-feature-proposals) for more details.
