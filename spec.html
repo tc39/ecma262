@@ -37250,9 +37250,10 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-getwaiterlist" aoid="GetWaiterList">
         <h1>GetWaiterList ( _block_, _i_ )</h1>
-        <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered list of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_.</p>
+        <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered list of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</p>
+        <p>Initially a WaiterList object has an empty list and no Synchronize event.</p>
         <p>The agent cluster has a store of WaiterList objects; the store is indexed by (_block_, _i_). WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
-        <p>Each WaiterList has a <dfn>critical section</dfn> that controls exclusive access to that WaiterList during evaluation. Only a single agent may enter a WaiterList's critical section at one time. Entering and leaving a WaiterList's critical section is controlled by the abstract operations EnterCriticalSection and LeaveCriticalSection. Operations on a WaiterList&mdash;adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list&mdash;may only be performed by agents that have entered the WaiterList's critical section.</p>
+        <p>Each WaiterList has a <dfn>critical section</dfn> that controls exclusive access to that WaiterList during evaluation. Only a single agent may enter a WaiterList's critical section at one time. Entering and leaving a WaiterList's critical section is controlled by the abstract operations EnterCriticalSection and LeaveCriticalSection. Operations on a WaiterList&mdash;adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, setting and retrieving the Synchronize event&mdash;may only be performed by agents that have entered the WaiterList's critical section.</p>
         <p>The abstract operation GetWaiterList takes two arguments, a Shared Data Block _block_ and a nonnegative integer _i_. It performs the following steps:</p>
         <emu-alg>
           1. Assert: _block_ is a Shared Data Block.
@@ -37268,6 +37269,15 @@ THH:mm:ss.sss
         <emu-alg>
           1. Assert: The calling agent is not in the critical section for any WaiterList.
           1. Wait until no agent is in the critical section for _WL_, then enter the critical section for _WL_ (without allowing any other agent to enter).
+          1. If _WL_ has a Synchronize event, then
+            1. NOTE: A _WL_ whose critical section has been entered at least once has a Synchronize event set by LeaveCriticalSection.
+            1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
+            1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
+            1. Let _entererEventList_ be _eventsRecord_.[[EventList]].
+            1. Let _enterEvent_ be a new Synchronize event.
+            1. Append _enterEvent_ to _entererEventList_.
+            1. Let _leaveEvent_ be the Synchronize event in _WL_.
+            1. Append (_leaveEvent_, _enterEvent_) to _eventRecords_.[[AgentSynchronizesWith]].
         </emu-alg>
         <p>EnterCriticalSection has <dfn>contention</dfn> when an agent attempting to enter the critical section must wait for another agent to leave it. When there is no contention, FIFO order of EnterCriticalSection calls is observable. When there is contention, an implementation may choose an arbitrary order but may not cause an agent to wait indefinitely.</p>
       </emu-clause>
@@ -37277,6 +37287,12 @@ THH:mm:ss.sss
         <p>The abstract operation LeaveCriticalSection takes one argument, a WaiterList _WL_. It performs the following steps:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
+          1. Let _execution_ be the [[CandidateExecution]] field of the calling surrounding's Agent Record.
+          1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
+          1. Let _leaverEventList_ be _eventsRecord_.[[EventList]].
+          1. Let _leaveEvent_ be a new Synchronize event.
+          1. Append _leaveEvent_ to _leaverEventList_.
+          1. Set the Synchronize event in _WL_ to _leaveEvent_.
           1. Leave the critical section for _WL_.
         </emu-alg>
       </emu-clause>
@@ -37337,15 +37353,6 @@ THH:mm:ss.sss
         <p>The abstract operation NotifyWaiter takes two arguments, a WaiterList _WL_ and an agent signifier _W_. It performs the following steps:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
-          1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
-          1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-          1. Let _agentSynchronizesWith_ be _eventsRecord_.[[AgentSynchronizesWith]].
-          1. Let _notifierEventList_ be _eventsRecord_.[[EventList]].
-          1. Let _waiterEventList_ be the [[EventList]] field of the element in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is _W_.
-          1. Let _notifyEvent_ and _waitEvent_ be new Synchronize events.
-          1. Append _notifyEvent_ to _notifierEventList_.
-          1. Append _waitEvent_ to _waiterEventList_.
-          1. Append (_notifyEvent_, _waitEvent_) to _agentSynchronizesWith_.
           1. Notify the agent _W_.
         </emu-alg>
         <emu-note>
