@@ -22695,7 +22695,7 @@
                   InitializeEnvironment()
                 </td>
                 <td>
-                  Initialize the Lexical Environment of the module, including resolving all imported bindings.
+                  Initialize the Lexical Environment of the module, including resolving all imported bindings, and create the module's execution context.
                 </td>
               </tr>
               <tr>
@@ -22703,7 +22703,7 @@
                   ExecuteModule()
                 </td>
                 <td>
-                  Initialize the execution context of the module and evaluate the module's code within it.
+                  Evaluate the module's code within its execution context.
                 </td>
               </tr>
             </tbody>
@@ -22927,6 +22927,17 @@
               </td>
               <td>
                 The result of parsing the source text of this module using |Module| as the goal symbol.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[Context]]
+              </td>
+              <td>
+                An ECMAScript execution context.
+              </td>
+              <td>
+                The execution context associated with this module.
               </td>
             </tr>
             <tr>
@@ -23387,7 +23398,7 @@
                 1. Append _ee_ to _starExportEntries_.
               1. Else,
                 1. Append _ee_ to _indirectExportEntries_.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: *undefined*, [[Namespace]]: *undefined*, [[Status]]: `"unlinked"`, [[EvaluationError]]: *undefined*, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[RequestedModules]]: _requestedModules_, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: *undefined*, [[DFSAncestorIndex]]: *undefined* }.
+            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: *undefined*, [[Namespace]]: *undefined*, [[Status]]: `"unlinked"`, [[EvaluationError]]: *undefined*, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: *undefined*, [[DFSAncestorIndex]]: *undefined* }.
           </emu-alg>
           <emu-note>
             <p>An implementation may parse module source text and analyse it for Early Error conditions prior to the evaluation of ParseModule for that module source text. However, the reporting of any errors must be deferred until the point where this specification actually performs ParseModule upon that source text.</p>
@@ -23504,6 +23515,15 @@
                 1. Let _resolution_ be ? _importedModule_.ResolveExport(_in_.[[ImportName]]).
                 1. If _resolution_ is *null* or `"ambiguous"`, throw a *SyntaxError* exception.
                 1. Call _envRec_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+            1. Let _moduleCxt_ be a new ECMAScript code execution context.
+            1. Set the Function of _moduleCxt_ to *null*.
+            1. Assert: _module_.[[Realm]] is not *undefined*.
+            1. Set the Realm of _moduleCxt_ to _module_.[[Realm]].
+            1. Set the ScriptOrModule of _moduleCxt_ to _module_.
+            1. Set the VariableEnvironment of _moduleCxt_ to _module_.[[Environment]].
+            1. Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].
+            1. Set _module_.[[Context]] to _moduleCxt_.
+            1. Push _moduleCxt_ onto the execution context stack; _moduleCxt_ is now the running execution context.
             1. Let _code_ be _module_.[[ECMAScriptCode]].
             1. Let _varDeclarations_ be the VarScopedDeclarations of _code_.
             1. Let _declaredVarNames_ be a new empty List.
@@ -23523,6 +23543,7 @@
                 1. If _d_ is a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
                   1. Let _fo_ be InstantiateFunctionObject of _d_ with argument _env_.
                   1. Call _envRec_.InitializeBinding(_dn_, _fo_).
+            1. Remove _moduleCxt_ from the execution context stack.
             1. Return NormalCompletion(~empty~).
           </emu-alg>
         </emu-clause>
@@ -23536,15 +23557,8 @@
 
           <emu-alg>
             1. Let _module_ be this Source Text Module Record.
-            1. Let _moduleCxt_ be a new ECMAScript code execution context.
-            1. Set the Function of _moduleCxt_ to *null*.
-            1. Assert: _module_.[[Realm]] is not *undefined*.
-            1. Set the Realm of _moduleCxt_ to _module_.[[Realm]].
-            1. Set the ScriptOrModule of _moduleCxt_ to _module_.
-            1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
-            1. Set the VariableEnvironment of _moduleCxt_ to _module_.[[Environment]].
-            1. Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].
             1. Suspend the currently running execution context.
+            1. Let _moduleCxt_ be _module_.[[Context]].
             1. Push _moduleCxt_ onto the execution context stack; _moduleCxt_ is now the running execution context.
             1. Let _result_ be the result of evaluating _module_.[[ECMAScriptCode]].
             1. Suspend _moduleCxt_ and remove it from the execution context stack.
