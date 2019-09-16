@@ -6188,20 +6188,41 @@
 <emu-clause id="sec-executable-code-and-execution-contexts">
   <h1>Executable Code and Execution Contexts</h1>
 
-  <emu-clause id="sec-lexical-environments">
+  <emu-clause id="sec-environment-records" oldids="sec-lexical-environments">
     <h1>Environment Records</h1>
-    <p>An <dfn>Environment Record</dfn> is a specification type used to define the association of |Identifier|s to specific variables and functions based upon the lexical nesting structure of ECMAScript code. An Environment Record consists of an Environment Record and a possibly null reference to an <em>outer</em> Environment Record ([[OuterEnv]] field). Usually an Environment Record is associated with some specific syntactic structure of ECMAScript code such as a |FunctionDeclaration|, a |BlockStatement|, or a |Catch| clause of a |TryStatement| and a new Environment Record is created each time such code is evaluated.</p>
-    <p>An Environment Record records the identifier bindings that are created within the scope of its associated Environment Record. It is referred to as the Environment Record's <dfn>EnvironmentRecord</dfn>.</p>
-    <p>The [[OuterEnv]] field is used to model the logical nesting of Environment Record values. The outer reference of a (inner) Environment Record is a reference to the Environment Record that logically surrounds the inner Environment Record. An outer Environment Record may, of course, have its own outer Environment Record. An Environment Record may serve as the outer environment for multiple inner Environment Records. For example, if a |FunctionDeclaration| contains two nested |FunctionDeclaration|s then the Environment Records of each of the nested functions will have as their outer Environment Record the Environment Record of the current evaluation of the surrounding function.</p>
-    <p>A <dfn id="global-environment">global environment</dfn> is an Environment Record which does not have an outer environment. The global environment's [[OuterEnv]] is *null*. A global environment's EnvironmentRecord may be prepopulated with identifier bindings and includes an associated global object whose properties provide some of the global environment's identifier bindings. As ECMAScript code is executed, additional properties may be added to the global object and the initial properties may be modified.</p>
-    <p>A <dfn id="module-environment">module environment</dfn> is an Environment Record that contains the bindings for the top level declarations of a |Module|. It also contains the bindings that are explicitly imported by the |Module|. The outer environment of a module environment is a global environment.</p>
-    <p>A <dfn id="function-environment">function environment</dfn> is an Environment Record that corresponds to the invocation of an ECMAScript function object. A function environment may establish a new `this` binding. A function environment also captures the state necessary to support `super` method invocations.</p>
+    <p><dfn>Environment Record</dfn> is a specification type used to define the association of |Identifier|s to specific variables and functions, based upon the lexical nesting structure of ECMAScript code. Usually an Environment Record is associated with some specific syntactic structure of ECMAScript code such as a |FunctionDeclaration|, a |BlockStatement|, or a |Catch| clause of a |TryStatement|. Each time such code is evaluated, a new Environment Record is created to record the identifier bindings that are created by that code.</p>
+    <p>Every Environment Record has an [[OuterEnv]] field, which is either *null* or a reference to an outer Environment Record. This is used to model the logical nesting of Environment Record values. The outer reference of an (inner) Environment Record is a reference to the Environment Record that logically surrounds the inner Environment Record. An outer Environment Record may, of course, have its own outer Environment Record. An Environment Record may serve as the outer environment for multiple inner Environment Records. For example, if a |FunctionDeclaration| contains two nested |FunctionDeclaration|s then the Environment Records of each of the nested functions will have as their outer Environment Record the Environment Record of the current evaluation of the surrounding function.</p>
     <p>Environment Records are purely specification mechanisms and need not correspond to any specific artefact of an ECMAScript implementation. It is impossible for an ECMAScript program to directly access or manipulate such values.</p>
 
-    <emu-clause id="sec-environment-records">
-      <h1>Environment Records</h1>
-      <p>There are two primary kinds of <dfn>Environment Record</dfn> values used in this specification: <em>declarative Environment Records</em> and <em>object Environment Records</em>. Declarative Environment Records are used to define the effect of ECMAScript language syntactic elements such as |FunctionDeclaration|s, |VariableDeclaration|s, and |Catch| clauses that directly associate identifier bindings with ECMAScript language values. Object Environment Records are used to define the effect of ECMAScript elements such as |WithStatement| that associate identifier bindings with the properties of some object. Global Environment Records and function Environment Records are specializations that are used for specifically for |Script| global declarations and for top-level declarations within functions.</p>
-      <p>For specification purposes Environment Record values are values of the Record specification type and can be thought of as existing in a simple object-oriented hierarchy where Environment Record is an abstract class with three concrete subclasses, declarative Environment Record, object Environment Record, and global Environment Record. Function Environment Records and module Environment Records are subclasses of declarative Environment Record. The abstract class includes the abstract specification methods defined in <emu-xref href="#table-15"></emu-xref>. These abstract methods have distinct concrete algorithms for each of the concrete subclasses.</p>
+    <emu-clause id="sec-the-environment-record-type-hierarchy">
+      <h1>The Environment Record Type Hierarchy</h1>
+      <p>Environment Records can be thought of as existing in a simple object-oriented hierarchy where Environment Record is an abstract class with three concrete subclasses: declarative Environment Record, object Environment Record, and global Environment Record. Function Environment Records and module Environment Records are subclasses of declarative Environment Record.</p>
+      <ul>
+        <li>
+          <p>Environment Record (abstract)</p>
+          <ul>
+            <li>
+              <p>A <em>declarative Environment Record</em> is used to define the effect of ECMAScript language syntactic elements such as |FunctionDeclaration|s, |VariableDeclaration|s, and |Catch| clauses that directly associate identifier bindings with ECMAScript language values.</p>
+              <ul>
+                <li>
+                  <p>A <em>function Environment Record</em> corresponds to the invocation of an ECMAScript function object, and contains bindings for the top-level declarations within that function. It may establish a new `this` binding. It also captures the state necessary to support `super` method invocations.</p>
+                </li>
+                <li>
+                  <p>A <em>module Environment Record</em> contains the bindings for the top-level declarations of a |Module|. It also contains the bindings that are explicitly imported by the |Module|. Its [[OuterEnv]] is a global Environment Record.</p>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <p>An <em>object Environment Record</em> is used to define the effect of ECMAScript elements such as |WithStatement| that associate identifier bindings with the properties of some object.</p>
+            </li>
+            <li>
+              <p>A <em>global Environment Record</em> is used for |Script| global declarations. It does not have an outer environment; its [[OuterEnv]] is *null*. It may be prepopulated with identifier bindings and it includes an associated global object whose properties provide some of the global environment's identifier bindings. As ECMAScript code is executed, additional properties may be added to the global object and the initial properties may be modified.</p>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <p>The Environment Record abstract class includes the abstract specification methods defined in <emu-xref href="#table-15"></emu-xref>. These abstract methods have distinct concrete algorithms for each of the concrete subclasses.</p>
       <emu-table id="table-15" caption="Abstract Methods of Environment Records">
         <table>
           <tbody>
@@ -6533,7 +6554,7 @@
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-function-environment-records">
+      <emu-clause id="sec-function-environment-records" oldids="function-environment">
         <h1>Function Environment Records</h1>
         <p>A <dfn>function Environment Record</dfn> is a declarative Environment Record that is used to represent the top-level scope of a function and, if the function is not an |ArrowFunction|, provides a `this` binding. If a function is not an |ArrowFunction| function and references `super`, its function Environment Record also contains the state that is used to perform `super` method invocations from within the function.</p>
         <p>Function Environment Records have the additional state fields listed in <emu-xref href="#table-16"></emu-xref>.</p>
@@ -6701,7 +6722,7 @@
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-global-environment-records">
+      <emu-clause id="sec-global-environment-records" oldids="global-environment">
         <h1>Global Environment Records</h1>
         <p>A global Environment Record is used to represent the outer most scope that is shared by all of the ECMAScript |Script| elements that are processed in a common realm. A global Environment Record provides the bindings for built-in globals (clause <emu-xref href="#sec-global-object"></emu-xref>), properties of the global object, and for all top-level declarations (<emu-xref href="#sec-block-static-semantics-toplevellexicallyscopeddeclarations"></emu-xref>, <emu-xref href="#sec-block-static-semantics-toplevelvarscopeddeclarations"></emu-xref>) that occur within a |Script|.</p>
         <p>A global Environment Record is logically a single record but it is specified as a composite encapsulating an object Environment Record and a declarative Environment Record. The object Environment Record has as its base object the global object of the associated Realm Record. This global object is the value returned by the global Environment Record's GetThisBinding concrete method. The object Environment Record component of a global Environment Record contains the bindings for all built-in globals (clause <emu-xref href="#sec-global-object"></emu-xref>) and all bindings introduced by a |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, or |VariableStatement| contained in global code. The bindings for all other ECMAScript declarations in global code are contained in the declarative Environment Record component of the global Environment Record.</p>
@@ -7084,7 +7105,7 @@
         </emu-clause>
       </emu-clause>
 
-      <emu-clause id="sec-module-environment-records">
+      <emu-clause id="sec-module-environment-records" oldids="module-environment">
         <h1>Module Environment Records</h1>
         <p>A module Environment Record is a declarative Environment Record that is used to represent the outer scope of an ECMAScript |Module|. In additional to normal mutable and immutable bindings, module Environment Records also provide immutable import bindings which are bindings that provide indirect access to a target binding that exists in another Environment Record.</p>
         <p>Module Environment Records support all of the declarative Environment Record methods listed in <emu-xref href="#table-15"></emu-xref> and share the same specifications for all of those methods except for GetBindingValue, DeleteBinding, HasThisBinding and GetThisBinding. In addition, module Environment Records support the methods listed in <emu-xref href="#table-20"></emu-xref>:</p>
