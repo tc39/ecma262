@@ -33,7 +33,7 @@ TC39 is open to accepting new feature requests for ECMAScript, referred to as "p
 Feature requests for future versions of ECMAScript should not be made in this repository. Instead, they are developed in separate GitHub repositories, which are then merged into the main repository once they have received "Stage 4".
 
 ##### Creating a new proposal
-To make a feature request, document the problem and a sketch of the solution with others in the community, including TC39 members. One place to do this is the [es-discuss mailing list](https://esdiscuss.org); another is the IRC channel #tc39 on Freenode ([instructions](https://freenode.net/kb/answer/chat)).
+To make a feature request, document the problem and a sketch of the solution with others in the community, including TC39 members. One place to do this is the [TC39 Discourse](https://es.discourse.group/); another is the IRC channel #tc39 on Freenode ([instructions](https://freenode.net/kb/answer/chat)).
 
 Your goal will be to convince others that your proposal is a useful addition to the language and recruit TC39 members to help turn your request into a proposal and shepherd it into the language. Once a proposal is introduced to the committee, new features are considered by the committee according to the [TC39 process document](https://tc39.es/process-document/).
 
