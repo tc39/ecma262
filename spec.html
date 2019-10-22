@@ -8469,20 +8469,13 @@
     </emu-clause>
 
     <emu-clause id="sec-functionallocate" aoid="FunctionAllocate">
-      <h1>FunctionAllocate ( _functionPrototype_, _functionKind_ )</h1>
-      <p>The abstract operation FunctionAllocate requires the two arguments _functionPrototype_ and _functionKind_. FunctionAllocate performs the following steps:</p>
+      <h1>FunctionAllocate ( _functionPrototype_ )</h1>
+      <p>The abstract operation FunctionAllocate requires the argument _functionPrototype_. FunctionAllocate performs the following steps:</p>
       <emu-alg>
         1. Assert: Type(_functionPrototype_) is Object.
-        1. Assert: _functionKind_ is either ~normal~, ~non-constructor~, ~generator~, ~async~, or ~asyncGenerator~.
-        1. If _functionKind_ is ~normal~, let _needsConstruct_ be *true*.
-        1. Else, let _needsConstruct_ be *false*.
-        1. If _functionKind_ is ~non-constructor~, set _functionKind_ to ~normal~.
         1. Let _F_ be a newly created ECMAScript function object with the internal slots listed in <emu-xref href="#table-27"></emu-xref>.
         1. Set _F_'s essential internal methods to the default ordinary object definitions specified in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>.
         1. Set _F_.[[Call]] to the definition specified in <emu-xref href="#sec-ecmascript-function-objects-call-thisargument-argumentslist"></emu-xref>.
-        1. If _needsConstruct_ is *true*, then
-          1. Set _F_.[[Construct]] to the definition specified in <emu-xref href="#sec-ecmascript-function-objects-construct-argumentslist-newtarget"></emu-xref>.
-          1. Set _F_.[[ConstructorKind]] to ~base~.
         1. Set _F_.[[IsClassConstructor]] to *false*.
         1. Set _F_.[[Prototype]] to _functionPrototype_.
         1. Set _F_.[[Extensible]] to *true*.
@@ -8516,9 +8509,7 @@
       <emu-alg>
         1. If _prototype_ is not present, then
           1. Set _prototype_ to %Function.prototype%.
-        1. If _kind_ is not ~Normal~, let _allocKind_ be ~non-constructor~.
-        1. Else, let _allocKind_ be ~normal~.
-        1. Let _F_ be FunctionAllocate(_prototype_, _allocKind_).
+        1. Let _F_ be FunctionAllocate(_prototype_).
         1. Return FunctionInitialize(_F_, _kind_, _ParameterList_, _Body_, _Scope_).
       </emu-alg>
     </emu-clause>
@@ -8528,7 +8519,7 @@
       <p>The abstract operation GeneratorFunctionCreate requires the arguments: _kind_ which is one of (~Normal~, ~Method~), a parameter list Parse Node specified by _ParameterList_, a body Parse Node specified by _Body_, a Lexical Environment specified by _Scope_. GeneratorFunctionCreate performs the following steps:</p>
       <emu-alg>
         1. Let _functionPrototype_ be %Generator%.
-        1. Let _F_ be FunctionAllocate(_functionPrototype_, ~generator~).
+        1. Let _F_ be FunctionAllocate(_functionPrototype_).
         1. Return FunctionInitialize(_F_, _kind_, _ParameterList_, _Body_, _Scope_).
       </emu-alg>
     </emu-clause>
@@ -8538,7 +8529,7 @@
       <p>The abstract operation AsyncGeneratorFunctionCreate requires the arguments: _kind_ which is one of (~Normal~, ~Method~), a parameter list Parse Node specified by _ParameterList_, a body Parse Node specified by _Body_, a Lexical Environment specified by _Scope_. AsyncGeneratorFunctionCreate performs the following steps:</p>
       <emu-alg>
         1. Let _functionPrototype_ be %AsyncGenerator%.
-        1. Let _F_ be ! FunctionAllocate(_functionPrototype_, ~generator~).
+        1. Let _F_ be ! FunctionAllocate(_functionPrototype_).
         1. Return ! FunctionInitialize(_F_, _kind_, _ParameterList_, _Body_, _Scope_).
       </emu-alg>
     </emu-clause>
@@ -8548,7 +8539,7 @@
       <p>The abstract operation AsyncFunctionCreate requires the arguments: _kind_ which is one of (~Normal~, ~Method~, ~Arrow~), a parameter list Parse Node specified by _parameters_, a body Parse Node specified by _body_, a Lexical Environment specified by _Scope_. AsyncFunctionCreate performs the following steps:</p>
       <emu-alg>
         1. Let _functionPrototype_ be %AsyncFunction.prototype%.
-        2. Let _F_ be ! FunctionAllocate(_functionPrototype_, ~async~).
+        2. Let _F_ be ! FunctionAllocate(_functionPrototype_).
         3. Return ! FunctionInitialize(_F_, _kind_, _parameters_, _body_, _Scope_).
       </emu-alg>
     </emu-clause>
@@ -8579,8 +8570,10 @@
       <p>The abstract operation MakeConstructor requires a Function argument _F_ and optionally, a Boolean _writablePrototype_ and an object _prototype_. If _prototype_ is provided it is assumed to already contain, if needed, a *"constructor"* property whose value is _F_. This operation converts _F_ into a constructor by performing the following steps:</p>
       <emu-alg>
         1. Assert: _F_ is an ECMAScript function object.
-        1. Assert: IsConstructor(_F_) is *true*.
+        1. Assert: IsConstructor(_F_) is *false*.
         1. Assert: _F_ is an extensible object that does not have a *"prototype"* own property.
+        1. Set _F_.[[Construct]] to the definition specified in <emu-xref href="#sec-ecmascript-function-objects-construct-argumentslist-newtarget"></emu-xref>.
+        1. Set _F_.[[ConstructorKind]] to ~base~.
         1. If _writablePrototype_ is not present, set _writablePrototype_ to *true*.
         1. If _prototype_ is not present, then
           1. Set _prototype_ to ObjectCreate(%Object.prototype%).
@@ -20805,8 +20798,8 @@
         1. Set the running execution context's LexicalEnvironment to _classScope_.
         1. Let _constructorInfo_ be ! DefineMethod of _constructor_ with arguments _proto_ and _constructorParent_.
         1. Let _F_ be _constructorInfo_.[[Closure]].
-        1. If |ClassHeritage_opt| is present, set _F_.[[ConstructorKind]] to ~derived~.
         1. Perform MakeConstructor(_F_, *false*, _proto_).
+        1. If |ClassHeritage_opt| is present, set _F_.[[ConstructorKind]] to ~derived~.
         1. Perform MakeClassConstructor(_F_).
         1. If _className_ is not *undefined*, then
           1. Perform SetFunctionName(_F_, _className_).
@@ -25772,7 +25765,7 @@
               1. If _strict_ is *true*, then
                 1. If BoundNames of _parameters_ contains any duplicate elements, throw a *SyntaxError* exception.
             1. Let _proto_ be ? GetPrototypeFromConstructor(_newTarget_, _fallbackProto_).
-            1. Let _F_ be FunctionAllocate(_proto_, _kind_).
+            1. Let _F_ be FunctionAllocate(_proto_).
             1. Let _realmF_ be _F_.[[Realm]].
             1. Let _scope_ be _realmF_.[[GlobalEnv]].
             1. Perform FunctionInitialize(_F_, ~Normal~, _parameters_, _body_, _scope_).
