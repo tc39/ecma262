@@ -8484,8 +8484,8 @@
     </emu-clause>
 
     <emu-clause id="sec-ordinaryfunctioncreate" aoid="OrdinaryFunctionCreate" oldids="sec-functionallocate,sec-functioninitialize,sec-functioncreate,sec-generatorfunctioncreate,sec-asyncgeneratorfunctioncreate,sec-async-functions-abstract-operations-async-function-create">
-      <h1>OrdinaryFunctionCreate ( _functionPrototype_, _ParameterList_, _Body_, _kind_, _Scope_ )</h1>
-      <p>The abstract operation OrdinaryFunctionCreate requires the arguments: an object _functionPrototype_, a parameter list Parse Node specified by _ParameterList_, a body Parse Node specified by _Body_, _kind_ which is one of (~Normal~, ~Method~, ~Arrow~), and a Lexical Environment specified by _Scope_. OrdinaryFunctionCreate performs the following steps:</p>
+      <h1>OrdinaryFunctionCreate ( _functionPrototype_, _ParameterList_, _Body_, _thisMode_, _Scope_ )</h1>
+      <p>The abstract operation OrdinaryFunctionCreate requires the arguments: an object _functionPrototype_, a parameter list Parse Node specified by _ParameterList_, a body Parse Node specified by _Body_, _thisMode_ which is either ~lexical-this~ or ~non-lexical-this~, and a Lexical Environment specified by _Scope_. OrdinaryFunctionCreate performs the following steps:</p>
       <emu-alg>
         1. Assert: Type(_functionPrototype_) is Object.
         1. Let _F_ be a newly created ECMAScript function object with the internal slots listed in <emu-xref href="#table-27"></emu-xref>.
@@ -8497,7 +8497,7 @@
         1. Set _F_.[[ECMAScriptCode]] to _Body_.
         1. If the source text matching _Body_ is strict mode code, let _Strict_ be *true*; else let _Strict_ be *false*.
         1. Set _F_.[[Strict]] to _Strict_.
-        1. If _kind_ is ~Arrow~, set _F_.[[ThisMode]] to ~lexical~.
+        1. If _thisMode_ is ~lexical-this~, set _F_.[[ThisMode]] to ~lexical~.
         1. Else if _Strict_ is *true*, set _F_.[[ThisMode]] to ~strict~.
         1. Else, set _F_.[[ThisMode]] to ~global~.
         1. Set _F_.[[IsClassConstructor]] to *false*.
@@ -19339,7 +19339,7 @@
       <emu-grammar>FunctionDeclaration : `function` BindingIdentifier `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
         1. Let _name_ be StringValue of |BindingIdentifier|.
-        1. Let _F_ be OrdinaryFunctionCreate(%Function.prototype%, |FormalParameters|, |FunctionBody|, ~Normal~, _scope_).
+        1. Let _F_ be OrdinaryFunctionCreate(%Function.prototype%, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform MakeConstructor(_F_).
         1. Perform SetFunctionName(_F_, _name_).
         1. Set _F_.[[SourceText]] to the source text matched by |FunctionDeclaration|.
@@ -19347,7 +19347,7 @@
       </emu-alg>
       <emu-grammar>FunctionDeclaration : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
-        1. Let _F_ be OrdinaryFunctionCreate(%Function.prototype%, |FormalParameters|, |FunctionBody|, ~Normal~, _scope_).
+        1. Let _F_ be OrdinaryFunctionCreate(%Function.prototype%, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform MakeConstructor(_F_).
         1. Perform SetFunctionName(_F_, *"default"*).
         1. Set _F_.[[SourceText]] to the source text matched by |FunctionDeclaration|.
@@ -19385,7 +19385,7 @@
       <emu-grammar>FunctionExpression : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, |FormalParameters|, |FunctionBody|, ~Normal~, _scope_).
+        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform MakeConstructor(_closure_).
         1. Set _closure_.[[SourceText]] to the source text matched by |FunctionExpression|.
         1. Return _closure_.
@@ -19397,7 +19397,7 @@
         1. Let _envRec_ be _funcEnv_'s EnvironmentRecord.
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform _envRec_.CreateImmutableBinding(_name_, *false*).
-        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, |FormalParameters|, |FunctionBody|, ~Normal~, _funcEnv_).
+        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _funcEnv_).
         1. Perform MakeConstructor(_closure_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Set _closure_.[[SourceText]] to the source text matched by |FunctionExpression|.
@@ -19660,7 +19660,7 @@
       <emu-alg>
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _parameters_ be CoveredFormalsList of |ArrowParameters|.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _parameters_, |ConciseBody|, ~Arrow~, _scope_).
+        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _parameters_, |ConciseBody|, ~lexical-this~, _scope_).
         1. Set _closure_.[[SourceText]] to the source text matched by |ArrowFunction|.
         1. Return _closure_.
       </emu-alg>
@@ -19797,12 +19797,10 @@
         1. ReturnIfAbrupt(_propKey_).
         1. Let _scope_ be the running execution context's LexicalEnvironment.
         1. If _functionPrototype_ is present as a parameter, then
-          1. Let _kind_ be ~Normal~.
           1. Let _prototype_ be _functionPrototype_.
         1. Else,
-          1. Let _kind_ be ~Method~.
           1. Let _prototype_ be %Function.prototype%.
-        1. Let _closure_ be OrdinaryFunctionCreate(_prototype_, |UniqueFormalParameters|, |FunctionBody|, _kind_, _scope_).
+        1. Let _closure_ be OrdinaryFunctionCreate(_prototype_, |UniqueFormalParameters|, |FunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Set _closure_.[[SourceText]] to the source text matched by |MethodDefinition|.
         1. Return the Record { [[Key]]: _propKey_, [[Closure]]: _closure_ }.
@@ -19826,7 +19824,7 @@
         1. ReturnIfAbrupt(_propKey_).
         1. Let _scope_ be the running execution context's LexicalEnvironment.
         1. Let _formalParameterList_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _formalParameterList_, |FunctionBody|, ~Method~, _scope_).
+        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _formalParameterList_, |FunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_, *"get"*).
         1. Set _closure_.[[SourceText]] to the source text matched by |MethodDefinition|.
@@ -19838,7 +19836,7 @@
         1. Let _propKey_ be the result of evaluating |PropertyName|.
         1. ReturnIfAbrupt(_propKey_).
         1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, |PropertySetParameterList|, |FunctionBody|, ~Method~, _scope_).
+        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, |PropertySetParameterList|, |FunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_, *"set"*).
         1. Set _closure_.[[SourceText]] to the source text matched by |MethodDefinition|.
@@ -20054,7 +20052,7 @@
       <emu-grammar>GeneratorDeclaration : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
         1. Let _name_ be StringValue of |BindingIdentifier|.
-        1. Let _F_ be OrdinaryFunctionCreate(%Generator%, |FormalParameters|, |GeneratorBody|, ~Normal~, _scope_).
+        1. Let _F_ be OrdinaryFunctionCreate(%Generator%, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _scope_).
         1. Let _prototype_ be ObjectCreate(%Generator.prototype%).
         1. Perform DefinePropertyOrThrow(_F_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Perform SetFunctionName(_F_, _name_).
@@ -20063,7 +20061,7 @@
       </emu-alg>
       <emu-grammar>GeneratorDeclaration : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
-        1. Let _F_ be OrdinaryFunctionCreate(%Generator%, |FormalParameters|, |GeneratorBody|, ~Normal~, _scope_).
+        1. Let _F_ be OrdinaryFunctionCreate(%Generator%, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _scope_).
         1. Let _prototype_ be ObjectCreate(%Generator.prototype%).
         1. Perform DefinePropertyOrThrow(_F_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Perform SetFunctionName(_F_, *"default"*).
@@ -20084,7 +20082,7 @@
         1. Let _propKey_ be the result of evaluating |PropertyName|.
         1. ReturnIfAbrupt(_propKey_).
         1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Generator%, |UniqueFormalParameters|, |GeneratorBody|, ~Method~, _scope_).
+        1. Let _closure_ be OrdinaryFunctionCreate(%Generator%, |UniqueFormalParameters|, |GeneratorBody|, ~non-lexical-this~, _scope_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Let _prototype_ be ObjectCreate(%Generator.prototype%).
         1. Perform DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
@@ -20111,7 +20109,7 @@
       <emu-grammar>GeneratorExpression : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Generator%, |FormalParameters|, |GeneratorBody|, ~Normal~, _scope_).
+        1. Let _closure_ be OrdinaryFunctionCreate(%Generator%, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _scope_).
         1. Let _prototype_ be ObjectCreate(%Generator.prototype%).
         1. Perform DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Set _closure_.[[SourceText]] to the source text matched by |GeneratorExpression|.
@@ -20124,7 +20122,7 @@
         1. Let _envRec_ be _funcEnv_'s EnvironmentRecord.
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform _envRec_.CreateImmutableBinding(_name_, *false*).
-        1. Let _closure_ be OrdinaryFunctionCreate(%Generator%, |FormalParameters|, |GeneratorBody|, ~Normal~, _funcEnv_).
+        1. Let _closure_ be OrdinaryFunctionCreate(%Generator%, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _funcEnv_).
         1. Let _prototype_ be ObjectCreate(%Generator.prototype%).
         1. Perform DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -20381,7 +20379,7 @@
       </emu-grammar>
       <emu-alg>
         1. Let _name_ be StringValue of |BindingIdentifier|.
-        1. Let _F_ be ! OrdinaryFunctionCreate(%AsyncGenerator%, |FormalParameters|, |AsyncGeneratorBody|, ~Normal~, _scope_).
+        1. Let _F_ be ! OrdinaryFunctionCreate(%AsyncGenerator%, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _scope_).
         1. Let _prototype_ be ! ObjectCreate(%AsyncGenerator.prototype%).
         1. Perform ! DefinePropertyOrThrow(_F_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Perform ! SetFunctionName(_F_, _name_).
@@ -20393,7 +20391,7 @@
         AsyncGeneratorDeclaration : `async` `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Let _F_ be OrdinaryFunctionCreate(%AsyncGenerator%, |FormalParameters|, |AsyncGeneratorBody|, ~Normal~, _scope_).
+        1. Let _F_ be OrdinaryFunctionCreate(%AsyncGenerator%, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _scope_).
         1. Let _prototype_ be ObjectCreate(%AsyncGenerator.prototype%).
         1. Perform DefinePropertyOrThrow(_F_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Perform SetFunctionName(_F_, *"default"*).
@@ -20415,7 +20413,7 @@
         1. Let _propKey_ be the result of evaluating |PropertyName|.
         1. ReturnIfAbrupt(_propKey_).
         1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGenerator%, |UniqueFormalParameters|, |AsyncGeneratorBody|, ~Method~, _scope_).
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGenerator%, |UniqueFormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _scope_).
         1. Perform ! MakeMethod(_closure_, _object_).
         1. Let _prototype_ be ! ObjectCreate(%AsyncGenerator.prototype%).
         1. Perform ! DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
@@ -20447,7 +20445,7 @@
       </emu-grammar>
       <emu-alg>
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGenerator%, |FormalParameters|, |AsyncGeneratorBody|, ~Normal~, _scope_).
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGenerator%, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _scope_).
         1. Let _prototype_ be ! ObjectCreate(%AsyncGenerator.prototype%).
         1. Perform ! DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Set _closure_.[[SourceText]] to the source text matched by |AsyncGeneratorExpression|.
@@ -20463,7 +20461,7 @@
         1. Let _envRec_ be _funcEnv_'s EnvironmentRecord.
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform ! _envRec_.CreateImmutableBinding(_name_).
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGenerator%, |FormalParameters|, |AsyncGeneratorBody|, ~Normal~, _funcEnv_).
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGenerator%, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _funcEnv_).
         1. Let _prototype_ be ! ObjectCreate(%AsyncGenerator.prototype%).
         1. Perform ! DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Perform ! SetFunctionName(_closure_, _name_).
@@ -21028,7 +21026,7 @@
       </emu-grammar>
       <emu-alg>
         1. Let _name_ be StringValue of |BindingIdentifier|.
-        1. Let _F_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |FormalParameters|, |AsyncFunctionBody|, ~Normal~, _scope_).
+        1. Let _F_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform ! SetFunctionName(_F_, _name_).
         1. Set _F_.[[SourceText]] to the source text matched by |AsyncFunctionDeclaration|.
         1. Return _F_.
@@ -21037,7 +21035,7 @@
         AsyncFunctionDeclaration : `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Let _F_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |FormalParameters|, |AsyncFunctionBody|, ~Normal~, _scope_).
+        1. Let _F_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform ! SetFunctionName(_F_, *"default"*).
         1. Set _F_.[[SourceText]] to the source text matched by |AsyncFunctionDeclaration|.
         1. Return _F_.
@@ -21071,7 +21069,7 @@
         1. Let _propKey_ be the result of evaluating |PropertyName|.
         1. ReturnIfAbrupt(_propKey_).
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |UniqueFormalParameters|, |AsyncFunctionBody|, ~Method~, _scope_).
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |UniqueFormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform ! MakeMethod(_closure_, _object_).
         1. Perform ! SetFunctionName(_closure_, _propKey_).
         1. Set _closure_.[[SourceText]] to the source text matched by |AsyncMethod|.
@@ -21114,7 +21112,7 @@
       </emu-grammar>
       <emu-alg>
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |FormalParameters|, |AsyncFunctionBody|, ~Normal~, _scope_).
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _scope_).
         1. Set _closure_.[[SourceText]] to the source text matched by |AsyncFunctionExpression|.
         1. Return _closure_.
       </emu-alg>
@@ -21128,7 +21126,7 @@
         1. Let _envRec_ be _funcEnv_'s EnvironmentRecord.
         1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform ! _envRec_.CreateImmutableBinding(_name_).
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |FormalParameters|, |AsyncFunctionBody|, ~Normal~, _funcEnv_).
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _funcEnv_).
         1. Perform ! SetFunctionName(_closure_, _name_).
         1. Perform ! _envRec_.InitializeBinding(_name_, _closure_).
         1. Set _closure_.[[SourceText]] to the source text matched by |AsyncFunctionExpression|.
@@ -21401,7 +21399,7 @@
       <emu-alg>
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _parameters_ be |AsyncArrowBindingIdentifier|.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _parameters_, |AsyncConciseBody|, ~Arrow~, _scope_).
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _parameters_, |AsyncConciseBody|, ~lexical-this~, _scope_).
         1. Set _closure_.[[SourceText]] to the source text matched by |AsyncArrowFunction|.
         1. Return _closure_.
       </emu-alg>
@@ -21412,7 +21410,7 @@
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _head_ be CoveredAsyncArrowHead of |CoverCallExpressionAndAsyncArrowHead|.
         1. Let _parameters_ be the |ArrowFormalParameters| of _head_.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _parameters_, |AsyncConciseBody|, ~Arrow~, _scope_).
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _parameters_, |AsyncConciseBody|, ~lexical-this~, _scope_).
         1. Set _closure_.[[SourceText]] to the source text matched by |AsyncArrowFunction|.
         1. Return _closure_.
       </emu-alg>
@@ -25748,7 +25746,7 @@
             1. Let _proto_ be ? GetPrototypeFromConstructor(_newTarget_, _fallbackProto_).
             1. Let _realmF_ be the current Realm Record.
             1. Let _scope_ be _realmF_.[[GlobalEnv]].
-            1. Let _F_ be ! OrdinaryFunctionCreate(_proto_, _parameters_, _body_, ~Normal~, _scope_).
+            1. Let _F_ be ! OrdinaryFunctionCreate(_proto_, _parameters_, _body_, ~non-lexical-this~, _scope_).
             1. If _kind_ is ~generator~, then
               1. Let _prototype_ be ObjectCreate(%Generator.prototype%).
               1. Perform DefinePropertyOrThrow(_F_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
