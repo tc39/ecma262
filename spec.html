@@ -9354,7 +9354,7 @@
         <p>When the [[GetOwnProperty]] internal method of an Integer-Indexed exotic object _O_ is called with property key _P_, the following steps are taken:</p>
         <emu-alg>
           1. Assert: IsPropertyKey(_P_) is *true*.
-          1. Assert: _O_ is an Object that has a [[ViewedArrayBuffer]] internal slot.
+          1. Assert: _O_ is an Integer-Indexed exotic object.
           1. If Type(_P_) is String, then
             1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
@@ -9370,16 +9370,13 @@
         <p>When the [[HasProperty]] internal method of an Integer-Indexed exotic object _O_ is called with property key _P_, the following steps are taken:</p>
         <emu-alg>
           1. Assert: IsPropertyKey(_P_) is *true*.
-          1. Assert: _O_ is an Object that has a [[ViewedArrayBuffer]] internal slot.
+          1. Assert: _O_ is an Integer-Indexed exotic object.
           1. If Type(_P_) is String, then
             1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
               1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
               1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
-              1. If IsInteger(_numericIndex_) is *false*, return *false*.
-              1. If _numericIndex_ = *-0*, return *false*.
-              1. If _numericIndex_ &lt; 0, return *false*.
-              1. If _numericIndex_ &ge; _O_.[[ArrayLength]], return *false*.
+              1. If ! IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *false*.
               1. Return *true*.
           1. Return ? OrdinaryHasProperty(_O_, _P_).
         </emu-alg>
@@ -9390,15 +9387,11 @@
         <p>When the [[DefineOwnProperty]] internal method of an Integer-Indexed exotic object _O_ is called with property key _P_, and Property Descriptor _Desc_, the following steps are taken:</p>
         <emu-alg>
           1. Assert: IsPropertyKey(_P_) is *true*.
-          1. Assert: _O_ is an Object that has a [[ViewedArrayBuffer]] internal slot.
+          1. Assert: _O_ is an Integer-Indexed exotic object.
           1. If Type(_P_) is String, then
             1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
-              1. If IsInteger(_numericIndex_) is *false*, return *false*.
-              1. If _numericIndex_ = *-0*, return *false*.
-              1. If _numericIndex_ &lt; 0, return *false*.
-              1. Let _length_ be _O_.[[ArrayLength]].
-              1. If _numericIndex_ &ge; _length_, return *false*.
+              1. If ! IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *false*.
               1. If IsAccessorDescriptor(_Desc_) is *true*, return *false*.
               1. If _Desc_ has a [[Configurable]] field and if _Desc_.[[Configurable]] is *true*, return *false*.
               1. If _Desc_ has an [[Enumerable]] field and if _Desc_.[[Enumerable]] is *false*, return *false*.
@@ -9442,7 +9435,7 @@
         <p>When the [[OwnPropertyKeys]] internal method of an Integer-Indexed exotic object _O_ is called, the following steps are taken:</p>
         <emu-alg>
           1. Let _keys_ be a new empty List.
-          1. Assert: _O_ is an Object that has [[ViewedArrayBuffer]], [[ArrayLength]], [[ByteOffset]], [[ContentType]], and [[TypedArrayName]] internal slots.
+          1. Assert: _O_ is an Integer-Indexed exotic object.
           1. Let _len_ be _O_.[[ArrayLength]].
           1. For each integer _i_ starting with 0 such that _i_ &lt; _len_, in ascending order, do
             1. Add ! ToString(_i_) as the last element of _keys_.
@@ -9473,18 +9466,28 @@
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-isvalidintegerindex" aoid="IsValidIntegerIndex">
+        <h1>IsValidIntegerIndex ( _O_, _index_ )</h1>
+        <p>The abstract operation IsValidIntegerIndex with arguments _O_ and _index_ performs the following steps:</p>
+        <emu-alg>
+          1. Assert: _O_ is an Integer-Indexed exotic object.
+          1. Assert: Type(_index_) is Number.
+          1. If ! IsInteger(_index_) is *false*, return *false*.
+          1. If _index_ is *-0*, return *false*.
+          1. If _index_ &lt; 0 or _index_ &ge; _O_.[[ArrayLength]], return *false*.
+          1. Return *true*.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-integerindexedelementget" aoid="IntegerIndexedElementGet">
         <h1>IntegerIndexedElementGet ( _O_, _index_ )</h1>
         <p>The abstract operation IntegerIndexedElementGet with arguments _O_ and _index_ performs the following steps:</p>
         <emu-alg>
+          1. Assert: _O_ is an Integer-Indexed exotic object.
           1. Assert: Type(_index_) is Number.
-          1. Assert: _O_ is an Object that has [[ViewedArrayBuffer]], [[ArrayLength]], [[ByteOffset]], [[ContentType]], and [[TypedArrayName]] internal slots.
           1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
           1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
-          1. If IsInteger(_index_) is *false*, return *undefined*.
-          1. If _index_ = *-0*, return *undefined*.
-          1. Let _length_ be _O_.[[ArrayLength]].
-          1. If _index_ &lt; 0 or _index_ &ge; _length_, return *undefined*.
+          1. If ! IsValidIntegerIndex(_O_, _index_) is *false*, return *undefined*.
           1. Let _offset_ be _O_.[[ByteOffset]].
           1. Let _arrayTypeName_ be the String value of _O_.[[TypedArrayName]].
           1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
@@ -9498,16 +9501,13 @@
         <h1>IntegerIndexedElementSet ( _O_, _index_, _value_ )</h1>
         <p>The abstract operation IntegerIndexedElementSet with arguments _O_, _index_, and _value_ performs the following steps:</p>
         <emu-alg>
+          1. Assert: _O_ is an Integer-Indexed exotic object.
           1. Assert: Type(_index_) is Number.
-          1. Assert: _O_ is an Object that has [[ViewedArrayBuffer]], [[ArrayLength]], [[ByteOffset]], [[ContentType]], and [[TypedArrayName]] internal slots.
           1. If _O_.[[ContentType]] is ~BigInt~, let _numValue_ be ? ToBigInt(_value_).
           1. Otherwise, let _numValue_ be ? ToNumber(_value_).
           1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
           1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
-          1. If IsInteger(_index_) is *false*, return *false*.
-          1. If _index_ = *-0*, return *false*.
-          1. Let _length_ be _O_.[[ArrayLength]].
-          1. If _index_ &lt; 0 or _index_ &ge; _length_, return *false*.
+          1. If ! IsValidIntegerIndex(_O_, _index_) is *false*, return *false*.
           1. Let _offset_ be _O_.[[ByteOffset]].
           1. Let _arrayTypeName_ be the String value of _O_.[[TypedArrayName]].
           1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
