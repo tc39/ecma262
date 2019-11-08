@@ -40,7 +40,7 @@ const request = async (url, method = 'GET', postData) => {
 	return new Promise((resolve, reject) => {
 		const req = lib.request(url, params, res => {
 			if (res.statusCode < 200 || res.statusCode >= 300) {
-				return reject(new Error(`Status Code: ${res.statusCode}`));
+				return reject(new Error(`Status Code: ${res.statusCode}; ${url}`));
 			}
 
 			const data = [];
