@@ -3052,6 +3052,16 @@
             </tr>
             <tr>
               <td>
+                %ForInIteratorPrototype%
+              </td>
+              <td>
+              </td>
+              <td>
+                The prototype of For-In iterator objects (<emu-xref href="#sec-for-in-iterator-objects"></emu-xref>)
+              </td>
+            </tr>
+            <tr>
+              <td>
                 %Function%
               </td>
               <td>
@@ -17990,8 +18000,17 @@
         </emu-alg>
         <p>The iterator's `throw` and `return` methods are *null* and are never invoked. The iterator's `next` method processes object properties to determine whether the property key should be returned as an iterator value. Returned property keys do not include keys that are Symbols. Properties of the target object may be deleted during enumeration. A property that is deleted before it is processed by the iterator's `next` method is ignored. If new properties are added to the target object during enumeration, the newly added properties are not guaranteed to be processed in the active enumeration. A property name will be returned by the iterator's `next` method at most once in any enumeration.</p>
         <p>Enumerating the properties of the target object includes enumerating properties of its prototype, and the prototype of the prototype, and so on, recursively; but a property of a prototype is not processed if it has the same name as a property that has already been processed by the iterator's `next` method. The values of [[Enumerable]] attributes are not considered when determining if a property of a prototype object has already been processed. The enumerable property names of prototype objects must be obtained by invoking EnumerateObjectProperties passing the prototype object as the argument. EnumerateObjectProperties must obtain the own property keys of the target object by calling its [[OwnPropertyKeys]] internal method. Property attributes of the target object must be obtained by calling its [[GetOwnProperty]] internal method.</p>
+        <p>In addition, if neither _O_ nor any object in its prototype chain is a Proxy exotic object, Integer-Indexed exotic object, Module Namespace exotic object, or implementation provided exotic object, then the iterator must behave as would the iterator given by CreateForInIterator(_O_) until one of the following occurs:</p>
+        <ul>
+          <li>the value of the [[Prototype]] internal slot of _O_ or an object in its prototype chain changes,</li>
+          <li>a property is removed from _O_ or an object in its prototype chain,</li>
+          <li>a property is added to an object in _O_'s prototype chain, or</li>
+          <li>the value of the [[Enumerable]] attribute of a property of _O_ or an object in its prototype chain changes.</li>
+        </ul>
+
         <emu-note>
-          <p>The following is an informative definition of an ECMAScript generator function that conforms to these rules:</p>
+          <p>Hosts are not required to implement the algorithm in <emu-xref href="#sec-%foriniteratorprototype%.next"></emu-xref> directly. They may choose any implementation whose behavior will not deviate from that algorithm unless one of the constraints in the previous paragraph is violated.</p>
+          <p>The following is an informative definition of an ECMAScript generator function that conforms to these rules:</ins></p>
           <pre><code class="javascript">
             function* EnumerateObjectProperties(obj) {
               const visited = new Set();
@@ -18011,6 +18030,121 @@
             }
           </code></pre>
         </emu-note>
+        <emu-note>
+          The list of exotic objects for which implementations are not required to match CreateForInIterator was chosen because implementations historically differed in behavior for those cases, and agreed in all others.
+        </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-for-in-iterator-objects">
+        <h1>For-In Iterator Objects</h1>
+        <p>A For-In Iterator is an object that represents a specific iteration over some specific object. For-In Iterator objects are never directly accessible to ECMAScript code; they exist soley to illustrate the behavior of EnumerateObjectProperties.</p>
+
+        <emu-clause id="sec-createforiniterator" aoid="CreateForInIterator">
+          <h1>CreateForInIterator ( _object_ )</h1>
+          <p>The abstract operation CreateForInIterator with argument _object_ is used to create a For-In Iterator object which iterates over the own and inherited enumerable string properties of _object_ in a specific order. It performs the following steps:</p>
+          <emu-alg>
+            1. Assert: Type(_object_) is Object.
+            1. Let _iterator_ be ObjectCreate(%ForInIteratorPrototype%, &laquo; [[Object]], [[ObjectWasVisited]], [[VisitedKeys]], [[RemainingKeys]] &raquo;).
+            1. Set _iterator_.[[Object]] to _object_.
+            1. Set _iterator_.[[ObjectWasVisited]] to *false*.
+            1. Set _iterator_.[[VisitedKeys]] to a new empty List.
+            1. Set _iterator_.[[RemainingKeys]] to a new empty List.
+            1. Return _iterator_.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-%foriniteratorprototype%-object">
+          <h1>The %ForInIteratorPrototype% Object</h1>
+          <p>The <dfn>%ForInIteratorPrototype%</dfn> object:</p>
+          <ul>
+            <li>has properties that are inherited by all For-In Iterator Objects.</li>
+            <li>is an ordinary object.</li>
+            <li>has a [[Prototype]] internal slot whose value is the intrinsic object %IteratorPrototype%.</li>
+            <li>is never directly accessible to ECMAScript code.</li>
+            <li>has the following properties:</li>
+          </ul>
+
+          <emu-clause id="sec-%foriniteratorprototype%.next">
+            <h1>%ForInIteratorPrototype%.next ( )</h1>
+            <emu-alg>
+              1. Let _O_ be the *this* value.
+              1. Assert: Type(_O_) is Object.
+              1. Assert: _O_ has all of the internal slots of a For-In Iterator Instance (<emu-xref href="#sec-properties-of-for-in-iterator-instances"></emu-xref>).
+              1. Let _object_ be _O_.[[Object]].
+              1. Let _visited_ be _O_.[[VisitedKeys]].
+              1. Let _remaining_ be _O_.[[RemainingKeys]].
+              1. Repeat,
+                1. If _O_.[[ObjectWasVisited]] is *false*, then
+                  1. Let _keys_ be ? _object_.[[OwnPropertyKeys]]().
+                  1. For each _key_ of _keys_ in List order, do
+                    1. If Type(_key_) is String, then
+                      1. Append _key_ to _remaining_.
+                  1. Set _O_.[[ObjectWasVisited]] to *true*.
+                1. Repeat, while _remaining_ is not empty,
+                  1. Remove the first element from _remaining_ and let _r_ be the value of the element.
+                  1. If there does not exist an element _v_ of _visited_ such that SameValue(_r_, _v_) is *true*, then
+                    1. Let _desc_ be ? _object_.[[GetOwnProperty]](_r_).
+                    1. If _desc_ is not *undefined*, then
+                      1. Append _r_ to _visited_.
+                      1. If _desc_.[[Enumerable]] is *true*, return CreateIterResultObject(_r_, *false*).
+                1. Set _object_ to ? _object_.[[GetPrototypeOf]]().
+                1. Set _O_.[[Object]] to _object_.
+                1. Set _O_.[[ObjectWasVisited]] to *false*.
+                1. If _object_ is *null*, return CreateIterResultObject(*undefined*, *true*).
+            </emu-alg>
+          </emu-clause>
+        </emu-clause>
+
+        <emu-clause id="sec-properties-of-for-in-iterator-instances">
+          <h1>Properties of For-In Iterator Instances</h1>
+          <p>For-In Iterator instances are ordinary objects that inherit properties from the %ForInIteratorPrototype% intrinsic object. For-In Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-for-in-iterator-instance-slots"></emu-xref>.</p>
+          <emu-table id="table-for-in-iterator-instance-slots" caption="Internal Slots of For-In Iterator Instances">
+            <table>
+              <tbody>
+              <tr>
+                <th>
+                  Internal Slot
+                </th>
+                <th>
+                  Description
+                </th>
+              </tr>
+              <tr>
+                <td>
+                  [[Object]]
+                </td>
+                <td>
+                  The Object value whose properties are being iterated.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[ObjectWasVisited]]
+                </td>
+                <td>
+                  *true* if the iterator has invoked [[OwnPropertyKeys]] on [[Object]], *false* otherwise.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[VisitedKeys]]
+                </td>
+                <td>
+                  A list of String values which have been emitted by this iterator thus far.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[RemainingKeys]]
+                </td>
+                <td>
+                  A list of String values remaining to be emitted for the current object, before iterating the properties of its prototype (if its prototype is not *null*).
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </emu-table>
+        </emu-clause>
       </emu-clause>
     </emu-clause>
   </emu-clause>
