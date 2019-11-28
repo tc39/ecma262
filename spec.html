@@ -31409,9 +31409,6 @@ THH:mm:ss.sss
           <li>
             A <em>Matcher</em> procedure is an internal closure that takes two arguments&mdash;a State and a Continuation&mdash;and returns a MatchResult result. A Matcher attempts to match a middle subpattern (specified by the closure's already-bound arguments) of the pattern against _Input_, starting at the intermediate state given by its State argument. The Continuation argument should be a closure that matches the rest of the pattern. After matching the subpattern of a pattern to obtain a new State, the Matcher then calls Continuation on that new State to test if the rest of the pattern can match as well. If it can, the Matcher returns the State returned by Continuation; if not, the Matcher may try different choices at its choice points, repeatedly calling Continuation until it either succeeds or all possibilities have been exhausted.
           </li>
-          <li>
-            An <em>AssertionTester</em> procedure is an internal closure that takes a State argument and returns a Boolean result. The assertion tester tests a specific condition (specified by the closure's already-bound arguments) against the current place in _Input_ and returns *true* if the condition matched or *false* if not.
-          </li>
         </ul>
       </emu-clause>
 
@@ -31496,14 +31493,10 @@ THH:mm:ss.sss
         <p>With parameter _direction_.</p>
         <p>The production <emu-grammar>Term :: Assertion</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-            1. Evaluate |Assertion| to obtain an AssertionTester _t_.
-            1. Call _t_(_x_) and let _r_ be the resulting Boolean value.
-            1. If _r_ is *false*, return ~failure~.
-            1. Call _c_(_x_) and return its result.
+          1. Return the Matcher that is the result of evaluating |Assertion|.
         </emu-alg>
         <emu-note>
-          <p>The AssertionTester is independent of _direction_.</p>
+          <p>The resulting Matcher is independent of _direction_.</p>
         </emu-note>
         <p>The production <emu-grammar>Term :: Atom</emu-grammar> evaluates as follows:</p>
         <emu-alg>
@@ -31590,44 +31583,44 @@ THH:mm:ss.sss
         <h1>Assertion</h1>
         <p>The production <emu-grammar>Assertion :: `^`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal AssertionTester closure that takes a State argument _x_ and performs the following steps:
+          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _e_ be _x_'s _endIndex_.
-            1. If _e_ is zero, return *true*.
-            1. If _Multiline_ is *false*, return *false*.
-            1. If the character _Input_[_e_ - 1] is one of |LineTerminator|, return *true*.
-            1. Return *false*.
+            1. If _e_ is zero, call _c_(_x_) and return its result.
+            1. If _Multiline_ is *false*, return ~failure~.
+            1. If the character _Input_[_e_ - 1] is one of |LineTerminator|, call _c_(_x_) and return its result.
+            1. Return ~failure~.
         </emu-alg>
         <emu-note>
           <p>Even when the `y` flag is used with a pattern, `^` always matches only at the beginning of _Input_, or (if _Multiline_ is *true*) at the beginning of a line.</p>
         </emu-note>
         <p>The production <emu-grammar>Assertion :: `$`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal AssertionTester closure that takes a State argument _x_ and performs the following steps:
+          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _e_ be _x_'s _endIndex_.
-            1. If _e_ is equal to _InputLength_, return *true*.
-            1. If _Multiline_ is *false*, return *false*.
-            1. If the character _Input_[_e_] is one of |LineTerminator|, return *true*.
-            1. Return *false*.
+            1. If _e_ is equal to _InputLength_, call _c_(_x_) and return its result.
+            1. If _Multiline_ is *false*, return ~failure~.
+            1. If the character _Input_[_e_] is one of |LineTerminator|, call _c_(_x_) and return its result.
+            1. Return ~failure~.
         </emu-alg>
         <p>The production <emu-grammar>Assertion :: `\` `b`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal AssertionTester closure that takes a State argument _x_ and performs the following steps:
+          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _e_ be _x_'s _endIndex_.
             1. Call IsWordChar(_e_ - 1) and let _a_ be the Boolean result.
             1. Call IsWordChar(_e_) and let _b_ be the Boolean result.
-            1. If _a_ is *true* and _b_ is *false*, return *true*.
-            1. If _a_ is *false* and _b_ is *true*, return *true*.
-            1. Return *false*.
+            1. If _a_ is *true* and _b_ is *false*, call _c_(_x_) and return its result.
+            1. If _a_ is *false* and _b_ is *true*, call _c_(_x_) and return its result.
+            1. Return ~failure~.
         </emu-alg>
         <p>The production <emu-grammar>Assertion :: `\` `B`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal AssertionTester closure that takes a State argument _x_ and performs the following steps:
+          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
             1. Let _e_ be _x_'s _endIndex_.
             1. Call IsWordChar(_e_ - 1) and let _a_ be the Boolean result.
             1. Call IsWordChar(_e_) and let _b_ be the Boolean result.
-            1. If _a_ is *true* and _b_ is *false*, return *false*.
-            1. If _a_ is *false* and _b_ is *true*, return *false*.
-            1. Return *true*.
+            1. If _a_ is *true* and _b_ is *false*, return ~failure~.
+            1. If _a_ is *false* and _b_ is *true*, return ~failure~.
+            1. Call _c_(_x_) and return its result.
         </emu-alg>
         <p>The production <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
