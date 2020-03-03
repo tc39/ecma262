@@ -3911,7 +3911,7 @@
 
   <emu-clause id="sec-ecmascript-specification-types">
     <h1>ECMAScript Specification Types</h1>
-    <p>A specification type corresponds to meta-values that are used within algorithms to describe the semantics of ECMAScript language constructs and ECMAScript language types. The specification types include Reference, List, Completion, Property Descriptor, Lexical Environment, Environment Record, and Data Block. Specification type values are specification artefacts that do not necessarily correspond to any specific entity within an ECMAScript implementation. Specification type values may be used to describe intermediate results of ECMAScript expression evaluation but such values cannot be stored as properties of objects or values of ECMAScript language variables.</p>
+    <p>A specification type corresponds to meta-values that are used within algorithms to describe the semantics of ECMAScript language constructs and ECMAScript language types. The specification types include Reference, List, Completion, Property Descriptor, Lexical Environment, Environment Record, Abstract Closure, and Data Block. Specification type values are specification artefacts that do not necessarily correspond to any specific entity within an ECMAScript implementation. Specification type values may be used to describe intermediate results of ECMAScript expression evaluation but such values cannot be stored as properties of objects or values of ECMAScript language variables.</p>
 
     <emu-clause id="sec-list-and-record-specification-type">
       <h1>The List and Record Specification Types</h1>
@@ -4391,6 +4391,21 @@
     <emu-clause id="sec-lexical-environment-and-environment-record-specification-types">
       <h1>The Lexical Environment and Environment Record Specification Types</h1>
       <p>The Lexical Environment and Environment Record types are used to explain the behaviour of name resolution in nested functions and blocks. These types and the operations upon them are defined in <emu-xref href="#sec-lexical-environments"></emu-xref>.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-abstract-closure">
+      <h1>The Abstract Closure Specification Type</h1>
+      <p>The <dfn>abstract closure</dfn> specification type is used to refer to algorithm steps together with a collection of values. Abstract closures are meta-values and are invoked using function application style such as _closure_(_arg1_, _arg2_). Like abstract operations, invocations perform the algorithm steps described by the abstract closure.</p>
+      <p>In algorithm steps that create an abstract closure, values are captured with the verb "capture" followed by a list of aliases. When an abstract closure is created, it captures the value that is associated with each alias at that time. In steps that specify the algorithm to be performed when an abstract closure is called, each captured value is referred to by the alias that was used to capture the value.</p>
+      <p>If an abstract closure returns a Completion Record, that Completion Record's [[Type]] must be either ~normal~ or ~throw~.</p>
+      <p>Abstract closures are created inline as part of other algorithms, shown in the following example.</p>
+      <emu-alg>
+        1. Let _addend_ be 41.
+        1. Let _closure_ be a new abstract closure with parameters (_x_) that captures _addend_ and performs the following steps when called:
+          1. Return _x_ + _addend_.
+        1. Let _val_ be _closure_(1).
+        1. Assert: _val_ is 42.
+      </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-data-blocks">
@@ -31444,7 +31459,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-pattern-semantics">
       <h1>Pattern Semantics</h1>
-      <p>A regular expression pattern is converted into an internal procedure using the process described below. An implementation is encouraged to use more efficient algorithms than the ones listed below, as long as the results are the same. The internal procedure is used as the value of a RegExp object's [[RegExpMatcher]] internal slot.</p>
+      <p>A regular expression pattern is converted into an abstract closure using the process described below. An implementation is encouraged to use more efficient algorithms than the ones listed below, as long as the results are the same. The abstract closure is used as the value of a RegExp object's [[RegExpMatcher]] internal slot.</p>
       <p>A |Pattern| is either a BMP pattern or a Unicode pattern depending upon whether or not its associated flags contain a `u`. A BMP pattern matches against a String interpreted as consisting of a sequence of 16-bit values that are Unicode code points in the range of the Basic Multilingual Plane. A Unicode pattern matches against a String interpreted as consisting of Unicode code points encoded using UTF-16. In the context of describing the behaviour of a BMP pattern &ldquo;character&rdquo; means a single 16-bit Unicode BMP code point. In the context of describing the behaviour of a Unicode pattern &ldquo;character&rdquo; means a UTF-16 encoded code point (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>). In either context, &ldquo;character value&rdquo; means the numeric value of the corresponding non-encoded code point.</p>
       <p>The syntax and semantics of |Pattern| is defined as if the source code for the |Pattern| was a List of |SourceCharacter| values where each |SourceCharacter| corresponds to a Unicode code point. If a BMP pattern contains a non-BMP |SourceCharacter| the entire pattern is encoded using UTF-16 and the individual code units of that encoding are used as the elements of the List.</p>
       <emu-note>
@@ -31491,10 +31506,10 @@ THH:mm:ss.sss
             A <em>MatchResult</em> is either a State or the special token ~failure~ that indicates that the match failed.
           </li>
           <li>
-            A <em>Continuation</em> procedure is an internal closure (i.e. an internal procedure with some arguments already bound to values) that takes one State argument and returns a MatchResult result. If an internal closure references variables which are bound in the function that creates the closure, the closure uses the values that these variables had at the time the closure was created. The Continuation attempts to match the remaining portion (specified by the closure's already-bound arguments) of the pattern against _Input_, starting at the intermediate state given by its State argument. If the match succeeds, the Continuation returns the final State that it reached; if the match fails, the Continuation returns ~failure~.
+            A <em>Continuation</em> is an abstract closure that takes one State argument and returns a MatchResult result. The Continuation attempts to match the remaining portion (specified by the closure's captured values) of the pattern against _Input_, starting at the intermediate state given by its State argument. If the match succeeds, the Continuation returns the final State that it reached; if the match fails, the Continuation returns ~failure~.
           </li>
           <li>
-            A <em>Matcher</em> procedure is an internal closure that takes two arguments&mdash;a State and a Continuation&mdash;and returns a MatchResult result. A Matcher attempts to match a middle subpattern (specified by the closure's already-bound arguments) of the pattern against _Input_, starting at the intermediate state given by its State argument. The Continuation argument should be a closure that matches the rest of the pattern. After matching the subpattern of a pattern to obtain a new State, the Matcher then calls Continuation on that new State to test if the rest of the pattern can match as well. If it can, the Matcher returns the State returned by Continuation; if not, the Matcher may try different choices at its choice points, repeatedly calling Continuation until it either succeeds or all possibilities have been exhausted.
+            A <em>Matcher</em> is an abstract closure that takes two arguments&mdash;a State and a Continuation&mdash;and returns a MatchResult result. A Matcher attempts to match a middle subpattern (specified by the closure's captured values) of the pattern against _Input_, starting at the intermediate state given by its State argument. The Continuation argument should be a closure that matches the rest of the pattern. After matching the subpattern of a pattern to obtain a new State, the Matcher then calls Continuation on that new State to test if the rest of the pattern can match as well. If it can, the Matcher returns the State returned by Continuation; if not, the Matcher may try different choices at its choice points, repeatedly calling Continuation until it either succeeds or all possibilities have been exhausted.
           </li>
         </ul>
       </emu-clause>
@@ -31504,18 +31519,21 @@ THH:mm:ss.sss
         <p>The production <emu-grammar>Pattern :: Disjunction</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Disjunction| with +1 as its _direction_ argument to obtain a Matcher _m_.
-          1. Return an internal closure that takes two arguments, a String _str_ and an integer _index_, and performs the following steps:
-            1. Assert: _index_ &le; the length of _str_.
+          1. Return a new abstract closure with parameters (_str_, _index_) that captures _m_ and performs the following steps when called:
+            1. Assert: _str_ is a String.
+            1. Assert: ! IsNonNegativeInteger(_index_) is *true* and _index_ &le; the length of _str_.
             1. If _Unicode_ is *true*, let _Input_ be a List consisting of the sequence of code points of ! UTF16DecodeString(_str_). Otherwise, let _Input_ be a List consisting of the sequence of code units that are the elements of _str_. _Input_ will be used throughout the algorithms in <emu-xref href="#sec-pattern-semantics"></emu-xref>. Each element of _Input_ is considered to be a character.
             1. Let _InputLength_ be the number of characters contained in _Input_. This variable will be used throughout the algorithms in <emu-xref href="#sec-pattern-semantics"></emu-xref>.
             1. Let _listIndex_ be the index into _Input_ of the character that was obtained from element _index_ of _str_.
-            1. Let _c_ be a Continuation that always returns its State argument as a successful MatchResult.
+            1. Let _c_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
             1. Let _cap_ be a List of _NcapturingParens_ *undefined* values, indexed 1 through _NcapturingParens_.
             1. Let _x_ be the State (_listIndex_, _cap_).
             1. Call _m_(_x_, _c_) and return its result.
         </emu-alg>
         <emu-note>
-          <p>A Pattern evaluates (&ldquo;compiles&rdquo;) to an internal procedure value. RegExpBuiltinExec can then apply this procedure to a String and an offset within the String to determine whether the pattern would match starting at exactly that offset within the String, and, if it does match, what the values of the capturing parentheses would be. The algorithms in <emu-xref href="#sec-pattern-semantics"></emu-xref> are designed so that compiling a pattern may throw a *SyntaxError* exception; on the other hand, once the pattern is successfully compiled, applying the resulting internal procedure to find a match in a String cannot throw an exception (except for any host-defined exceptions that can occur anywhere such as out-of-memory).</p>
+          <p>A Pattern evaluates (&ldquo;compiles&rdquo;) to an abstract closure value. RegExpBuiltinExec can then apply this procedure to a String and an offset within the String to determine whether the pattern would match starting at exactly that offset within the String, and, if it does match, what the values of the capturing parentheses would be. The algorithms in <emu-xref href="#sec-pattern-semantics"></emu-xref> are designed so that compiling a pattern may throw a *SyntaxError* exception; on the other hand, once the pattern is successfully compiled, applying the resulting abstract closure to find a match in a String cannot throw an exception (except for any host-defined exceptions that can occur anywhere such as out-of-memory).</p>
         </emu-note>
       </emu-clause>
 
@@ -31531,7 +31549,9 @@ THH:mm:ss.sss
         <emu-alg>
           1. Evaluate |Alternative| with argument _direction_ to obtain a Matcher _m1_.
           1. Evaluate |Disjunction| with argument _direction_ to obtain a Matcher _m2_.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
             1. Call _m1_(_x_, _c_) and let _r_ be its result.
             1. If _r_ is not ~failure~, return _r_.
             1. Call _m2_(_x_, _c_) and return its result.
@@ -31554,20 +31574,31 @@ THH:mm:ss.sss
         <p>With parameter _direction_.</p>
         <p>The production <emu-grammar>Alternative :: [empty]</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return a Matcher that takes two arguments, a State _x_ and a Continuation _c_, and returns the result of calling _c_(_x_).
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Call _c_(_x_) and return its result.
         </emu-alg>
         <p>The production <emu-grammar>Alternative :: Alternative Term</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Alternative| with argument _direction_ to obtain a Matcher _m1_.
           1. Evaluate |Term| with argument _direction_ to obtain a Matcher _m2_.
           1. If _direction_ is equal to +1, then
-            1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-              1. Let _d_ be a Continuation that takes a State argument _y_ and returns the result of calling _m2_(_y_, _c_).
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
+              1. Let _d_ be a new Continuation with parameters (_y_) that captures _c_ and _m2_ and performs the following steps when called:
+                1. Assert: _y_ is a State.
+                1. Call _m2_(_y_, _c_) and return its result.
               1. Call _m1_(_x_, _d_) and return its result.
           1. Else,
             1. Assert: _direction_ is equal to -1.
-            1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-              1. Let _d_ be a Continuation that takes a State argument _y_ and returns the result of calling _m1_(_y_, _c_).
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
+              1. Let _d_ be a new Continuation with parameters (_y_) that captures _c_ and _m1_ and performs the following steps when called:
+                1. Assert: _y_ is a State.
+                1. Call _m1_(_y_, _c_) and return its result.
               1. Call _m2_(_x_, _d_) and return its result.
         </emu-alg>
         <emu-note>
@@ -31596,7 +31627,9 @@ THH:mm:ss.sss
           1. Assert: If _max_ is finite, then _max_ is not less than _min_.
           1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Term|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Term|.
           1. Let _parenCount_ be the number of left-capturing parentheses in |Atom|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes enclosed by |Atom|.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_, _min_, _max_, _greedy_, _parenIndex_, and _parenCount_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
             1. Call RepeatMatcher(_m_, _min_, _max_, _greedy_, _x_, _c_, _parenIndex_, _parenCount_) and return its result.
         </emu-alg>
 
@@ -31605,7 +31638,8 @@ THH:mm:ss.sss
           <p>The abstract operation RepeatMatcher takes eight parameters, a Matcher _m_, an integer _min_, an integer (or &infin;) _max_, a Boolean _greedy_, a State _x_, a Continuation _c_, an integer _parenIndex_, and an integer _parenCount_, and performs the following steps:</p>
           <emu-alg>
             1. If _max_ is zero, return _c_(_x_).
-            1. Let _d_ be an internal Continuation closure that takes one State argument _y_ and performs the following steps:
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures _m_, _min_, _max_, _greedy_, _x_, _c_, _parenIndex_, and _parenCount_ and performs the following steps when called:
+              1. Assert: _y_ is a State.
               1. If _min_ is zero and _y_'s _endIndex_ is equal to _x_'s _endIndex_, return ~failure~.
               1. If _min_ is zero, let _min2_ be zero; otherwise let _min2_ be _min_ - 1.
               1. If _max_ is &infin;, let _max2_ be &infin;; otherwise let _max2_ be _max_ - 1.
@@ -31670,7 +31704,9 @@ THH:mm:ss.sss
         <h1>Assertion</h1>
         <p>The production <emu-grammar>Assertion :: `^`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
             1. Let _e_ be _x_'s _endIndex_.
             1. If _e_ is zero, or if _Multiline_ is *true* and the character _Input_[_e_ - 1] is one of |LineTerminator|, then
               1. Call _c_(_x_) and return its result.
@@ -31681,7 +31717,9 @@ THH:mm:ss.sss
         </emu-note>
         <p>The production <emu-grammar>Assertion :: `$`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
             1. Let _e_ be _x_'s _endIndex_.
             1. If _e_ is equal to _InputLength_, or if _Multiline_ is *true* and the character _Input_[_e_] is one of |LineTerminator|, then
               1. Call _c_(_x_) and return its result.
@@ -31689,7 +31727,9 @@ THH:mm:ss.sss
         </emu-alg>
         <p>The production <emu-grammar>Assertion :: `\` `b`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
             1. Let _e_ be _x_'s _endIndex_.
             1. Call IsWordChar(_e_ - 1) and let _a_ be the Boolean result.
             1. Call IsWordChar(_e_) and let _b_ be the Boolean result.
@@ -31699,7 +31739,9 @@ THH:mm:ss.sss
         </emu-alg>
         <p>The production <emu-grammar>Assertion :: `\` `B`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
             1. Let _e_ be _x_'s _endIndex_.
             1. Call IsWordChar(_e_ - 1) and let _a_ be the Boolean result.
             1. Call IsWordChar(_e_) and let _b_ be the Boolean result.
@@ -31710,8 +31752,12 @@ THH:mm:ss.sss
         <p>The production <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Disjunction| with +1 as its _direction_ argument to obtain a Matcher _m_.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-            1. Let _d_ be a Continuation that always returns its State argument as a successful MatchResult.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
             1. Call _m_(_x_, _d_) and let _r_ be its result.
             1. If _r_ is ~failure~, return ~failure~.
             1. Let _y_ be _r_'s State.
@@ -31723,8 +31769,12 @@ THH:mm:ss.sss
         <p>The production <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Disjunction| with +1 as its _direction_ argument to obtain a Matcher _m_.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-            1. Let _d_ be a Continuation that always returns its State argument as a successful MatchResult.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
             1. Call _m_(_x_, _d_) and let _r_ be its result.
             1. If _r_ is not ~failure~, return ~failure~.
             1. Call _c_(_x_) and return its result.
@@ -31732,8 +31782,12 @@ THH:mm:ss.sss
         <p>The production <emu-grammar>Assertion :: `(` `?` `&lt;=` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Disjunction| with -1 as its _direction_ argument to obtain a Matcher _m_.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-            1. Let _d_ be a Continuation that always returns its State argument as a successful MatchResult.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
             1. Call _m_(_x_, _d_) and let _r_ be its result.
             1. If _r_ is ~failure~, return ~failure~.
             1. Let _y_ be _r_'s State.
@@ -31745,8 +31799,12 @@ THH:mm:ss.sss
         <p>The production <emu-grammar>Assertion :: `(` `?` `&lt;!` Disjunction `)`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
           1. Evaluate |Disjunction| with -1 as its _direction_ argument to obtain a Matcher _m_.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-            1. Let _d_ be a Continuation that always returns its State argument as a successful MatchResult.
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
+              1. Assert: _y_ is a State.
+              1. Return _y_.
             1. Call _m_(_x_, _d_) and let _r_ be its result.
             1. If _r_ is not ~failure~, return ~failure~.
             1. Call _c_(_x_) and return its result.
@@ -32078,8 +32136,11 @@ THH:mm:ss.sss
         <emu-alg>
           1. Evaluate |Disjunction| with argument _direction_ to obtain a Matcher _m_.
           1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Atom|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Atom|.
-          1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
-            1. Let _d_ be an internal Continuation closure that takes one State argument _y_ and performs the following steps:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _direction_, _m_, and _parenIndex_ and performs the following steps when called:
+            1. Assert: _x_ is a State.
+            1. Assert: _c_ is a Continuation.
+            1. Let _d_ be a new Continuation with parameters (_y_) that captures _x_, _c_, _direction_, and _parenIndex_ and performs the following steps when called:
+              1. Assert: _y_ is a State.
               1. Let _cap_ be a copy of _y_'s _captures_ List.
               1. Let _xe_ be _x_'s _endIndex_.
               1. Let _ye_ be _y_'s _endIndex_.
@@ -32104,7 +32165,9 @@ THH:mm:ss.sss
           <h1>Runtime Semantics: CharacterSetMatcher ( _A_, _invert_, _direction_ )</h1>
           <p>The abstract operation CharacterSetMatcher takes three arguments, a CharSet _A_, a Boolean flag _invert_, and an integer _direction_, and performs the following steps:</p>
           <emu-alg>
-            1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _A_, _invert_, and _direction_ and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
               1. Let _e_ be _x_'s _endIndex_.
               1. Let _f_ be _e_ + _direction_.
               1. If _f_ &lt; 0 or _f_ &gt; _InputLength_, return ~failure~.
@@ -32141,7 +32204,7 @@ THH:mm:ss.sss
               1. Return _cu_.
           </emu-alg>
           <emu-note>
-            <p>Parentheses of the form `(` |Disjunction| `)` serve both to group the components of the |Disjunction| pattern together and to save the result of the match. The result can be used either in a backreference (`\\` followed by a nonzero decimal number), referenced in a replace String, or returned as part of an array from the regular expression matching internal procedure. To inhibit the capturing behaviour of parentheses, use the form `(?:` |Disjunction| `)` instead.</p>
+            <p>Parentheses of the form `(` |Disjunction| `)` serve both to group the components of the |Disjunction| pattern together and to save the result of the match. The result can be used either in a backreference (`\\` followed by a nonzero decimal number), referenced in a replace String, or returned as part of an array from the regular expression matching abstract closure. To inhibit the capturing behaviour of parentheses, use the form `(?:` |Disjunction| `)` instead.</p>
           </emu-note>
           <emu-note>
             <p>The form `(?=` |Disjunction| `)` specifies a zero-width positive lookahead. In order for it to succeed, the pattern inside |Disjunction| must match at the current position, but the current position is not advanced before matching the sequel. If |Disjunction| can match at the current position in several ways, only the first one is tried. Unlike other regular expression operators, there is no backtracking into a `(?=` form (this unusual behaviour is inherited from Perl). This only matters when the |Disjunction| contains capturing parentheses and the sequel of the pattern contains backreferences to those captures.</p>
@@ -32240,7 +32303,9 @@ THH:mm:ss.sss
           <h1>Runtime Semantics: BackreferenceMatcher ( _n_, _direction_ )</h1>
           <p>The abstract operation BackreferenceMatcher takes two arguments, an integer _n_ and an integer _direction_, and performs the following steps:</p>
           <emu-alg>
-            1. Return an internal Matcher closure that takes two arguments, a State _x_ and a Continuation _c_, and performs the following steps:
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _n_ and _direction_ and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
               1. Let _cap_ be _x_'s _captures_ List.
               1. Let _s_ be _cap_[_n_].
               1. If _s_ is *undefined*, return _c_(_x_).
@@ -32558,7 +32623,7 @@ THH:mm:ss.sss
               1. Let _patternCharacters_ be a List whose elements are the code points of _pText_.
             1. Set _obj_.[[OriginalSource]] to _P_.
             1. Set _obj_.[[OriginalFlags]] to _F_.
-            1. Set _obj_.[[RegExpMatcher]] to the internal procedure that evaluates the above parse by applying the semantics provided in <emu-xref href="#sec-pattern-semantics"></emu-xref> using _patternCharacters_ as the pattern's List of |SourceCharacter| values and _F_ as the flag parameters.
+            1. Set _obj_.[[RegExpMatcher]] to the abstract closure that evaluates the above parse by applying the semantics provided in <emu-xref href="#sec-pattern-semantics"></emu-xref> using _patternCharacters_ as the pattern's List of |SourceCharacter| values and _F_ as the flag parameters.
             1. Perform ? Set(_obj_, *"lastIndex"*, 0, *true*).
             1. Return _obj_.
           </emu-alg>
@@ -32577,7 +32642,7 @@ THH:mm:ss.sss
           <h1>Runtime Semantics: EscapeRegExpPattern ( _P_, _F_ )</h1>
           <p>When the abstract operation EscapeRegExpPattern with arguments _P_ and _F_ is called, the following occurs:</p>
           <emu-alg>
-            1. Let _S_ be a String in the form of a |Pattern[~U]| (|Pattern[+U]| if _F_ contains *"u"*) equivalent to _P_ interpreted as UTF-16 encoded Unicode code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>), in which certain code points are escaped as described below. _S_ may or may not be identical to _P_; however, the internal procedure that would result from evaluating _S_ as a |Pattern[~U]| (|Pattern[+U]| if _F_ contains *"u"*) must behave identically to the internal procedure given by the constructed object's [[RegExpMatcher]] internal slot. Multiple calls to this abstract operation using the same values for _P_ and _F_ must produce identical results.
+            1. Let _S_ be a String in the form of a |Pattern[~U]| (|Pattern[+U]| if _F_ contains *"u"*) equivalent to _P_ interpreted as UTF-16 encoded Unicode code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>), in which certain code points are escaped as described below. _S_ may or may not be identical to _P_; however, the abstract closure that would result from evaluating _S_ as a |Pattern[~U]| (|Pattern[+U]| if _F_ contains *"u"*) must behave identically to the abstract closure given by the constructed object's [[RegExpMatcher]] internal slot. Multiple calls to this abstract operation using the same values for _P_ and _F_ must produce identical results.
             1. The code points `/` or any |LineTerminator| occurring in the pattern shall be escaped in _S_ as necessary to ensure that the string-concatenation of *"/"*, _S_, *"/"*, and _F_ can be parsed (in an appropriate lexical context) as a |RegularExpressionLiteral| that behaves identically to the constructed regular expression. For example, if _P_ is *"/"*, then _S_ could be *"\\/"* or *"\\u002F"*, among other possibilities, but not *"/"*, because `///` followed by _F_ would be parsed as a |SingleLineComment| rather than a |RegularExpressionLiteral|. If _P_ is the empty String, this specification can be met by letting _S_ be *"(?:)"*.
             1. Return _S_.
           </emu-alg>
@@ -33139,7 +33204,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-properties-of-regexp-instances">
       <h1>Properties of RegExp Instances</h1>
-      <p>RegExp instances are ordinary objects that inherit properties from the RegExp prototype object. RegExp instances have internal slots [[RegExpMatcher]], [[OriginalSource]], and [[OriginalFlags]]. The value of the [[RegExpMatcher]] internal slot is an implementation-dependent representation of the |Pattern| of the RegExp object.</p>
+      <p>RegExp instances are ordinary objects that inherit properties from the RegExp prototype object. RegExp instances have internal slots [[RegExpMatcher]], [[OriginalSource]], and [[OriginalFlags]]. The value of the [[RegExpMatcher]] internal slot is an abstract closure representation of the |Pattern| of the RegExp object.</p>
       <emu-note>
         <p>Prior to ECMAScript 2015, `RegExp` instances were specified as having the own data properties *"source"*, *"global"*, *"ignoreCase"*, and *"multiline"*. Those properties are now specified as accessor properties of `RegExp.prototype`.</p>
       </emu-note>
