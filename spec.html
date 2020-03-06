@@ -38120,7 +38120,8 @@ THH:mm:ss.sss
           1. Let _gap_ be the empty String.
         1. Let _wrapper_ be OrdinaryObjectCreate(%Object.prototype%).
         1. Perform ! CreateDataPropertyOrThrow(_wrapper_, the empty String, _value_).
-        1. Return ? SerializeJSONProperty(the empty String, _wrapper_).
+        1. Let _state_ be the Record { [[ReplacerFunction]]: _ReplacerFunction_, [[Stack]]: _stack_, [[Indent]]: _indent_, [[Gap]]: _gap_, [[PropertyList]]: _PropertyList_ }.
+        1. Return ? SerializeJSONProperty(_state_, the empty String, _wrapper_).
       </emu-alg>
       <p>This function is the <dfn>%JSONStringify%</dfn> intrinsic object.</p>
       <p>The *"length"* property of the `stringify` function is 3.</p>
@@ -38163,16 +38164,16 @@ THH:mm:ss.sss
       </emu-note>
 
       <emu-clause id="sec-serializejsonproperty" aoid="SerializeJSONProperty">
-        <h1>Runtime Semantics: SerializeJSONProperty ( _key_, _holder_ )</h1>
-        <p>The abstract operation SerializeJSONProperty with arguments _key_, and _holder_ has access to _ReplacerFunction_ from the invocation of the `stringify` method. Its algorithm is as follows:</p>
+        <h1>Runtime Semantics: SerializeJSONProperty ( _state_, _key_, _holder_ )</h1>
+        <p>The abstract operation SerializeJSONProperty with arguments _state_, _key_, and _holder_ performs the following steps:</p>
         <emu-alg>
           1. Let _value_ be ? Get(_holder_, _key_).
           1. If Type(_value_) is Object or BigInt, then
             1. Let _toJSON_ be ? GetV(_value_, *"toJSON"*).
             1. If IsCallable(_toJSON_) is *true*, then
               1. Set _value_ to ? Call(_toJSON_, _value_, &laquo; _key_ &raquo;).
-          1. If _ReplacerFunction_ is not *undefined*, then
-            1. Set _value_ to ? Call(_ReplacerFunction_, _holder_, &laquo; _key_, _value_ &raquo;).
+          1. If _state_.[[ReplacerFunction]] is not *undefined*, then
+            1. Set _value_ to ? Call(state.[[ReplacerFunction]], _holder_, &laquo; _key_, _value_ &raquo;).
           1. If Type(_value_) is Object, then
             1. If _value_ has a [[NumberData]] internal slot, then
               1. Set _value_ to ? ToNumber(_value_).
@@ -38192,8 +38193,8 @@ THH:mm:ss.sss
           1. If Type(_value_) is BigInt, throw a *TypeError* exception.
           1. If Type(_value_) is Object and IsCallable(_value_) is *false*, then
             1. Let _isArray_ be ? IsArray(_value_).
-            1. If _isArray_ is *true*, return ? SerializeJSONArray(_value_).
-            1. Return ? SerializeJSONObject(_value_).
+            1. If _isArray_ is *true*, return ? SerializeJSONArray(_state_, _value_).
+            1. Return ? SerializeJSONObject(_state_, _value_).
           1. Return *undefined*.
         </emu-alg>
       </emu-clause>
@@ -38325,56 +38326,56 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-serializejsonobject" aoid="SerializeJSONObject">
-        <h1>Runtime Semantics: SerializeJSONObject ( _value_ )</h1>
-        <p>The abstract operation SerializeJSONObject with argument _value_ serializes an object. It has access to the _stack_, _indent_, _gap_, and _PropertyList_ values of the current invocation of the `stringify` method.</p>
+        <h1>Runtime Semantics: SerializeJSONObject ( _state_, _value_ )</h1>
+        <p>The abstract operation SerializeJSONObject with arguments _state_ and _value_ serializes an object. It performs the following steps:</p>
         <emu-alg>
-          1. If _stack_ contains _value_, throw a *TypeError* exception because the structure is cyclical.
-          1. Append _value_ to _stack_.
-          1. Let _stepback_ be _indent_.
-          1. Set _indent_ to the string-concatenation of _indent_ and _gap_.
-          1. If _PropertyList_ is not *undefined*, then
-            1. Let _K_ be _PropertyList_.
+          1. If _state_.[[Stack]] contains _value_, throw a *TypeError* exception because the structure is cyclical.
+          1. Append _value_ to _state_.[[Stack]].
+          1. Let _stepback_ be _state_.[[Indent]].
+          1. Set _state_.[[Indent]] to the string-concatenation of _state_.[[Indent]] and _state_.[[Gap]].
+          1. If _state_.[[PropertyList]] is not *undefined*, then
+            1. Let _K_ be _state_.[[PropertyList]].
           1. Else,
             1. Let _K_ be ? EnumerableOwnPropertyNames(_value_, ~key~).
           1. Let _partial_ be a new empty List.
           1. For each element _P_ of _K_, do
-            1. Let _strP_ be ? SerializeJSONProperty(_P_, _value_).
+            1. Let _strP_ be ? SerializeJSONProperty(_state_, _P_, _value_).
             1. If _strP_ is not *undefined*, then
               1. Let _member_ be QuoteJSONString(_P_).
               1. Set _member_ to the string-concatenation of _member_ and *":"*.
-              1. If _gap_ is not the empty String, then
+              1. If state_.[[Gap]] is not the empty String, then
                 1. Set _member_ to the string-concatenation of _member_ and the code unit 0x0020 (SPACE).
               1. Set _member_ to the string-concatenation of _member_ and _strP_.
               1. Append _member_ to _partial_.
           1. If _partial_ is empty, then
             1. Let _final_ be *"{}"*.
           1. Else,
-            1. If _gap_ is the empty String, then
+            1. If state_.[[Gap]] is the empty String, then
               1. Let _properties_ be the String value formed by concatenating all the element Strings of _partial_ with each adjacent pair of Strings separated with the code unit 0x002C (COMMA). A comma is not inserted either before the first String or after the last String.
               1. Let _final_ be the string-concatenation of *"{"*, _properties_, and *"}"*.
             1. Else,
-              1. Let _separator_ be the string-concatenation of the code unit 0x002C (COMMA), the code unit 0x000A (LINE FEED), and _indent_.
+              1. Let _separator_ be the string-concatenation of the code unit 0x002C (COMMA), the code unit 0x000A (LINE FEED), and _state_.[[Indent]].
               1. Let _properties_ be the String value formed by concatenating all the element Strings of _partial_ with each adjacent pair of Strings separated with _separator_. The _separator_ String is not inserted either before the first String or after the last String.
-              1. Let _final_ be the string-concatenation of *"{"*, the code unit 0x000A (LINE FEED), _indent_, _properties_, the code unit 0x000A (LINE FEED), _stepback_, and *"}"*.
-          1. Remove the last element of _stack_.
-          1. Set _indent_ to _stepback_.
+              1. Let _final_ be the string-concatenation of *"{"*, the code unit 0x000A (LINE FEED), _state_.[[Indent]], _properties_, the code unit 0x000A (LINE FEED), _stepback_, and *"}"*.
+          1. Remove the last element of _state_.[[Stack]].
+          1. Set _state_.[[Indent]] to _stepback_.
           1. Return _final_.
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-serializejsonarray" aoid="SerializeJSONArray">
-        <h1>Runtime Semantics: SerializeJSONArray ( _value_ )</h1>
-        <p>The abstract operation SerializeJSONArray with argument _value_ serializes an array. It has access to the _stack_, _indent_, and _gap_ values of the current invocation of the `stringify` method.</p>
+        <h1>Runtime Semantics: SerializeJSONArray ( _state_, _value_ )</h1>
+        <p>The abstract operation SerializeJSONArray with arguments _state_ and _value_ serializes an array. It performs the following steps:</p>
         <emu-alg>
-          1. If _stack_ contains _value_, throw a *TypeError* exception because the structure is cyclical.
-          1. Append _value_ to _stack_.
-          1. Let _stepback_ be _indent_.
-          1. Set _indent_ to the string-concatenation of _indent_ and _gap_.
+          1. If _state_.[[Stack]] contains _value_, throw a *TypeError* exception because the structure is cyclical.
+          1. Append _value_ to _state_.[[Stack]].
+          1. Let _stepback_ be _state_.[[Indent]].
+          1. Set _state_.[[Indent]] to the string-concatenation of _state_.[[Indent]] and _state_.[[Gap]].
           1. Let _partial_ be a new empty List.
           1. Let _len_ be ? LengthOfArrayLike(_value_).
           1. Let _index_ be 0.
           1. Repeat, while _index_ &lt; _len_
-            1. Let _strP_ be ? SerializeJSONProperty(! ToString(_index_), _value_).
+            1. Let _strP_ be ? SerializeJSONProperty(_state_, ! ToString(_index_), _value_).
             1. If _strP_ is *undefined*, then
               1. Append *"null"* to _partial_.
             1. Else,
@@ -38383,15 +38384,15 @@ THH:mm:ss.sss
           1. If _partial_ is empty, then
             1. Let _final_ be *"[]"*.
           1. Else,
-            1. If _gap_ is the empty String, then
+            1. If _state_.[[Gap]] is the empty String, then
               1. Let _properties_ be the String value formed by concatenating all the element Strings of _partial_ with each adjacent pair of Strings separated with the code unit 0x002C (COMMA). A comma is not inserted either before the first String or after the last String.
               1. Let _final_ be the string-concatenation of *"["*, _properties_, and *"]"*.
             1. Else,
-              1. Let _separator_ be the string-concatenation of the code unit 0x002C (COMMA), the code unit 0x000A (LINE FEED), and _indent_.
+              1. Let _separator_ be the string-concatenation of the code unit 0x002C (COMMA), the code unit 0x000A (LINE FEED), and _state_.[[Indent]].
               1. Let _properties_ be the String value formed by concatenating all the element Strings of _partial_ with each adjacent pair of Strings separated with _separator_. The _separator_ String is not inserted either before the first String or after the last String.
-              1. Let _final_ be the string-concatenation of *"["*, the code unit 0x000A (LINE FEED), _indent_, _properties_, the code unit 0x000A (LINE FEED), _stepback_, and *"]"*.
-          1. Remove the last element of _stack_.
-          1. Set _indent_ to _stepback_.
+              1. Let _final_ be the string-concatenation of *"["*, the code unit 0x000A (LINE FEED), _state_.[[Indent]], _properties_, the code unit 0x000A (LINE FEED), _stepback_, and *"]"*.
+          1. Remove the last element of _state_.[[Stack]].
+          1. Set _state_.[[Indent]] to _stepback_.
           1. Return _final_.
         </emu-alg>
         <emu-note>
