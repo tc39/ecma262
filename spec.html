@@ -13393,9 +13393,13 @@
 
       MetaProperty :
         NewTarget
+        ImportMeta
 
       NewTarget :
         `new` `.` `target`
+
+      ImportMeta :
+        `import` `.` `meta`
 
       NewExpression[Yield, Await] :
         MemberExpression[?Yield, ?Await]
@@ -13482,6 +13486,16 @@
           </code></pre>
           <p>which is a valid statement and where automatic semicolon insertion does not apply.</p>
         </emu-note>
+
+        <emu-grammar>
+          ImportMeta :
+            `import` `.` `meta`
+        </emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the syntactic goal symbol is not |Module|.
+          </li>
+        </ul>
       </emu-clause>
 
       <emu-clause id="sec-left-hand-side-expressions-static-semantics-coveredcallexpression">
@@ -13644,6 +13658,9 @@
 
           NewTarget :
             `new` `.` `target`
+
+          ImportMeta :
+            `import` `.` `meta`
 
           LeftHandSideExpression :
             OptionalExpression
@@ -14092,6 +14109,53 @@
         <emu-alg>
           1. Return GetNewTarget().
         </emu-alg>
+
+        <emu-grammar>ImportMeta : `import` `.` `meta`</emu-grammar>
+        <emu-alg>
+          1. Let _module_ be ! GetActiveScriptOrModule().
+          1. Assert: _module_ is a Source Text Module Record.
+          1. Let _importMeta_ be _module_.[[ImportMeta]].
+          1. If _importMeta_ is ~empty~, then
+            1. Set _importMeta_ to ! OrdinaryObjectCreate(*null*).
+            1. Let _importMetaValues_ be ! HostGetImportMetaProperties(_module_).
+            1. For each Record { [[Key]], [[Value]] } _p_ that is an element of _importMetaValues_, do
+              1. Perform ! CreateDataPropertyOrThrow(_importMeta_, _p_.[[Key]], _p_.[[Value]]).
+            1. Perform ! HostFinalizeImportMeta(_importMeta_, _module_).
+            1. Set _module_.[[ImportMeta]] to _importMeta_.
+            1. Return _importMeta_.
+          1. Else,
+            1. Assert: Type(_importMeta_) is Object.
+            1. Return _importMeta_.
+        </emu-alg>
+
+        <emu-clause id="sec-hostgetimportmetaproperties" aoid="HostGetImportMetaProperties">
+          <h1>Runtime Semantics: HostGetImportMetaProperties ( _moduleRecord_ )</h1>
+          <p>HostGetImportMetaProperties is an implementation-defined abstract operation that allows hosts to provide property keys and values for the object returned from `import.meta`.</p>
+
+          <p>The implementation of HostGetImportMetaProperties must conform to the following requirements:</p>
+          <ul>
+            <li>It must return a List, whose values are all Records with two fields, [[Key]] and [[Value]].</li>
+            <li>Each such Record's [[Key]] field must be a property key, i.e., IsPropertyKey must return *true* when applied to it.</li>
+            <li>Each such Record's [[Value]] field must be an ECMAScript value.</li>
+            <li>It must always complete normally (i.e., not return an abrupt completion).</li>
+          </ul>
+
+          <p>The default implementation of HostGetImportMetaProperties is to return a new empty List.</p>
+        </emu-clause>
+
+        <emu-clause id="sec-hostfinalizeimportmeta" aoid="HostFinalizeImportMeta">
+          <h1>Runtime Semantics: HostFinalizeImportMeta ( _importMeta_, _moduleRecord_ )</h1>
+          <p>HostFinalizeImportMeta is an implementation-defined abstract operation that allows hosts to perform any extraordinary operations to prepare the object returned from `import.meta`.</p>
+
+          <p>Most hosts will be able to simply define HostGetImportMetaProperties, and leave HostFinalizeImportMeta with its default behavior. However, HostFinalizeImportMeta provides an "escape hatch" for hosts which need to directly manipulate the object before it is exposed to ECMAScript code.</p>
+
+          <p>The implementation of HostFinalizeImportMeta must conform to the following requirements:</p>
+          <ul>
+            <li>It must always complete normally (i.e., not return an abrupt completion).</li>
+          </ul>
+
+          <p>The default implementation of HostFinalizeImportMeta is to return NormalCompletion(~empty~).</p>
+        </emu-clause>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -23325,6 +23389,17 @@
             </tr>
             <tr>
               <td>
+                [[ImportMeta]]
+              </td>
+              <td>
+                Object
+              </td>
+              <td>
+                An object exposed through the `import.meta` meta property. It is ~empty~ until it is accessed by ECMAScript code.
+              </td>
+            </tr>
+            <tr>
+              <td>
                 [[ImportEntries]]
               </td>
               <td>
@@ -23798,7 +23873,7 @@
                 1. Append _ee_ to _starExportEntries_.
               1. Else,
                 1. Append _ee_ to _indirectExportEntries_.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: *undefined*, [[Namespace]]: *undefined*, [[Status]]: ~unlinked~, [[EvaluationError]]: *undefined*, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: *undefined*, [[DFSAncestorIndex]]: *undefined* }.
+            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: *undefined*, [[Namespace]]: *undefined*, [[Status]]: ~unlinked~, [[EvaluationError]]: *undefined*, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: *undefined*, [[DFSAncestorIndex]]: *undefined* }.
           </emu-alg>
           <emu-note>
             <p>An implementation may parse module source text and analyse it for Early Error conditions prior to the evaluation of ParseModule for that module source text. However, the reporting of any errors must be deferred until the point where this specification actually performs ParseModule upon that source text.</p>
@@ -41638,6 +41713,7 @@ THH:mm:ss.sss
     <emu-prodref name="SuperProperty"></emu-prodref>
     <emu-prodref name="MetaProperty"></emu-prodref>
     <emu-prodref name="NewTarget"></emu-prodref>
+    <emu-prodref name="ImportMeta"></emu-prodref>
     <emu-prodref name="NewExpression"></emu-prodref>
     <emu-prodref name="CallExpression"></emu-prodref>
     <p>When processing an instance of the production <emu-prodref name="CallExpression" a="callcover"></emu-prodref> the interpretation of |CoverCallExpressionAndAsyncArrowHead| is refined using the following grammar:</p>
