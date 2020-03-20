@@ -4435,7 +4435,7 @@
 
     <emu-clause id="sec-data-blocks">
       <h1>Data Blocks</h1>
-      <p>The <dfn>Data Block</dfn> specification type is used to describe a distinct and mutable sequence of byte-sized (8 bit) numeric values. A Data Block value is created with a fixed number of bytes that each have the initial value 0.</p>
+      <p>The <dfn>Data Block</dfn> specification type is used to describe a distinct and mutable sequence of byte-sized (8 bit) numeric values. A <dfn>byte value</dfn> is an integer value in the range 0 through 255, inclusive. A Data Block value is created with a fixed number of bytes that each have the initial value 0.</p>
       <p>For notational convenience within this specification, an array-like syntax can be used to access the individual bytes of a Data Block value. This notation presents a Data Block value as a 0-origined integer-indexed sequence of bytes. For example, if _db_ is a 5 byte Data Block value then _db_[2] can be used to access its 3<sup>rd</sup> byte.</p>
       <p>A data block that resides in memory that can be referenced from multiple agents concurrently is designated a <dfn>Shared Data Block</dfn>. A Shared Data Block has an identity (for the purposes of equality testing Shared Data Block values) that is <em>address-free</em>: it is tied not to the virtual addresses the block is mapped to in any process, but to the set of locations in memory that the block represents. Two data blocks are equal only if the sets of the locations they contain are equal; otherwise, they are not equal and the intersection of the sets of locations they contain is empty.  Finally, Shared Data Blocks can be distinguished from Data Blocks.</p>
       <p>The semantics of Shared Data Blocks is defined using Shared Data Block events by the memory model. Abstract operations below introduce Shared Data Block events and act as the interface between evaluation semantics and the event semantics of the memory model. The events form a candidate execution, on which the memory model acts as a filter. Please consult the memory model for full semantics.</p>
@@ -36762,6 +36762,23 @@ THH:mm:ss.sss
   <emu-clause id="sec-arraybuffer-objects">
     <h1>ArrayBuffer Objects</h1>
 
+    <emu-clause id="sec-arraybuffer-notation">
+      <h1>Notation</h1>
+      <p>The descriptions below in this section, <emu-xref href="#sec-atomics-object"></emu-xref>, and <emu-xref href="#sec-memory-model"></emu-xref> use the read-modify-write modification function internal data structure.</p>
+      <p>A <dfn>read-modify-write modification function</dfn> is a mathematical function that is notationally represented as an abstract closure that takes two Lists of byte values as arguments and returns a List of byte values. These abstract closures satisfy all of the following properties:</p>
+      <ul>
+        <li>They perform all their algorithm steps atomically.</li>
+        <li>Their individual algorithm steps are not observable.</li>
+      </ul>
+      <emu-note>
+        <p>To aid verifying that a read-modify-write modification function's algorithm steps constitute a pure, mathematical function, the following editorial conventions are recommended:</p>
+        <ul>
+          <li>They do not access, directly or transitively via invoked abstract operations and abstract closures, any language or specification values except their parameters and captured values.</li>
+          <li>They do not return completion values.</li>
+        </ul>
+      </emu-note>
+    </emu-clause>
+
     <emu-clause id="sec-abstract-operations-for-arraybuffer-objects">
       <h1>Abstract Operations For ArrayBuffer Objects</h1>
 
@@ -36948,7 +36965,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-getmodifysetvalueinbuffer" aoid="GetModifySetValueInBuffer">
         <h1>GetModifySetValueInBuffer ( _arrayBuffer_, _byteIndex_, _type_, _value_, _op_ [ , _isLittleEndian_ ] )</h1>
-        <p>The abstract operation GetModifySetValueInBuffer takes arguments _arrayBuffer_ (a SharedArrayBuffer object), _byteIndex_ (a non-negative integer), _type_ (a TypedArray element type), _value_ (a Number or a BigInt), and _op_ (a semantic function) and optional argument _isLittleEndian_ (a Boolean). It performs the following steps when called:</p>
+        <p>The abstract operation GetModifySetValueInBuffer takes arguments _arrayBuffer_ (a SharedArrayBuffer object), _byteIndex_ (a non-negative integer), _type_ (a TypedArray element type), _value_ (a Number or a BigInt), and _op_ (a read-modify-write modification function) and optional argument _isLittleEndian_ (a Boolean). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: IsSharedArrayBuffer(_arrayBuffer_) is *true*.
           1. Assert: There are sufficient bytes in _arrayBuffer_ starting at _byteIndex_ to represent a value of _type_.
@@ -37785,7 +37802,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-atomicreadmodifywrite" aoid="AtomicReadModifyWrite">
         <h1>AtomicReadModifyWrite ( _typedArray_, _index_, _value_, _op_ )</h1>
-        <p>The abstract operation AtomicReadModifyWrite takes arguments _typedArray_, _index_, _value_, and _op_ (a pure combining operation). _op_ takes two List of byte values arguments and returns a List of byte values. This operation atomically loads a value, combines it with another value, and stores the result of the combination. It returns the loaded value. It performs the following steps when called:</p>
+        <p>The abstract operation AtomicReadModifyWrite takes arguments _typedArray_, _index_, _value_, and _op_ (a read-modify-write modification function). _op_ takes two List of byte values arguments and returns a List of byte values. This operation atomically loads a value, combines it with another value, and stores the result of the combination. It returns the loaded value. It performs the following steps when called:</p>
         <emu-alg>
           1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
           1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
@@ -37814,23 +37831,63 @@ THH:mm:ss.sss
           1. Return GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, ~SeqCst~).
         </emu-alg>
       </emu-clause>
+
+      <emu-clause id="sec-bytelistbitwiseop" aoid="ByteListBitwiseOp">
+        <h1>ByteListBitwiseOp( _op_, _xBytes_, _yBytes_ )</h1>
+        <p>The abstract operation ByteListBitwiseOp takes arguments _op_ (a read-modify-write modification function), _xBytes_ (a List of byte values), and _yBytes_ (a List of byte values). The operation atomically performs a bitwise operation on all byte values of the arguments and returns a List of byte values. It performs the following steps when called:</p>
+        <emu-alg>
+          1. Assert: _xBytes_ and _yBytes_ have the same number of elements.
+          1. Let _result_ be a new empty List.
+          1. Let _i_ be 0.
+          1. For each element _xByte_ of _xBytes_, do
+            1. Let _yByte_ be _yBytes_[_i_].
+            1. Let _resultByte_ be the result of applying the bitwise operator _op_ to _xByte_ and _yByte_.
+            1. Set _i_ to _i_ + 1.
+            1. Append _resultByte_ to the end of _result_.
+          1. Return _result_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-bytelistequal" aoid="ByteListEqual">
+        <h1>ByteListEqual( _xBytes_, _yBytes_ )</h1>
+        <p>The abstract operation ByteListEqual takes arguments _xBytes_ (a List of byte values) and _yBytes_ (a List of byte values). It performs the following steps when called:</p>
+        <emu-alg>
+          1. If _xBytes_ and _yBytes_ do not have the same number of elements, return *false*.
+          1. Let _i_ be 0.
+          1. For each element _xByte_ of _xBytes_, do
+            1. Let _yByte_ be _yBytes_[_i_].
+            1. If _xByte_ is not equal to _yByte_, return *false*.
+            1. Set _i_ to _i_ + 1.
+          1. Return *true*.
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-atomics.add">
       <h1>Atomics.add ( _typedArray_, _index_, _value_ )</h1>
-      <p>Let `add` denote a semantic function of two List of byte values arguments that applies the addition operation to the Number values corresponding to the List of byte values arguments and returns a List of byte values corresponding to the result of that operation.</p>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, `add`).
+        1. Let _type_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _typedArray_.[[TypedArrayName]].
+        1. Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
+        1. Let _add_ be a new read-modify-write modification function with parameters (_xBytes_, _yBytes_) that captures _type_ and _isLittleEndian_ and performs the following steps atomically when called:
+          1. Let _x_ be RawBytesToNumeric(_type_, _xBytes_, _isLittleEndian_).
+          1. Let _y_ be RawBytesToNumeric(_type_, _yBytes_, _isLittleEndian_).
+          1. Let _T_ be Type(_x_).
+          1. Let _sum_ be _T_::add(_x_, _y_).
+          1. Let _sumBytes_ be NumericToRawBytes(_type_, _sum_, _isLittleEndian_).
+          1. Assert: _sumBytes_, _xBytes_, and _yBytes_ have the same number of elements.
+          1. Return _sumBytes_.
+        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, _add_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-atomics.and">
       <h1>Atomics.and ( _typedArray_, _index_, _value_ )</h1>
-      <p>Let `and` denote a semantic function of two List of byte values arguments that applies the bitwise-and operation element-wise to the two arguments and returns a List of byte values corresponding to the result of that operation.</p>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, `and`).
+        1. Let _and_ be a new read-modify-write modification function with parameters (_xBytes_, _yBytes_) that captures nothing and performs the following steps atomically when called:
+          1. Return ByteListBitwiseOp(`&`, _xBytes_, _yBytes_).
+        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, _and_).
       </emu-alg>
     </emu-clause>
 
@@ -37853,17 +37910,20 @@ THH:mm:ss.sss
         1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
         1. Let _offset_ be _typedArray_.[[ByteOffset]].
         1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
-        1. Let `compareExchange` denote a semantic function of two List of byte values arguments that returns the second argument if the first argument is element-wise equal to _expectedBytes_.
-        1. Return GetModifySetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _replacement_, `compareExchange`).
+        1. Let _compareExchange_ be a new read-modify-write modification function with parameters (_oldBytes_, _newBytes_) that captures _expectedBytes_ and performs the following steps atomically when called:
+          1. If ByteListEqual(_oldBytes_, _expectedBytes_) is *true*, return _newBytes_.
+          1. Return _oldBytes_.
+        1. Return GetModifySetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _replacement_, _compareExchange_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-atomics.exchange">
       <h1>Atomics.exchange ( _typedArray_, _index_, _value_ )</h1>
-      <p>Let `second` denote a semantic function of two List of byte values arguments that returns its second argument.</p>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, `second`).
+        1. Let _second_ be a new read-modify-write modification function with parameters (_oldBytes_, _newBytes_) that captures nothing and performs the following steps atomically when called:
+          1. Return _newBytes_.
+        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, _second_).
       </emu-alg>
     </emu-clause>
 
@@ -37895,10 +37955,11 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-atomics.or">
       <h1>Atomics.or ( _typedArray_, _index_, _value_ )</h1>
-      <p>Let `or` denote a semantic function of two List of byte values arguments that applies the bitwise-or operation element-wise to the two arguments and returns a List of byte values corresponding to the result of that operation.</p>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, `or`).
+        1. Let _or_ be a new read-modify-write modification function with parameters (_xBytes_, _yBytes_) that captures nothing and performs the following steps atomically when called:
+          1. Return ByteListBitwiseOp(`|`, _xBytes_, _yBytes_).
+        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, _or_).
       </emu-alg>
     </emu-clause>
 
@@ -37922,10 +37983,19 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-atomics.sub">
       <h1>Atomics.sub ( _typedArray_, _index_, _value_ )</h1>
-      <p>Let `subtract` denote a semantic function of two List of byte values arguments that applies the subtraction operation to the Number values corresponding to the List of byte values arguments and returns a List of byte values corresponding to the result of that operation.</p>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, `subtract`).
+        1. Let _type_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _typedArray_.[[TypedArrayName]].
+        1. Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
+        1. Let _subtract_ be a new read-modify-write modification function with parameters (_xBytes_, _yBytes_) that captures _type_ and _isLittleEndian_ and performs the following steps atomically when called:
+          1. Let _x_ be RawBytesToNumeric(_type_, _xBytes_, _isLittleEndian_).
+          1. Let _y_ be RawBytesToNumeric(_type_, _yBytes_, _isLittleEndian_).
+          1. Let _T_ be Type(_x_).
+          1. Let _difference_ be _T_::subtract(_x_, _y_).
+          1. Let _differenceBytes_ be NumericToRawBytes(_type_, _difference_, _isLittleEndian_).
+          1. Assert: _differenceBytes_, _xBytes_, and _yBytes_ have the same number of elements.
+          1. Return _differenceBytes_.
+        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, _subtract_).
       </emu-alg>
     </emu-clause>
 
@@ -37996,10 +38066,11 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-atomics.xor">
       <h1>Atomics.xor ( _typedArray_, _index_, _value_ )</h1>
-      <p>Let `xor` denote a semantic function of two List of byte values arguments that applies the bitwise-xor operation element-wise to the two arguments and returns a List of byte values corresponding to the result of that operation.</p>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, `xor`).
+        1. Let _xor_ be a new read-modify-write modification function with parameters (_xBytes_, _yBytes_) that captures nothing and performs the following steps atomically when called:
+          1. Return ByteListBitwiseOp(`^`, _xBytes_, _yBytes_).
+        1. Return ? AtomicReadModifyWrite(_typedArray_, _index_, _value_, _xor_).
       </emu-alg>
     </emu-clause>
 
@@ -41006,8 +41077,8 @@ THH:mm:ss.sss
           </tr>
           <tr>
             <td>[[ModifyOp]]</td>
-            <td>A semantic function</td>
-            <td>A pure semantic function that returns a modified List of byte values from a read List of byte values and [[Payload]].</td>
+            <td>A read-modify-write modification function</td>
+            <td>An abstract closure that returns a modified List of byte values from a read List of byte values and [[Payload]].</td>
           </tr>
         </tbody>
       </table>
@@ -41108,7 +41179,7 @@ THH:mm:ss.sss
           </tr>
           <tr>
             <td>[[ReadsBytesFrom]]</td>
-            <td>A reads-bytes-from semantic function.</td>
+            <td>A reads-bytes-from mathematical function.</td>
             <td>Defined below.</td>
           </tr>
           <tr>
@@ -41195,7 +41266,7 @@ THH:mm:ss.sss
         1. Return _bytesRead_.
       </emu-alg>
       <emu-note>
-        <p>The semantic function [[ModifyOp]] is given by the function properties on the Atomics object that introduce ReadModifyWriteSharedMemory events.</p>
+        <p>The read-modify-write modification [[ModifyOp]] is given by the function properties on the Atomics object that introduce ReadModifyWriteSharedMemory events.</p>
       </emu-note>
       <emu-note>
         <p>This abstract operation composes a List of write events into a List of byte values. It is used in the event semantics of ReadSharedMemory and ReadModifyWriteSharedMemory events.</p>
@@ -41230,7 +41301,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-reads-bytes-from" aoid="reads-bytes-from">
       <h1>reads-bytes-from</h1>
-      <p>For a candidate execution _execution_, _execution_.[[ReadsBytesFrom]] is a semantic function from events in SharedDataBlockEventSet(_execution_) to Lists of events in SharedDataBlockEventSet(_execution_) that satisfies the following conditions.</p>
+      <p>For a candidate execution _execution_, _execution_.[[ReadsBytesFrom]] is a mathematical function mapping events in SharedDataBlockEventSet(_execution_) to Lists of events in SharedDataBlockEventSet(_execution_) that satisfies the following conditions.</p>
       <ul>
         <li>
           <p>For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ in SharedDataBlockEventSet(_execution_), _execution_.[[ReadsBytesFrom]](_R_) is a List of length equal to _R_.[[ElementSize]] of WriteSharedMemory or ReadModifyWriteSharedMemory events _Ws_ such that all of the following are true.</p>
