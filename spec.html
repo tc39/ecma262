@@ -7600,17 +7600,23 @@
   <emu-clause id="sec-jobs" oldids="sec-jobs-and-job-queues,sec-enqueuejob,sec-runjobs,job-queue">
     <h1>Jobs and Host Operations to Enqueue Jobs</h1>
     <p>A <dfn id="job">Job</dfn> is an abstract closure with no parameters that initiates an ECMAScript computation when no other ECMAScript computation is currently in progress.</p>
+    <p>A Job is stored in a <dfn>Job Record</dfn>, which has the slots [[AbstractClosure]], [[Realm]], and [[ScriptOrModule]].</p>
     <p>Jobs are scheduled for execution by ECMAScript host environments. This specification describes the host hook HostEnqueuePromiseJob to schedule one kind of job; host environments may define additional abstract operations which schedule jobs. Such operations accept a Job abstract closure as the parameter and schedule it to be performed at some future time. Their implementations must conform to the following requirements:</p>
 
     <ul>
-      <li>At some future point in time, when there is no running execution context and the execution context stack is empty, the implementation must:
-        <ol>
-          <li>Push an execution context onto the execution context stack.</li>
-          <li>Perform any implementation-defined preparation steps.</li>
-          <li>Call the abstract closure.</li>
-          <li>Perform any implementation-defined cleanup steps.</li>
-          <li>Pop the previously-pushed execution context from the execution context stack.</li>
-        </ol>
+      <li>At some future point in time, when there is no running execution context and the execution context stack is empty, the implementation must perform the following steps:
+        <emu-alg>
+          1. Let _job_ be the selected Job Record.
+          1. Let _context_ be a new ECMAScript code exceution context.
+          1. Set the Function of _context_ to *null*.
+          1. Set the Realm of _context_ to _job_.[[Record]].
+          1. Set the ScriptOrModule of _context_ to _job_.[[ScriptOrModule]].
+          1. Push _context_ onto the execution context stack; _context_ is now the running exceution context.
+          1. Perform any implementation-defined preparation steps.
+          1. Perform ! _job_.[[AbstractClosure]]().
+          1. Perform any implementation-defined cleanup steps.
+          1. Pop _context_ from the exceution context stack.
+        </emu-alg>
       </li>
       <li>Only one Job may be actively undergoing evaluation at any point in time.</li>
       <li>Once evaluation of a Job starts, it must run to completion before evaluation of any other Job starts.</li>
@@ -7628,10 +7634,17 @@
       <p>The _realm_ parameter is passed through to hosts with no normative requirements; it is either *null* or a Realm.</p>
 
       <emu-note>
-        The _realm_ for PromiseResolveThenableJobs is the result of calling GetFunctionRealm on the _then_ function object. The _realm_ for PromiseReactionJobs is the result of calling GetFunctionRealm on the handler if the handler is not *undefined*. Otherwise the _realm_ is *null*. The WHATWG HTML specification, for example, uses _realm_ to check for ability to run script and to prepare to run script.
+        The _realm_ argument passed to PromiseResolveThenableJobs is the result of calling GetFunctionRealm on the _then_ function object. The _realm_ for PromiseReactionJobs is the result of calling GetFunctionRealm on the handler if the handler is not *undefined*. Otherwise the _realm_ is *null*. The WHATWG HTML specification, for example, uses _realm_ to check for ability to run script and to prepare to run script.
       </emu-note>
 
       <p>The implementation of HostEnqueuePromiseJob must conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref>. Additionally, Jobs must be scheduled in FIFO order, with Jobs running in the same order as the HostEnqueuePromiseJob invocations which scheduled them.</p>
+
+      <emu-alg>
+        1. Let _activeRealm_ be the current Realm Record.
+        1. Let _activeScriptOrModule_ be ! GetActiveScriptOrModule().
+        1. Let _r_ be Job Record { [[AbstractClosure]]: _job_, [[Realm]]: _activeRealm_, [[ScriptOrModule]]: _activeScriptOrModule_ }.
+        1. Schedule _r_ to be performed, at some future time, conforming to the requirements in <emu-xref href="#sec-jobs"></emu-xref>.
+      </emu-alg>
     </emu-clause>
   </emu-clause>
 
