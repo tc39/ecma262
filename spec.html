@@ -30890,7 +30890,7 @@ THH:mm:ss.sss
           `.`
           `\` AtomEscape[?U, ?N]
           CharacterClass[?U]
-          `(` GroupSpecifier Disjunction[?U, ?N] `)`
+          `(` GroupSpecifier[?U] Disjunction[?U, ?N] `)`
           `(` `?` `:` Disjunction[?U, ?N] `)`
 
         SyntaxCharacter :: one of
@@ -30903,7 +30903,7 @@ THH:mm:ss.sss
           DecimalEscape
           CharacterClassEscape[?U]
           CharacterEscape[?U]
-          [+N] `k` GroupName
+          [+N] `k` GroupName[?U]
 
         CharacterEscape[U] ::
           ControlEscape
@@ -30920,27 +30920,29 @@ THH:mm:ss.sss
           `a` `b` `c` `d` `e` `f` `g` `h` `i` `j` `k` `l` `m` `n` `o` `p` `q` `r` `s` `t` `u` `v` `w` `x` `y` `z`
           `A` `B` `C` `D` `E` `F` `G` `H` `I` `J` `K` `L` `M` `N` `O` `P` `Q` `R` `S` `T` `U` `V` `W` `X` `Y` `Z`
 
-        GroupSpecifier ::
+        GroupSpecifier[U] ::
           [empty]
-          `?` GroupName
+          `?` GroupName[?U]
 
-        GroupName ::
-          `&lt;` RegExpIdentifierName `&gt;`
+        GroupName[U] ::
+          `&lt;` RegExpIdentifierName[?U] `&gt;`
 
-        RegExpIdentifierName ::
-          RegExpIdentifierStart
-          RegExpIdentifierName RegExpIdentifierPart
+        RegExpIdentifierName[U] ::
+          RegExpIdentifierStart[?U]
+          RegExpIdentifierName[?U] RegExpIdentifierPart[?U]
 
-        RegExpIdentifierStart ::
+        RegExpIdentifierStart[U] ::
           UnicodeIDStart
           `$`
           `_`
           `\` RegExpUnicodeEscapeSequence[+U]
+          [~U] UnicodeLeadSurrogate UnicodeTrailSurrogate
 
-        RegExpIdentifierPart ::
+        RegExpIdentifierPart[U] ::
           UnicodeIDContinue
           `$`
           `\` RegExpUnicodeEscapeSequence[+U]
+          [~U] UnicodeLeadSurrogate UnicodeTrailSurrogate
           &lt;ZWNJ&gt;
           &lt;ZWJ&gt;
 
@@ -30951,6 +30953,12 @@ THH:mm:ss.sss
           [+U] `u` NonSurrogate
           [~U] `u` Hex4Digits
           [+U] `u{` CodePoint `}`
+
+        UnicodeLeadSurrogate ::
+          any Unicode code point in the inclusive range 0xD800 to 0xDBFF
+
+        UnicodeTrailSurrogate ::
+          any Unicode code point in the inclusive range 0xDC00 to 0xDFFF
       </emu-grammar>
       <p>Each `\\u` |TrailSurrogate| for which the choice of associated `u` |LeadSurrogate| is ambiguous shall be associated with the nearest possible `u` |LeadSurrogate| that would otherwise have no corresponding `\\u` |TrailSurrogate|.</p>
       <emu-grammar type="definition">
@@ -31091,13 +31099,25 @@ THH:mm:ss.sss
         <emu-grammar>RegExpIdentifierStart[U] :: `\` RegExpUnicodeEscapeSequence[?U]</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the CharacterValue of |RegExpUnicodeEscapeSequence| is none of *"$"*, or *"_"*, or the UTF16Encoding of a code point matched by the |UnicodeIDStart| lexical grammar production.
+            It is a Syntax Error if the CharacterValue of |RegExpUnicodeEscapeSequence| is not the code point value of *"$"*, *"_"*, or some code point matched by the |UnicodeIDStart| lexical grammar production.
+          </li>
+        </ul>
+        <emu-grammar>RegExpIdentifierStart[U] :: UnicodeLeadSurrogate UnicodeTrailSurrogate</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the result of performing UTF16DecodeSurrogatePair on the two code points matched by UnicodeLeadSurrogate and UnicodeTrailSurrogate respectively is not matched by the |UnicodeIDStart| lexical grammar production.
           </li>
         </ul>
         <emu-grammar>RegExpIdentifierPart[U] :: `\` RegExpUnicodeEscapeSequence[?U]</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the CharacterValue of |RegExpUnicodeEscapeSequence| is none of *"$"*, or *"_"*, or the UTF16Encoding of either &lt;ZWNJ&gt; or &lt;ZWJ&gt;, or the UTF16Encoding of a Unicode code point that would be matched by the |UnicodeIDContinue| lexical grammar production.
+            It is a Syntax Error if the CharacterValue of |RegExpUnicodeEscapeSequence| is not the code point value of *"$"*,  *"_"*, &lt;ZWNJ&gt;, &lt;ZWJ&gt;, or some code point matched by the |UnicodeIDContinue| lexical grammar production.
+          </li>
+        </ul>
+        <emu-grammar>RegExpIdentifierPart[U] :: UnicodeLeadSurrogate UnicodeTrailSurrogate</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the result of performing UTF16DecodeSurrogatePair on the two code points matched by UnicodeLeadSurrogate and UnicodeTrailSurrogate respectively is not matched by the |UnicodeIDContinue| lexical grammar production.
           </li>
         </ul>
         <emu-grammar>UnicodePropertyValueExpression :: UnicodePropertyName `=` UnicodePropertyValue</emu-grammar>
