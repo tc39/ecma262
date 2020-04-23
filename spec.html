@@ -2546,7 +2546,7 @@
             If the Type of the return value is Property Descriptor, the return value must be a <emu-xref href="#sec-completepropertydescriptor">complete property descriptor</emu-xref>.
           </li>
           <li>
-            If _P_ is described as a non-configurable, non-writable own data property, all future calls to [[GetOwnProperty]] ( _P_ ) must return Property Descritor whose [[Value]] is SameValue as _P_'s [[Value]] attribute.
+            If _P_ is described as a non-configurable, non-writable own data property, all future calls to [[GetOwnProperty]] ( _P_ ) must return Property Descriptor whose [[Value]] is SameValue as _P_'s [[Value]] attribute.
           </li>
           <li>
             If _P_'s attributes other than [[Writable]] may change over time or if the property might be deleted, then _P_'s [[Configurable]] attribute must be *true*.
@@ -7417,7 +7417,7 @@
         1. Let _global_ be _realmRec_.[[GlobalObject]].
         1. For each property of the Global Object specified in clause <emu-xref href="#sec-global-object"></emu-xref>, do
           1. Let _name_ be the String value of the property name.
-          1. Let _desc_ be the fully populated data property descriptor for the property containing the specified attributes for the property. For properties listed in <emu-xref href="#sec-function-properties-of-the-global-object"></emu-xref>, <emu-xref href="#sec-constructor-properties-of-the-global-object"></emu-xref>, or <emu-xref href="#sec-other-properties-of-the-global-object"></emu-xref> the value of the [[Value]] attribute is the corresponding intrinsic object from _realmRec_.
+          1. Let _desc_ be the fully populated data property descriptor for the property, containing the specified attributes for the property. For properties listed in <emu-xref href="#sec-function-properties-of-the-global-object"></emu-xref>, <emu-xref href="#sec-constructor-properties-of-the-global-object"></emu-xref>, or <emu-xref href="#sec-other-properties-of-the-global-object"></emu-xref> the value of the [[Value]] attribute is the corresponding intrinsic object from _realmRec_.
           1. Perform ? DefinePropertyOrThrow(_global_, _name_, _desc_).
         1. Return _global_.
       </emu-alg>
@@ -7526,7 +7526,7 @@
             Generator
           </td>
           <td>
-            The GeneratorObject that this execution context is evaluating.
+            The generator object that this execution context is evaluating.
           </td>
         </tr>
         </tbody>
@@ -8624,7 +8624,7 @@
           1. If *"arguments"* is an element of _functionNames_ or if *"arguments"* is an element of _lexicalNames_, then
             1. Set _argumentsObjectNeeded_ to *false*.
         1. If _strict_ is *true* or if _hasParameterExpressions_ is *false*, then
-          1. NOTE: Only a single lexical environment is needed for the parameters and top-level vars.
+          1. NOTE: Only a single Environment Record is needed for the parameters and top-level vars.
           1. Let _env_ be the LexicalEnvironment of _calleeContext_.
         1. Else,
           1. NOTE: A separate Environment Record is needed to ensure that bindings created by direct eval calls in the formal parameter list are outside the environment where parameters are declared.
@@ -11820,6 +11820,9 @@
           </li>
           <li>
             The TV of <emu-grammar>TemplateCharacter :: `\` NotEscapeSequence</emu-grammar> is *undefined*.
+          </li>
+          <li>
+            The TV of <emu-grammar>TemplateCharacter :: LineTerminatorSequence</emu-grammar> is the TRV of |LineTerminatorSequence|.
           </li>
           <li>
             The TV of <emu-grammar>LineContinuation :: `\` LineTerminatorSequence</emu-grammar> is the empty code unit sequence.
@@ -20121,6 +20124,9 @@
         1. Perform SetFunctionName(_closure_, _name_).
         1. Return _closure_.
       </emu-alg>
+      <emu-note>
+        <p>An |ArrowFunction| does not define local bindings for `arguments`, `super`, `this`, or `new.target`. Any reference to `arguments`, `super`, `this`, or `new.target` within an |ArrowFunction| must resolve to a binding in a lexically enclosing environment. Typically this will be the Function Environment of an immediately enclosing function. Even though an |ArrowFunction| may contain references to `super`, the function object created in step 4 is not made into a method by performing MakeMethod. An |ArrowFunction| that references `super` is always contained within a non-|ArrowFunction| and the necessary state to implement `super` is accessible via the _scope_ that is captured by the function object of the |ArrowFunction|.</p>
+      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-arrow-function-definitions-runtime-semantics-evaluation">
@@ -20129,9 +20135,6 @@
       <emu-alg>
         1. Return the result of performing NamedEvaluation for this |ArrowFunction| with argument *""*.
       </emu-alg>
-      <emu-note>
-        <p>An |ArrowFunction| does not define local bindings for `arguments`, `super`, `this`, or `new.target`. Any reference to `arguments`, `super`, `this`, or `new.target` within an |ArrowFunction| must resolve to a binding in a lexically enclosing environment. Typically this will be the Function Environment of an immediately enclosing function. Even though an |ArrowFunction| may contain references to `super`, the function object created in step 3 is not made into a method by performing MakeMethod. An |ArrowFunction| that references `super` is always contained within a non-|ArrowFunction| and the necessary state to implement `super` is accessible via the _scope_ that is captured by the function object of the |ArrowFunction|.</p>
-      </emu-note>
       <emu-grammar>ExpressionBody : AssignmentExpression</emu-grammar>
       <emu-alg>
         1. Let _exprRef_ be the result of evaluating |AssignmentExpression|.
@@ -20267,7 +20270,7 @@
         1. Let _propKey_ be the result of evaluating |PropertyName|.
         1. ReturnIfAbrupt(_propKey_).
         1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. If _functionPrototype_ is present as a parameter, then
+        1. If _functionPrototype_ is present, then
           1. Let _prototype_ be _functionPrototype_.
         1. Else,
           1. Let _prototype_ be %Function.prototype%.
@@ -28550,9 +28553,6 @@
           1. If abs(_time_) &gt; 8.64 &times; 10<sup>15</sup>, return *NaN*.
           1. Return ! ToInteger(_time_).
         </emu-alg>
-        <emu-note>
-          <p>The point of step 4 is that an implementation is permitted a choice of internal representations of time values, for example as a 64-bit signed integer or as a 64-bit floating-point value. Depending on the implementation, this internal representation may or may not distinguish *-0* and *+0*.</p>
-        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-date-time-string-format">
@@ -30662,7 +30662,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-createstringiterator" aoid="CreateStringIterator">
         <h1>CreateStringIterator ( _string_ )</h1>
-        <p>The abstract operation CreateStringIterator takes argument _string_. This operation is used to create iterator objects for String methods which return such iterators. It performs the following steps when called:</p>
+        <p>The abstract operation CreateStringIterator takes argument _string_. This operation is used to create iterator objects for String methods that return such iterators. It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: Type(_string_) is String.
           1. Let _iterator_ be OrdinaryObjectCreate(%StringIteratorPrototype%, &laquo; [[IteratedString]], [[StringNextIndex]] &raquo;).
@@ -31533,7 +31533,7 @@ THH:mm:ss.sss
             <p>because each iteration of the outermost `*` clears all captured Strings contained in the quantified |Atom|, which in this case includes capture Strings numbered 2, 3, 4, and 5.</p>
           </emu-note>
           <emu-note>
-            <p>Step 2.a of the RepeatMatcher states that once the minimum number of repetitions has been satisfied, any more expansions of |Atom| that match the empty character sequence are not considered for further repetitions. This prevents the regular expression engine from falling into an infinite loop on patterns such as:</p>
+            <p>Step 2.b of the RepeatMatcher states that once the minimum number of repetitions has been satisfied, any more expansions of |Atom| that match the empty character sequence are not considered for further repetitions. This prevents the regular expression engine from falling into an infinite loop on patterns such as:</p>
             <pre><code class="javascript">/(a*)*/.exec("b")</code></pre>
             <p>or the slightly more complicated:</p>
             <pre><code class="javascript">/(a*)b\1+/.exec("baaaac")</code></pre>
@@ -34272,7 +34272,7 @@ THH:mm:ss.sss
             <p>Because non-existent property values always compare greater than *undefined* property values, and *undefined* always compares greater than any other value, *undefined* property values always sort to the end of the result, followed by non-existent property values.</p>
           </emu-note>
           <emu-note>
-            <p>Method calls performed by the ToString abstract operations in steps 5 and 7 have the potential to cause SortCompare to not behave as a consistent comparison function.</p>
+            <p>Method calls performed by the ToString abstract operations in steps 5 and 6 have the potential to cause SortCompare to not behave as a consistent comparison function.</p>
           </emu-note>
         </emu-clause>
       </emu-clause>
@@ -34502,7 +34502,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-createarrayiterator" aoid="CreateArrayIterator">
         <h1>CreateArrayIterator ( _array_, _kind_ )</h1>
-        <p>The abstract operation CreateArrayIterator takes arguments _array_ and _kind_. This operation is used to create iterator objects for Array methods which return such iterators. It performs the following steps when called:</p>
+        <p>The abstract operation CreateArrayIterator takes arguments _array_ and _kind_. This operation is used to create iterator objects for Array methods that return such iterators. It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: Type(_array_) is Object.
           1. Assert: _kind_ is ~key+value~, ~key~, or ~value~.
@@ -36039,7 +36039,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-createmapiterator" aoid="CreateMapIterator">
         <h1>CreateMapIterator ( _map_, _kind_ )</h1>
-        <p>The abstract operation CreateMapIterator takes arguments _map_ and _kind_. This operation is used to create iterator objects for Map methods which return such iterators. It performs the following steps when called:</p>
+        <p>The abstract operation CreateMapIterator takes arguments _map_ and _kind_. This operation is used to create iterator objects for Map methods that return such iterators. It performs the following steps when called:</p>
         <emu-alg>
           1. Perform ? RequireInternalSlot(_map_, [[MapData]]).
           1. Let _iterator_ be OrdinaryObjectCreate(%MapIteratorPrototype%, &laquo; [[IteratedMap]], [[MapNextIndex]], [[MapIterationKind]] &raquo;).
@@ -36373,7 +36373,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-createsetiterator" aoid="CreateSetIterator">
         <h1>CreateSetIterator ( _set_, _kind_ )</h1>
-        <p>The abstract operation CreateSetIterator takes arguments _set_ and _kind_. This operation is used to create iterator objects for Set methods which return such iterators. It performs the following steps when called:</p>
+        <p>The abstract operation CreateSetIterator takes arguments _set_ and _kind_. This operation is used to create iterator objects for Set methods that return such iterators. It performs the following steps when called:</p>
         <emu-alg>
           1. Perform ? RequireInternalSlot(_set_, [[SetData]]).
           1. Let _iterator_ be OrdinaryObjectCreate(%SetIteratorPrototype%, &laquo; [[IteratedSet]], [[SetNextIndex]], [[SetIterationKind]] &raquo;).
