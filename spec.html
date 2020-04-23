@@ -7207,16 +7207,16 @@
       <p>The following abstract operations are used in this specification to operate upon Environment Records:</p>
 
       <emu-clause id="sec-getidentifierreference" aoid="GetIdentifierReference">
-        <h1>GetIdentifierReference ( _lex_, _name_, _strict_ )</h1>
-        <p>The abstract operation GetIdentifierReference takes arguments _lex_ (an Environment Record or *null*), _name_ (a String), and _strict_ (a Boolean). It performs the following steps when called:</p>
+        <h1>GetIdentifierReference ( _env_, _name_, _strict_ )</h1>
+        <p>The abstract operation GetIdentifierReference takes arguments _env_ (an Environment Record or *null*), _name_ (a String), and _strict_ (a Boolean). It performs the following steps when called:</p>
         <emu-alg>
-          1. If _lex_ is the value *null*, then
+          1. If _env_ is the value *null*, then
             1. Return a value of type Reference whose base value component is *undefined*, whose referenced name component is _name_, and whose strict reference flag is _strict_.
-          1. Let _exists_ be ? _lex_.HasBinding(_name_).
+          1. Let _exists_ be ? _env_.HasBinding(_name_).
           1. If _exists_ is *true*, then
-            1. Return a value of type Reference whose base value component is _lex_, whose referenced name component is _name_, and whose strict reference flag is _strict_.
+            1. Return a value of type Reference whose base value component is _env_, whose referenced name component is _name_, and whose strict reference flag is _strict_.
           1. Else,
-            1. Let _outer_ be _lex_.[[OuterEnv]].
+            1. Let _outer_ be _env_.[[OuterEnv]].
             1. Return ? GetIdentifierReference(_outer_, _name_, _strict_).
         </emu-alg>
       </emu-clause>
@@ -7561,13 +7561,13 @@
       <h1>GetThisEnvironment ( )</h1>
       <p>The abstract operation GetThisEnvironment takes no arguments. It finds the Environment Record that currently supplies the binding of the keyword `this`. It performs the following steps when called:</p>
       <emu-alg>
-        1. Let _lex_ be the running execution context's LexicalEnvironment.
+        1. Let _env_ be the running execution context's LexicalEnvironment.
         1. Repeat,
-          1. Let _exists_ be _lex_.HasThisBinding().
-          1. If _exists_ is *true*, return _lex_.
-          1. Let _outer_ be _lex_.[[OuterEnv]].
+          1. Let _exists_ be _env_.HasThisBinding().
+          1. If _exists_ is *true*, return _env_.
+          1. Let _outer_ be _env_.[[OuterEnv]].
           1. Assert: _outer_ is not *null*.
-          1. Set _lex_ to _outer_.
+          1. Set _env_ to _outer_.
       </emu-alg>
       <emu-note>
         <p>The loop in step 2 will always terminate because the list of environments always ends with the global environment which has a `this` binding.</p>
@@ -21186,8 +21186,8 @@
       <p>With parameters _classBinding_ and _className_.</p>
       <emu-grammar>ClassTail : ClassHeritage? `{` ClassBody? `}`</emu-grammar>
       <emu-alg>
-        1. Let _lex_ be the LexicalEnvironment of the running execution context.
-        1. Let _classScope_ be NewDeclarativeEnvironment(_lex_).
+        1. Let _env_ be the LexicalEnvironment of the running execution context.
+        1. Let _classScope_ be NewDeclarativeEnvironment(_env_).
         1. If _classBinding_ is not *undefined*, then
           1. Perform _classScope_.CreateImmutableBinding(_classBinding_, *true*).
         1. If |ClassHeritage_opt| is not present, then
@@ -21196,7 +21196,7 @@
         1. Else,
           1. Set the running execution context's LexicalEnvironment to _classScope_.
           1. Let _superclassRef_ be the result of evaluating |ClassHeritage|.
-          1. Set the running execution context's LexicalEnvironment to _lex_.
+          1. Set the running execution context's LexicalEnvironment to _env_.
           1. Let _superclass_ be ? GetValue(_superclassRef_).
           1. If _superclass_ is *null*, then
             1. Let _protoParent_ be *null*.
@@ -21234,9 +21234,9 @@
           1. Else,
             1. Let _status_ be PropertyDefinitionEvaluation of _m_ with arguments _F_ and *false*.
           1. If _status_ is an abrupt completion, then
-            1. Set the running execution context's LexicalEnvironment to _lex_.
+            1. Set the running execution context's LexicalEnvironment to _env_.
             1. Return Completion(_status_).
-        1. Set the running execution context's LexicalEnvironment to _lex_.
+        1. Set the running execution context's LexicalEnvironment to _env_.
         1. If _classBinding_ is not *undefined*, then
           1. Perform _classScope_.InitializeBinding(_classBinding_, _F_).
         1. Return _F_.
@@ -24924,17 +24924,17 @@
               1. For each _name_ in _varNames_, do
                 1. If _varEnv_.HasLexicalDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
                 1. NOTE: `eval` will not create a global var declaration that would be shadowed by a global lexical declaration.
-            1. Let _thisLex_ be _lexEnv_.
+            1. Let _thisEnv_ be _lexEnv_.
             1. Assert: The following loop will terminate.
-            1. Repeat, while _thisLex_ is not the same as _varEnv_,
-              1. If _thisLex_ is not an object Environment Record, then
+            1. Repeat, while _thisEnv_ is not the same as _varEnv_,
+              1. If _thisEnv_ is not an object Environment Record, then
                 1. NOTE: The environment of with statements cannot contain any lexical declaration so it doesn't need to be checked for var/let hoisting conflicts.
                 1. For each _name_ in _varNames_, do
-                  1. If _thisLex_.HasBinding(_name_) is *true*, then
+                  1. If _thisEnv_.HasBinding(_name_) is *true*, then
                     1. Throw a *SyntaxError* exception.
                     1. NOTE: Annex <emu-xref href="#sec-variablestatements-in-catch-blocks"></emu-xref> defines alternate semantics for the above step.
                   1. NOTE: A direct eval will not hoist var declaration over a like-named lexical declaration.
-              1. Set _thisLex_ to _thisLex_.[[OuterEnv]].
+              1. Set _thisEnv_ to _thisEnv_.[[OuterEnv]].
           1. Let _functionsToInitialize_ be a new empty List.
           1. Let _declaredFunctionNames_ be a new empty List.
           1. For each _d_ in _varDeclarations_, in reverse list order, do
@@ -42955,13 +42955,13 @@ THH:mm:ss.sss
               1. Let _F_ be StringValue of the |BindingIdentifier| of _f_.
               1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _body_, then
                 1. Let _bindingExists_ be *false*.
-                1. Let _thisLex_ be _lexEnv_.
+                1. Let _thisEnv_ be _lexEnv_.
                 1. Assert: The following loop will terminate.
-                1. Repeat, while _thisLex_ is not the same as _varEnv_,
-                  1. If _thisLex_ is not an object Environment Record, then
-                    1. If _thisLex_.HasBinding(_F_) is *true*, then
+                1. Repeat, while _thisEnv_ is not the same as _varEnv_,
+                  1. If _thisEnv_ is not an object Environment Record, then
+                    1. If _thisEnv_.HasBinding(_F_) is *true*, then
                       1. Let _bindingExists_ be *true*.
-                  1. Set _thisLex_ to _thisLex_.[[OuterEnv]].
+                  1. Set _thisEnv_ to _thisEnv_.[[OuterEnv]].
                 1. If _bindingExists_ is *false* and _varEnv_ is a global Environment Record, then
                   1. If _varEnv_.HasLexicalDeclaration(_F_) is *false*, then
                     1. Let _fnDefinable_ be ? _varEnv_.CanDeclareGlobalVar(_F_).
@@ -43059,11 +43059,11 @@ THH:mm:ss.sss
       <p>This modified behaviour also applies to `var` and `function` declarations introduced by direct eval calls contained within the |Block| of a |Catch| clause. This change is accomplished by modifying the algorithm of <emu-xref href="#sec-evaldeclarationinstantiation"></emu-xref> as follows:</p>
       <p>Step 3.d.i.2.a.i is replaced by:</p>
       <emu-alg type="i">
-        1. If _thisLex_ is not the Environment Record for a |Catch| clause, throw a *SyntaxError* exception.
+        1. If _thisEnv_ is not the Environment Record for a |Catch| clause, throw a *SyntaxError* exception.
       </emu-alg>
       <p>Step 7.d.ii.4.a.i.i is replaced by:</p>
       <emu-alg type="i">
-        1. If _thisLex_ is not the Environment Record for a |Catch| clause, let _bindingExists_ be *true*.
+        1. If _thisEnv_ is not the Environment Record for a |Catch| clause, let _bindingExists_ be *true*.
       </emu-alg>
     </emu-annex>
 
