@@ -1,16 +1,33 @@
-script:
-  - 'if [ -n "${BUILD-}" ]; then npm run build-master; fi'
-  - 'if [ -n "${BUILD-}" ] && [ "${TRAVIS_BRANCH-}" = "master" ]; then ./scripts/auto-deploy.sh; fi;'
-
 env:
   global:
     - secure: "UCSm2OZkCtH8EPSPjp8fujOyQrtHtPJi8DDdOyCSkUunSw9H+HiONwuh+J1Of77B9OUC1HTWE51tW75nsnaQik4GihXB+eah7ow3RLM14LoLoUz+PA84W8sDuuCbm37Kqtf4vnWKlAUhDeUZNyhGyIezdB22UaqWWir9KGdp4AE="
 
+workspaces:
+  use:
+    - build
+stages:
+  - install-build
+  - upload
+
 matrix:
   include:
-    - node_js: "lts/*"
+    - stage: install-build
+      workspaces:
+        create:
+          name: build
+          paths:
+            - ./
+      node_js: "lts/*"
       env: BUILD=true
+      script:
+        - 'npm run build-master'
+        - 'if [ "${TRAVIS_BRANCH-}" = "master" ]; then ./scripts/auto-deploy.sh; fi;'
+    - stage: upload
+      node_js: "lts/*"
+      env: UPLOAD=true
+      script:
+        - 'node scripts/insert_snapshot_warning'
+        - 'node scripts/publish-preview'
+      if: type = pull_request AND repo = tc39/ecma262
 
 language: node_js
-
-sudo: false
