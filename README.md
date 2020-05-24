@@ -10,6 +10,8 @@ the ECMAScript® Language Specification.
 This source is processed to obtain a human-readable version,
 which you can view [here](https://tc39.es/ecma262/).
 
+If you want to explore how the specification was written, you can also view the source with its history in [searchfox](https://searchfox.org/ecma262/source/spec.html).
+
 ## Current Proposals
 
 Proposals follow [the TC39 process](https://tc39.es/process-document/) and are tracked in the [proposals repository](https://github.com/tc39/proposals).
