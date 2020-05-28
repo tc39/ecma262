@@ -8357,6 +8357,17 @@
         </tr>
         <tr>
           <td>
+            [[PresentInStackTraces]]
+          </td>
+          <td>
+            Boolean
+          </td>
+          <td>
+            When *false*, this function must not have a corresponding entry in stack traces.
+          </td>
+        </tr>
+        <tr>
+          <td>
             [[HasSourceTextAvailable]]
           </td>
           <td>
@@ -8514,7 +8525,9 @@
         1. Set _F_.[[FormalParameters]] to _ParameterList_.
         1. Set _F_.[[ECMAScriptCode]] to _Body_.
         1. If the source text matching _Body_ is strict mode code, let _Strict_ be *true*; else let _Strict_ be *false*.
+        1. Set _F_.[[PresentInStackTraces]] to PresentInStackTraces of _Body_.
         1. Set _F_.[[HasSourceTextAvailable]] to HasSourceTextAvailable of _Body_.
+        1. Assert: If _F_.[[PresentInStackTraces]] is *false*, _F_.[[HasSourceTextAvailable]] is *false*.
         1. Set _F_.[[Strict]] to _Strict_.
         1. If _thisMode_ is ~lexical-this~, set _F_.[[ThisMode]] to ~lexical~.
         1. Else if _Strict_ is *true*, set _F_.[[ThisMode]] to ~strict~.
@@ -13635,17 +13648,30 @@
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-callexpression-static-semantics-presentinstacktraces">
+        <h1>Static Semantics: PresentInStackTraces</h1>
+        <emu-see-also-para op="PresentInStackTraces"></emu-see-also-para>
+        <emu-grammar>CallExpression : CoverCallExpressionAndAsyncArrowHead</emu-grammar>
+        <emu-alg>
+          1. If |CallExpression| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Sensitive Directive, return *false*.
+          1. If the source text matched by |CallExpression| is eval code resulting from a direct eval, then
+            1. Return PresentInStackTraces of the |CallExpression| whose evaluation is the direct eval.
+          1. Return *true*.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-callexpression-static-semantics-hassourcetextavailable">
         <h1>Static Semantics: HasSourceTextAvailable</h1>
         <emu-see-also-para op="HasSourceTextAvailable"></emu-see-also-para>
         <emu-grammar>CallExpression : CoverCallExpressionAndAsyncArrowHead</emu-grammar>
         <emu-alg>
-          1. If |CallExpression| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Hidden Implementation Directive, return *false*.
+          1. If |CallExpression| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Sensitive Directive or a Hidden Implementation Directive, return *false*.
           1. If the source text matched by |CallExpression| is eval code resulting from a direct eval, then
             1. Return HasSourceTextAvailable of the |CallExpression| whose evaluation is the direct eval.
           1. Return *true*.
         </emu-alg>
       </emu-clause>
+
     </emu-clause>
 
     <emu-clause id="sec-property-accessors">
@@ -19453,8 +19479,9 @@
       <h1>Directive Prologues</h1>
       <p>A <dfn id="directive-prologue">Directive Prologue</dfn> is the longest sequence of |ExpressionStatement|s occurring as the initial |StatementListItem|s or |ModuleItem|s of a |FunctionBody|, a |ScriptBody|, or a |ModuleBody| and where each |ExpressionStatement| in the sequence consists entirely of a |StringLiteral| token followed by a semicolon. The semicolon may appear explicitly or may be inserted by automatic semicolon insertion. A Directive Prologue may be an empty sequence.</p>
       <p>A <dfn id="use-strict-directive">Use Strict Directive</dfn> is an |ExpressionStatement| in a Directive Prologue whose |StringLiteral| is either of the exact code point sequences `"use strict"` or `'use strict'`. A Use Strict Directive may not contain an |EscapeSequence| or |LineContinuation|.</p>
+      <p>A <dfn id="sensitive-directive">Sensitive Directive</dfn> is an |ExpressionStatement| in a Directive Prologue whose |StringLiteral| is either of the exact code point sequences `"sensitive"` or `'sensitive'`. A Sensitive Directive may not contain an |EscapeSequence| or |LineContinuation|.</p>
       <p>A <dfn id="hidden-implementation-directive">Hidden Implementation Directive</dfn> is an |ExpressionStatement| in a Directive Prologue whose |StringLiteral| is either of the exact code point sequences `"hide source"` or `'hide source'`. A Hidden Implementation Directive may not contain an |EscapeSequence| or |LineContinuation|.</p>
-      <p>A <dfn id="built-in-directive">Built-in Directive</dfn> is an |ExpressionStatement| in a Directive Prologue that is either a Use Strict Directive or a Hidden Implementation Directive.</p>
+      <p>A <dfn id="built-in-directive">Built-in Directive</dfn> is an |ExpressionStatement| in a Directive Prologue that is either a Use Strict Directive, a Sensitive Directive, or a Hidden Implementation Directive.</p>
       <p>A Directive Prologue may contain duplicate Built-in Directives. However, an implementation may issue a warning if this occurs.</p>
       <emu-note>
         <p>The |ExpressionStatement|s of a Directive Prologue are evaluated normally during evaluation of the containing production. Implementations may define implementation-specific meanings for |ExpressionStatement|s in a Directive Prologue which are not a Built-in Directive. If an appropriate notification mechanism exists, an implementation should issue a warning if it encounters in a Directive Prologue an |ExpressionStatement| that is not a Built-in Directive and which does not have a meaning defined by the implementation.</p>
@@ -19643,13 +19670,26 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-function-definitions-static-semantics-presentinstacktraces">
+      <h1>Static Semantics: PresentInStackTraces</h1>
+      <emu-see-also-para op="PresentInStackTraces"></emu-see-also-para>
+      <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
+      <emu-alg>
+        1. If the Directive Prologue of |FunctionBody| contains a Sensitive Directive, return *false*.
+        1. If |FunctionBody| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Sensitive Directive, return *false*.
+        1. If the source text matched by |FunctionBody| is eval code resulting from a direct eval, then
+          1. Return PresentInStackTraces of the |CallExpression| whose evaluation is the direct eval.
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-function-definitions-static-semantics-hassourcetextavailable">
       <h1>Static Semantics: HasSourceTextAvailable</h1>
       <emu-see-also-para op="HasSourceTextAvailable"></emu-see-also-para>
       <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
       <emu-alg>
-        1. If the Directive Prologue of |FunctionBody| contains a Hidden Implementation Directive, return *false*.
-        1. If |FunctionBody| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Hidden Implementation Directive, return *false*.
+        1. If the Directive Prologue of |FunctionBody| contains a Sensitive Directive or a Hidden Implementation Directive, return *false*.
+        1. If |FunctionBody| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Sensitive Directive or a Hidden Implementation Directive, return *false*.
         1. If the source text matched by |FunctionBody| is eval code resulting from a direct eval, then
           1. Return HasSourceTextAvailable of the |CallExpression| whose evaluation is the direct eval.
         1. Return *true*.
@@ -20056,12 +20096,24 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-arrow-function-definitions-static-semantics-presentinstacktraces">
+      <h1>Static Semantics: PresentInStackTraces</h1>
+      <emu-see-also-para op="PresentInStackTraces"></emu-see-also-para>
+      <emu-grammar>ExpressionBody : AssignmentExpression</emu-grammar>
+      <emu-alg>
+        1. If |ExpressionBody| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Sensitive Directive, return *false*.
+        1. If the source text matched by |ExpressionBody| is eval code resulting from a direct eval, then
+          1. Return PresentInStackTraces of the |CallExpression| whose evaluation is the direct eval.
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-arrow-function-definitions-static-semantics-hassourcetextavailable">
       <h1>Static Semantics: HasSourceTextAvailable</h1>
       <emu-see-also-para op="HasSourceTextAvailable"></emu-see-also-para>
       <emu-grammar>ExpressionBody : AssignmentExpression</emu-grammar>
       <emu-alg>
-        1. If |ExpressionBody| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Hidden Implementation Directive, return *false*.
+        1. If |ExpressionBody| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Sensitive Directive or a Hidden Implementation Directive, return *false*.
         1. If the source text matched by |ExpressionBody| is eval code resulting from a direct eval, then
           1. Return HasSourceTextAvailable of the |CallExpression| whose evaluation is the direct eval.
         1. Return *true*.
@@ -26881,7 +26933,7 @@
   <emu-clause id="sec-error-objects">
     <h1>Error Objects</h1>
     <p>Instances of Error objects are thrown as exceptions when runtime errors occur. The Error objects may also serve as base objects for user-defined exception classes.</p>
-    <p>Stack trace information exposed to the running program through implementation-defined accessors such as the de facto `Error.prototype.stack` must not include any incidental attribution or position information related to functions whose [[HasSourceTextAvailable]] slot has a value of *false*. Examples of incidental attribution information are filenames, module specifiers, and URIs. Examples of incidental position information are line numbers and column numbers.</p>
+    <p>Stack trace information exposed to the running program through implementation-defined accessors such as the de facto `Error.prototype.stack` must not indicate the presence of functions whose [[PresentInStackTraces]] slot has a value of *false*. Additionally, stack frames from these accessors which refer to functions whose [[HasSourceTextAvailable]] slot has a value of *false* must not include any incidental attribution or position information related to the function. Examples of incidental attribution information are filenames, module specifiers, and URIs. Examples of incidental position information are line numbers and column numbers.</p>
 
     <emu-clause id="sec-error-constructor">
       <h1>The Error Constructor</h1>
