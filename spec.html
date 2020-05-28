@@ -490,7 +490,7 @@
       <h1>The Syntactic Grammar</h1>
       <p>The <em>syntactic grammar</em> for ECMAScript is given in clauses 11, 12, 13, 14, and 15. This grammar has ECMAScript tokens defined by the lexical grammar as its terminal symbols (<emu-xref href="#sec-lexical-and-regexp-grammars"></emu-xref>). It defines a set of productions, starting from two alternative goal symbols |Script| and |Module|, that describe how sequences of tokens form syntactically correct independent components of ECMAScript programs.</p>
       <p>When a stream of code points is to be parsed as an ECMAScript |Script| or |Module|, it is first converted to a stream of input elements by repeated application of the lexical grammar; this stream of input elements is then parsed by a single application of the syntactic grammar. The input stream is syntactically in error if the tokens in the stream of input elements cannot be parsed as a single instance of the goal nonterminal (|Script| or |Module|), with no tokens left over.</p>
-      <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn>Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol.</p>
+      <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn>Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol. A Parse Node _A_ occurs within another Parse Node _B_ if _A_ is the child of _B_ or if _A_ is the child of some Parse Node _C_ where _C_ occurs within _B_.</p>
       <p>New Parse Nodes are instantiated for each invocation of the parser and never reused between parses even of identical source text. Parse Nodes are considered <dfn>the same Parse Node</dfn> if and only if they represent the same span of source text, are instances of the same grammar symbol, and resulted from the same parser invocation.</p>
       <emu-note>
         <p>Parsing the same String multiple times will lead to different Parse Nodes. For example, consider:</p>
@@ -8357,6 +8357,17 @@
         </tr>
         <tr>
           <td>
+            [[HasSourceTextAvailable]]
+          </td>
+          <td>
+            Boolean
+          </td>
+          <td>
+            When *false*, this function will be rendered as a |NativeFunction| by `Function.prototype.toString` (<emu-xref href="#sec-function.prototype.tostring"></emu-xref>) and corresponding stack trace entries will have no incidental attribution or position information, as defined in <emu-xref href="#sec-error-objects"></emu-xref>.
+          </td>
+        </tr>
+        <tr>
+          <td>
             [[HomeObject]]
           </td>
           <td>
@@ -8503,6 +8514,7 @@
         1. Set _F_.[[FormalParameters]] to _ParameterList_.
         1. Set _F_.[[ECMAScriptCode]] to _Body_.
         1. If the source text matching _Body_ is strict mode code, let _Strict_ be *true*; else let _Strict_ be *false*.
+        1. Set _F_.[[HasSourceTextAvailable]] to HasSourceTextAvailable of _Body_.
         1. Set _F_.[[Strict]] to _Strict_.
         1. If _thisMode_ is ~lexical-this~, set _F_.[[ThisMode]] to ~lexical~.
         1. Else if _Strict_ is *true*, set _F_.[[ThisMode]] to ~strict~.
@@ -13620,6 +13632,18 @@
         </emu-grammar>
         <emu-alg>
           1. Return ~invalid~.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-callexpression-static-semantics-hassourcetextavailable">
+        <h1>Static Semantics: HasSourceTextAvailable</h1>
+        <emu-see-also-para op="HasSourceTextAvailable"></emu-see-also-para>
+        <emu-grammar>CallExpression : CoverCallExpressionAndAsyncArrowHead</emu-grammar>
+        <emu-alg>
+          1. If |CallExpression| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Hidden Implementation Directive, return *false*.
+          1. If the source text matched by |CallExpression| is eval code resulting from a direct eval, then
+            1. Return HasSourceTextAvailable of the |CallExpression| whose evaluation is the direct eval.
+          1. Return *true*.
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -19426,12 +19450,14 @@
     </emu-grammar>
 
     <emu-clause id="sec-directive-prologues-and-the-use-strict-directive">
-      <h1>Directive Prologues and the Use Strict Directive</h1>
+      <h1>Directive Prologues</h1>
       <p>A <dfn id="directive-prologue">Directive Prologue</dfn> is the longest sequence of |ExpressionStatement|s occurring as the initial |StatementListItem|s or |ModuleItem|s of a |FunctionBody|, a |ScriptBody|, or a |ModuleBody| and where each |ExpressionStatement| in the sequence consists entirely of a |StringLiteral| token followed by a semicolon. The semicolon may appear explicitly or may be inserted by automatic semicolon insertion. A Directive Prologue may be an empty sequence.</p>
       <p>A <dfn id="use-strict-directive">Use Strict Directive</dfn> is an |ExpressionStatement| in a Directive Prologue whose |StringLiteral| is either of the exact code point sequences `"use strict"` or `'use strict'`. A Use Strict Directive may not contain an |EscapeSequence| or |LineContinuation|.</p>
-      <p>A Directive Prologue may contain more than one Use Strict Directive. However, an implementation may issue a warning if this occurs.</p>
+      <p>A <dfn id="hidden-implementation-directive">Hidden Implementation Directive</dfn> is an |ExpressionStatement| in a Directive Prologue whose |StringLiteral| is either of the exact code point sequences `"hide source"` or `'hide source'`. A Hidden Implementation Directive may not contain an |EscapeSequence| or |LineContinuation|.</p>
+      <p>A <dfn id="built-in-directive">Built-in Directive</dfn> is an |ExpressionStatement| in a Directive Prologue that is either a Use Strict Directive or a Hidden Implementation Directive.</p>
+      <p>A Directive Prologue may contain duplicate Built-in Directives. However, an implementation may issue a warning if this occurs.</p>
       <emu-note>
-        <p>The |ExpressionStatement|s of a Directive Prologue are evaluated normally during evaluation of the containing production. Implementations may define implementation specific meanings for |ExpressionStatement|s which are not a Use Strict Directive and which occur in a Directive Prologue. If an appropriate notification mechanism exists, an implementation should issue a warning if it encounters in a Directive Prologue an |ExpressionStatement| that is not a Use Strict Directive and which does not have a meaning defined by the implementation.</p>
+        <p>The |ExpressionStatement|s of a Directive Prologue are evaluated normally during evaluation of the containing production. Implementations may define implementation-specific meanings for |ExpressionStatement|s in a Directive Prologue which are not a Built-in Directive. If an appropriate notification mechanism exists, an implementation should issue a warning if it encounters in a Directive Prologue an |ExpressionStatement| that is not a Built-in Directive and which does not have a meaning defined by the implementation.</p>
       </emu-note>
     </emu-clause>
 
@@ -19614,6 +19640,19 @@
       <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
       <emu-alg>
         1. If the Directive Prologue of |FunctionBody| contains a Use Strict Directive, return *true*; otherwise, return *false*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-function-definitions-static-semantics-hassourcetextavailable">
+      <h1>Static Semantics: HasSourceTextAvailable</h1>
+      <emu-see-also-para op="HasSourceTextAvailable"></emu-see-also-para>
+      <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
+      <emu-alg>
+        1. If the Directive Prologue of |FunctionBody| contains a Hidden Implementation Directive, return *false*.
+        1. If |FunctionBody| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Hidden Implementation Directive, return *false*.
+        1. If the source text matched by |FunctionBody| is eval code resulting from a direct eval, then
+          1. Return HasSourceTextAvailable of the |CallExpression| whose evaluation is the direct eval.
+        1. Return *true*.
       </emu-alg>
     </emu-clause>
 
@@ -20014,6 +20053,18 @@
       <emu-grammar>ConciseBody : ExpressionBody</emu-grammar>
       <emu-alg>
         1. Return *false*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-arrow-function-definitions-static-semantics-hassourcetextavailable">
+      <h1>Static Semantics: HasSourceTextAvailable</h1>
+      <emu-see-also-para op="HasSourceTextAvailable"></emu-see-also-para>
+      <emu-grammar>ExpressionBody : AssignmentExpression</emu-grammar>
+      <emu-alg>
+        1. If |ExpressionBody| occurs within a |ScriptBody|, |ModuleBody|, or |FunctionBody| that has a Directive Prologue that contains a Hidden Implementation Directive, return *false*.
+        1. If the source text matched by |ExpressionBody| is eval code resulting from a direct eval, then
+          1. Return HasSourceTextAvailable of the |CallExpression| whose evaluation is the direct eval.
+        1. Return *true*.
       </emu-alg>
     </emu-clause>
 
@@ -26394,7 +26445,7 @@
         <p>When the `toString` method is called, the following steps are taken:</p>
         <emu-alg>
           1. Let _func_ be the *this* value.
-          1. If _func_ is a <emu-xref href="#sec-bound-function-exotic-objects">bound function exotic object</emu-xref> or a <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref>, then return an implementation-dependent String source code representation of _func_. The representation must have the syntax of a |NativeFunction|. Additionally, if _func_ is a <emu-xref href="#sec-well-known-intrinsic-objects">Well-known Intrinsic Object</emu-xref> and is not identified as an anonymous function, the portion of the returned String that would be matched by |PropertyName| must be the initial value of the *"name"* property of _func_.
+          1. If _func_ is a <emu-xref href="#sec-bound-function-exotic-objects">bound function exotic object</emu-xref> or a <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref> or has a [[HasSourceTextAvailable]] slot with the value *false*, then return an implementation-dependent String source code representation of _func_. The representation must have the syntax of a |NativeFunction|. Additionally, if _func_ is a <emu-xref href="#sec-well-known-intrinsic-objects">Well-known Intrinsic Object</emu-xref> and is not identified as an anonymous function, the portion of the returned String that would be matched by |PropertyName| must be the initial value of the *"name"* property of _func_.
           1. If Type(_func_) is Object and _func_ has a [[SourceText]] internal slot and _func_.[[SourceText]] is a sequence of Unicode code points and ! HostHasSourceTextAvailable(_func_) is *true*, then
             1. Return ! UTF16Encode(_func_.[[SourceText]]).
           1. If Type(_func_) is Object and IsCallable(_func_) is *true*, then return an implementation-dependent String source code representation of _func_. The representation must have the syntax of a |NativeFunction|.
@@ -26830,6 +26881,7 @@
   <emu-clause id="sec-error-objects">
     <h1>Error Objects</h1>
     <p>Instances of Error objects are thrown as exceptions when runtime errors occur. The Error objects may also serve as base objects for user-defined exception classes.</p>
+    <p>Stack trace information exposed to the running program through implementation-defined accessors such as the de facto `Error.prototype.stack` must not include any incidental attribution or position information related to functions whose [[HasSourceTextAvailable]] slot has a value of *false*. Examples of incidental attribution information are filenames, module specifiers, and URIs. Examples of incidental position information are line numbers and column numbers.</p>
 
     <emu-clause id="sec-error-constructor">
       <h1>The Error Constructor</h1>
