@@ -4,23 +4,35 @@
   "version": "1.0.0",
   "description": "The ECMAScript specification",
   "scripts": {
-    "build-es2019": "git remote remove origin && git remote add origin \"git@github.com:$TRAVIS_REPO_SLUG.git\" && git fetch --quiet origin && git checkout --quiet es2019 && mkdir \"out/2019\" && cp -R img \"out/2019\" && ecmarkup --verbose spec.html out/2019/index.html --css out/2019/ecmarkup.css --js out/2019/ecmarkup.js && git checkout --quiet test-travis",
-    "build-master": "mkdir out && cp -R img out && ecmarkup --verbose spec.html out/index.html --css out/ecmarkup.css --js out/ecmarkup.js",
-    "build": "npm run clean && npm run build-master",
-    "build-for-pdf": "npm run build -- -- -- --old-toc",
-    "build-travis": "npm run clean && npm run build-master && npm run build-es2019",
+    "ipr-check": "node scripts/check-form tc39/ecma262 \"$TRAVIS_COMMIT\"",
+    "prebuild-spec": "git remote rm travis-origin 2>/dev/null ; git remote add travis-origin \"git@github.com:${TRAVIS_REPO_SLUG:-tc39/ecma262}.git\" && git fetch --quiet travis-origin",
+    "build-spec": "YEAR=2020 && git checkout --quiet \"es${YEAR}\" && mkdir -p \"out/${YEAR}\" && cp -R img \"out/${YEAR}\" && ecmarkup --verbose spec.html \"out/${YEAR}/index.html\" --css \"out/${YEAR}/ecmarkup.css\" --js \"out/${YEAR}/ecmarkup.js\" && git checkout --quiet travis-origin/test-travis",
+    "postbuild-spec": "git remote rm travis-origin",
+    "build-master": "npm run build-only -- --lint-spec",
+    "prebuild-only": "npm run clean && mkdir out && cp -R img out && npm run wipe-es6biblio",
+    "build-only": "ecmarkup --verbose spec.html out/index.html --css out/ecmarkup.css --js out/ecmarkup.js",
+    "build": "npm run build-master",
+    "build-for-pdf": "npm run build-master -- --old-toc",
+    "build-travis": "npm run build-master && npm run build-spec",
+    "prebuild-snapshot": "npm run clean",
+    "build-snapshot": "npm run build-master && node scripts/insert_snapshot_warning.js",
     "clean": "rm -rf out",
     "test": "exit 0",
-    "watch": "npm run clean && mkdir out && cp -R img out && ecmarkup --watch --verbose spec.html out/index.html --css out/ecmarkup.css --js out/ecmarkup.js"
+    "watch": "npm run build-master -- --watch",
+    "wipe-es6biblio": "echo \"{}\" > node_modules/ecmarkup/es6biblio.json",
+    "check-commit": "node scripts/check-commit"
   },
   "repository": "tc39/ecma262",
   "author": "ECMA TC39",
-  "license": "SEE LICENSE IN https://tc39.github.io/ecma262/#sec-copyright-and-software-license",
-  "homepage": "https://tc39.github.io/ecma262/",
+  "license": "SEE LICENSE IN https://tc39.es/ecma262/#sec-copyright-and-software-license",
+  "homepage": "https://tc39.es/ecma262/",
   "dependencies": {
-    "ecmarkup": "^3.16.0"
+    "ecmarkup": "^3.25.1"
   },
   "devDependencies": {
-    "@alrra/travis-scripts": "^2.1.0"
+    "@alrra/travis-scripts": "^2.1.0",
+    "glob": "^7.1.6",
+    "jsdom": "^15.0.0",
+    "tiny-json-http": "^7.1.2"
   }
 }

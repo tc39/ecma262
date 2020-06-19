@@ -8,14 +8,17 @@ This repository contains the source for the current draft of ECMA-262,
 the ECMAScript® Language Specification.
 
 This source is processed to obtain a human-readable version,
-which you can view [here](https://tc39.github.io/ecma262/).
+which you can view [here](https://tc39.es/ecma262/).
+
+If you want to explore how the specification was written, you can also view the source with its history in [searchfox](https://searchfox.org/ecma262/source/spec.html).
 
 ## Current Proposals
 
-Proposals follow [the TC39 process](https://tc39.github.io/process-document/) and are tracked in the [proposals repository](https://github.com/tc39/proposals).
+Proposals follow [the TC39 process](https://tc39.es/process-document/) and are tracked in the [proposals repository](https://github.com/tc39/proposals).
 
 * [Finished Proposals](https://github.com/tc39/proposals/blob/master/finished-proposals.md)
 * [Active Proposals](https://github.com/tc39/proposals)
+* [Stage 1 Proposals](https://github.com/tc39/proposals/blob/master/stage-1-proposals.md)
 * [Stage 0 Proposals](https://github.com/tc39/proposals/blob/master/stage-0-proposals.md)
 * [Inactive Proposals](https://github.com/tc39/proposals/blob/master/inactive-proposals.md)
 
@@ -29,5 +32,6 @@ After cloning, do `npm install` to set up your environment. You can then do `npm
 
 ## Community
 
+* [ES discourse](https://es.discourse.group/): Discourse for ECMAScript discussion and questions
 * [Es-discuss mailing list](https://esdiscuss.org): Mailing list for ECMAScript discussions
 * IRC: #tc39 on Freenode ([instructions](https://freenode.net/kb/answer/chat))

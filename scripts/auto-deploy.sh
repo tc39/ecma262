@@ -2,6 +2,11 @@
 
 declare -r PRIVATE_KEY_FILE_NAME='github_deploy_key'
 
+if [ -z "${encrypted_1e2182e20f4c_iv-}" ] || [ -z "${encrypted_1e2182e20f4c_key}" ]; then
+  echo >&2 'secure keys do not exist'
+  exit 0
+fi
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Decrypt the file containing the private key
