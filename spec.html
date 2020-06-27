@@ -10452,6 +10452,27 @@
     </emu-clause>
   </emu-clause>
 
+  <emu-clause id="sec-stringindexof" aoid="StringIndexOf">
+    <h1>Runtime Semantics: StringIndexOf ( _string_, _searchValue_, _fromIndex_ )</h1>
+    <p>The abstract operation StringIndexOf takes arguments _string_ (a String), _searchValue_ (a String), and _fromIndex_ (a non-negative integer). It performs the following steps when called:</p>
+    <emu-alg>
+      1. Assert: Type(_string_) is String.
+      1. Assert: Type(_searchValue_) is String.
+      1. Assert: ! IsNonNegativeInteger(_fromIndex_) is *true*.
+      1. Let _len_ be the length of _string_.
+      1. If _searchValue_ is the empty String and _fromIndex_ &le; _len_, return _fromIndex_.
+      1. Let _searchLen_ be the length of _searchValue_.
+      1. If there exists any integer _k_ such that _fromIndex_ &le; _k_ &le; _len_ - _searchLen_ and for all nonnegative integers _j_ less than _searchLen_, the code unit at index _k_ + _j_ within _string_ is the same as the code unit at index _j_ within _searchValue_, let _pos_ be the smallest (closest to *-&infin;*) such integer. Otherwise, let _pos_ be -1.
+      1. Return _pos_.
+    </emu-alg>
+    <emu-note>
+      <p>If _searchValue_ is empty and _fromIndex_ is less than or equal to the length of _string_, this algorithm returns _fromIndex_. An empty _searchValue_ is effectively found at every position within a string, including after the last code unit.</p>
+    </emu-note>
+    <emu-note>
+      <p>This algorithm always returns -1 if _fromIndex_ &gt; the length of _string_.</p>
+    </emu-note>
+  </emu-clause>
+
   <emu-clause id="sec-types-of-source-code">
     <h1>Types of Source Code</h1>
     <p>There are four types of ECMAScript code:</p>
@@ -29987,7 +30008,9 @@ THH:mm:ss.sss
           1. Let _len_ be the length of _S_.
           1. Let _start_ be min(max(_pos_, 0), _len_).
           1. Let _searchLen_ be the length of _searchStr_.
-          1. If there exists any integer _k_ not smaller than _start_ such that _k_ + _searchLen_ is not greater than _len_, and for all nonnegative integers _j_ less than _searchLen_, the code unit at index _k_ + _j_ within _S_ is the same as the code unit at index _j_ within _searchStr_, return *true*; but if there is no such integer _k_, return *false*.
+          1. Let _index_ be ! StringIndexOf(_S_, _searchStr_, _start_).
+          1. If _index_ is not -1, return *true*.
+          1. Return *false*.
         </emu-alg>
         <emu-note>
           <p>If _searchString_ appears as a substring of the result of converting this object to a String, at one or more indices that are greater than or equal to _position_, return *true*; otherwise, returns *false*. If _position_ is *undefined*, 0 is assumed, so as to search all of the String.</p>
@@ -30015,7 +30038,7 @@ THH:mm:ss.sss
           1. Let _len_ be the length of _S_.
           1. Let _start_ be min(max(_pos_, 0), _len_).
           1. Let _searchLen_ be the length of _searchStr_.
-          1. Return the smallest possible integer _k_ not smaller than _start_ such that _k_ + _searchLen_ is not greater than _len_, and for all nonnegative integers _j_ less than _searchLen_, the code unit at index _k_ + _j_ within _S_ is the same as the code unit at index _j_ within _searchStr_; but if there is no such integer _k_, return the value -1.
+          1. Return ! StringIndexOf(_S_, _searchStr_, _start_).
         </emu-alg>
         <emu-note>
           <p>The `indexOf` function is intentionally generic; it does not require that its *this* value be a String object. Therefore, it can be transferred to other kinds of objects for use as a method.</p>
@@ -30366,6 +30389,50 @@ THH:mm:ss.sss
             </table>
           </emu-table>
         </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-string.prototype.replaceall">
+        <h1>String.prototype.replaceAll ( _searchValue_, _replaceValue_ )</h1>
+        <p>When the `replaceAll` method is called with arguments _searchValue_ and _replaceValue_, the following steps are taken:</p>
+        <emu-alg>
+          1. Let _O_ be ? RequireObjectCoercible(*this* value).
+          1. If _searchValue_ is neither *undefined* nor *null*, then
+            1. Let _isRegExp_ be ? IsRegExp(_searchValue_).
+            1. If _isRegExp_ is *true*, then
+              1. Let _flags_ be ? Get(_searchValue_, *"flags"*).
+              1. Perform ? RequireObjectCoercible(_flags_).
+              1. If ? ToString(_flags_) does not contain *"g"*, throw a *TypeError* exception.
+            1. Let _replacer_ be ? GetMethod(_searchValue_, @@replace).
+            1. If _replacer_ is not *undefined*, then
+              1. Return ? Call(_replacer_, _searchValue_, « _O_, _replaceValue_ »).
+          1. Let _string_ be ? ToString(_O_).
+          1. Let _searchString_ be ? ToString(_searchValue_).
+          1. Let _functionalReplace_ be IsCallable(_replaceValue_).
+          1. If _functionalReplace_ is *false*, then
+            1. Set _replaceValue_ to ? ToString(_replaceValue_).
+          1. Let _searchLength_ be the length of _searchString_.
+          1. Let _advanceBy_ be max(1, _searchLength_).
+          1. Let _matchPositions_ be a new empty List.
+          1. Let _position_ be ! StringIndexOf(_string_, _searchString_, 0).
+          1. Repeat, while _position_ is not -1,
+            1. Append _position_ to the end of _matchPositions_.
+            1. Set _position_ to ! StringIndexOf(_string_, _searchString_, _position_ + _advanceBy_).
+          1. Let _endOfLastMatch_ be 0.
+          1. Let _result_ be the empty String.
+          1. For each _position_ in _matchPositions_, do
+            1. If _functionalReplace_ is *true*, then
+              1. Let _replacement_ be ? ToString(? Call(_replaceValue_, *undefined*, « _searchString_, _position_, _string_ »)).
+            1. Else,
+              1. Assert: Type(_replaceValue_) is String.
+              1. Let _captures_ be a new empty List.
+              1. Let _replacement_ be ! GetSubstitution(_searchString_, _string_, _position_, _captures_, *undefined*, _replaceValue_).
+            1. Let _stringSlice_ be the substring of _string_ consisting of the code units from _endOfLastMatch_ (inclusive) up to _position_ (exclusive).
+            1. Set _result_ to the string-concatenation of _result_, _stringSlice_, and _replacement_.
+            1. Set _endOfLastMatch_ to _position_ + _searchLength_.
+          1. If _endOfLastMatch_ &lt; the length of _string_, then
+            1. Set _result_ to the string-concatenation of _result_ and the substring of _string_ consisting of the code units from _endOfLastMatch_ (inclusive) up through the final code unit of _string_ (inclusive).
+          1. Return _result_.
+        </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-string.prototype.search">
