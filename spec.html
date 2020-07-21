@@ -2761,6 +2761,28 @@
             </tr>
             <tr>
               <td>
+                %AggregateError%
+              </td>
+              <td>
+                `AggregateError`
+              </td>
+              <td>
+                The `AggregateError` constructor (<emu-xref href="#sec-aggregate-error-constructor"></emu-xref>)
+              </td>
+            </tr>
+            <tr>
+              <td>
+                %AggregateErrorPrototype%
+              </td>
+              <td>
+                `AggregateError.prototype`
+              </td>
+              <td>
+                The initial value of the `prototype` data property of %AggregateError%; i.e., %AggregateError.prototype%
+              </td>
+            </tr>
+            <tr>
+              <td>
                 %Array%
               </td>
               <td>
@@ -6268,6 +6290,25 @@
         </emu-alg>
         <p>The *"length"* property of a ListIteratorNext function is 0.</p>
       </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-iterabletolist" aoid="IterableToList">
+      <h1>Runtime Semantics: IterableToList ( _items_ [ , _method_ ] )</h1>
+      <p>The abstract operation IterableToList takes argument _items_ and optional argument _method_. It performs the following steps when called:</p>
+      <emu-alg>
+        1. If _method_ is present, then
+          1. Let _iteratorRecord_ be ? GetIterator(_items_, ~sync~, _method_).
+        1. Else,
+          1. Let _iteratorRecord_ be ? GetIterator(_items_, ~sync~).
+        1. Let _values_ be a new empty List.
+        1. Let _next_ be *true*.
+        1. Repeat, while _next_ is not *false*,
+          1. Set _next_ to ? IteratorStep(_iteratorRecord_).
+          1. If _next_ is not *false*, then
+            1. Let _nextValue_ be ? IteratorValue(_next_).
+            1. Append _nextValue_ to the end of the List _values_.
+        1. Return _values_.
+      </emu-alg>
     </emu-clause>
   </emu-clause>
 </emu-clause>
@@ -26864,6 +26905,7 @@
   <emu-clause id="sec-error-objects">
     <h1>Error Objects</h1>
     <p>Instances of Error objects are thrown as exceptions when runtime errors occur. The Error objects may also serve as base objects for user-defined exception classes.</p>
+    <p>When an ECMAScript implementation detects a runtime error, it throws a new instance of one of the _NativeError_ objects defined in <emu-xref href="#sec-native-error-types-used-in-this-standard"></emu-xref> or a new instance of AggregateError object defined in <emu-xref href="#sec-aggregate-error-object-structure"></emu-xref>. Each of these objects has the structure described below, differing only in the name used as the constructor name instead of _NativeError_, in the `name` property of the prototype object, in the implementation-defined `message` property of the prototype object, and in the presence of the %AggregateError%-specific `errors` property.</p>
 
     <emu-clause id="sec-error-constructor">
       <h1>The Error Constructor</h1>
@@ -26949,12 +26991,12 @@
 
     <emu-clause id="sec-properties-of-error-instances">
       <h1>Properties of Error Instances</h1>
-      <p>Error instances are ordinary objects that inherit properties from the Error prototype object and have an [[ErrorData]] internal slot whose value is *undefined*. The only specified uses of [[ErrorData]] is to identify Error and _NativeError_ instances as Error objects within `Object.prototype.toString`.</p>
+      <p>Error instances are ordinary objects that inherit properties from the Error prototype object and have an [[ErrorData]] internal slot whose value is *undefined*. The only specified uses of [[ErrorData]] is to identify Error, AggregateError, and _NativeError_ instances as Error objects within `Object.prototype.toString`.</p>
     </emu-clause>
 
     <emu-clause id="sec-native-error-types-used-in-this-standard">
       <h1>Native Error Types Used in This Standard</h1>
-      <p>A new instance of one of the _NativeError_ objects below is thrown when a runtime error is detected. All of these objects share the same structure, as described in <emu-xref href="#sec-nativeerror-object-structure"></emu-xref>.</p>
+      <p>A new instance of one of the _NativeError_ objects below or of the AggregateError object is thrown when a runtime error is detected. All _NativeError_ objects share the same structure, as described in <emu-xref href="#sec-nativeerror-object-structure"></emu-xref>.</p>
 
       <emu-clause id="sec-native-error-types-used-in-this-standard-evalerror">
         <h1>EvalError</h1>
@@ -27065,7 +27107,84 @@
 
       <emu-clause id="sec-properties-of-nativeerror-instances">
         <h1>Properties of _NativeError_ Instances</h1>
-        <p>_NativeError_ instances are ordinary objects that inherit properties from their _NativeError_ prototype object and have an [[ErrorData]] internal slot whose value is *undefined*. The only specified use of [[ErrorData]] is by `Object.prototype.toString` (<emu-xref href="#sec-object.prototype.tostring"></emu-xref>) to identify Error or _NativeError_ instances.</p>
+        <p>_NativeError_ instances are ordinary objects that inherit properties from their _NativeError_ prototype object and have an [[ErrorData]] internal slot whose value is *undefined*. The only specified use of [[ErrorData]] is by `Object.prototype.toString` (<emu-xref href="#sec-object.prototype.tostring"></emu-xref>) to identify Error, AggregateError, or _NativeError_ instances.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-aggregate-error-objects">
+      <h1>AggregateError Objects</h1>
+
+      <emu-clause id="sec-aggregate-error-constructor">
+        <h1>The AggregateError Constructor</h1>
+        <p>The AggregateError constructor:</p>
+        <ul>
+          <li>is the intrinsic object <dfn>%AggregateError%</dfn>.</li>
+          <li>is the initial value of the *"AggregateError"* property of the global object.</li>
+          <li>creates and initializes a new AggregateError object when called as a function rather than as a constructor. Thus the function call `AggregateError(&hellip;)` is equivalent to the object creation expression `new AggregateError(&hellip;)` with the same arguments.</li>
+          <li>is designed to be subclassable. It may be used as the value of an `extends` clause of a class definition. Subclass constructors that intend to inherit the specified AggregateError behaviour must include a `super` call to the AggregateError constructor to create and initialize subclass instances with an [[ErrorData]] internal slot.</li>
+        </ul>
+
+        <emu-clause id="sec-aggregate-error">
+          <h1>AggregateError ( _errors_, _message_ )</h1>
+          <p>When the *AggregateError* function is called with arguments _errors_ and _message_, the following steps are taken:</p>
+          <emu-alg>
+            1. If NewTarget is *undefined*, let _newTarget_ be the active function object, else let _newTarget_ be NewTarget.
+            1. Let _O_ be ? OrdinaryCreateFromConstructor(_newTarget_, `"%AggregateError.prototype%"`, &laquo; [[ErrorData]] &raquo;).
+            1. If _message_ is not *undefined*, then
+              1. Let _msg_ be ? ToString(_message_).
+              1. Let _msgDesc_ be the PropertyDescriptor { [[Value]]: _msg_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.
+              1. Perform ! DefinePropertyOrThrow(_O_, *"message"*, _msgDesc_).
+            1. Let _errorsList_ be ? IterableToList(_errors_).
+            1. Perform ! DefinePropertyOrThrow(_O_, *"errors"*, Property Descriptor { [[Configurable]]: *true*, [[Enumerable]]: *false*, [[Writable]]: *true*, [[Value]]: ! CreateArrayFromList(_errorsList_) }).
+            1. Return _O_.
+          </emu-alg>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-properties-of-the-aggregate-error-constructors">
+        <h1>Properties of the AggregateError Constructor</h1>
+        <p>The AggregateError constructor:</p>
+        <ul>
+          <li>has a [[Prototype]] internal slot whose value is the intrinsic object %Error%.</li>
+          <li>has the following properties:</li>
+        </ul>
+
+        <emu-clause id="sec-aggregate-error.prototype">
+          <h1>AggregateError.prototype</h1>
+          <p>The initial value of `AggregateError.prototype` is the intrinsic object %AggregateError.prototype%.</p>
+          <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-properties-of-the-aggregate-error-prototype-objects">
+        <h1>Properties of the AggregateError Prototype Object</h1>
+        <p>The AggregateError prototype object:</p>
+        <ul>
+          <li>is the intrinsic object <dfn>%AggregateError.prototype%</dfn>.</li>
+          <li>is an ordinary object.</li>
+          <li>is not an Error instance or an AggregateError instance and does not have an [[ErrorData]] internal slot.</li>
+          <li>has a [[Prototype]] internal slot whose value is the intrinsic object %Error.prototype%.</li>
+        </ul>
+
+        <emu-clause id="sec-aggregate-error.prototype.constructor">
+          <h1>AggregateError.prototype.constructor</h1>
+          <p>The initial value of `AggregateError.prototype.constructor` is the intrinsic object %AggregateError%.</p>
+        </emu-clause>
+
+        <emu-clause id="sec-aggregate-error.prototype.message">
+          <h1>AggregateError.prototype.message</h1>
+          <p>The initial value of `AggregateError.prototype.message` is the empty String.</p>
+        </emu-clause>
+
+        <emu-clause id="sec-aggregate-error.prototype.name">
+          <h1>AggregateError.prototype.name</h1>
+          <p>The initial value of `AggregateError.prototype.name` is *"AggregateError"*.</p>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-properties-of-aggregate-error-instances">
+        <h1>Properties of AggregateError Instances</h1>
+        <p>AggregateError instances are ordinary objects that inherit properties from their AggregateError prototype object and have an [[ErrorData]] internal slot whose value is *undefined*. The only specified use of [[ErrorData]] is by `Object.prototype.toString` (<emu-xref href="#sec-object.prototype.tostring"></emu-xref>) to identify Error, AggregateError, or _NativeError_ instances.</p>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -35051,22 +35170,6 @@ THH:mm:ss.sss
             1. Set _k_ to _k_ + 1.
           1. Return _targetObj_.
         </emu-alg>
-
-        <emu-clause id="sec-iterabletolist" aoid="IterableToList">
-          <h1>Runtime Semantics: IterableToList ( _items_, _method_ )</h1>
-          <p>The abstract operation IterableToList takes arguments _items_ and _method_. It performs the following steps when called:</p>
-          <emu-alg>
-            1. Let _iteratorRecord_ be ? GetIterator(_items_, ~sync~, _method_).
-            1. Let _values_ be a new empty List.
-            1. Let _next_ be *true*.
-            1. Repeat, while _next_ is not *false*,
-              1. Set _next_ to ? IteratorStep(_iteratorRecord_).
-              1. If _next_ is not *false*, then
-                1. Let _nextValue_ be ? IteratorValue(_next_).
-                1. Append _nextValue_ to the end of the List _values_.
-            1. Return _values_.
-          </emu-alg>
-        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-%typedarray%.of">
@@ -40422,6 +40525,90 @@ THH:mm:ss.sss
             1. Return *undefined*.
           </emu-alg>
           <p>The *"length"* property of a `Promise.allSettled` reject element function is 1.</p>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-promise.any">
+        <h1>Promise.any ( _iterable_ )</h1>
+        <p>The `any` function returns a promise that is fulfilled by the first given promise to be fulfilled, or rejected with an `AggregateError` holding the rejection reasons if all of the given promises are rejected. It resolves all elements of the passed iterable to promises as it runs this algorithm.</p>
+        <emu-alg>
+          1. Let _C_ be the *this* value.
+          1. Let _promiseCapability_ be ? NewPromiseCapability(_C_).
+          1. Let _promiseResolve_ be GetPromiseResolve(_C_).
+          1. IfAbruptRejectPromise(_promiseResolve_, _promiseCapability_).
+          1. Let _iteratorRecord_ be GetIterator(_iterable_).
+          1. IfAbruptRejectPromise(_iteratorRecord_, _promiseCapability_).
+          1. Let _result_ be PerformPromiseAny(_iteratorRecord_, _C_, _promiseCapability_, _promiseResolve_).
+          1. If _result_ is an abrupt completion, then
+            1. If _iteratorRecord_.[[Done]] is *false*, set _result_ to IteratorClose(_iteratorRecord_, _result_).
+            1. IfAbruptRejectPromise(_result_, _promiseCapability_).
+          1. Return Completion(_result_).
+        </emu-alg>
+        <emu-note>
+          <p>The `any` function requires its *this* value to be a constructor function that supports the parameter conventions of the `Promise` constructor.</p>
+        </emu-note>
+
+        <emu-clause id="sec-performpromiseany" aoid="PerformPromiseAny">
+          <h1>Runtime Semantics: PerformPromiseAny ( _iteratorRecord_, _constructor_, _resultCapability_, _promiseResolve_ )</h1>
+          <p>The abstract operation PerformPromiseAny takes arguments _iteratorRecord_, _constructor_, _resultCapability_ (a PromiseCapability Record), and _promiseResolve_. It performs the following steps when called:</p>
+          <emu-alg>
+            1. Assert: ! IsConstructor(_constructor_) is *true*.
+            1. Assert: ! IsCallable(_promiseResolve_) is *true*.
+            1. Let _errors_ be a new empty List.
+            1. Let _remainingElementsCount_ be a new Record { [[Value]]: 1 }.
+            1. Let _index_ be 0.
+            1. Repeat,
+              1. Let _next_ be IteratorStep(_iteratorRecord_).
+              1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
+              1. ReturnIfAbrupt(_next_).
+              1. If _next_ is *false*, then
+                1. Set _iteratorRecord_.[[Done]] to *true*.
+                1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+                1. If _remainingElementsCount_.[[Value]] is 0, then
+                  1. Let _error_ be a newly created `AggregateError` object.
+                  1. Perform ! DefinePropertyOrThrow(_error_, *"errors"*, Property Descriptor { [[Configurable]]: *true*, [[Enumerable]]: *false*, [[Writable]]: *true*, [[Value]]: ! CreateArrayFromList(_errors_) }).
+                  1. Return ThrowCompletion(_error_).
+                1. Return _resultCapability_.[[Promise]].
+              1. Let _nextValue_ be IteratorValue(_next_).
+              1. If _nextValue_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
+              1. ReturnIfAbrupt(_nextValue_).
+              1. Append *undefined* to _errors_.
+              1. Let _nextPromise_ be ? Call(_promiseResolve_, _constructor_, &laquo; _nextValue_ &raquo;).
+              1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-promise.any-reject-element-functions" title></emu-xref>.
+              1. Let _rejectElement_ be ! CreateBuiltinFunction(_steps_, &laquo; [[AlreadyCalled]], [[Index]], [[Errors]], [[Capability]], [[RemainingElements]] &raquo;).
+              1. Set _rejectElement_.[[AlreadyCalled]] to a new Record { [[Value]]: *false* }.
+              1. Set _rejectElement_.[[Index]] to _index_.
+              1. Set _rejectElement_.[[Errors]] to _errors_.
+              1. Set _rejectElement_.[[Capability]] to _resultCapability_.
+              1. Set _rejectElement_.[[RemainingElements]] to _remainingElementsCount_.
+              1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] + 1.
+              1. Perform ? Invoke(_nextPromise_, *"then"*, &laquo; _resultCapability_.[[Resolve]], _rejectElement_ &raquo;).
+              1. Increase _index_ by 1.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-promise.any-reject-element-functions">
+          <h1>`Promise.any` Reject Element Functions</h1>
+          <p>A `Promise.any` reject element function is an anonymous built-in function that is used to reject a specific `Promise.any` element. Each `Promise.any` reject element function has [[Index]], [[Errors]], [[Capability]], [[RemainingElements]], and [[AlreadyCalled]] internal slots.</p>
+          <p>When a `Promise.any` reject element function is called with argument _x_, the following steps are taken:</p>
+          <emu-alg>
+            1. Let _F_ be the active function object.
+            1. Let _alreadyCalled_ be _F_.[[AlreadyCalled]].
+            1. If _alreadyCalled_.[[Value]] is *true*, return *undefined*.
+            1. Set _alreadyCalled_.[[Value]] to *true*.
+            1. Let _index_ be _F_.[[Index]].
+            1. Let _errors_ be _F_.[[Errors]].
+            1. Let _promiseCapability_ be _F_.[[Capability]].
+            1. Let _remainingElementsCount_ be _F_.[[RemainingElements]].
+            1. Set _errors_[_index_] to _x_.
+            1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+            1. If _remainingElementsCount_.[[Value]] is 0, then
+              1. Let _error_ be a newly created `AggregateError` object.
+              1. Perform ! DefinePropertyOrThrow(_error_, *"errors"*, Property Descriptor { [[Configurable]]: *true*, [[Enumerable]]: *false*, [[Writable]]: *true*, [[Value]]: ! CreateArrayFromList(_errors_) }).
+              1. Return ? Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _error_ &raquo;).
+            1. Return *undefined*.
+          </emu-alg>
+          <p>The *"length"* property of a `Promise.any` reject element function is 1.</p>
         </emu-clause>
       </emu-clause>
 
