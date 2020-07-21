@@ -11145,6 +11145,7 @@
         `&amp;&amp;` `||` `??`
         `?` `:`
         `=` `+=` `-=` `*=` `%=` `**=` `&lt;&lt;=` `&gt;&gt;=` `&gt;&gt;&gt;=` `&amp;=` `|=` `^=`
+        `&amp;&amp;=` `||=` `??=`
         `=&gt;`
 
       DivPunctuator ::
@@ -15332,6 +15333,9 @@
         AsyncArrowFunction[?In, ?Yield, ?Await]
         LeftHandSideExpression[?Yield, ?Await] `=` AssignmentExpression[?In, ?Yield, ?Await] #assignment
         LeftHandSideExpression[?Yield, ?Await] AssignmentOperator AssignmentExpression[?In, ?Yield, ?Await]
+        LeftHandSideExpression[?Yield, ?Await] `&amp;&amp;=` AssignmentExpression[?In, ?Yield, ?Await]
+        LeftHandSideExpression[?Yield, ?Await] `||=` AssignmentExpression[?In, ?Yield, ?Await]
+        LeftHandSideExpression[?Yield, ?Await] `??=` AssignmentExpression[?In, ?Yield, ?Await]
 
       AssignmentOperator : one of
         `*=` `/=` `%=` `+=` `-=` `&lt;&lt;=` `&gt;&gt;=` `&gt;&gt;&gt;=` `&amp;=` `^=` `|=` `**=`
@@ -15355,7 +15359,13 @@
           It is a Syntax Error if AssignmentTargetType of |LeftHandSideExpression| is not ~simple~.
         </li>
       </ul>
-      <emu-grammar>AssignmentExpression : LeftHandSideExpression AssignmentOperator AssignmentExpression</emu-grammar>
+      <emu-grammar>
+        AssignmentExpression :
+          LeftHandSideExpression AssignmentOperator AssignmentExpression
+          LeftHandSideExpression `&amp;&amp;=` AssignmentExpression
+          LeftHandSideExpression `||=` AssignmentExpression
+          LeftHandSideExpression `??=` AssignmentExpression
+      </emu-grammar>
       <ul>
         <li>
           It is a Syntax Error if AssignmentTargetType of |LeftHandSideExpression| is not ~simple~.
@@ -15379,6 +15389,9 @@
           YieldExpression
           LeftHandSideExpression `=` AssignmentExpression
           LeftHandSideExpression AssignmentOperator AssignmentExpression
+          LeftHandSideExpression `&amp;&amp;=` AssignmentExpression
+          LeftHandSideExpression `||=` AssignmentExpression
+          LeftHandSideExpression `??=` AssignmentExpression
       </emu-grammar>
       <emu-alg>
         1. Return *false*.
@@ -15395,6 +15408,9 @@
           AsyncArrowFunction
           LeftHandSideExpression `=` AssignmentExpression
           LeftHandSideExpression AssignmentOperator AssignmentExpression
+          LeftHandSideExpression `&amp;&amp;=` AssignmentExpression
+          LeftHandSideExpression `||=` AssignmentExpression
+          LeftHandSideExpression `??=` AssignmentExpression
       </emu-grammar>
       <emu-alg>
         1. Return ~invalid~.
@@ -15424,7 +15440,7 @@
       <emu-grammar>AssignmentExpression : LeftHandSideExpression AssignmentOperator AssignmentExpression</emu-grammar>
       <emu-alg>
         1. Let _lref_ be the result of evaluating |LeftHandSideExpression|.
-        1. Let _lval_ be ? GetValue(_lref_).
+        1. [id="step-assignmentexpression-evaluation-compound-getvalue"] Let _lval_ be ? GetValue(_lref_).
         1. Let _rref_ be the result of evaluating |AssignmentExpression|.
         1. Let _rval_ be ? GetValue(_rref_).
         1. Let _assignmentOpText_ be the source text matched by |AssignmentOperator|.
@@ -15452,8 +15468,49 @@
         1. [id="step-assignmentexpression-evaluation-compound-putvalue"] Perform ? PutValue(_lref_, _r_).
         1. Return _r_.
       </emu-alg>
+      <emu-grammar>AssignmentExpression : LeftHandSideExpression `&amp;&amp;=` AssignmentExpression</emu-grammar>
+      <emu-alg>
+        1. Let _lref_ be the result of evaluating |LeftHandSideExpression|.
+        1. [id="step-assignmentexpression-evaluation-lgcl-and-getvalue"] Let _lval_ be ? GetValue(_lref_).
+        1. Let _lbool_ be ! ToBoolean(_lval_).
+        1. If _lbool_ is *false*, return _lval_.
+        1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and IsIdentifierRef of |LeftHandSideExpression| is *true*, then
+          1. Let _rval_ be NamedEvaluation of |AssignmentExpression| with argument GetReferencedName(_lref_).
+        1. Else,
+          1. Let _rref_ be the result of evaluating |AssignmentExpression|.
+          1. Let _rval_ be ? GetValue(_rref_).
+        1. [id="step-assignmentexpression-evaluation-lgcl-and-putvalue"] Perform ? PutValue(_lref_, _rval_).
+        1. Return _rval_.
+      </emu-alg>
+      <emu-grammar>AssignmentExpression : LeftHandSideExpression `||=` AssignmentExpression</emu-grammar>
+      <emu-alg>
+        1. Let _lref_ be the result of evaluating |LeftHandSideExpression|.
+        1. [id="step-assignmentexpression-evaluation-lgcl-or-getvalue"] Let _lval_ be ? GetValue(_lref_).
+        1. Let _lbool_ be ! ToBoolean(_lval_).
+        1. If _lbool_ is *true*, return _lval_.
+        1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and IsIdentifierRef of |LeftHandSideExpression| is *true*, then
+          1. Let _rval_ be NamedEvaluation of |AssignmentExpression| with argument GetReferencedName(_lref_).
+        1. Else,
+          1. Let _rref_ be the result of evaluating |AssignmentExpression|.
+          1. Let _rval_ be ? GetValue(_rref_).
+        1. [id="step-assignmentexpression-evaluation-lgcl-or-putvalue"] Perform ? PutValue(_lref_, _rval_).
+        1. Return _rval_.
+      </emu-alg>
+      <emu-grammar>AssignmentExpression : LeftHandSideExpression `??=` AssignmentExpression</emu-grammar>
+      <emu-alg>
+        1. Let _lref_ be the result of evaluating |LeftHandSideExpression|.
+        1. [id="step-assignmentexpression-evaluation-lgcl-nullish-getvalue"] Let _lval_ be ? GetValue(_lref_).
+        1. If _lval_ is neither *undefined* nor *null*, return _lval_.
+        1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and IsIdentifierRef of |LeftHandSideExpression| is *true*, then
+          1. Let _rval_ be NamedEvaluation of |AssignmentExpression| with argument GetReferencedName(_lref_).
+        1. Else,
+          1. Let _rref_ be the result of evaluating |AssignmentExpression|.
+          1. Let _rval_ be ? GetValue(_rref_).
+        1. [id="step-assignmentexpression-evaluation-lgcl-nullish-putvalue"] Perform ? PutValue(_lref_, _rval_).
+        1. Return _rval_.
+      </emu-alg>
       <emu-note>
-        <p>When an assignment occurs within strict mode code, it is a runtime error if _lref_ in step <emu-xref href="#step-assignmentexpression-evaluation-simple-putvalue"></emu-xref> of the first algorithm or step <emu-xref href="#step-assignmentexpression-evaluation-compound-putvalue"></emu-xref> of the second algorithm is an unresolvable reference. If it is, a *ReferenceError* exception is thrown. The |LeftHandSideExpression| also may not be a reference to a data property with the attribute value { [[Writable]]: *false* }, to an accessor property with the attribute value { [[Set]]: *undefined* }, nor to a non-existent property of an object for which the IsExtensible predicate returns the value *false*. In these cases a *TypeError* exception is thrown.</p>
+        <p>When this expression occurs within strict mode code, it is a runtime error if _lref_ in step <emu-xref href="#step-assignmentexpression-evaluation-simple-putvalue"></emu-xref>, <emu-xref href="#step-assignmentexpression-evaluation-compound-getvalue"></emu-xref>, <emu-xref href="#step-assignmentexpression-evaluation-lgcl-and-getvalue"></emu-xref>, <emu-xref href="#step-assignmentexpression-evaluation-lgcl-or-getvalue"></emu-xref>, <emu-xref href="#step-assignmentexpression-evaluation-lgcl-nullish-getvalue"></emu-xref> is an unresolvable reference. If it is, a *ReferenceError* exception is thrown. Additionally, it is a runtime error if the _lref_ in step <emu-xref href="#step-assignmentexpression-evaluation-compound-putvalue"></emu-xref>, <emu-xref href="#step-assignmentexpression-evaluation-lgcl-and-putvalue"></emu-xref>, <emu-xref href="#step-assignmentexpression-evaluation-lgcl-or-putvalue"></emu-xref>, <emu-xref href="#step-assignmentexpression-evaluation-lgcl-nullish-putvalue"></emu-xref> is a reference to a data property with the attribute value { [[Writable]]: *false* }, to an accessor property with the attribute value { [[Set]]: *undefined* }, or to a non-existent property of an object for which the IsExtensible predicate returns the value *false*. In these cases a *TypeError* exception is thrown.</p>
       </emu-note>
     </emu-clause>
 
@@ -15790,7 +15847,7 @@
               1. ReturnIfAbrupt(_value_).
           1. If _iteratorRecord_.[[Done]] is *true*, let _value_ be *undefined*.
           1. If |Initializer| is present and _value_ is *undefined*, then
-            1. If IsAnonymousFunctionDefinition(|Initializer|) and IsIdentifierRef of |DestructuringAssignmentTarget| are both *true*, then
+            1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and IsIdentifierRef of |LeftHandSideExpression| is *true*, then
               1. Let _v_ be NamedEvaluation of |Initializer| with argument GetReferencedName(_lref_).
             1. Else,
               1. Let _defaultValue_ be the result of evaluating |Initializer|.
@@ -22182,6 +22239,9 @@
             AsyncArrowFunction
             LeftHandSideExpression `=` AssignmentExpression
             LeftHandSideExpression AssignmentOperator AssignmentExpression
+            LeftHandSideExpression `&amp;&amp;=` AssignmentExpression
+            LeftHandSideExpression `||=` AssignmentExpression
+            LeftHandSideExpression `??=` AssignmentExpression
 
           BitwiseANDExpression : BitwiseANDExpression `&amp;` EqualityExpression
 
