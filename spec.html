@@ -7839,6 +7839,11 @@
             <td>A candidate execution Record</td>
             <td>See the memory model.</td>
           </tr>
+          <tr>
+            <td>[[KeptAlive]]</td>
+            <td>List of objects</td>
+            <td>Initially a new empty List, representing the list of objects to be kept alive until the end of the current Job</td>
+          </tr>
         </tbody>
       </table>
     </emu-table>
@@ -7948,6 +7953,150 @@
     <emu-note>
       <p>This, along with the liveness guarantee in the memory model, ensures that all ~SeqCst~ writes eventually become observable to all agents.</p>
     </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-weakref-processing-model">
+    <h1>Processing model of WeakRef and FinalizationRegistry objects</h1>
+    <emu-clause id="sec-weakref-invariants">
+      <h1>Objectives</h1>
+
+      <p> This specification does not make any guarantees that any object will be garbage collected. Objects which are not live may be released after long periods of time, or never at all. For this reason, this specification uses the term "may" when describing behaviour triggered by garbage collection.</p>
+
+      <p>The semantics of WeakRef and FinalizationRegistry objects is based on two operations which happen at particular points in time: </p>
+
+      <ul>
+        <li>
+          When `WeakRef.prototype.deref` is called, the referent (if *undefined* is not returned) is kept alive so that subsequent, synchronous accesses also return the object. This list is reset when synchronous work is done using the ClearKeptObjects abstract operation.
+        </li>
+
+        <li>
+          When an object which is registered with a FinalizationRegistry becomes unreachable, a call of the FinalizationRegistry's cleanup callback may eventually be made, after synchronous ECMAScript execution completes.  The FinalizationRegistry cleanup is performed with the CleanupFinalizationRegistry abstract operation.
+        </li>
+      </ul>
+
+      <p>Neither of these actions (ClearKeptObjects or CleanupFinalizationRegistry) may interrupt synchronous ECMAScript execution. Because hosts may assemble longer, synchronous ECMAScript execution runs, this specification defers the scheduling of ClearKeptObjects and CleanupFinalizationRegistry to the host environment.</p>
+
+      <p>Some ECMAScript implementations include garbage collector implementations which run in the background, including when ECMAScript is idle. Letting the host environment schedule CleanupFinalizationRegistry allows it to resume ECMAScript execution in order to run finalizer work, which may free up held values, reducing overall memory usage.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-liveness">
+      <h1>Liveness</h1>
+
+      <p>For some set of objects _S_, a <dfn>hypothetical WeakRef-oblivious</dfn> execution with respect to _S_ is an execution whereby the abstract operation WeakRefDeref of a WeakRef whose referent is an element of _S_ always returns *undefined*.</p>
+
+      <emu-note>
+        WeakRef-obliviousness, together with liveness, capture two notions. One, that a WeakRef itself does not keep an object alive. Two, that cycles in liveness does not imply that an object is live. To be concrete, if determining _obj_'s liveness depends on determining the liveness of another WeakRef referent, _obj2_, _obj2_'s liveness cannot assume _obj_'s liveness, which would be circular reasoning.
+      </emu-note>
+      <emu-note>
+        WeakRef-obliviousness is defined on sets of objects instead of individual objects to account for cycles. If it were defined on individual objects, then an object in a cycle will be considered live even though its Object value is only observed via WeakRefs of other objects in the cycle.
+      </emu-note>
+      <emu-note>
+        Colloquially, we say that an individual object is live if every set of objects containing it is live.
+      </emu-note>
+
+      <p>At any point during evaluation, a set of objects _S_ is considered <dfn>live</dfn> if either of the following conditions is met: </p>
+
+      <ul>
+        <li>
+          Any element in _S_ is included in any agent's [[KeptAlive]] List.
+        </li>
+        <li>
+          There exists a valid future hypothetical WeakRef-oblivious execution with respect to _S_ that observes the Object value of any object in _S_.
+        </li>
+      </ul>
+      <emu-note>
+        The intuition the second condition above intends to capture is that an object is live if its identity is observable via non-WeakRef means. An object's identity may be observed by observing a strict equality comparison between objects or observing the object being used as key in a Map.
+      </emu-note>
+      <emu-note>
+        <p>Presence of an object in a field, an internal slot, or a property does not imply that the object is live. For example if the object in question is never passed back to the program, then it cannot be observed.</p>
+
+        <p>This is the case for keys in a WeakMap, members of a WeakSet, as well as the [[WeakRefTarget]] and [[UnregisterToken]] fields of a FinalizationRegistry Cell record.</p>
+
+        <p>The above definition implies that, if a key in a WeakMap is not live, then its corresponding value is not necessarily live either.</p>
+      </emu-note>
+      <emu-note>
+        Liveness is the lower bound for guaranteeing which WeakRefs engines must not empty. Liveness as defined here is undecidable. In practice, engines use conservative approximations such as reachability. There is expected to be significant implementation leeway.
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-weakref-execution">
+      <h1>Execution</h1>
+
+      <p>At any time, if a set of objects _S_ is not live, an ECMAScript implementation may perform the following steps atomically:</p>
+
+      <emu-alg>
+        1. For each _obj_ of _S_, do
+          1. For each WeakRef _ref_ such that _ref_.[[WeakRefTarget]] is _obj_, do
+            1. Set _ref_.[[WeakRefTarget]] to ~empty~.
+          1. For each FinalizationRegistry _fg_ such that _fg_.[[Cells]] contains _cell_, and _cell_.[[WeakRefTarget]] is _obj_, do
+            1. Set _cell_.[[WeakRefTarget]] to ~empty~.
+            1. Optionally, perform ! HostEnqueueFinalizationRegistryCleanupJob(_fg_).
+          1. For each WeakMap _map_ such that _map_.[[WeakMapData]] contains a Record value _r_ such that _r_.[[Key]] is _obj_, do
+            1. Set _r_.[[Key]] to ~empty~.
+            1. Set _r_.[[Value]] to ~empty~.
+          1. For each WeakSet _set_ such that _set_.[[WeakSetData]] contains _obj_, do
+            1. Replace the element of _set_ whose value is _obj_ with an element whose value is ~empty~.
+      </emu-alg>
+
+      <emu-note>
+        <p>Together with the definition of liveness, this clause prescribes legal optimizations that an implementation may apply regarding WeakRefs.</p>
+
+        <p>It is possible to access an object without observing its identity. Optimizations such as dead variable elimination and scalar replacement on properties of non-escaping objects whose identity is not observed are allowed. These optimizations are thus allowed to observably empty WeakRefs that point to such objects.</p>
+
+        <p>On the other hand, if an object's identity is observable, and that object is in the [[WeakRefTarget]] internal slot of a WeakRef, optimizations such as rematerialization that observably empty the WeakRef are prohibited.</p>
+
+        <p>Because calling HostEnqueueFinalizationRegistryCleanupJob is optional, registered objects in a FinalizationRegistry do not necessarily hold that FinalizationRegistry live. Implementations may omit FinalizationRegistry callbacks for any reason, e.g., if the FinalizationRegistry itself becomes dead, or if the application is shutting down.</p>
+      </emu-note>
+      <emu-note>
+        <p>Implementations are not obligated to empty WeakRefs for maximal sets of non-live objects.</p>
+        <p>If an implementation chooses a non-live set _S_ in which to empty WeakRefs, it must empty WeakRefs for all objects in _S_ simultaneously. In other words, an implementation must not empty a WeakRef pointing to an object _obj_ without emptying out other WeakRefs that, if not emptied, could result in an execution that observes the Object value of _obj_.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-weakref-host-hooks">
+      <h1>Host Hooks</h1>
+
+      <emu-clause id="sec-host-cleanup-finalization-registry" aoid=HostEnqueueFinalizationRegistryCleanupJob>
+        <h1>HostEnqueueFinalizationRegistryCleanupJob ( _finalizationRegistry_ )</h1>
+
+        <p>The abstract operation HostEnqueueFinalizationRegistryCleanupJob takes argument _finalizationRegistry_ (a FinalizationRegistry). HostEnqueueFinalizationRegistryCleanupJob is an implementation-defined abstract operation that is expected to call CleanupFinalizationRegistry(_finalizationRegistry_) at some point in the future, if possible. The host's responsibility is to make this call at a time which does not interrupt synchronous ECMAScript code execution.</p>
+      </emu-clause>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-clear-kept-objects" aoid=ClearKeptObjects>
+    <h1>ClearKeptObjects ( )</h1>
+    <p>The abstract operation ClearKeptObjects takes no arguments. ECMAScript implementations are expected to call ClearKeptObjects when a synchronous sequence of ECMAScript executions completes. It performs the following steps when called:</p>
+    <emu-alg>
+      1. Let _agentRecord_ be the surrounding agent's Agent Record.
+      1. Set _agentRecord_.[[KeptAlive]] to a new empty List.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-addtokeptobjects" aoid="AddToKeptObjects">
+    <h1>AddToKeptObjects ( _object_ )</h1>
+    <p>The abstract operation AddToKeptObjects takes argument _object_ (an Object). It performs the following steps when called:</p>
+    <emu-alg>
+      1. Let _agentRecord_ be the surrounding agent's Agent Record.
+      1. Append _object_ to _agentRecord_.[[KeptAlive]].
+    </emu-alg>
+    <emu-note>
+      When the abstract operation AddToKeptObjects is called with a target object reference, it adds the target to a list that will point strongly at the target until ClearKeptObjects is called.
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-cleanup-finalization-registry" aoid="CleanupFinalizationRegistry">
+    <h1>CleanupFinalizationRegistry ( _finalizationRegistry_ )</h1>
+    <p>The abstract operation CleanupFinalizationRegistry takes argument _finalizationRegistry_ (a finalization registry object). It performs the following steps when called:</p>
+    <emu-alg>
+      1. Assert: _finalizationRegistry_ has [[Cells]] and [[CleanupCallback]] internal slots.
+      1. Set _callback_ to _finalizationRegistry_.[[CleanupCallback]].
+      1. While _finalizationRegistry_.[[Cells]] contains a Record _cell_ such that _cell_.[[WeakRefTarget]] is ~empty~, an implementation may perform the following steps:
+        1. Choose any such _cell_.
+        1. Remove _cell_ from _finalizationRegistry_.[[Cells]].
+        1. Perform ? Call(_callback_, *undefined*, &laquo; _cell_.[[HeldValue]] &raquo;).
+      1. Return NormalCompletion(*undefined*).
+    </emu-alg>
   </emu-clause>
 </emu-clause>
 
@@ -25676,6 +25825,11 @@
       <p>See <emu-xref href="#sec-native-error-types-used-in-this-standard-evalerror"></emu-xref>.</p>
     </emu-clause>
 
+    <emu-clause id="sec-constructor-properties-of-the-global-object-finnalization-registry">
+      <h1>FinalizationRegistry ( . . . )</h1>
+      <p>See <emu-xref href="#sec-finalization-registry-constructor"></emu-xref>.</p>
+    </emu-clause>
+
     <emu-clause id="sec-float32array">
       <h1>Float32Array ( . . . )</h1>
       <p>See <emu-xref href="#sec-typedarray-constructors"></emu-xref>.</p>
@@ -25804,6 +25958,11 @@
     <emu-clause id="sec-constructor-properties-of-the-global-object-weakmap">
       <h1>WeakMap ( . . . )</h1>
       <p>See <emu-xref href="#sec-weakmap-constructor"></emu-xref>.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-constructor-properties-of-the-global-object-weakref">
+      <h1>WeakRef ( . . . )</h1>
+      <p>See <emu-xref href="#sec-weak-ref-constructor"></emu-xref>.</p>
     </emu-clause>
 
     <emu-clause id="sec-constructor-properties-of-the-global-object-weakset">
@@ -36779,7 +36938,7 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-weakmap-objects">
     <h1>WeakMap Objects</h1>
-    <p>WeakMap objects are collections of key/value pairs where the keys are objects and values may be arbitrary ECMAScript language values. A WeakMap may be queried to see if it contains a key/value pair with a specific key, but no mechanism is provided for enumerating the objects it holds as keys. If an object that is being used as the key of a WeakMap key/value pair is only reachable by following a chain of references that start within that WeakMap, then that key/value pair is inaccessible and is automatically removed from the WeakMap. WeakMap implementations must detect and remove such key/value pairs and any associated resources.</p>
+    <p>WeakMap objects are collections of key/value pairs where the keys are objects and values may be arbitrary ECMAScript language values. A WeakMap may be queried to see if it contains a key/value pair with a specific key, but no mechanism is provided for enumerating the objects it holds as keys. In certain conditions, objects which are not live are removed as WeakMap keys, as described in <emu-xref href="#sec-weakref-execution"></emu-xref>.</p>
     <p>An implementation may impose an arbitrarily determined latency between the time a key/value pair of a WeakMap becomes inaccessible and the time when the key/value pair is removed from the WeakMap. If this latency was observable to ECMAScript program, it would be a source of indeterminacy that could impact program execution. For that reason, an ECMAScript implementation must not provide any means to observe a key of a WeakMap that does not require the observer to present the observed key.</p>
     <p>WeakMap objects must be implemented using either hash tables or other mechanisms that, on average, provide access times that are sublinear on the number of key/value pairs in the collection. The data structure used in this WeakMap objects specification are only intended to describe the required observable semantics of WeakMap objects. It is not intended to be a viable implementation model.</p>
     <emu-note>
@@ -36927,7 +37086,7 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-weakset-objects">
     <h1>WeakSet Objects</h1>
-    <p>WeakSet objects are collections of objects. A distinct object may only occur once as an element of a WeakSet's collection. A WeakSet may be queried to see if it contains a specific object, but no mechanism is provided for enumerating the objects it holds. If an object that is contained by a WeakSet is only reachable by following a chain of references that start within that WeakSet, then that object is inaccessible and is automatically removed from the WeakSet. WeakSet implementations must detect and remove such objects and any associated resources.</p>
+    <p>WeakSet objects are collections of objects. A distinct object may only occur once as an element of a WeakSet's collection. A WeakSet may be queried to see if it contains a specific object, but no mechanism is provided for enumerating the objects it holds. In certain conditions, objects which are not live are removed as WeakSet elements, as described in <emu-xref href="#sec-weakref-execution"></emu-xref>.</p>
     <p>An implementation may impose an arbitrarily determined latency between the time an object contained in a WeakSet becomes inaccessible and the time when the object is removed from the WeakSet. If this latency was observable to ECMAScript program, it would be a source of indeterminacy that could impact program execution. For that reason, an ECMAScript implementation must not provide any means to determine if a WeakSet contains a particular object that does not require the observer to present the observed object.</p>
     <p>WeakSet objects must be implemented using either hash tables or other mechanisms that, on average, provide access times that are sublinear on the number of elements in the collection. The data structure used in this WeakSet objects specification is only intended to describe the required observable semantics of WeakSet objects. It is not intended to be a viable implementation model.</p>
     <emu-note>
@@ -38786,6 +38945,267 @@ THH:mm:ss.sss
       <h1>JSON [ @@toStringTag ]</h1>
       <p>The initial value of the @@toStringTag property is the String value *"JSON"*.</p>
       <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+    </emu-clause>
+  </emu-clause>
+</emu-clause>
+
+<emu-clause id="sec-managing-memory">
+  <h1>Managing Memory</h1>
+
+  <emu-clause id="sec-weak-ref-objects">
+    <h1>WeakRef Objects</h1>
+    <p>A WeakRef is an object that is used to refer to a target object without preserving it from garbage collection. WeakRefs can be dereferenced to allow access to the target object, if the target object hasn't been reclaimed by garbage collection.</p>
+
+    <emu-clause id="sec-weak-ref-constructor">
+      <h1>The WeakRef Constructor</h1>
+      <p>The WeakRef constructor:</p>
+      <ul>
+        <li>is the intrinsic object %WeakRef%.</li>
+        <li>
+          is the initial value of the *"WeakRef"* property of the global object.
+        </li>
+        <li>
+          creates and initializes a new WeakRef object when called as a constructor.
+        </li>
+        <li>
+          is not intended to be called as a function and will throw an exception when called in that manner.
+        </li>
+        <li>
+          is designed to be subclassable. It may be used as the value in an `extends` clause of a class definition. Subclass constructors that intend to inherit the specified `WeakRef` behaviour must include a `super` call to the `WeakRef` constructor to create and initialize the subclass instance with the internal state necessary to support the `WeakRef.prototype` built-in methods.
+        </li>
+      </ul>
+
+      <emu-clause id="sec-weak-ref-target">
+        <h1>WeakRef ( _target_ )</h1>
+        <p>When the `WeakRef` function is called with argument _target_, the following steps are taken:</p>
+        <emu-alg>
+          1. If NewTarget is *undefined*, throw a *TypeError* exception.
+          1. If Type(_target_) is not Object, throw a *TypeError* exception.
+          1. Let _weakRef_ be ? OrdinaryCreateFromConstructor(NewTarget, `"%WeakRef.prototype%"`, &laquo; [[WeakRefTarget]] &raquo;).
+          1. Perfom ! AddToKeptObjects(_target_).
+          1. Set _weakRef_.[[WeakRefTarget]] to _target_.
+          1. Return _weakRef_.
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-weak-ref-constructor">
+      <h1>Properties of the WeakRef Constructor</h1>
+      <p>The WeakRef constructor:</p>
+      <ul>
+        <li>
+          has a [[Prototype]] internal slot whose value is the intrinsic object %Function.prototype%.
+        </li>
+        <li>has the following properties:</li>
+      </ul>
+
+      <emu-clause id="sec-weak-ref.prototype">
+        <h1>WeakRef.prototype</h1>
+        <p>The initial value of `WeakRef.prototype` is the intrinsic %WeakRef.prototype% object. </p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-weak-ref-prototype-object">
+      <h1>Properties of the WeakRef Prototype Object</h1>
+      <p>The WeakRef prototype object:</p>
+      <ul>
+        <li>is the intrinsic object <dfn>%WeakRef.prototype%</dfn>.</li>
+        <li>
+          has a [[Prototype]] internal slot whose value is %Object.prototype%.
+        </li>
+        <li>is an ordinary object.</li>
+        <li>does not have a [[WeakRefTarget]] internal slot.</li>
+      </ul>
+
+      <emu-clause id="sec-weak-ref.prototype.constructor" normative-optional>
+        <h1>WeakRef.prototype.constructor</h1>
+
+        <p>The initial value of `WeakRef.prototype.constructor` is the intrinsic object %WeakRef%.</p>
+
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-weak-ref.prototype.deref">
+        <h1>WeakRef.prototype.deref ( )</h1>
+        <p>The following steps are taken:</p>
+        <emu-alg>
+          1. Let _weakRef_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_weakRef_, [[WeakRefTarget]]).
+          1. Return ! WeakRefDeref(_weakRef_).
+        </emu-alg>
+
+        <emu-note>
+          <p>If the WeakRef returns a _target_ Object that is not *undefined*, then this _target_ object should not be garbage collected until the current execution of ECMAScript code has completed. The AddToKeptObjects operation makes sure read consistency is maintained.</p>
+
+          <pre><code class="javascript">
+            target = { foo: function() {} };
+            let weakRef = new WeakRef(target);
+
+            ... later ...
+
+            if (weakRef.deref()) {
+              weakRef.deref().foo();
+            }
+          </code></pre>
+
+          <p>In the above example, if the first deref does not evaluate to *undefined* then the second deref cannot either.</p>
+        </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-weak-ref.prototype-@@tostringtag">
+        <h1>WeakRef.prototype [ @@toStringTag ]</h1>
+        <p>The initial value of the @@toStringTag property is the String value *"WeakRef"*.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-weakref-abstract-operations">
+      <h1>WeakRef Abstract Operations</h1>
+      <emu-clause id="sec-weakrefderef" aoid="WeakRefDeref">
+        <h1>WeakRefDeref ( _weakRef_ )</h1>
+        <p>The abstract operation WeakRefDeref takes argument _weakRef_ (a WeakRef). It performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _target_ be _weakRef_.[[WeakRefTarget]].
+          1. If _target_ is not ~empty~, then
+            1. Perform ! AddToKeptObjects(_target_).
+            1. Return _target_.
+          1. Return *undefined*.
+        </emu-alg>
+        <emu-note>
+          <p>This abstract operation is defined separately from WeakRef.prototype.deref strictly to make it possible to succinctly define liveness.</p>
+        </emu-note>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-weak-ref-instances">
+      <h1>Properties of WeakRef Instances</h1>
+      <p>WeakRef instances are ordinary objects that inherit properties from the WeakRef prototype. WeakRef instances also have a [[WeakRefTarget]] internal slot.</p>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-finalization-registry-objects">
+    <h1>FinalizationRegistry Objects</h1>
+    <p>A FinalizationRegistry is an object that manages registration and unregistration of cleanup operations that are performed when target objects are garbage collected.</p>
+
+    <emu-clause id="sec-finalization-registry-constructor">
+      <h1>The FinalizationRegistry Constructor</h1>
+      <p>The FinalizationRegistry constructor:</p>
+      <ul>
+        <li>is the intrinsic object <dfn>%FinalizationRegistry%</dfn>.</li>
+        <li>
+          is the initial value of the *"FinalizationRegistry"* property of the global object.
+        </li>
+        <li>
+          creates and initializes a new FinalizationRegistry object when called as a constructor.
+        </li>
+        <li>
+          is not intended to be called as a function and will throw an exception when called in that manner.
+        </li>
+        <li>
+          is designed to be subclassable. It may be used as the value in an `extends` clause of a class definition. Subclass constructors that intend to inherit the specified `FinalizationRegistry` behaviour must include a `super` call to the `FinalizationRegistry` constructor to create and initialize the subclass instance with the internal state necessary to support the `FinalizationRegistry.prototype` built-in methods.
+        </li>
+      </ul>
+
+      <emu-clause id="sec-finalization-registry-cleanup-callback">
+        <h1>FinalizationRegistry ( _cleanupCallback_ )</h1>
+        <p>When the `FinalizationRegistry` function is called with argument _cleanupCallback_, the following steps are taken:</p>
+        <emu-alg>
+          1. If NewTarget is *undefined*, throw a *TypeError* exception.
+          1. If IsCallable(_cleanupCallback_) is *false*, throw a *TypeError* exception.
+          1. Let _finalizationRegistry_ be ? OrdinaryCreateFromConstructor(NewTarget, *"%FinalizationRegistry.prototype%"*, &laquo; [[Realm]], [[CleanupCallback]], [[Cells]] &raquo;).
+          1. Let _fn_ be the active function object.
+          1. Set _finalizationRegistry_.[[Realm]] to _fn_.[[Realm]].
+          1. Set _finalizationRegistry_.[[CleanupCallback]] to _cleanupCallback_.
+          1. Set _finalizationRegistry_.[[Cells]] to a new empty List.
+          1. Return _finalizationRegistry_.
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-finalization-registry-constructor">
+      <h1>Properties of the FinalizationRegistry Constructor</h1>
+      <p>The FinalizationRegistry constructor:</p>
+      <ul>
+        <li>
+          has a [[Prototype]] internal slot whose value is the intrinsic object %Function.prototype%.
+        </li>
+        <li>has the following properties:</li>
+      </ul>
+
+      <emu-clause id="sec-finalization-registry.prototype">
+        <h1>FinalizationRegistry.prototype</h1>
+        <p>The initial value of `FinalizationRegistry.prototype` is the intrinsic %FinalizationRegistry.prototype% object.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-the-finalization-registry-prototype-object">
+      <h1>Properties of the FinalizationRegistry Prototype Object</h1>
+      <p>The FinalizationRegistry prototype object:</p>
+      <ul>
+        <li>is the intrinsic object <dfn>%FinalizationRegistry.prototype%</dfn>.</li>
+        <li>
+          has a [[Prototype]] internal slot whose value is %Object.prototype%.
+        </li>
+        <li>is an ordinary object.</li>
+        <li>
+          does not have [[Cells]] and [[CleanupCallback]] internal slots.
+        </li>
+      </ul>
+
+      <emu-clause id="sec-finalization-registry.prototype.constructor">
+        <h1>FinalizationRegistry.prototype.constructor</h1>
+        <p>The initial value of `FinalizationRegistry.prototype.constructor` is the intrinsic object %FinalizationRegistry%.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-finalization-registry.prototype.register">
+        <h1>FinalizationRegistry.prototype.register ( _target_, _heldValue_ [ , _unregisterToken_ ] )</h1>
+        <p>The following steps are taken:</p>
+        <emu-alg>
+          1. Let _finalizationRegistry_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_finalizationRegistry_, [[Cells]]).
+          1. If Type(_target_) is not Object, throw a *TypeError* exception.
+          1. If SameValue(_target_, _heldValue_) is *true*, throw a *TypeError* exception.
+          1. If Type(_unregisterToken_) is not Object, then
+            1. If _unregisterToken_ is not *undefined*, throw a *TypeError* exception.
+            1. Set _unregisterToken_ to ~empty~.
+          1. Let _cell_ be the Record { [[WeakRefTarget]]: _target_, [[HeldValue]]: _heldValue_, [[UnregisterToken]]: _unregisterToken_ }.
+          1. Append _cell_ to _finalizationRegistry_.[[Cells]].
+          1. Return *undefined*.
+        </emu-alg>
+
+        <emu-note>
+          <p>Based on the algorithms and definitions in this specification, _cell_.[[HeldValue]] is live when _cell_ is in _finalizationRegistry_.[[Cells]]; however, this does not necessarily mean that _cell_.[[UnregisterToken]] or _cell_.[[Target]] are live.  For example, registering an object with itself as its unregister token would not keep the object alive forever.</p>
+        </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-finalization-registry.prototype.unregister">
+        <h1>FinalizationRegistry.prototype.unregister ( _unregisterToken_ )</h1>
+        <p>The following steps are taken:</p>
+        <emu-alg>
+          1. Let _finalizationRegistry_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_finalizationRegistry_, [[Cells]]).
+          1. If Type(_unregisterToken_) is not Object, throw a *TypeError* exception.
+          1. Let _removed_ be *false*.
+          1. For each Record { [[WeakRefTarget]], [[HeldValue]], [[UnregisterToken]] } _cell_ that is an element of _finalizationRegistry_.[[Cells]], do
+            1. If _cell_.[[UnregisterToken]] is not ~empty~ and SameValue(_cell_.[[UnregisterToken]], _unregisterToken_) is *true*, then
+              1. Remove _cell_ from _finalizationRegistry_.[[Cells]].
+              1. Set _removed_ to *true*.
+          1. Return _removed_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-finalization-registry.prototype-@@tostringtag">
+        <h1>FinalizationRegistry.prototype [ @@toStringTag ]</h1>
+        <p>The initial value of the @@toStringTag property is the String value *"FinalizationRegistry"*.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-properties-of-finalization-registry-instances">
+      <h1>Properties of FinalizationRegistry Instances</h1>
+      <p>FinalizationRegistry instances are ordinary objects that inherit properties from the FinalizationRegistry prototype. FinalizationRegistry instances also have [[Cells]] and [[CleanupCallback]] internal slots.</p>
     </emu-clause>
   </emu-clause>
 </emu-clause>
@@ -43767,6 +44187,7 @@ THH:mm:ss.sss
   <p>See <emu-xref href="#sec-hosts-and-implementations"></emu-xref> for the definition of host.</p>
   <emu-annex id="sec-host-hooks-summary">
     <h1>Host Hooks</h1>
+    <p><b>HostEnqueueFinalizationRegistryCleanupJob(...)</b></p>
     <p><b>HostEnqueuePromiseJob(...)</b></p>
     <p><b>HostEnsureCanCompileStrings(...)</b></p>
     <p><b>HostFinalizeImportMeta(...)</b></p>
