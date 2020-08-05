@@ -8857,8 +8857,12 @@
           1. Let _description_ be _name_'s [[Description]] value.
           1. If _description_ is *undefined*, set _name_ to the empty String.
           1. Else, set _name_ to the string-concatenation of *"["*, _description_, and *"]"*.
+        1. If _F_ has an [[InitialName]] internal slot, then
+          1. Set _F_.[[InitialName]] to _name_.
         1. If _prefix_ is present, then
           1. Set _name_ to the string-concatenation of _prefix_, the code unit 0x0020 (SPACE), and _name_.
+          1. If _F_ has an [[InitialName]] internal slot, then
+            1. Optionally, set _F_.[[InitialName]] to _name_.
         1. Return ! DefinePropertyOrThrow(_F_, *"name"*, PropertyDescriptor { [[Value]]: _name_, [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }).
       </emu-alg>
     </emu-clause>
@@ -9011,6 +9015,7 @@
     <p>The behaviour specified for each built-in function via algorithm steps or other means is the specification of the function body behaviour for both [[Call]] and [[Construct]] invocations of the function. However, [[Construct]] invocation is not supported by all built-in functions. For each built-in function, when invoked with [[Call]], the [[Call]] _thisArgument_ provides the *this* value, the [[Call]] _argumentsList_ provides the named parameters, and the NewTarget value is *undefined*. When invoked with [[Construct]], the *this* value is uninitialized, the [[Construct]] _argumentsList_ provides the named parameters, and the [[Construct]] _newTarget_ parameter provides the NewTarget value. If the built-in function is implemented as an ECMAScript function object then this specified behaviour must be implemented by the ECMAScript code that is the body of the function. Built-in functions that are ECMAScript function objects must be strict functions. If a built-in constructor has any [[Call]] behaviour other than throwing a *TypeError* exception, an ECMAScript implementation of the function must be done in a manner that does not cause the function's [[IsClassConstructor]] internal slot to have the value *true*.</p>
     <p>Built-in function objects that are not identified as constructors do not implement the [[Construct]] internal method unless otherwise specified in the description of a particular function. When a built-in constructor is called as part of a `new` expression the _argumentsList_ parameter of the invoked [[Construct]] internal method provides the values for the built-in constructor's named parameters.</p>
     <p>Built-in functions that are not constructors do not have a *"prototype"* property unless otherwise specified in the description of a particular function.</p>
+    <p>Built-in functions have an [[InitialName]] internal slot.</p>
     <p>If a built-in function object is not implemented as an ECMAScript function it must provide [[Call]] and [[Construct]] internal methods that conform to the following definitions:</p>
 
     <emu-clause id="sec-built-in-function-objects-call-thisargument-argumentslist">
@@ -9051,11 +9056,12 @@
         1. If _realm_ is not present, set _realm_ to the current Realm Record.
         1. Assert: _realm_ is a Realm Record.
         1. If _prototype_ is not present, set _prototype_ to _realm_.[[Intrinsics]].[[%Function.prototype%]].
-        1. Let _func_ be a new built-in function object that when called performs the action described by _steps_. The new function object has internal slots whose names are the elements of _internalSlotsList_.
+        1. Let _func_ be a new built-in function object that when called performs the action described by _steps_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
         1. Set _func_.[[Realm]] to _realm_.
         1. Set _func_.[[Prototype]] to _prototype_.
         1. Set _func_.[[Extensible]] to *true*.
         1. Set _func_.[[ScriptOrModule]] to *null*.
+        1. Set _func_.[[InitialName]] to *null*.
         1. Return _func_.
       </emu-alg>
       <p>Each built-in function defined in this specification is created by calling the CreateBuiltinFunction abstract operation.</p>
@@ -25151,7 +25157,7 @@
     <p>For example, the function object that is the initial value of the *"map"* property of the Array prototype object is described under the subclause heading &laquo;Array.prototype.map (callbackFn [ , thisArg])&raquo; which shows the two named arguments callbackFn and thisArg, the latter being optional; therefore the value of the *"length"* property of that function object is 1.</p>
   </emu-note>
   <p>Unless otherwise specified, the *"length"* property of a built-in function object has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
-  <p>Every built-in function object, including constructors, has a *"name"* property whose value is a String. Unless otherwise specified, this value is the name that is given to the function in this specification. Functions that are identified as anonymous functions use the empty String as the value of the *"name"* property. For functions that are specified as properties of objects, the name value is the property name string used to access the function. Functions that are specified as get or set accessor functions of built-in properties have *"get "* or *"set "* prepended to the property name string. The value of the *"name"* property is explicitly specified for each built-in functions whose property key is a Symbol value.</p>
+  <p>Every built-in function object, including constructors, has a *"name"* property whose value is a String. Unless otherwise specified, this value is the name that is given to the function in this specification. Functions that are identified as anonymous functions use the empty String as the value of the *"name"* property. For functions that are specified as properties of objects, the name value is the property name string used to access the function. Functions that are specified as get or set accessor functions of built-in properties have *"get "* or *"set "* prepended to the property name string. The value of the *"name"* property is explicitly specified for each built-in functions whose property key is a Symbol value. The *"name"* property is set using SetFunctionName.</p>
   <p>Unless otherwise specified, the *"name"* property of a built-in function object has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
   <p>Every other data property described in clauses 18 through 26 and in Annex <emu-xref href="#sec-additional-built-in-properties"></emu-xref> has the attributes { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true* } unless otherwise specified.</p>
   <p>Every accessor property described in clauses 18 through 26 and in Annex <emu-xref href="#sec-additional-built-in-properties"></emu-xref> has the attributes { [[Enumerable]]: *false*, [[Configurable]]: *true* } unless otherwise specified. If only a get accessor function is described, the set accessor function is the default value, *undefined*. If only a set accessor is described the get accessor is the default value, *undefined*.</p>
@@ -26712,7 +26718,7 @@
         <p>When the `toString` method is called, the following steps are taken:</p>
         <emu-alg>
           1. Let _func_ be the *this* value.
-          1. If _func_ is a <emu-xref href="#sec-bound-function-exotic-objects">bound function exotic object</emu-xref> or a <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref>, then return an implementation-defined String source code representation of _func_. The representation must have the syntax of a |NativeFunction|. Additionally, if _func_ is a <emu-xref href="#sec-well-known-intrinsic-objects">Well-known Intrinsic Object</emu-xref> and is not identified as an anonymous function, the portion of the returned String that would be matched by |PropertyName| must be the initial value of the *"name"* property of _func_.
+          1. If _func_ is a <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref>, then return an implementation-defined String source code representation of _func_. The representation must have the syntax of a |NativeFunction|. Additionally, if _func_ has an [[InitialName]] internal slot and _func_.[[InitialName]] is a String, the portion of the returned String that would be matched by |NativeFunctionAccessor?| |PropertyName| must be the value of _func_.[[InitialName]].
           1. If Type(_func_) is Object and _func_ has a [[SourceText]] internal slot and _func_.[[SourceText]] is a sequence of Unicode code points and ! HostHasSourceTextAvailable(_func_) is *true*, then
             1. Return ! UTF16Encode(_func_.[[SourceText]]).
           1. If Type(_func_) is Object and IsCallable(_func_) is *true*, then return an implementation-defined String source code representation of _func_. The representation must have the syntax of a |NativeFunction|.
@@ -26721,7 +26727,10 @@
 
         <emu-grammar type="definition">
           NativeFunction :
-            `function` PropertyName[~Yield, ~Await]? `(` FormalParameters[~Yield, ~Await] `)` `{` `[` `native` `code` `]` `}`
+            `function` NativeFunctionAccessor? PropertyName[~Yield, ~Await]? `(` FormalParameters[~Yield, ~Await] `)` `{` `[` `native` `code` `]` `}`
+          NativeFunctionAccessor :
+            `get`
+            `set`
         </emu-grammar>
       </emu-clause>
 
