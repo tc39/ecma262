@@ -7760,11 +7760,9 @@
     <ul>
       <li>At some future point in time, when there is no running execution context and the execution context stack is empty, the implementation must:
         <ol>
-          <li>Push an execution context onto the execution context stack.</li>
           <li>Perform any host-defined preparation steps.</li>
-          <li>Call the Abstract Closure.</li>
-          <li>Perform any host-defined cleanup steps.</li>
-          <li>Pop the previously-pushed execution context from the execution context stack.</li>
+          <li>Invoke the Job Abstract Closure.</li>
+          <li>Perform any host-defined cleanup steps, after which the execution context stack must be empty.</li>
         </ol>
       </li>
       <li>Only one Job may be actively undergoing evaluation at any point in time.</li>
@@ -7773,19 +7771,43 @@
     </ul>
 
     <emu-note>
-      <p>Host environments are not required to treat Jobs uniformly with respect to scheduling. For example, web browsers and Node.js treat Promise-handling Jobs as a higher priority than other work; future features may add Jobs that are not treated at such a high priority.</p>
+      Host environments are not required to treat Jobs uniformly with respect to scheduling. For example, web browsers and Node.js treat Promise-handling Jobs as a higher priority than other work; future features may add Jobs that are not treated at such a high priority.
     </emu-note>
+
+    <p>At any particular time, _scriptOrModule_ (a Script Record, a Module Record, or *null*) is the <dfn id="job-activescriptormodule">active script or module</dfn> if all of the following conditions are true:</p>
+    <ul>
+      <li>GetActiveScriptOrModule() is _scriptOrModule_.</li>
+      <li>If _scriptOrModule_ is a Script Record or Module Record, let _ec_ be the topmost execution context on the execution context stack whose ScriptOrModule component is _scriptOrModule_. The Realm component of _ec_ is _scriptOrModule_.[[Realm]].</li>
+    </ul>
+
+    <p>At any particular time, an execution is <dfn id="job-preparedtoevaluatecode">prepared to evaluate ECMAScript code</dfn> if all of the following conditions are true:</p>
+    <ul>
+      <li>The execution context stack is not empty.</li>
+      <li>The Realm component of the topmost execution context on the execution context stack is a Realm Record.</li>
+    </ul>
+
+    <emu-note>
+      <p>Host environments may prepare an execution to evaluate code by pushing execution contexts onto the execution context stack. The specific steps are implementation-defined.</p>
+      <p>The specific choice of Realm is up to the host environment. This initial execution context and Realm is only in use before any callback function is invoked. When a callback function related to a Job, like a Promise handler, is invoked, the invocation pushes its own execution context and Realm.</p>
+    </emu-note>
+
+    <p>Particular kinds of Jobs have additional conformance requirements.</p>
 
     <emu-clause id="sec-hostenqueuepromisejob" aoid="HostEnqueuePromiseJob">
       <h1>HostEnqueuePromiseJob ( _job_, _realm_ )</h1>
       <p>HostEnqueuePromiseJob is a host-defined abstract operation that schedules the Job Abstract Closure _job_ to be performed, at some future time. The Abstract Closures used with this algorithm are intended to be related to the handling of Promises, or otherwise, to be scheduled with equal priority to Promise handling operations.</p>
-      <p>The _realm_ parameter is passed through to hosts with no normative requirements; it is either *null* or a Realm.</p>
+      <p>The _realm_ parameter is either *null* or a Realm Record.</p>
+
+      <p>The implementation of HostEnqueuePromiseJob must conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref> as well as the following:</p>
+      <ul>
+        <li>If _realm_ is not *null*, each time _job_ is invoked the implementation must perform implementation-defined steps such that execution is <emu-xref href="#job-preparedtoevaluatecode">prepared to evaluate ECMAScript code</emu-xref> at the time of _job_'s invocation.</li>
+        <li>Let _scriptOrModule_ be GetActiveScriptOrModule() at the time HostEnqueuePromiseJob is invoked. If _realm_ is not *null*, each time _job_ is invoked the implementation must perform implementation-defined steps such that _scriptOrModule_ is the <emu-xref href="#job-activescriptormodule">active script or module</emu-xref> at the time of _job_'s invocation.</li>
+        <li>Jobs must run in the same order as the HostEnqueuePromiseJob invocations that scheduled them.</li>
+      </ul>
 
       <emu-note>
-        The _realm_ for PromiseResolveThenableJobs is the result of calling GetFunctionRealm on the _then_ function object. The _realm_ for PromiseReactionJobs is the result of calling GetFunctionRealm on the handler if the handler is not *undefined*. Otherwise the _realm_ is *null*. The WHATWG HTML specification (<a href="https://html.spec.whatwg.org/">https://html.spec.whatwg.org/</a>), for example, uses _realm_ to check for ability to run script and to prepare to run script.
+        <p>The _realm_ for Jobs returned by NewPromiseResolveThenableJob is usually the result of calling GetFunctionRealm on the _then_ function object. The _realm_ for Jobs returned by NewPromiseReactionJob is usually the result of calling GetFunctionRealm on the handler if the handler is not *undefined*. If the handler is *undefined*, _realm_ is *null*. For both kinds of Jobs, when GetFunctionRealm completes abnormally (i.e. called on a revoked Proxy), _realm_ is the current Realm at the time of the GetFunctionRealm call. When the _realm_ is *null*, no user ECMAScript code will be evaluated and no new ECMAScript objects (e.g. Error objects) will be created. The WHATWG HTML specification (<a href="https://html.spec.whatwg.org/">https://html.spec.whatwg.org/</a>), for example, uses _realm_ to check for the ability to run script and for the <a href="https://html.spec.whatwg.org/#entry">entry</a> concept.</p>
       </emu-note>
-
-      <p>The implementation of HostEnqueuePromiseJob must conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref>. Additionally, Jobs must be scheduled in FIFO order, with Jobs running in the same order as the HostEnqueuePromiseJob invocations which scheduled them.</p>
     </emu-clause>
   </emu-clause>
 
@@ -40759,6 +40781,8 @@ THH:mm:ss.sss
           1. If _reaction_.[[Handler]] is not *undefined*, then
             1. Let _getHandlerRealmResult_ be GetFunctionRealm(_reaction_.[[Handler]]).
             1. If _getHandlerRealmResult_ is a normal completion, then set _handlerRealm_ to _getHandlerRealmResult_.[[Value]].
+            1. Else, set _handlerRealm_ to the current Realm Record.
+            1. NOTE: _handlerRealm_ is never *null* unless the handler is *undefined*. When the handler is a revoked Proxy and no ECMAScript code runs, _handlerRealm_ is used to create error objects.
           1. Return the Record { [[Job]]: _job_, [[Realm]]: _handlerRealm_ }.
         </emu-alg>
       </emu-clause>
@@ -40776,7 +40800,8 @@ THH:mm:ss.sss
             1. Return Completion(_thenCallResult_).
           1. Let _getThenRealmResult_ be GetFunctionRealm(_then_).
           1. If _getThenRealmResult_ is a normal completion, then let _thenRealm_ be _getThenRealmResult_.[[Value]].
-          1. Otherwise, let _thenRealm_ be *null*.
+          1. Else, let _thenRealm_ be the current Realm Record.
+          1. NOTE: _thenRealm_ is never *null*. When _then_ is a revoked Proxy and no code runs, _thenRealm_ is used to create error objects.
           1. Return the Record { [[Job]]: _job_, [[Realm]]: _thenRealm_ }.
         </emu-alg>
         <emu-note>
