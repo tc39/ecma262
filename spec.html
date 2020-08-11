@@ -7793,6 +7793,91 @@
 
     <p>Particular kinds of Jobs have additional conformance requirements.</p>
 
+    <emu-clause id="sec-jobcallback-records">
+      <h1>JobCallback Records</h1>
+      <p>A <dfn>JobCallback Record</dfn> is a Record value used to store a function object and a host-defined value. Function objects that are invoked via a Job enqueued by the host may have additional host-defined context. To propagate the state, Job Abstract Closures should not capture and call function objects directly. Instead, use HostMakeJobCallback and HostCallJobCallback.</p>
+      <emu-note>
+        <p>The WHATWG HTML specification (<a href="https://html.spec.whatwg.org/">https://html.spec.whatwg.org/</a>), for example, uses the host-defined value to propagate the incumbent settings object for Promise callbacks.</p>
+      </emu-note>
+      <p>JobCallback Records have the fields listed in <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
+      <emu-table id="table-jobcallback-records" caption="JobCallback Record Fields">
+        <table>
+          <tbody>
+            <tr>
+              <th>
+                Field Name
+              </th>
+              <th>
+                Value
+              </th>
+              <th>
+                Meaning
+              </th>
+            </tr>
+            <tr>
+              <td>
+                [[Callback]]
+              </td>
+              <td>
+                A function object
+              </td>
+              <td>
+                The function to invoke when the Job is invoked.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[HostDefined]]
+              </td>
+              <td>
+                Any, default value is ~empty~.
+              </td>
+              <td>
+                Field reserved for use by hosts.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-hostmakejobcallback" aoid="HostMakeJobCallback">
+      <h1>HostMakeJobCallback ( _callback_ )</h1>
+      <p>HostMakeJobCallback is a host-defined abstract operation that takes argument _callback_ (a function object).</p>
+      <p>The implementation of HostMakeJobCallback must conform to the following requirements:</p>
+      <ul>
+        <li>It must always complete normally (i.e., not return an abrupt completion).</li>
+        <li>It must always return a JobCallback Record whose [[Callback]] field is _callback_.</li>
+      </ul>
+      <p>The default implementation of HostMakeJobCallback performs the following steps when called:</p>
+      <emu-alg>
+        1. Assert: IsCallable(_callback_) is *true*.
+        1. Return the JobCallback Record { [[Callback]]: _callback_, [[HostDefined]]: ~empty~ }.
+      </emu-alg>
+      <p>ECMAScript hosts that are not web browsers must use the default implementation of HostMakeJobCallback.</p>
+      <emu-note>
+        <p>This is called at the time that the callback is passed to the function that is responsible for its being eventually scheduled and run. For example, `promise.then(thenAction)` calls MakeJobCallback on `thenAction` at the time of invoking `Promise.prototype.then`, not at the time of scheduling the reaction Job.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-hostcalljobcallback" aoid="HostCallJobCallback">
+      <h1>HostCallJobCallback ( _jobCallback_, _V_, _argumentsList_ )</h1>
+      <p>HostCallJobCallback is a host-defined abstract operation that takes arguments _jobCallback_ (a JobCallback Record), _V_ (an ECMAScript language value), and _argumentsList_ (a List of ECMAScript language values).</p>
+      <p>The implementation of HostCallJobCallback must conform to the following requirements:</p>
+      <ul>
+        <li>It must always perform and return the result of Call(_jobCallback_.[[Callback]], _V_, _argumentsList_).</li>
+      </ul>
+      <emu-note>
+        <p>This requirement means that hosts cannot change the [[Call]] behaviour of function objects defined in this specification.</p>
+      </emu-note>
+      <p>The default implementation of HostCallJobCallback performs the following steps when called:</p>
+      <emu-alg>
+        1. Assert: IsCallable(_jobCallback_.[[Callback]]) is *true*.
+        1. Return ? Call(_jobCallback_.[[Callback]], _V_, _argumentsList_).
+      </emu-alg>
+      <p>ECMAScript hosts that are not web browsers must use the default implementation of HostCallJobCallback.</p>
+    </emu-clause>
+
     <emu-clause id="sec-hostenqueuepromisejob" aoid="HostEnqueuePromiseJob">
       <h1>HostEnqueuePromiseJob ( _job_, _realm_ )</h1>
       <p>HostEnqueuePromiseJob is a host-defined abstract operation that schedules the Job Abstract Closure _job_ to be performed, at some future time. The Abstract Closures used with this algorithm are intended to be related to the handling of Promises, or otherwise, to be scheduled with equal priority to Promise handling operations.</p>
@@ -22797,7 +22882,7 @@
               [[HostDefined]]
             </td>
             <td>
-              Any, default value is *undefined*.
+              Any, default value is ~empty~.
             </td>
             <td>
               Field reserved for use by host environments that need to associate additional information with a script.
@@ -40578,7 +40663,7 @@ THH:mm:ss.sss
                 ~Fulfill~ | ~Reject~
               </td>
               <td>
-                The [[Type]] is used when [[Handler]] is *undefined* to allow for behaviour specific to the settlement type.
+                The [[Type]] is used when [[Handler]] is ~empty~ to allow for behaviour specific to the settlement type.
               </td>
             </tr>
             <tr>
@@ -40586,10 +40671,10 @@ THH:mm:ss.sss
                 [[Handler]]
               </td>
               <td>
-                A function object or *undefined*.
+                A JobCallback Record | ~empty~.
               </td>
               <td>
-                The function that should be applied to the incoming value, and whose return value will govern what happens to the derived promise. If [[Handler]] is *undefined*, a function that depends on the value of [[Type]] will be used instead.
+                The function that should be applied to the incoming value, and whose return value will govern what happens to the derived promise. If [[Handler]] is ~empty~, a function that depends on the value of [[Type]] will be used instead.
               </td>
             </tr>
             </tbody>
@@ -40651,7 +40736,8 @@ THH:mm:ss.sss
             1. Let _thenAction_ be _then_.[[Value]].
             1. If IsCallable(_thenAction_) is *false*, then
               1. Return FulfillPromise(_promise_, _resolution_).
-            1. Let _job_ be NewPromiseResolveThenableJob(_promise_, _resolution_, _thenAction_).
+            1. Let _thenJobCallback_ be HostMakeJobCallback(_thenAction_).
+            1. Let _job_ be NewPromiseResolveThenableJob(_promise_, _resolution_, _thenJobCallback_).
             1. Perform HostEnqueuePromiseJob(_job_.[[Job]], _job_.[[Realm]]).
             1. Return *undefined*.
           </emu-alg>
@@ -40738,7 +40824,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-triggerpromisereactions" aoid="TriggerPromiseReactions">
         <h1>TriggerPromiseReactions ( _reactions_, _argument_ )</h1>
-        <p>The abstract operation TriggerPromiseReactions takes arguments _reactions_ (a collection of PromiseReaction Records) and _argument_. It enqueues a new Job for each record in _reactions_. Each such Job processes the [[Type]] and [[Handler]] of the PromiseReaction Record, and if the [[Handler]] is a function, calls it passing the given argument. If the [[Handler]] is *undefined*, the behaviour is determined by the [[Type]]. It performs the following steps when called:</p>
+        <p>The abstract operation TriggerPromiseReactions takes arguments _reactions_ (a collection of PromiseReaction Records) and _argument_. It enqueues a new Job for each record in _reactions_. Each such Job processes the [[Type]] and [[Handler]] of the PromiseReaction Record, and if the [[Handler]] is not ~empty~, calls it passing the given argument. If the [[Handler]] is ~empty~, the behaviour is determined by the [[Type]]. It performs the following steps when called:</p>
         <emu-alg>
           1. For each _reaction_ in _reactions_, in original insertion order, do
             1. Let _job_ be NewPromiseReactionJob(_reaction_, _argument_).
@@ -40782,12 +40868,12 @@ THH:mm:ss.sss
             1. Let _promiseCapability_ be _reaction_.[[Capability]].
             1. Let _type_ be _reaction_.[[Type]].
             1. Let _handler_ be _reaction_.[[Handler]].
-            1. If _handler_ is *undefined*, then
+            1. If _handler_ is ~empty~, then
               1. If _type_ is ~Fulfill~, let _handlerResult_ be NormalCompletion(_argument_).
               1. Else,
                 1. Assert: _type_ is ~Reject~.
                 1. Let _handlerResult_ be ThrowCompletion(_argument_).
-            1. Else, let _handlerResult_ be Call(_handler_, *undefined*, &laquo; _argument_ &raquo;).
+            1. Else, let _handlerResult_ be HostCallJobCallback(_handler_, *undefined*, &laquo; _argument_ &raquo;).
             1. If _promiseCapability_ is *undefined*, then
               1. Assert: _handlerResult_ is not an abrupt completion.
               1. Return NormalCompletion(~empty~).
@@ -40798,8 +40884,8 @@ THH:mm:ss.sss
               1. Let _status_ be Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _handlerResult_.[[Value]] &raquo;).
             1. Return Completion(_status_).
           1. Let _handlerRealm_ be *null*.
-          1. If _reaction_.[[Handler]] is not *undefined*, then
-            1. Let _getHandlerRealmResult_ be GetFunctionRealm(_reaction_.[[Handler]]).
+          1. If _reaction_.[[Handler]] is not ~empty~, then
+            1. Let _getHandlerRealmResult_ be GetFunctionRealm(_reaction_.[[Handler]].[[Callback]]).
             1. If _getHandlerRealmResult_ is a normal completion, then set _handlerRealm_ to _getHandlerRealmResult_.[[Value]].
             1. Else, set _handlerRealm_ to the current Realm Record.
             1. NOTE: _handlerRealm_ is never *null* unless the handler is *undefined*. When the handler is a revoked Proxy and no ECMAScript code runs, _handlerRealm_ is used to create error objects.
@@ -40813,15 +40899,15 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _job_ be a new Job Abstract Closure with no parameters that captures _promiseToResolve_, _thenable_, and _then_ and performs the following steps when called:
             1. Let _resolvingFunctions_ be CreateResolvingFunctions(_promiseToResolve_).
-            1. Let _thenCallResult_ be Call(_then_, _thenable_, &laquo; _resolvingFunctions_.[[Resolve]], _resolvingFunctions_.[[Reject]] &raquo;).
+            1. Let _thenCallResult_ be HostCallJobCallback(_then_, _thenable_, &laquo; _resolvingFunctions_.[[Resolve]], _resolvingFunctions_.[[Reject]] &raquo;).
             1. If _thenCallResult_ is an abrupt completion, then
               1. Let _status_ be Call(_resolvingFunctions_.[[Reject]], *undefined*, &laquo; _thenCallResult_.[[Value]] &raquo;).
               1. Return Completion(_status_).
             1. Return Completion(_thenCallResult_).
-          1. Let _getThenRealmResult_ be GetFunctionRealm(_then_).
+          1. Let _getThenRealmResult_ be GetFunctionRealm(_then_.[[Callback]]).
           1. If _getThenRealmResult_ is a normal completion, then let _thenRealm_ be _getThenRealmResult_.[[Value]].
           1. Else, let _thenRealm_ be the current Realm Record.
-          1. NOTE: _thenRealm_ is never *null*. When _then_ is a revoked Proxy and no code runs, _thenRealm_ is used to create error objects.
+          1. NOTE: _thenRealm_ is never *null*. When _then_.[[Callback]] is a revoked Proxy and no code runs, _thenRealm_ is used to create error objects.
           1. Return the Record { [[Job]]: _job_, [[Realm]]: _thenRealm_ }.
         </emu-alg>
         <emu-note>
@@ -41383,11 +41469,15 @@ THH:mm:ss.sss
             1. If _resultCapability_ is not present, then
               1. Set _resultCapability_ to *undefined*.
             1. If IsCallable(_onFulfilled_) is *false*, then
-              1. Set _onFulfilled_ to *undefined*.
+              1. Let _onFulfilledJobCallback_ be ~empty~.
+            1. Else,
+              1. Let _onFulfilledJobCallback_ be HostMakeJobCallback(_onFulfilled_).
             1. If IsCallable(_onRejected_) is *false*, then
-              1. Set _onRejected_ to *undefined*.
-            1. Let _fulfillReaction_ be the PromiseReaction { [[Capability]]: _resultCapability_, [[Type]]: ~Fulfill~, [[Handler]]: _onFulfilled_ }.
-            1. Let _rejectReaction_ be the PromiseReaction { [[Capability]]: _resultCapability_, [[Type]]: ~Reject~, [[Handler]]: _onRejected_ }.
+              1. Let _onRejectedJobCallback_ be ~empty~.
+            1. Else,
+              1. Let _onRejectedJobCallback_ be HostMakeJobCallback(_onRejected_).
+            1. Let _fulfillReaction_ be the PromiseReaction { [[Capability]]: _resultCapability_, [[Type]]: ~Fulfill~, [[Handler]]: _onFulfilledJobCallback_ }.
+            1. Let _rejectReaction_ be the PromiseReaction { [[Capability]]: _resultCapability_, [[Type]]: ~Reject~, [[Handler]]: _onRejectedJobCallback_ }.
             1. If _promise_.[[PromiseState]] is ~pending~, then
               1. Append _fulfillReaction_ as the last element of the List that is _promise_.[[PromiseFulfillReactions]].
               1. Append _rejectReaction_ as the last element of the List that is _promise_.[[PromiseRejectReactions]].
@@ -44262,6 +44352,7 @@ THH:mm:ss.sss
   <p>See <emu-xref href="#sec-hosts-and-implementations"></emu-xref> for the definition of host.</p>
   <emu-annex id="sec-host-hooks-summary">
     <h1>Host Hooks</h1>
+    <p><b>HostCallJobCallback(...)</b></p>
     <p><b>HostEnqueueFinalizationRegistryCleanupJob(...)</b></p>
     <p><b>HostEnqueuePromiseJob(...)</b></p>
     <p><b>HostEnsureCanCompileStrings(...)</b></p>
@@ -44269,6 +44360,7 @@ THH:mm:ss.sss
     <p><b>HostGetImportMetaProperties(...)</b></p>
     <p><b>HostHasSourceTextAvailable(...)</b></p>
     <p><b>HostImportModuleDynamically(...)</b></p>
+    <p><b>HostMakeJobCallback(...)</b></p>
     <p><b>HostPromiseRejectionTracker(...)</b></p>
     <p><b>HostResolveImportedModule(...)</b></p>
     <p><b>InitializeHostDefinedRealm(...)</b></p>
@@ -44278,6 +44370,7 @@ THH:mm:ss.sss
     <p>[[HostDefined]] on Realm Records: See <emu-xref href="#table-21"></emu-xref>.</p>
     <p>[[HostDefined]] on Script Records: See <emu-xref href="#table-script-records"></emu-xref>.</p>
     <p>[[HostDefined]] on Module Records: See <emu-xref href="#table-36"></emu-xref>.</p>
+    <p>[[HostDefined]] on JobCallback Records: See <emu-xref href="#table-jobcallback-records"></emu-xref>.</p>
     <p>[[HostSynchronizesWith]] on Candidate Executions: See <emu-xref href="#table-candidate-execution-records"></emu-xref>.</p>
     <p>[[IsHTMLDDA]]: See <emu-xref href="#sec-IsHTMLDDA-internal-slot"></emu-xref>.</p>
   </emu-annex>
