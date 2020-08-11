@@ -37437,7 +37437,7 @@ THH:mm:ss.sss
             1. Let _readEvent_ be ReadSharedMemory { [[Order]]: _order_, [[NoTear]]: _noTear_, [[Block]]: _block_, [[ByteIndex]]: _byteIndex_, [[ElementSize]]: _elementSize_ }.
             1. Append _readEvent_ to _eventList_.
             1. Append Chosen Value Record { [[Event]]: _readEvent_, [[ChosenValue]]: _rawValue_ } to _execution_.[[ChosenValues]].
-          1. Else, let _rawValue_ be a List of _elementSize_ containing, in order, the _elementSize_ sequence of bytes starting with _block_[_byteIndex_].
+          1. Else, let _rawValue_ be a List of size _elementSize_ containing the sequence of _elementSize_ bytes starting with _block_[_byteIndex_].
           1. If _isLittleEndian_ is not present, set _isLittleEndian_ to the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
           1. Return RawBytesToNumeric(_type_, _rawValue_, _isLittleEndian_).
         </emu-alg>
@@ -37487,9 +37487,9 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-getmodifysetvalueinbuffer" aoid="GetModifySetValueInBuffer">
         <h1>GetModifySetValueInBuffer ( _arrayBuffer_, _byteIndex_, _type_, _value_, _op_ [ , _isLittleEndian_ ] )</h1>
-        <p>The abstract operation GetModifySetValueInBuffer takes arguments _arrayBuffer_ (a SharedArrayBuffer object), _byteIndex_ (a non-negative integer), _type_ (a TypedArray element type), _value_ (a Number or a BigInt), and _op_ (a read-modify-write modification function) and optional argument _isLittleEndian_ (a Boolean). It performs the following steps when called:</p>
+        <p>The abstract operation GetModifySetValueInBuffer takes arguments _arrayBuffer_ (an ArrayBuffer object or a SharedArrayBuffer object), _byteIndex_ (a non-negative integer), _type_ (a TypedArray element type), _value_ (a Number or a BigInt), and _op_ (a read-modify-write modification function) and optional argument _isLittleEndian_ (a Boolean). It performs the following steps when called:</p>
         <emu-alg>
-          1. Assert: IsSharedArrayBuffer(_arrayBuffer_) is *true*.
+          1. Assert: IsDetachedBuffer(_arrayBuffer_) is *false*.
           1. Assert: There are sufficient bytes in _arrayBuffer_ starting at _byteIndex_ to represent a value of _type_.
           1. Assert: ! IsNonNegativeInteger(_byteIndex_) is *true*.
           1. Assert: Type(_value_) is BigInt if ! IsBigIntElementType(_type_) is *true*; otherwise, Type(_value_) is Number.
@@ -37497,13 +37497,18 @@ THH:mm:ss.sss
           1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for Element Type _type_.
           1. If _isLittleEndian_ is not present, set _isLittleEndian_ to the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
           1. Let _rawBytes_ be NumericToRawBytes(_type_, _value_, _isLittleEndian_).
-          1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
-          1. Let _eventList_ be the [[EventList]] field of the element in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-          1. Let _rawBytesRead_ be a List of length _elementSize_ of nondeterministically chosen byte values.
-          1. NOTE: In implementations, _rawBytesRead_ is the result of a load-link, of a load-exclusive, or of an operand of a read-modify-write instruction on the underlying hardware. The nondeterminism is a semantic prescription of the memory model to describe observable behaviour of hardware with weak consistency.
-          1. Let _rmwEvent_ be ReadModifyWriteSharedMemory { [[Order]]: ~SeqCst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _byteIndex_, [[ElementSize]]: _elementSize_, [[Payload]]: _rawBytes_, [[ModifyOp]]: _op_ }.
-          1. Append _rmwEvent_ to _eventList_.
-          1. Append Chosen Value Record { [[Event]]: _rmwEvent_, [[ChosenValue]]: _rawBytesRead_ } to _execution_.[[ChosenValues]].
+          1. If IsSharedArrayBuffer(_arrayBuffer_) is *true*, then
+            1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
+            1. Let _eventList_ be the [[EventList]] field of the element in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
+            1. Let _rawBytesRead_ be a List of length _elementSize_ of nondeterministically chosen byte values.
+            1. NOTE: In implementations, _rawBytesRead_ is the result of a load-link, of a load-exclusive, or of an operand of a read-modify-write instruction on the underlying hardware. The nondeterminism is a semantic prescription of the memory model to describe observable behaviour of hardware with weak consistency.
+            1. Let _rmwEvent_ be ReadModifyWriteSharedMemory { [[Order]]: ~SeqCst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _byteIndex_, [[ElementSize]]: _elementSize_, [[Payload]]: _rawBytes_, [[ModifyOp]]: _op_ }.
+            1. Append _rmwEvent_ to _eventList_.
+            1. Append Chosen Value Record { [[Event]]: _rmwEvent_, [[ChosenValue]]: _rawBytesRead_ } to _execution_.[[ChosenValues]].
+          1. Else,
+            1. Let _rawBytesRead_ be a List of size _elementSize_ containing the sequence of _elementSize_ bytes starting with _block_[_byteIndex_].
+            1. Let _rawBytesModified_ be _op_(_rawBytesRead_, _rawBytes_).
+            1. Store the individual bytes of _rawBytesModified_ into _block_, in order, starting at _block_[_byteIndex_].
           1. Return RawBytesToNumeric(_type_, _rawBytesRead_, _isLittleEndian_).
         </emu-alg>
       </emu-clause>
@@ -38176,21 +38181,18 @@ THH:mm:ss.sss
     <emu-clause id="sec-abstract-operations-for-atomics">
       <h1>Abstract Operations for Atomics</h1>
 
-      <emu-clause id="sec-validatesharedintegertypedarray" aoid="ValidateSharedIntegerTypedArray">
-        <h1>ValidateSharedIntegerTypedArray ( _typedArray_ [ , _waitable_ ] )</h1>
-        <p>The abstract operation ValidateSharedIntegerTypedArray takes argument _typedArray_ and optional argument _waitable_ (a Boolean). It performs the following steps when called:</p>
+      <emu-clause id="sec-validateintegertypedarray" aoid="ValidateIntegerTypedArray" oldid="sec-validatesharedintegertypedarray">
+        <h1>ValidateIntegerTypedArray ( _typedArray_ [ , _waitable_ ] )</h1>
+        <p>The abstract operation ValidateIntegerTypedArray takes argument _typedArray_ and optional argument _waitable_ (a Boolean). It performs the following steps when called:</p>
         <emu-alg>
           1. If _waitable_ is not present, set _waitable_ to *false*.
-          1. Perform ? RequireInternalSlot(_typedArray_, [[TypedArrayName]]).
+          1. Let _buffer_ be ? ValidateTypedArray(_typedArray_).
           1. Let _typeName_ be _typedArray_.[[TypedArrayName]].
           1. Let _type_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _typeName_.
           1. If _waitable_ is *true*, then
             1. If _typeName_ is not *"Int32Array"* or *"BigInt64Array"*, throw a *TypeError* exception.
           1. Else,
             1. If ! IsUnclampedIntegerElementType(_type_) is *false* and ! IsBigIntElementType(_type_) is *false*, throw a *TypeError* exception.
-          1. Assert: _typedArray_ has a [[ViewedArrayBuffer]] internal slot.
-          1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
-          1. If IsSharedArrayBuffer(_buffer_) is *false*, throw a *TypeError* exception.
           1. Return _buffer_.
         </emu-alg>
       </emu-clause>
@@ -38200,8 +38202,8 @@ THH:mm:ss.sss
         <p>The abstract operation ValidateAtomicAccess takes arguments _typedArray_ and _requestIndex_. It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: _typedArray_ is an Object that has a [[ViewedArrayBuffer]] internal slot.
-          1. Let _accessIndex_ be ? ToIndex(_requestIndex_).
           1. Let _length_ be _typedArray_.[[ArrayLength]].
+          1. Let _accessIndex_ be ? ToIndex(_requestIndex_).
           1. Assert: _accessIndex_ &ge; 0.
           1. If _accessIndex_ &ge; _length_, throw a *RangeError* exception.
           1. Return _accessIndex_.
@@ -38324,11 +38326,13 @@ THH:mm:ss.sss
         <h1>AtomicReadModifyWrite ( _typedArray_, _index_, _value_, _op_ )</h1>
         <p>The abstract operation AtomicReadModifyWrite takes arguments _typedArray_, _index_, _value_, and _op_ (a read-modify-write modification function). _op_ takes two List of byte values arguments and returns a List of byte values. This operation atomically loads a value, combines it with another value, and stores the result of the combination. It returns the loaded value. It performs the following steps when called:</p>
         <emu-alg>
-          1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
+          1. Let _buffer_ be ? ValidateIntegerTypedArray(_typedArray_).
           1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
           1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
           1. If _typedArray_.[[ContentType]] is ~BigInt~, let _v_ be ? ToBigInt(_value_).
           1. Otherwise, let _v_ be ? ToInteger(_value_).
+          1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+          1. NOTE: The above check is not redundant with the check in ValidateIntegerTypedArray because the call to ToBigInt or ToInteger on the preceding lines can have arbitrary side effects, which could cause the buffer to become detached.
           1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
           1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
           1. Let _offset_ be _typedArray_.[[ByteOffset]].
@@ -38341,8 +38345,10 @@ THH:mm:ss.sss
         <h1>AtomicLoad ( _typedArray_, _index_ )</h1>
         <p>The abstract operation AtomicLoad takes arguments _typedArray_ and _index_. It atomically loads a value and returns the loaded value. It performs the following steps when called:</p>
         <emu-alg>
-          1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
+          1. Let _buffer_ be ? ValidateIntegerTypedArray(_typedArray_).
           1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+          1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+          1. NOTE: The above check is not redundant with the check in ValidateIntegerTypedArray because the call to ValidateAtomicAccess on the preceding line can have arbitrary side effects, which could cause the buffer to become detached.
           1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
           1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
           1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
@@ -38418,7 +38424,7 @@ THH:mm:ss.sss
       <h1>Atomics.compareExchange ( _typedArray_, _index_, _expectedValue_, _replacementValue_ )</h1>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
+        1. Let _buffer_ be ? ValidateIntegerTypedArray(_typedArray_).
         1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
         1. If _typedArray_.[[ContentType]] is ~BigInt~, then
@@ -38427,6 +38433,8 @@ THH:mm:ss.sss
         1. Else,
           1. Let _expected_ be ? ToInteger(_expectedValue_).
           1. Let _replacement_ be ? ToInteger(_replacementValue_).
+        1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+        1. NOTE: The above check is not redundant with the check in ValidateIntegerTypedArray because the call to ToBigInt or ToInteger on the preceding lines can have arbitrary side effects, which could cause the buffer to become detached.
         1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
         1. Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
         1. Let _expectedBytes_ be NumericToRawBytes(_elementType_, _expected_, _isLittleEndian_).
@@ -38490,11 +38498,13 @@ THH:mm:ss.sss
       <h1>Atomics.store ( _typedArray_, _index_, _value_ )</h1>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_).
+        1. Let _buffer_ be ? ValidateIntegerTypedArray(_typedArray_).
         1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
         1. If _arrayTypeName_ is *"BigUint64Array"* or *"BigInt64Array"*, let _v_ be ? ToBigInt(_value_).
         1. Otherwise, let _v_ be ? ToInteger(_value_).
+        1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+        1. NOTE: The above check is not redundant with the check in ValidateIntegerTypedArray because the call to ToBigInt or ToInteger on the preceding lines can have arbitrary side effects, which could cause the buffer to become detached.
         1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
         1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
         1. Let _offset_ be _typedArray_.[[ByteOffset]].
@@ -38526,7 +38536,8 @@ THH:mm:ss.sss
       <h1>Atomics.wait ( _typedArray_, _index_, _value_, _timeout_ )</h1>
       <p>`Atomics.wait` puts the calling agent in a wait queue and puts it to sleep until it is notified or the sleep times out. The following steps are taken:</p>
       <emu-alg>
-        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+        1. Let _buffer_ be ? ValidateIntegerTypedArray(_typedArray_, *true*).
+        1. If IsSharedArrayBuffer(_buffer_) is *false*, throw a *TypeError* exception.
         1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
         1. If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ? ToBigInt64(_value_).
@@ -38562,7 +38573,7 @@ THH:mm:ss.sss
       <h1>Atomics.notify ( _typedArray_, _index_, _count_ )</h1>
       <p>`Atomics.notify` notifies some agents that are sleeping in the wait queue.  The following steps are taken:</p>
       <emu-alg>
-        1. Let _buffer_ be ? ValidateSharedIntegerTypedArray(_typedArray_, *true*).
+        1. Let _buffer_ be ? ValidateIntegerTypedArray(_typedArray_, *true*).
         1. Let _i_ be ? ValidateAtomicAccess(_typedArray_, _index_).
         1. If _count_ is *undefined*, let _c_ be *+&infin;*.
         1. Else,
@@ -38573,6 +38584,7 @@ THH:mm:ss.sss
         1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
         1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
         1. Let _indexedPosition_ be (_i_ &times; _elementSize_) + _offset_.
+        1. If IsSharedArrayBuffer(_buffer_) is *false*, return 0.
         1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
         1. Let _n_ be 0.
         1. Perform EnterCriticalSection(_WL_).
