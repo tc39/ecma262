@@ -1016,6 +1016,7 @@
         <p>The rationale behind this design was to keep the implementation of Strings as simple and high-performing as possible. If ECMAScript source text is in Normalized Form C, string literals are guaranteed to also be normalized, as long as they do not contain any Unicode escape sequences.</p>
       </emu-note>
       <p>In this specification, the phrase "the <dfn id="string-concatenation">string-concatenation</dfn> of _A_, _B_, ..." (where each argument is a String value, a code unit, or a sequence of code units) denotes the String value whose sequence of code units is the concatenation of the code units (in order) of each of the arguments (in order).</p>
+      <p>The phrase "the <dfn id="substring">substring</dfn> of _S_ from _inclusiveStart_ to _exclusiveEnd_" (where _S_ is a String value or a sequence of code units and _inclusiveStart_ and _exclusiveEnd_ are integers) denotes the String value consisting of the consecutive code units of _S_ beginning at index _inclusiveStart_ and ending immediately before index _exclusiveEnd_ (which is the empty String when _inclusiveStart_ = _exclusiveEnd_). If the "to" suffix is omitted, the length of _S_ is used as the value of _exclusiveEnd_.</p>
 
       <emu-clause id="sec-stringindexof" aoid="StringIndexOf">
         <h1>Runtime Semantics: StringIndexOf ( _string_, _searchValue_, _fromIndex_ )</h1>
@@ -25547,7 +25548,8 @@
           1. If the length of _S_ is at least 2 and the first two code units of _S_ are either *"0x"* or *"0X"*, then
             1. Remove the first two code units from _S_.
             1. Set _R_ to 16.
-        1. If _S_ contains a code unit that is not a radix-_R_ digit, let _Z_ be the substring of _S_ consisting of all code units before the first such code unit; otherwise, let _Z_ be _S_.
+        1. If _S_ contains a code unit that is not a radix-_R_ digit, let _end_ be the index within _S_ of the first such code unit; otherwise, let _end_ be the length of _S_.
+        1. Let _Z_ be the substring of _S_ from 0 to _end_.
         1. If _Z_ is empty, return *NaN*.
         1. Let _mathInt_ be the mathematical integer value that is represented by _Z_ in radix-_R_ notation, using the letters <b>A</b>-<b>Z</b> and <b>a</b>-<b>z</b> for digits with values 10 through 35. (However, if _R_ is 10 and _Z_ contains more than 20 significant digits, every significant digit after the 20th may be replaced by a 0 digit, at the option of the implementation; and if _R_ is not 2, 4, 8, 10, 16, or 32, then _mathInt_ may be an implementation-approximated value representing the mathematical integer value that is represented by _Z_ in radix-_R_ notation.)
         1. If _mathInt_ = 0<sub>ℝ</sub>, then
@@ -25662,7 +25664,7 @@
                   1. If _C_ is not in _reservedSet_, then
                     1. Let _S_ be the String value containing only the code unit _C_.
                   1. Else,
-                    1. Let _S_ be the substring of _string_ from index _start_ to index _k_ inclusive.
+                    1. Let _S_ be the substring of _string_ from _start_ to _k_ + 1.
                 1. Else,
                   1. Assert: the most significant bit in _B_ is 1.
                   1. Let _n_ be the smallest nonnegative integer such that (_B_ &lt;&lt; _n_) &amp; 0x80 is equal to 0.
@@ -30506,10 +30508,11 @@ THH:mm:ss.sss
           1. If _endPosition_ is *undefined*, let _pos_ be _len_; else let _pos_ be ? ToInteger(_endPosition_).
           1. Let _end_ be min(max(_pos_, 0), _len_).
           1. Let _searchLength_ be the length of _searchStr_.
+          1. If _searchLength_ = 0, return *true*.
           1. Let _start_ be _end_ - _searchLength_.
-          1. If _start_ is less than 0, return *false*.
-          1. If the sequence of code units of _S_ starting at _start_ of length _searchLength_ is the same as the full code unit sequence of _searchStr_, return *true*.
-          1. Otherwise, return *false*.
+          1. If _start_ &lt; 0, return *false*.
+          1. Let _substring_ be the substring of _S_ from _start_ to _end_.
+          1. Return ! SameValueNonNumeric(_substring_, _searchStr_).
         </emu-alg>
         <emu-note>
           <p>Returns *true* if the sequence of code units of _searchString_ converted to a String is the same as the corresponding code units of this object (converted to a String) starting at _endPosition_ - length(this). Otherwise returns *false*.</p>
@@ -30541,7 +30544,7 @@ THH:mm:ss.sss
           1. Return *false*.
         </emu-alg>
         <emu-note>
-          <p>If _searchString_ appears as a substring of the result of converting this object to a String, at one or more indices that are greater than or equal to _position_, return *true*; otherwise, returns *false*. If _position_ is *undefined*, 0 is assumed, so as to search all of the String.</p>
+          <p>If _searchString_ appears as a <emu-not-ref>substring</emu-not-ref> of the result of converting this object to a String, at one or more indices that are greater than or equal to _position_, return *true*; otherwise, returns *false*. If _position_ is *undefined*, 0 is assumed, so as to search all of the String.</p>
         </emu-note>
         <emu-note>
           <p>Throwing an exception if the first argument is a RegExp is specified in order to allow future editions to define extensions that allow such argument values.</p>
@@ -30554,7 +30557,7 @@ THH:mm:ss.sss
       <emu-clause id="sec-string.prototype.indexof">
         <h1>String.prototype.indexOf ( _searchString_ [ , _position_ ] )</h1>
         <emu-note>
-          <p>If _searchString_ appears as a substring of the result of converting this object to a String, at one or more indices that are greater than or equal to _position_, then the smallest such index is returned; otherwise, -1 is returned. If _position_ is *undefined*, 0 is assumed, so as to search all of the String.</p>
+          <p>If _searchString_ appears as a <emu-not-ref>substring</emu-not-ref> of the result of converting this object to a String, at one or more indices that are greater than or equal to _position_, then the smallest such index is returned; otherwise, -1 is returned. If _position_ is *undefined*, 0 is assumed, so as to search all of the String.</p>
         </emu-note>
         <p>The `indexOf` method takes two arguments, _searchString_ and _position_, and performs the following steps:</p>
         <emu-alg>
@@ -30576,7 +30579,7 @@ THH:mm:ss.sss
       <emu-clause id="sec-string.prototype.lastindexof">
         <h1>String.prototype.lastIndexOf ( _searchString_ [ , _position_ ] )</h1>
         <emu-note>
-          <p>If _searchString_ appears as a substring of the result of converting this object to a String at one or more indices that are smaller than or equal to _position_, then the greatest such index is returned; otherwise, -1 is returned. If _position_ is *undefined*, the length of the String value is assumed, so as to search all of the String.</p>
+          <p>If _searchString_ appears as a <emu-not-ref>substring</emu-not-ref> of the result of converting this object to a String at one or more indices that are smaller than or equal to _position_, then the greatest such index is returned; otherwise, -1 is returned. If _position_ is *undefined*, the length of the String value is assumed, so as to search all of the String.</p>
         </emu-note>
         <p>The `lastIndexOf` method takes two arguments, _searchString_ and _position_, and performs the following steps:</p>
         <emu-alg>
@@ -30753,19 +30756,20 @@ THH:mm:ss.sss
               1. Return ? Call(_replacer_, _searchValue_, &laquo; _O_, _replaceValue_ &raquo;).
           1. Let _string_ be ? ToString(_O_).
           1. Let _searchString_ be ? ToString(_searchValue_).
+          1. Let _searchLen_ be the length of _searchString_.
           1. Let _functionalReplace_ be IsCallable(_replaceValue_).
           1. If _functionalReplace_ is *false*, then
             1. Set _replaceValue_ to ? ToString(_replaceValue_).
-          1. Search _string_ for the first occurrence of _searchString_ and let _pos_ be the index within _string_ of the first code unit of the matched substring and let _matched_ be _searchString_. If no occurrences of _searchString_ were found, return _string_.
+          1. Let _pos_ be ! StringIndexOf(_string_, _searchString_, 0).
+          1. If _pos_ is -1, return _string_.
           1. If _functionalReplace_ is *true*, then
-            1. Let _replValue_ be ? Call(_replaceValue_, *undefined*, &laquo; _matched_, _pos_, _string_ &raquo;).
+            1. Let _replValue_ be ? Call(_replaceValue_, *undefined*, &laquo; _searchString_, _pos_, _string_ &raquo;).
             1. Let _replStr_ be ? ToString(_replValue_).
           1. Else,
             1. Let _captures_ be a new empty List.
-            1. Let _replStr_ be ! GetSubstitution(_matched_, _string_, _pos_, _captures_, *undefined*, _replaceValue_).
-          1. Let _tailPos_ be _pos_ + the number of code units in _matched_.
-          1. Let _newString_ be the string-concatenation of the first _pos_ code units of _string_, _replStr_, and the trailing substring of _string_ starting at index _tailPos_. If _pos_ is 0, the first element of the concatenation will be the empty String.
-          1. Return _newString_.
+            1. Let _replStr_ be ! GetSubstitution(_searchString_, _string_, _pos_, _captures_, *undefined*, _replaceValue_).
+          1. Let _tailPos_ be _pos_ + _searchLen_.
+          1. Return the string-concatenation of the substring of _string_ from 0 to _pos_, _replStr_, and the substring of _string_ from _tailPos_.
         </emu-alg>
         <emu-note>
           <p>The `replace` function is intentionally generic; it does not require that its *this* value be a String object. Therefore, it can be transferred to other kinds of objects for use as a method.</p>
@@ -30832,7 +30836,7 @@ THH:mm:ss.sss
                   <code>$`</code>
                 </td>
                 <td>
-                  If _position_ is 0, the replacement is the empty String. Otherwise the replacement is the substring of _str_ that starts at index 0 and whose last code unit is at index _position_ - 1.
+                  The replacement is the substring of _str_ from 0 to _position_.
                 </td>
               </tr>
               <tr>
@@ -30843,7 +30847,7 @@ THH:mm:ss.sss
                   `$'`
                 </td>
                 <td>
-                  If _tailPos_ &ge; _stringLength_, the replacement is the empty String. Otherwise the replacement is the substring of _str_ that starts at index _tailPos_ and continues to the end of _str_.
+                  If _tailPos_ &ge; _stringLength_, the replacement is the empty String. Otherwise the replacement is the substring of _str_ from _tailPos_.
                 </td>
               </tr>
               <tr>
@@ -30895,7 +30899,7 @@ THH:mm:ss.sss
                       1. Scan until the next `>` U+003E (GREATER-THAN SIGN).
                       1. If none is found, the replacement text is the String *"$&lt;"*.
                       1. Else,
-                        1. Let _groupName_ be the enclosed substring.
+                        1. Let _groupName_ be the enclosed <emu-not-ref>substring</emu-not-ref>.
                         1. Let _capture_ be ? Get(_namedCaptures_, _groupName_).
                         1. If _capture_ is *undefined*, replace the text through `>` with the empty String.
                         1. Otherwise, replace the text through `>` with ? ToString(_capture_).
@@ -30954,11 +30958,12 @@ THH:mm:ss.sss
               1. Assert: Type(_replaceValue_) is String.
               1. Let _captures_ be a new empty List.
               1. Let _replacement_ be ! GetSubstitution(_searchString_, _string_, _position_, _captures_, *undefined*, _replaceValue_).
-            1. Let _stringSlice_ be the substring of _string_ consisting of the code units from _endOfLastMatch_ (inclusive) up to _position_ (exclusive).
+            1. Let _stringSlice_ be the substring of _string_ from _endOfLastMatch_ to _position_.
             1. Set _result_ to the string-concatenation of _result_, _stringSlice_, and _replacement_.
             1. Set _endOfLastMatch_ to _position_ + _searchLength_.
           1. If _endOfLastMatch_ &lt; the length of _string_, then
-            1. Set _result_ to the string-concatenation of _result_ and the substring of _string_ consisting of the code units from _endOfLastMatch_ (inclusive) up through the final code unit of _string_ (inclusive).
+            1. Let _tail_ be the substring of _string_ from _endOfLastMatch_.
+            1. Set _result_ to the string-concatenation of _result_ and _tail_.
           1. Return _result_.
         </emu-alg>
       </emu-clause>
@@ -30983,7 +30988,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-string.prototype.slice">
         <h1>String.prototype.slice ( _start_, _end_ )</h1>
-        <p>The `slice` method takes two arguments, _start_ and _end_, and returns a substring of the result of converting this object to a String, starting from index _start_ and running to, but not including, index _end_ (or through the end of the String if _end_ is *undefined*). If _start_ is negative, it is treated as <emu-eqn>_sourceLength_ + _start_</emu-eqn> where _sourceLength_ is the length of the String. If _end_ is negative, it is treated as <emu-eqn>_sourceLength_ + _end_</emu-eqn> where _sourceLength_ is the length of the String. The result is a String value, not a String object. The following steps are taken:</p>
+        <p>The `slice` method takes two arguments, _start_ and _end_, and returns a <emu-not-ref>substring</emu-not-ref> of the result of converting this object to a String, starting from index _start_ and running to, but not including, index _end_ (or through the end of the String if _end_ is *undefined*). If _start_ is negative, it is treated as <emu-eqn>_sourceLength_ + _start_</emu-eqn> where _sourceLength_ is the length of the String. If _end_ is negative, it is treated as <emu-eqn>_sourceLength_ + _end_</emu-eqn> where _sourceLength_ is the length of the String. The result is a String value, not a String object. The following steps are taken:</p>
         <emu-alg>
           1. Let _O_ be ? RequireObjectCoercible(*this* value).
           1. Let _S_ be ? ToString(_O_).
@@ -30992,8 +30997,8 @@ THH:mm:ss.sss
           1. If _end_ is *undefined*, let _intEnd_ be _len_; else let _intEnd_ be ? ToInteger(_end_).
           1. If _intStart_ &lt; 0, let _from_ be max(_len_ + _intStart_, 0); otherwise let _from_ be min(_intStart_, _len_).
           1. If _intEnd_ &lt; 0, let _to_ be max(_len_ + _intEnd_, 0); otherwise let _to_ be min(_intEnd_, _len_).
-          1. Let _span_ be max(_to_ - _from_, 0).
-          1. Return the String value containing _span_ consecutive code units from _S_ beginning with the code unit at index _from_.
+          1. If _from_ &ge; _to_, return the empty String.
+          1. Return the substring of _S_ from _from_ to _to_.
         </emu-alg>
         <emu-note>
           <p>The `slice` function is intentionally generic; it does not require that its *this* value be a String object. Therefore it can be transferred to other kinds of objects for use as a method.</p>
@@ -31002,7 +31007,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-string.prototype.split">
         <h1>String.prototype.split ( _separator_, _limit_ )</h1>
-        <p>Returns an Array object into which substrings of the result of converting this object to a String have been stored. The substrings are determined by searching from left to right for occurrences of _separator_; these occurrences are not part of any substring in the returned array, but serve to divide up the String value. The value of _separator_ may be a String of any length or it may be an object, such as a RegExp, that has a @@split method.</p>
+        <p>Returns an Array object into which substrings of the result of converting this object to a String have been stored. The substrings are determined by searching from left to right for occurrences of _separator_; these occurrences are not part of any String in the returned array, but serve to divide up the String value. The value of _separator_ may be a String of any length or it may be an object, such as a RegExp, that has a @@split method.</p>
         <p>When the `split` method is called, the following steps are taken:</p>
         <emu-alg>
           1. Let _O_ be ? RequireObjectCoercible(*this* value).
@@ -31033,18 +31038,18 @@ THH:mm:ss.sss
               1. Assert: _e_ is an integer index &le; _s_.
               1. If _e_ = _p_, set _q_ to _q_ + 1.
               1. Else,
-                1. Let _T_ be the String value equal to the substring of _S_ consisting of the code units at indices _p_ (inclusive) through _q_ (exclusive).
+                1. Let _T_ be the substring of _S_ from _p_ to _q_.
                 1. Perform ! CreateDataPropertyOrThrow(_A_, ! ToString(_lengthA_), _T_).
                 1. Set _lengthA_ to _lengthA_ + 1.
                 1. If _lengthA_ = _lim_, return _A_.
                 1. Set _p_ to _e_.
                 1. Set _q_ to _p_.
-          1. Let _T_ be the String value equal to the substring of _S_ consisting of the code units at indices _p_ (inclusive) through _s_ (exclusive).
+          1. Let _T_ be the substring of _S_ from _p_ to _s_.
           1. Perform ! CreateDataPropertyOrThrow(_A_, ! ToString(_lengthA_), _T_).
           1. Return _A_.
         </emu-alg>
         <emu-note>
-          <p>The value of _separator_ may be an empty String. In this case, _separator_ does not match the empty substring at the beginning or end of the input String, nor does it match the empty substring at the end of the previous separator match. If _separator_ is the empty String, the String is split up into individual code unit elements; the length of the result array equals the length of the String, and each substring contains one code unit.</p>
+          <p>The value of _separator_ may be an empty String. In this case, _separator_ does not match the empty <emu-not-ref>substring</emu-not-ref> at the beginning or end of the input String, nor does it match the empty <emu-not-ref>substring</emu-not-ref> at the end of the previous separator match. If _separator_ is the empty String, the String is split up into individual code unit elements; the length of the result array equals the length of the String, and each <emu-not-ref>substring</emu-not-ref> contains one code unit.</p>
           <p>If the *this* value is (or converts to) the empty String, the result depends on whether _separator_ can match the empty String. If it can, the result array contains no elements. Otherwise, the result array contains one element, which is the empty String.</p>
           <p>If _separator_ is *undefined*, then the result array contains just one String, which is the *this* value (converted to a String). If _limit_ is not *undefined*, then the output array is truncated so that it contains no more than _limit_ elements.</p>
         </emu-note>
@@ -31075,14 +31080,15 @@ THH:mm:ss.sss
           1. Let _isRegExp_ be ? IsRegExp(_searchString_).
           1. If _isRegExp_ is *true*, throw a *TypeError* exception.
           1. Let _searchStr_ be ? ToString(_searchString_).
-          1. Let _pos_ be ? ToInteger(_position_).
-          1. Assert: If _position_ is *undefined*, then _pos_ is 0.
           1. Let _len_ be the length of _S_.
+          1. If _position_ is *undefined*, let _pos_ be 0; else let _pos_ be ? ToInteger(_position_).
           1. Let _start_ be min(max(_pos_, 0), _len_).
           1. Let _searchLength_ be the length of _searchStr_.
-          1. If _searchLength_ + _start_ is greater than _len_, return *false*.
-          1. If the sequence of code units of _S_ starting at _start_ of length _searchLength_ is the same as the full code unit sequence of _searchStr_, return *true*.
-          1. Otherwise, return *false*.
+          1. If _searchLength_ = 0, return *true*.
+          1. Let _end_ be _start_ + _searchLength_.
+          1. If _end_ &gt; _len_, return *false*.
+          1. Let _substring_ be the substring of _S_ from _start_ to _end_.
+          1. Return ! SameValueNonNumeric(_substring_, _searchStr_).
         </emu-alg>
         <emu-note>
           <p>This method returns *true* if the sequence of code units of _searchString_ converted to a String is the same as the corresponding code units of this object (converted to a String) starting at index _position_. Otherwise returns *false*.</p>
@@ -31097,7 +31103,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-string.prototype.substring">
         <h1>String.prototype.substring ( _start_, _end_ )</h1>
-        <p>The `substring` method takes two arguments, _start_ and _end_, and returns a substring of the result of converting this object to a String, starting from index _start_ and running to, but not including, index _end_ of the String (or through the end of the String if _end_ is *undefined*). The result is a String value, not a String object.</p>
+        <p>The `substring` method takes two arguments, _start_ and _end_, and returns a <emu-not-ref>substring</emu-not-ref> of the result of converting this object to a String, starting from index _start_ and running to, but not including, index _end_ of the String (or through the end of the String if _end_ is *undefined*). The result is a String value, not a String object.</p>
         <p>If either argument is *NaN* or negative, it is replaced with zero; if either argument is larger than the length of the String, it is replaced with the length of the String.</p>
         <p>If _start_ is larger than _end_, they are swapped.</p>
         <p>The following steps are taken:</p>
@@ -31111,7 +31117,7 @@ THH:mm:ss.sss
           1. Let _finalEnd_ be min(max(_intEnd_, 0), _len_).
           1. Let _from_ be min(_finalStart_, _finalEnd_).
           1. Let _to_ be max(_finalStart_, _finalEnd_).
-          1. Return the String value whose length is _to_ - _from_, containing code units from _S_, namely the code units with indices _from_ through _to_ - 1, in ascending order.
+          1. Return the substring of _S_ from _from_ to _to_.
         </emu-alg>
         <emu-note>
           <p>The `substring` function is intentionally generic; it does not require that its *this* value be a String object. Therefore, it can be transferred to other kinds of objects for use as a method.</p>
@@ -31299,16 +31305,17 @@ THH:mm:ss.sss
             1. Let _O_ be the *this* value.
             1. If Type(_O_) is not Object, throw a *TypeError* exception.
             1. If _O_ does not have all of the internal slots of a String Iterator Instance (<emu-xref href="#sec-properties-of-string-iterator-instances"></emu-xref>), throw a *TypeError* exception.
-            1. Let _s_ be _O_.[[IteratedString]].
-            1. If _s_ is *undefined*, return CreateIterResultObject(*undefined*, *true*).
+            1. Let _S_ be _O_.[[IteratedString]].
+            1. If _S_ is *undefined*, return CreateIterResultObject(*undefined*, *true*).
             1. Let _position_ be _O_.[[StringNextIndex]].
-            1. Let _len_ be the length of _s_.
+            1. Let _len_ be the length of _S_.
             1. If _position_ &ge; _len_, then
               1. Set _O_.[[IteratedString]] to *undefined*.
               1. Return CreateIterResultObject(*undefined*, *true*).
-            1. Let _cp_ be ! CodePointAt(_s_, _position_).
-            1. Let _resultString_ be the String value containing _cp_.[[CodeUnitCount]] consecutive code units from _s_ beginning with the code unit at index _position_.
-            1. Set _O_.[[StringNextIndex]] to _position_ + _cp_.[[CodeUnitCount]].
+            1. Let _cp_ be ! CodePointAt(_S_, _position_).
+            1. Let _nextIndex_ be _position_ + _cp_.[[CodeUnitCount]].
+            1. Let _resultString_ be the substring of _S_ from _position_ to _nextIndex_.
+            1. Set _O_.[[StringNextIndex]] to _nextIndex_.
             1. Return CreateIterResultObject(_resultString_, *false*).
           </emu-alg>
         </emu-clause>
@@ -33234,7 +33241,7 @@ THH:mm:ss.sss
             1. Assert: The value of _A_'s *"length"* property is _n_ + 1.
             1. Perform ! CreateDataPropertyOrThrow(_A_, *"index"*, _lastIndex_).
             1. Perform ! CreateDataPropertyOrThrow(_A_, *"input"*, _S_).
-            1. Let _matchedSubstr_ be the matched substring (i.e. the portion of _S_ between offset _lastIndex_ inclusive and offset _e_ exclusive).
+            1. Let _matchedSubstr_ be the substring of _S_ from _lastIndex_ to _e_.
             1. Perform ! CreateDataPropertyOrThrow(_A_, *"0"*, _matchedSubstr_).
             1. If _R_ contains any |GroupName|, then
               1. Let _groups_ be OrdinaryObjectCreate(*null*).
@@ -33493,10 +33500,10 @@ THH:mm:ss.sss
               1. Let _replacement_ be ? GetSubstitution(_matched_, _S_, _position_, _captures_, _namedCaptures_, _replaceValue_).
             1. If _position_ &ge; _nextSourcePosition_, then
               1. NOTE: _position_ should not normally move backwards. If it does, it is an indication of an ill-behaving RegExp subclass or use of an access triggered side-effect to change the global flag or other characteristics of _rx_. In such cases, the corresponding substitution is ignored.
-              1. Set _accumulatedResult_ to the string-concatenation of the current value of _accumulatedResult_, the substring of _S_ consisting of the code units from _nextSourcePosition_ (inclusive) up to _position_ (exclusive), and _replacement_.
+              1. Set _accumulatedResult_ to the string-concatenation of _accumulatedResult_, the substring of _S_ from _nextSourcePosition_ to _position_, and _replacement_.
               1. Set _nextSourcePosition_ to _position_ + _matchLength_.
           1. If _nextSourcePosition_ &ge; _lengthS_, return _accumulatedResult_.
-          1. Return the string-concatenation of _accumulatedResult_ and the substring of _S_ consisting of the code units from _nextSourcePosition_ (inclusive) up through the final code unit of _S_ (inclusive).
+          1. Return the string-concatenation of _accumulatedResult_ and the substring of _S_ from _nextSourcePosition_.
         </emu-alg>
         <p>The value of the *"name"* property of this function is *"[Symbol.replace]"*.</p>
       </emu-clause>
@@ -33543,9 +33550,9 @@ THH:mm:ss.sss
       <emu-clause id="sec-regexp.prototype-@@split">
         <h1>RegExp.prototype [ @@split ] ( _string_, _limit_ )</h1>
         <emu-note>
-          <p>Returns an Array object into which substrings of the result of converting _string_ to a String have been stored. The substrings are determined by searching from left to right for matches of the *this* value regular expression; these occurrences are not part of any substring in the returned array, but serve to divide up the String value.</p>
-          <p>The *this* value may be an empty regular expression or a regular expression that can match an empty String. In this case, the regular expression does not match the empty substring at the beginning or end of the input String, nor does it match the empty substring at the end of the previous separator match. (For example, if the regular expression matches the empty String, the String is split up into individual code unit elements; the length of the result array equals the length of the String, and each substring contains one code unit.) Only the first match at a given index of the String is considered, even if backtracking could yield a non-empty-substring match at that index. (For example, `/a*?/[Symbol.split]("ab")` evaluates to the array `["a", "b"]`, while `/a*/[Symbol.split]("ab")` evaluates to the array `["","b"]`.)</p>
-          <p>If the _string_ is (or converts to) the empty String, the result depends on whether the regular expression can match the empty String. If it can, the result array contains no elements. Otherwise, the result array contains one element, which is the empty String.</p>
+          <p>Returns an Array object into which substrings of the result of converting _string_ to a String have been stored. The substrings are determined by searching from left to right for matches of the *this* value regular expression; these occurrences are not part of any String in the returned array, but serve to divide up the String value.</p>
+          <p>The *this* value may be an empty regular expression or a regular expression that can match an empty String. In this case, the regular expression does not match the empty <emu-not-ref>substring</emu-not-ref> at the beginning or end of the input String, nor does it match the empty <emu-not-ref>substring</emu-not-ref> at the end of the previous separator match. (For example, if the regular expression matches the empty String, the String is split up into individual code unit elements; the length of the result array equals the length of the String, and each <emu-not-ref>substring</emu-not-ref> contains one code unit.) Only the first match at a given index of the String is considered, even if backtracking could yield a non-empty <emu-not-ref>substring</emu-not-ref> match at that index. (For example, `/a*?/[Symbol.split]("ab")` evaluates to the array `["a", "b"]`, while `/a*/[Symbol.split]("ab")` evaluates to the array `["","b"]`.)</p>
+          <p>If _string_ is (or converts to) the empty String, the result depends on whether the regular expression can match the empty String. If it can, the result array contains no elements. Otherwise, the result array contains one element, which is the empty String.</p>
           <p>If the regular expression contains capturing parentheses, then each time _separator_ is matched the results (including any *undefined* results) of the capturing parentheses are spliced into the output array. For example,</p>
           <pre><code class="javascript">/&lt;(\/)?([^&lt;&gt;]+)&gt;/[Symbol.split]("A&lt;B&gt;bold&lt;/B&gt;and&lt;CODE&gt;coded&lt;/CODE&gt;")</code></pre>
           <p>evaluates to the array</p>
@@ -33585,7 +33592,7 @@ THH:mm:ss.sss
               1. Set _e_ to min(_e_, _size_).
               1. If _e_ = _p_, set _q_ to AdvanceStringIndex(_S_, _q_, _unicodeMatching_).
               1. Else,
-                1. Let _T_ be the String value equal to the substring of _S_ consisting of the code units at indices _p_ (inclusive) through _q_ (exclusive).
+                1. Let _T_ be the substring of _S_ from _p_ to _q_.
                 1. Perform ! CreateDataPropertyOrThrow(_A_, ! ToString(_lengthA_), _T_).
                 1. Set _lengthA_ to _lengthA_ + 1.
                 1. If _lengthA_ = _lim_, return _A_.
@@ -33600,7 +33607,7 @@ THH:mm:ss.sss
                   1. Set _lengthA_ to _lengthA_ + 1.
                   1. If _lengthA_ = _lim_, return _A_.
                 1. Set _q_ to _p_.
-          1. Let _T_ be the String value equal to the substring of _S_ consisting of the code units at indices _p_ (inclusive) through _size_ (exclusive).
+          1. Let _T_ be the substring of _S_ from _p_ to _size_.
           1. Perform ! CreateDataPropertyOrThrow(_A_, ! ToString(_lengthA_), _T_).
           1. Return _A_.
         </emu-alg>
@@ -38814,7 +38821,7 @@ THH:mm:ss.sss
           1. Set _space_ to min(10, ! ToInteger(_space_)).
           1. If _space_ &lt; 1, let _gap_ be the empty String; otherwise let _gap_ be the String value containing _space_ occurrences of the code unit 0x0020 (SPACE).
         1. Else if Type(_space_) is String, then
-          1. If the length of _space_ is 10 or less, let _gap_ be _space_; otherwise let _gap_ be the String value consisting of the first 10 code units of _space_.
+          1. If the length of _space_ is 10 or less, let _gap_ be _space_; otherwise let _gap_ be the substring of _space_ from 0 to 10.
         1. Else,
           1. Let _gap_ be the empty String.
         1. Let _wrapper_ be OrdinaryObjectCreate(%Object.prototype%).
@@ -43520,12 +43527,19 @@ THH:mm:ss.sss
           1. Repeat, while _k_ &ne; _length_,
             1. Let _c_ be the code unit at index _k_ within _string_.
             1. If _c_ is the code unit 0x0025 (PERCENT SIGN), then
-              1. If _k_ &le; _length_ - 6 and the code unit at index _k_ + 1 within _string_ is the code unit 0x0075 (LATIN SMALL LETTER U) and the four code units at indices _k_ + 2, _k_ + 3, _k_ + 4, and _k_ + 5 within _string_ are all hexadecimal digits, then
-                1. Set _c_ to the code unit whose value is the integer represented by the four hexadecimal digits at indices _k_ + 2, _k_ + 3, _k_ + 4, and _k_ + 5 within _string_.
-                1. Set _k_ to _k_ + 5.
-              1. Else if _k_ &le; _length_ - 3 and the two code units at indices _k_ + 1 and _k_ + 2 within _string_ are both hexadecimal digits, then
-                1. Set _c_ to the code unit whose value is the integer represented by two zeroes plus the two hexadecimal digits at indices _k_ + 1 and _k_ + 2 within _string_.
-                1. Set _k_ to _k_ + 2.
+              1. Let _hexEscape_ be the empty String.
+              1. Let _skip_ be 0.
+              1. If _k_ &le; _length_ - 6 and the code unit at index _k_ + 1 within _string_ is the code unit 0x0075 (LATIN SMALL LETTER U), then
+                1. Set _hexEscape_ to the substring of _string_ from _k_ + 2 to _k_ + 6.
+                1. Set _skip_ to 5.
+              1. Else if _k_ &le; _length_ - 3, then
+                1. Set _hexEscape_ to the substring of _string_ from _k_ + 1 to _k_ + 3.
+                1. Set _skip_ to 2.
+              1. If _hexEscape_ can be interpreted as an expansion of |HexDigits|, then
+                1. Let _hexIntegerLiteral_ be the string-concatenation of *"0x"* and _hexEscape_.
+                1. Let _n_ be ! ToNumber(_hexIntegerLiteral_).
+                1. Set _c_ to the code unit whose value is _n_.
+                1. Set _k_ to _k_ + _skip_.
             1. Set _R_ to the string-concatenation of _R_ and _c_.
             1. Set _k_ to _k_ + 1.
           1. Return _R_.
@@ -43627,17 +43641,18 @@ THH:mm:ss.sss
 
       <emu-annex id="sec-string.prototype.substr">
         <h1>String.prototype.substr ( _start_, _length_ )</h1>
-        <p>The `substr` method takes two arguments, _start_ and _length_, and returns a substring of the result of converting the *this* value to a String, starting from index _start_ and running for _length_ code units (or through the end of the String if _length_ is *undefined*). If _start_ is negative, it is treated as <emu-eqn>_sourceLength_ + _start_</emu-eqn> where _sourceLength_ is the length of the String. The result is a String value, not a String object. The following steps are taken:</p>
+        <p>The `substr` method takes two arguments, _start_ and _length_, and returns a <emu-not-ref>substring</emu-not-ref> of the result of converting the *this* value to a String, starting from index _start_ and running for _length_ code units (or through the end of the String if _length_ is *undefined*). If _start_ is negative, it is treated as <emu-eqn>_sourceLength_ + _start_</emu-eqn> where _sourceLength_ is the length of the String. The result is a String value, not a String object. The following steps are taken:</p>
         <emu-alg>
           1. Let _O_ be ? RequireObjectCoercible(*this* value).
           1. Let _S_ be ? ToString(_O_).
+          1. Let _size_ be the length of _S_.
           1. Let _intStart_ be ? ToInteger(_start_).
-          1. If _length_ is *undefined*, let _end_ be *+&infin;*; otherwise let _end_ be ? ToInteger(_length_).
-          1. Let _size_ be the number of code units in _S_.
           1. If _intStart_ &lt; 0, set _intStart_ to max(_size_ + _intStart_, 0).
-          1. Let _resultLength_ be min(max(_end_, 0), _size_ - _intStart_).
-          1. If _resultLength_ &le; 0, return the empty String.
-          1. Return the String value containing _resultLength_ consecutive code units from _S_ beginning with the code unit at index _intStart_.
+          1. If _length_ is *undefined*, let _intLength_ be _size_; otherwise let _intLength_ be ? ToInteger(_length_).
+          1. If _intLength_ &le; 0, return the empty String.
+          1. Let _intEnd_ be min(_intStart_ + _intLength_, _size_).
+          1. If _intStart_ &ge; _intEnd_, return the empty String.
+          1. Return the substring of _S_ from _intStart_ to _intEnd_.
         </emu-alg>
         <emu-note>
           <p>The `substr` function is intentionally generic; it does not require that its *this* value be a String object. Therefore it can be transferred to other kinds of objects for use as a method.</p>
