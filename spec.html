@@ -1739,7 +1739,7 @@
           <emu-alg>
             1. Let _lnum_ be ! ToInt32(_x_).
             1. Let _rnum_ be ! ToUint32(_y_).
-            1. Let _shiftCount_ be the result of masking out all but the least significant 5 bits of _rnum_, that is, compute _rnum_ &amp; 0x1F.
+            1. Let _shiftCount_ be _rnum_ modulo 32.
             1. Return the result of left shifting _lnum_ by _shiftCount_ bits. The result is a signed 32-bit integer.
           </emu-alg>
         </emu-clause>
@@ -1750,7 +1750,7 @@
           <emu-alg>
             1. Let _lnum_ be ! ToInt32(_x_).
             1. Let _rnum_ be ! ToUint32(_y_).
-            1. Let _shiftCount_ be the result of masking out all but the least significant 5 bits of _rnum_, that is, compute _rnum_ &amp; 0x1F.
+            1. Let _shiftCount_ be _rnum_ modulo 32.
             1. Return the result of performing a sign-extending right shift of _lnum_ by _shiftCount_ bits. The most significant bit is propagated. The result is a signed 32-bit integer.
           </emu-alg>
         </emu-clause>
@@ -1761,7 +1761,7 @@
           <emu-alg>
             1. Let _lnum_ be ! ToUint32(_x_).
             1. Let _rnum_ be ! ToUint32(_y_).
-            1. Let _shiftCount_ be the result of masking out all but the least significant 5 bits of _rnum_, that is, compute _rnum_ &amp; 0x1F.
+            1. Let _shiftCount_ be _rnum_ modulo 32.
             1. Return the result of performing a zero-filling right shift of _lnum_ by _shiftCount_ bits. Vacated bits are filled with zero. The result is an unsigned 32-bit integer.
           </emu-alg>
         </emu-clause>
@@ -25645,7 +25645,7 @@
           <h1>Runtime Semantics: Decode ( _string_, _reservedSet_ )</h1>
           <p>The abstract operation Decode takes arguments _string_ (a String) and _reservedSet_ (a String). It performs URI unescaping and decoding. It performs the following steps when called:</p>
           <emu-alg>
-            1. Let _strLen_ be the number of code units in _string_.
+            1. Let _strLen_ be the length of _string_.
             1. Let _R_ be the empty String.
             1. Let _k_ be 0.
             1. Repeat,
@@ -25659,29 +25659,27 @@
                 1. If the code units at index (_k_ + 1) and (_k_ + 2) within _string_ do not represent hexadecimal digits, throw a *URIError* exception.
                 1. Let _B_ be the 8-bit value represented by the two hexadecimal digits at index (_k_ + 1) and (_k_ + 2).
                 1. Set _k_ to _k_ + 2.
-                1. If the most significant bit in _B_ is 0, then
+                1. Let _n_ be the number of leading 1 bits in _B_.
+                1. If _n_ = 0, then
                   1. Let _C_ be the code unit whose value is _B_.
                   1. If _C_ is not in _reservedSet_, then
                     1. Let _S_ be the String value containing only the code unit _C_.
                   1. Else,
                     1. Let _S_ be the substring of _string_ from _start_ to _k_ + 1.
                 1. Else,
-                  1. Assert: the most significant bit in _B_ is 1.
-                  1. Let _n_ be the smallest nonnegative integer such that (_B_ &lt;&lt; _n_) &amp; 0x80 is equal to 0.
-                  1. If _n_ equals 1 or _n_ is greater than 4, throw a *URIError* exception.
-                  1. Let _Octets_ be a List of 8-bit integers of size _n_.
-                  1. Set _Octets_[0] to _B_.
+                  1. If _n_ = 1 or _n_ &gt; 4, throw a *URIError* exception.
                   1. If _k_ + (3 &times; (_n_ - 1)) is greater than or equal to _strLen_, throw a *URIError* exception.
+                  1. Let _Octets_ be a new List containing _B_.
                   1. Let _j_ be 1.
                   1. Repeat, while _j_ &lt; _n_,
                     1. Set _k_ to _k_ + 1.
                     1. If the code unit at index _k_ within _string_ is not the code unit 0x0025 (PERCENT SIGN), throw a *URIError* exception.
                     1. If the code units at index (_k_ + 1) and (_k_ + 2) within _string_ do not represent hexadecimal digits, throw a *URIError* exception.
                     1. Let _B_ be the 8-bit value represented by the two hexadecimal digits at index (_k_ + 1) and (_k_ + 2).
-                    1. If the two most significant bits in _B_ are not 10, throw a *URIError* exception.
                     1. Set _k_ to _k_ + 2.
-                    1. Set _Octets_[_j_] to _B_.
+                    1. Append _B_ to  _Octets_.
                     1. Set _j_ to _j_ + 1.
+                  1. Assert: The length of _Octets_ is _n_.
                   1. If _Octets_ does not contain a valid UTF-8 encoding of a Unicode code point, throw a *URIError* exception.
                   1. Let _V_ be the value obtained by applying the UTF-8 transformation to _Octets_, that is, from a List of octets into a 21-bit value.
                   1. Let _S_ be the String value whose code units are, in order, the elements in CodePointToUTF16CodeUnits(_V_).
