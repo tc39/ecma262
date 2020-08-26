@@ -31947,10 +31947,10 @@ THH:mm:ss.sss
         <p>Furthermore, the descriptions below use the following internal data structures:</p>
         <ul>
           <li>
-            A <em>CharSet</em> is a mathematical set of characters, either code units or code points depending up the state of the _Unicode_ flag. &ldquo;All characters&rdquo; means either all code unit values or all code point values also depending upon the state of _Unicode_.
+            A <em>CharSet</em> is a mathematical set of characters. When the _Unicode_ flag is *true*, &ldquo;all characters&rdquo; means the CharSet containing all code point values; otherwise &ldquo;all characters&rdquo; means the CharSet containing all code unit values.
           </li>
           <li>
-            A <em>State</em> is an ordered pair (_endIndex_, _captures_) where _endIndex_ is an integer and _captures_ is a List of _NcapturingParens_ values. States are used to represent partial match states in the regular expression matching algorithms. The _endIndex_ is one plus the index of the last input character matched so far by the pattern, while _captures_ holds the results of capturing parentheses. The _n_<sup>th</sup> element of _captures_ is either a List that represents the value obtained by the _n_<sup>th</sup> set of capturing parentheses or *undefined* if the _n_<sup>th</sup> set of capturing parentheses hasn't been reached yet. Due to backtracking, many States may be in use at any time during the matching process.
+            A <em>State</em> is an ordered pair (_endIndex_, _captures_) where _endIndex_ is an integer and _captures_ is a List of _NcapturingParens_ values. States are used to represent partial match states in the regular expression matching algorithms. The _endIndex_ is one plus the index of the last input character matched so far by the pattern, while _captures_ holds the results of capturing parentheses. The _n_<sup>th</sup> element of _captures_ is either a List of characters that represents the value obtained by the _n_<sup>th</sup> set of capturing parentheses or *undefined* if the _n_<sup>th</sup> set of capturing parentheses hasn't been reached yet. Due to backtracking, many States may be in use at any time during the matching process.
           </li>
           <li>
             A <em>MatchResult</em> is either a State or the special token ~failure~ that indicates that the match failed.
@@ -32264,7 +32264,7 @@ THH:mm:ss.sss
           <h1>Runtime Semantics: WordCharacters ( )</h1>
           <p>The abstract operation WordCharacters takes no arguments. It performs the following steps when called:</p>
           <emu-alg>
-            1. Let _A_ be a set of characters containing the sixty-three characters:
+            1. Let _A_ be a CharSet containing the sixty-three characters:
             <figure>
               <table class="lightweight-table">
                 <tbody>
@@ -32496,11 +32496,11 @@ THH:mm:ss.sss
                 </tbody>
               </table>
             </figure>
-            1. Let _U_ be an empty set.
-            1. For each character _c_ not in set _A_ where Canonicalize(_c_) is in _A_, add _c_ to _U_.
+            1. Let _U_ be an empty CharSet.
+            1. For each character _c_ in the CharSet of all characters, do
+              1. If _c_ is not in _A_ and Canonicalize(_c_) is in _A_, add _c_ to _U_.
             1. Assert: Unless _Unicode_ and _IgnoreCase_ are both *true*, _U_ is empty.
-            1. Add the characters in set _U_ to set _A_.
-            1. Return _A_.
+            1. Return the union of _A_ and _U_.
           </emu-alg>
         </emu-clause>
         <emu-clause id="sec-runtime-semantics-iswordchar-abstract-operation" aoid="IsWordChar">
@@ -32568,9 +32568,9 @@ THH:mm:ss.sss
         </emu-alg>
         <p>The production <emu-grammar>Atom :: `.`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. If _DotAll_ is *true*, then
-            1. Let _A_ be the set of all characters.
-          1. Otherwise, let _A_ be the set of all characters except |LineTerminator|.
+          1. Let _A_ be the CharSet of all characters.
+          1. If _DotAll_ is not *true*, then
+            1. Remove from _A_ all characters corresponding to a code point on the right-hand side of the |LineTerminator| production.
           1. Call CharacterSetMatcher(_A_, *false*, _direction_) and return its Matcher result.
         </emu-alg>
         <p>The production <emu-grammar>Atom :: `\` AtomEscape</emu-grammar> evaluates as follows:</p>
@@ -32625,10 +32625,10 @@ THH:mm:ss.sss
               1. Let _ch_ be the character _Input_[_index_].
               1. Let _cc_ be Canonicalize(_ch_).
               1. If _invert_ is *false*, then
-                1. If there does not exist a member _a_ of set _A_ such that Canonicalize(_a_) is _cc_, return ~failure~.
+                1. If there does not exist a member _a_ of _A_ such that Canonicalize(_a_) is _cc_, return ~failure~.
               1. Else,
                 1. Assert: _invert_ is *true*.
-                1. If there exists a member _a_ of set _A_ such that Canonicalize(_a_) is _cc_, return ~failure~.
+                1. If there exists a member _a_ of _A_ such that Canonicalize(_a_) is _cc_, return ~failure~.
               1. Let _cap_ be _x_'s _captures_ List.
               1. Let _y_ be the State (_f_, _cap_).
               1. Call _c_(_y_) and return its result.
@@ -32805,27 +32805,27 @@ THH:mm:ss.sss
         <h1>CharacterClassEscape</h1>
         <p>The production <emu-grammar>CharacterClassEscape :: `d`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the ten-element set of characters containing the characters `0` through `9` inclusive.
+          1. Return the ten-element CharSet containing the characters `0` through `9` inclusive.
         </emu-alg>
         <p>The production <emu-grammar>CharacterClassEscape :: `D`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the set of all characters not included in the set returned by <emu-grammar>CharacterClassEscape :: `d`</emu-grammar> .
+          1. Return the CharSet containing all characters not in the CharSet returned by <emu-grammar>CharacterClassEscape :: `d`</emu-grammar> .
         </emu-alg>
         <p>The production <emu-grammar>CharacterClassEscape :: `s`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the set of characters containing the characters that are on the right-hand side of the |WhiteSpace| or |LineTerminator| productions.
+          1. Return the CharSet containing all characters corresponding to a code point on the right-hand side of the |WhiteSpace| or |LineTerminator| productions.
         </emu-alg>
         <p>The production <emu-grammar>CharacterClassEscape :: `S`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the set of all characters not included in the set returned by <emu-grammar>CharacterClassEscape :: `s`</emu-grammar> .
+          1. Return the CharSet containing all characters not in the CharSet returned by <emu-grammar>CharacterClassEscape :: `s`</emu-grammar> .
         </emu-alg>
         <p>The production <emu-grammar>CharacterClassEscape :: `w`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the set of all characters returned by WordCharacters().
+          1. Return ! WordCharacters().
         </emu-alg>
         <p>The production <emu-grammar>CharacterClassEscape :: `W`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Return the set of all characters not included in the set returned by <emu-grammar>CharacterClassEscape :: `w`</emu-grammar> .
+          1. Return the CharSet containing all characters not in the CharSet returned by <emu-grammar>CharacterClassEscape :: `w`</emu-grammar> .
         </emu-alg>
         <p>The production <emu-grammar>CharacterClassEscape :: `p{` UnicodePropertyValueExpression `}`</emu-grammar> evaluates as follows:</p>
         <emu-alg>
@@ -32912,7 +32912,7 @@ THH:mm:ss.sss
             1. Let _i_ be the character value of character _a_.
             1. Let _j_ be the character value of character _b_.
             1. Assert: _i_ &le; _j_.
-            1. Return the set containing all characters numbered _i_ through _j_, inclusive.
+            1. Return the CharSet containing all characters with a character value greater than or equal to _i_ and less than or equal to _j_.
           </emu-alg>
         </emu-clause>
       </emu-clause>
