@@ -4321,7 +4321,7 @@
 
           StrNumericLiteral :::
             StrDecimalLiteral
-            NonDecimalIntegerLiteral
+            NonDecimalIntegerLiteral[~Sep]
 
           StrDecimalLiteral :::
             StrUnsignedDecimalLiteral
@@ -4330,9 +4330,9 @@
 
           StrUnsignedDecimalLiteral :::
             `Infinity`
-            DecimalDigits `.` DecimalDigits? ExponentPart?
-            `.` DecimalDigits ExponentPart?
-            DecimalDigits ExponentPart?
+            DecimalDigits[~Sep] `.` DecimalDigits[~Sep]? ExponentPart[~Sep]?
+            `.` DecimalDigits[~Sep] ExponentPart[~Sep]?
+            DecimalDigits[~Sep] ExponentPart[~Sep]?
         </emu-grammar>
         <p>All grammar symbols not explicitly defined above have the definitions used in the Lexical Grammar for numeric literals (<emu-xref href="#sec-literals-numeric-literals"></emu-xref>)</p>
         <emu-note>
@@ -10908,36 +10908,42 @@
       <h1>Numeric Literals</h1>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
+        NumericLiteralSeparator ::
+          `_`
+
         NumericLiteral ::
           DecimalLiteral
           DecimalBigIntegerLiteral
-          NonDecimalIntegerLiteral
-          NonDecimalIntegerLiteral BigIntLiteralSuffix
+          NonDecimalIntegerLiteral[+Sep]
+          NonDecimalIntegerLiteral[+Sep] BigIntLiteralSuffix
 
         DecimalBigIntegerLiteral ::
           `0` BigIntLiteralSuffix
-          NonZeroDigit DecimalDigits? BigIntLiteralSuffix
+          NonZeroDigit DecimalDigits[+Sep]? BigIntLiteralSuffix
+          NonZeroDigit NumericLiteralSeparator DecimalDigits[+Sep] BigIntLiteralSuffix
 
-        NonDecimalIntegerLiteral ::
-          BinaryIntegerLiteral
-          OctalIntegerLiteral
-          HexIntegerLiteral
+        NonDecimalIntegerLiteral[Sep] ::
+          BinaryIntegerLiteral[?Sep]
+          OctalIntegerLiteral[?Sep]
+          HexIntegerLiteral[?Sep]
 
         BigIntLiteralSuffix ::
           `n`
 
         DecimalLiteral ::
-          DecimalIntegerLiteral `.` DecimalDigits? ExponentPart?
-          `.` DecimalDigits ExponentPart?
-          DecimalIntegerLiteral ExponentPart?
+          DecimalIntegerLiteral `.` DecimalDigits[+Sep]? ExponentPart[+Sep]?
+          `.` DecimalDigits[+Sep] ExponentPart[+Sep]?
+          DecimalIntegerLiteral ExponentPart[+Sep]?
 
         DecimalIntegerLiteral ::
           `0`
-          NonZeroDigit DecimalDigits?
+          NonZeroDigit
+          NonZeroDigit NumericLiteralSeparator? DecimalDigits[+Sep]
 
-        DecimalDigits ::
+        DecimalDigits[Sep] ::
           DecimalDigit
-          DecimalDigits DecimalDigit
+          DecimalDigits[?Sep] DecimalDigit
+          [+Sep] DecimalDigits[+Sep] NumericLiteralSeparator DecimalDigit
 
         DecimalDigit :: one of
           `0` `1` `2` `3` `4` `5` `6` `7` `8` `9`
@@ -10945,46 +10951,49 @@
         NonZeroDigit :: one of
           `1` `2` `3` `4` `5` `6` `7` `8` `9`
 
-        ExponentPart ::
-          ExponentIndicator SignedInteger
+        ExponentPart[Sep] ::
+          ExponentIndicator SignedInteger[?Sep]
 
         ExponentIndicator :: one of
           `e` `E`
 
-        SignedInteger ::
-          DecimalDigits
-          `+` DecimalDigits
-          `-` DecimalDigits
+        SignedInteger[Sep] ::
+          DecimalDigits[?Sep]
+          `+` DecimalDigits[?Sep]
+          `-` DecimalDigits[?Sep]
 
-        BinaryIntegerLiteral ::
-          `0b` BinaryDigits
-          `0B` BinaryDigits
+        BinaryIntegerLiteral[Sep] ::
+          `0b` BinaryDigits[?Sep]
+          `0B` BinaryDigits[?Sep]
 
-        BinaryDigits ::
+        BinaryDigits[Sep] ::
           BinaryDigit
-          BinaryDigits BinaryDigit
+          BinaryDigits[?Sep] BinaryDigit
+          [+Sep] BinaryDigits[+Sep] NumericLiteralSeparator BinaryDigit
 
         BinaryDigit :: one of
           `0` `1`
 
-        OctalIntegerLiteral ::
-          `0o` OctalDigits
-          `0O` OctalDigits
+        OctalIntegerLiteral[Sep] ::
+          `0o` OctalDigits[?Sep]
+          `0O` OctalDigits[?Sep]
 
-        OctalDigits ::
+        OctalDigits[Sep] ::
           OctalDigit
-          OctalDigits OctalDigit
+          OctalDigits[?Sep] OctalDigit
+          [+Sep] OctalDigits[+Sep] NumericLiteralSeparator OctalDigit
 
         OctalDigit :: one of
           `0` `1` `2` `3` `4` `5` `6` `7`
 
-        HexIntegerLiteral ::
-          `0x` HexDigits
-          `0X` HexDigits
+        HexIntegerLiteral[Sep] ::
+          `0x` HexDigits[?Sep]
+          `0X` HexDigits[?Sep]
 
-        HexDigits ::
+        HexDigits[Sep] ::
           HexDigit
-          HexDigits HexDigit
+          HexDigits[?Sep] HexDigit
+          [+Sep] HexDigits[+Sep] NumericLiteralSeparator HexDigit
 
         HexDigit :: one of
           `0` `1` `2` `3` `4` `5` `6` `7` `8` `9` `a` `b` `c` `d` `e` `f` `A` `B` `C` `D` `E` `F`
@@ -11015,19 +11024,19 @@
             The MV of <emu-grammar>DecimalLiteral :: DecimalIntegerLiteral `.`</emu-grammar> is the MV of |DecimalIntegerLiteral|.
           </li>
           <li>
-            The MV of <emu-grammar>DecimalLiteral :: DecimalIntegerLiteral `.` DecimalDigits</emu-grammar> is the MV of |DecimalIntegerLiteral| plus (the MV of |DecimalDigits| &times; 10<sub>ℝ</sub><sup>-<sub>ℝ</sub>_n_</sup>), where _n_ is the mathematical value of the number of code points in |DecimalDigits|.
+            The MV of <emu-grammar>DecimalLiteral :: DecimalIntegerLiteral `.` DecimalDigits</emu-grammar> is the MV of |DecimalIntegerLiteral| plus (the MV of |DecimalDigits| &times; 10<sub>ℝ</sub><sup>-<sub>ℝ</sub>_n_</sup>), where _n_ is the mathematical value of the number of code points in |DecimalDigits|, excluding all occurrences of |NumericLiteralSeparator|.
           </li>
           <li>
             The MV of <emu-grammar>DecimalLiteral :: DecimalIntegerLiteral `.` ExponentPart</emu-grammar> is the MV of |DecimalIntegerLiteral| &times; 10<sub>ℝ</sub><sup>_e_</sup>, where _e_ is the MV of |ExponentPart|.
           </li>
           <li>
-            The MV of <emu-grammar>DecimalLiteral :: DecimalIntegerLiteral `.` DecimalDigits ExponentPart</emu-grammar> is (the MV of |DecimalIntegerLiteral| plus (the MV of |DecimalDigits| &times; 10<sub>ℝ</sub><sup>-<sub>ℝ</sub>_n_</sup>)) &times; 10<sub>ℝ</sub><sup>_e_</sup>, where _n_ is the mathematical integer number of code points in |DecimalDigits| and _e_ is the MV of |ExponentPart|.
+            The MV of <emu-grammar>DecimalLiteral :: DecimalIntegerLiteral `.` DecimalDigits ExponentPart</emu-grammar> is (the MV of |DecimalIntegerLiteral| plus (the MV of |DecimalDigits| &times; 10<sub>ℝ</sub><sup>-<sub>ℝ</sub>_n_</sup>)) &times; 10<sub>ℝ</sub><sup>_e_</sup>, where _n_ is the mathematical integer number of code points in |DecimalDigits|, excluding all occurrences of |NumericLiteralSeparator|, and _e_ is the MV of |ExponentPart|.
           </li>
           <li>
-            The MV of <emu-grammar>DecimalLiteral :: `.` DecimalDigits</emu-grammar> is the MV of |DecimalDigits| &times; 10<sub>ℝ</sub><sup>-<sub>ℝ</sub>_n_</sup>, where _n_ is the mathematical integer number of code points in |DecimalDigits|.
+            The MV of <emu-grammar>DecimalLiteral :: `.` DecimalDigits</emu-grammar> is the MV of |DecimalDigits| &times; 10<sub>ℝ</sub><sup>-<sub>ℝ</sub>_n_</sup>, where _n_ is the mathematical integer number of code points in |DecimalDigits|, excluding all occurrences of |NumericLiteralSeparator|.
           </li>
           <li>
-            The MV of <emu-grammar>DecimalLiteral :: `.` DecimalDigits ExponentPart</emu-grammar> is the MV of |DecimalDigits| &times; 10<sub>ℝ</sub><sup>_e_ -<sub>ℝ</sub> _n_</sup>, where _n_ is the mathematical integer number of code points in |DecimalDigits| and _e_ is the MV of |ExponentPart|.
+            The MV of <emu-grammar>DecimalLiteral :: `.` DecimalDigits ExponentPart</emu-grammar> is the MV of |DecimalDigits| &times; 10<sub>ℝ</sub><sup>_e_ -<sub>ℝ</sub> _n_</sup>, where _n_ is the mathematical integer number of code points in |DecimalDigits|, excluding all occurrences of |NumericLiteralSeparator|, and _e_ is the MV of |ExponentPart|.
           </li>
           <li>
             The MV of <emu-grammar>DecimalLiteral :: DecimalIntegerLiteral</emu-grammar> is the MV of |DecimalIntegerLiteral|.
@@ -11042,13 +11051,16 @@
             The MV of <emu-grammar>DecimalIntegerLiteral :: NonZeroDigit</emu-grammar> is the MV of |NonZeroDigit|.
           </li>
           <li>
-            The MV of <emu-grammar>DecimalIntegerLiteral :: NonZeroDigit DecimalDigits</emu-grammar> is (the MV of |NonZeroDigit| &times; 10<sub>ℝ</sub><sup>_n_</sup>) plus the MV of |DecimalDigits|, where _n_ is the mathematical integer number of code points in |DecimalDigits|.
+            The MV of <emu-grammar>DecimalIntegerLiteral :: NonZeroDigit NumericLiteralSeparator? DecimalDigits</emu-grammar> is (the MV of |NonZeroDigit| &times; 10<sub>ℝ</sub><sup>_n_</sup>) plus the MV of |DecimalDigits|, where _n_ is the mathematical integer number of code points in |DecimalDigits|, excluding all occurrences of |NumericLiteralSeparator|.
           </li>
           <li>
             The MV of <emu-grammar>DecimalDigits :: DecimalDigit</emu-grammar> is the MV of |DecimalDigit|.
           </li>
           <li>
             The MV of <emu-grammar>DecimalDigits :: DecimalDigits DecimalDigit</emu-grammar> is (the MV of |DecimalDigits| &times; 10<sub>ℝ</sub>) plus the MV of |DecimalDigit|.
+          </li>
+          <li>
+            The MV of <emu-grammar>DecimalDigits :: DecimalDigits NumericLiteralSeparator DecimalDigit</emu-grammar> is (the MV of |DecimalDigits| &times; 10<sub>ℝ</sub>) plus the MV of |DecimalDigit|.
           </li>
           <li>
             The MV of <emu-grammar>ExponentPart :: ExponentIndicator SignedInteger</emu-grammar> is the MV of |SignedInteger|.
@@ -11123,6 +11135,9 @@
             The MV of <emu-grammar>BinaryDigits :: BinaryDigits BinaryDigit</emu-grammar> is (the MV of |BinaryDigits| &times; 2<sub>ℝ</sub>) plus the MV of |BinaryDigit|.
           </li>
           <li>
+            The MV of <emu-grammar>BinaryDigits :: BinaryDigits NumericLiteralSeparator BinaryDigit</emu-grammar> is (the MV of |BinaryDigits| &times; 2<sub>ℝ</sub>) plus the MV of |BinaryDigit|.
+          </li>
+          <li>
             The MV of <emu-grammar>OctalIntegerLiteral :: `0o` OctalDigits</emu-grammar> is the MV of |OctalDigits|.
           </li>
           <li>
@@ -11135,6 +11150,9 @@
             The MV of <emu-grammar>OctalDigits :: OctalDigits OctalDigit</emu-grammar> is (the MV of |OctalDigits| &times; 8<sub>ℝ</sub>) plus the MV of |OctalDigit|.
           </li>
           <li>
+            The MV of <emu-grammar>OctalDigits :: OctalDigits NumericLiteralSeparator OctalDigit</emu-grammar> is (the MV of |OctalDigits| &times; 8<sub>ℝ</sub>) plus the MV of |OctalDigit|.
+          </li>
+          <li>
             The MV of <emu-grammar>HexIntegerLiteral :: `0x` HexDigits</emu-grammar> is the MV of |HexDigits|.
           </li>
           <li>
@@ -11145,6 +11163,9 @@
           </li>
           <li>
             The MV of <emu-grammar>HexDigits :: HexDigits HexDigit</emu-grammar> is (the MV of |HexDigits| &times; 16<sub>ℝ</sub>) plus the MV of |HexDigit|.
+          </li>
+          <li>
+            The MV of <emu-grammar>HexDigits :: HexDigits NumericLiteralSeparator HexDigit</emu-grammar> is (the MV of |HexDigits| &times; 16<sub>ℝ</sub>) plus the MV of |HexDigit|.
           </li>
           <li>
             The MV of <emu-grammar>Hex4Digits :: HexDigit HexDigit HexDigit HexDigit</emu-grammar> is (0x1000<sub>ℝ</sub> times the MV of the first |HexDigit|) plus (0x100<sub>ℝ</sub> times the MV of the second |HexDigit|) plus (0x10<sub>ℝ</sub> times the MV of the third |HexDigit|) plus the MV of the fourth |HexDigit|.
@@ -11184,9 +11205,13 @@
         <emu-alg>
           1. Return the BigInt value that represents the MV of |NonZeroDigit|.
         </emu-alg>
-        <emu-grammar>DecimalBigIntegerLiteral :: NonZeroDigit DecimalDigits BigIntLiteralSuffix</emu-grammar>
+        <emu-grammar>
+          DecimalBigIntegerLiteral ::
+            NonZeroDigit DecimalDigits BigIntLiteralSuffix
+            NonZeroDigit NumericLiteralSeparator DecimalDigits BigIntLiteralSuffix
+        </emu-grammar>
         <emu-alg>
-          1. Let _n_ be the mathematical integer number of code points in |DecimalDigits|.
+          1. Let _n_ be the mathematical integer number of code points in |DecimalDigits|, excluding all occurrences of |NumericLiteralSeparator|.
           1. Let _mv_ be (the MV of |NonZeroDigit| &times; 10<sub>ℝ</sub><sup>_n_</sup>) plus the MV of |DecimalDigits|.
           1. Return the BigInt value that represents _mv_.
         </emu-alg>
@@ -11625,10 +11650,10 @@
           `u` `{` CodePoint [lookahead &lt;! HexDigit] [lookahead != `}`]
 
         NotCodePoint ::
-          HexDigits [> but only if MV of |HexDigits| &gt; 0x10FFFF]
+          HexDigits[~Sep] [> but only if MV of |HexDigits| &gt; 0x10FFFF]
 
         CodePoint ::
-          HexDigits [> but only if MV of |HexDigits| &le; 0x10FFFF]
+          HexDigits[~Sep] [> but only if MV of |HexDigits| &le; 0x10FFFF]
       </emu-grammar>
       <p>A conforming implementation must not use the extended definition of |EscapeSequence| described in <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref> when parsing a |TemplateCharacter|.</p>
       <emu-note>
@@ -30824,9 +30849,9 @@ THH:mm:ss.sss
           `*`
           `+`
           `?`
-          `{` DecimalDigits `}`
-          `{` DecimalDigits `,` `}`
-          `{` DecimalDigits `,` DecimalDigits `}`
+          `{` DecimalDigits[~Sep] `}`
+          `{` DecimalDigits[~Sep] `,` `}`
+          `{` DecimalDigits[~Sep] `,` DecimalDigits[~Sep] `}`
 
         Atom[U, N] ::
           PatternCharacter
@@ -30920,7 +30945,7 @@ THH:mm:ss.sss
           [~U] SourceCharacter but not UnicodeIDContinue
 
         DecimalEscape ::
-          NonZeroDigit DecimalDigits? [lookahead &lt;! DecimalDigit]
+          NonZeroDigit DecimalDigits[~Sep]? [lookahead &lt;! DecimalDigit]
 
         CharacterClassEscape[U] ::
           `d`
@@ -41760,6 +41785,7 @@ THH:mm:ss.sss
     <emu-prodref name="RightBracePunctuator"></emu-prodref>
     <emu-prodref name="NullLiteral"></emu-prodref>
     <emu-prodref name="BooleanLiteral"></emu-prodref>
+    <emu-prodref name="NumericLiteralSeparator"></emu-prodref>
     <emu-prodref name="NumericLiteral"></emu-prodref>
     <emu-prodref name="DecimalBigIntegerLiteral"></emu-prodref>
     <emu-prodref name="NonDecimalIntegerLiteral"></emu-prodref>
@@ -42140,8 +42166,8 @@ THH:mm:ss.sss
         NumericLiteral ::
           DecimalLiteral
           DecimalBigIntegerLiteral
-          NonDecimalIntegerLiteral
-          NonDecimalIntegerLiteral BigIntLiteralSuffix
+          NonDecimalIntegerLiteral[+Sep]
+          NonDecimalIntegerLiteral[+Sep] BigIntLiteralSuffix
           LegacyOctalIntegerLiteral
 
         LegacyOctalIntegerLiteral ::
@@ -42150,7 +42176,8 @@ THH:mm:ss.sss
 
         DecimalIntegerLiteral ::
           `0`
-          NonZeroDigit DecimalDigits?
+          NonZeroDigit
+          NonZeroDigit NumericLiteralSeparator? DecimalDigits[+Sep]
           NonOctalDecimalIntegerLiteral
 
         NonOctalDecimalIntegerLiteral ::
@@ -42375,9 +42402,9 @@ THH:mm:ss.sss
           ExtendedPatternCharacter
 
         InvalidBracedQuantifier ::
-          `{` DecimalDigits `}`
-          `{` DecimalDigits `,` `}`
-          `{` DecimalDigits `,` DecimalDigits `}`
+          `{` DecimalDigits[~Sep] `}`
+          `{` DecimalDigits[~Sep] `,` `}`
+          `{` DecimalDigits[~Sep] `,` DecimalDigits[~Sep] `}`
 
         ExtendedPatternCharacter ::
           SourceCharacter but not one of `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `|`
@@ -42674,7 +42701,7 @@ THH:mm:ss.sss
               1. Else if _k_ &le; _length_ - 3, then
                 1. Set _hexEscape_ to the substring of _string_ from _k_ + 1 to _k_ + 3.
                 1. Set _skip_ to 2.
-              1. If _hexEscape_ can be interpreted as an expansion of |HexDigits|, then
+              1. If _hexEscape_ can be interpreted as an expansion of |HexDigits[~Sep]|, then
                 1. Let _hexIntegerLiteral_ be the string-concatenation of *"0x"* and _hexEscape_.
                 1. Let _n_ be ! ToNumber(_hexIntegerLiteral_).
                 1. Set _c_ to the code unit whose value is _n_.
