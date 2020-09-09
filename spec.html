@@ -37609,20 +37609,6 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-atomicload" aoid="AtomicLoad">
-        <h1>AtomicLoad ( _typedArray_, _index_ )</h1>
-        <p>The abstract operation AtomicLoad takes arguments _typedArray_ and _index_. It atomically loads a value and returns the loaded value. It performs the following steps when called:</p>
-        <emu-alg>
-          1. Let _buffer_ be ? ValidateIntegerTypedArray(_typedArray_).
-          1. Let _indexedPosition_ be ? ValidateAtomicAccess(_typedArray_, _index_).
-          1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
-          1. NOTE: The above check is not redundant with the check in ValidateIntegerTypedArray because the call to ValidateAtomicAccess on the preceding line can have arbitrary side effects, which could cause the buffer to become detached.
-          1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
-          1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
-          1. Return GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, ~SeqCst~).
-        </emu-alg>
-      </emu-clause>
-
       <emu-clause id="sec-bytelistbitwiseop" aoid="ByteListBitwiseOp">
         <h1>ByteListBitwiseOp ( _op_, _xBytes_, _yBytes_ )</h1>
         <p>The abstract operation ByteListBitwiseOp takes arguments _op_ (a sequence of Unicode code points), _xBytes_ (a List of byte values), and _yBytes_ (a List of byte values). The operation atomically performs a bitwise operation on all byte values of the arguments and returns a List of byte values. It performs the following steps when called:</p>
@@ -37738,11 +37724,17 @@ THH:mm:ss.sss
         <p>Regardless of the value of `Atomics.isLockFree`, all atomic operations are guaranteed to be atomic. For example, they will never have a visible operation take place in the middle of the operation (e.g., "tearing").</p>
       </emu-note>
     </emu-clause>
-    <emu-clause id="sec-atomics.load">
+    <emu-clause id="sec-atomics.load" oldids="sec-atomicload">
       <h1>Atomics.load ( _typedArray_, _index_ )</h1>
       <p>The following steps are taken:</p>
       <emu-alg>
-        1. Return ? AtomicLoad(_typedArray_, _index_).
+        1. Let _buffer_ be ? ValidateIntegerTypedArray(_typedArray_).
+        1. Let _indexedPosition_ be ? ValidateAtomicAccess(_typedArray_, _index_).
+        1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+        1. NOTE: The above check is not redundant with the check in ValidateIntegerTypedArray because the call to ValidateAtomicAccess on the preceding line can have arbitrary side effects, which could cause the buffer to become detached.
+        1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
+        1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
+        1. Return GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, ~SeqCst~).
       </emu-alg>
     </emu-clause>
 
@@ -37808,7 +37800,8 @@ THH:mm:ss.sss
         1. Let _block_ be _buffer_.[[ArrayBufferData]].
         1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
         1. Perform EnterCriticalSection(_WL_).
-        1. Let _w_ be ! AtomicLoad(_typedArray_, ! ToIndex(_index_)).
+        1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
+        1. Let _w_ be ! GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, ~SeqCst~).
         1. If _v_ is not equal to _w_, then
           1. Perform LeaveCriticalSection(_WL_).
           1. Return the String *"not-equal"*.
