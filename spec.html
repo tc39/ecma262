@@ -9139,7 +9139,7 @@
       <h1>Integer-Indexed Exotic Objects</h1>
       <p>An Integer-Indexed exotic object is an exotic object that performs special handling of integer index property keys.</p>
       <p><emu-xref href="#integer-indexed-exotic-object">Integer-Indexed exotic objects</emu-xref> have the same internal slots as ordinary objects and additionally [[ViewedArrayBuffer]], [[ArrayLength]], [[ByteOffset]], [[ContentType]], and [[TypedArrayName]] internal slots.</p>
-      <p>An object is an <dfn id="integer-indexed-exotic-object">Integer-Indexed exotic object</dfn> if its [[GetOwnProperty]], [[HasProperty]], [[DefineOwnProperty]], [[Get]], [[Set]], and [[OwnPropertyKeys]] internal methods use the definitions in this section, and its other essential internal methods use the definitions found in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>. These methods are installed by IntegerIndexedObjectCreate.</p>
+      <p>An object is an <dfn id="integer-indexed-exotic-object">Integer-Indexed exotic object</dfn> if its [[GetOwnProperty]], [[HasProperty]], [[DefineOwnProperty]], [[Get]], [[Set]], [[Delete]], and [[OwnPropertyKeys]] internal methods use the definitions in this section, and its other essential internal methods use the definitions found in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>. These methods are installed by IntegerIndexedObjectCreate.</p>
 
       <emu-clause id="sec-integer-indexed-exotic-objects-getownproperty-p">
         <h1>[[GetOwnProperty]] ( _P_ )</h1>
@@ -9150,9 +9150,9 @@
           1. If Type(_P_) is String, then
             1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
-              1. Let _value_ be ? IntegerIndexedElementGet(_O_, _numericIndex_).
+              1. Let _value_ be ! IntegerIndexedElementGet(_O_, _numericIndex_).
               1. If _value_ is *undefined*, return *undefined*.
-              1. Return the PropertyDescriptor { [[Value]]: _value_, [[Writable]]: *true*, [[Enumerable]]: *true*, [[Configurable]]: *false* }.
+              1. Return the PropertyDescriptor { [[Value]]: _value_, [[Writable]]: *true*, [[Enumerable]]: *true*, [[Configurable]]: *true* }.
           1. Return OrdinaryGetOwnProperty(_O_, _P_).
         </emu-alg>
       </emu-clause>
@@ -9167,7 +9167,7 @@
             1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
               1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
-              1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+              1. If IsDetachedBuffer(_buffer_) is *true*, return *false*.
               1. If ! IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *false*.
               1. Return *true*.
           1. Return ? OrdinaryHasProperty(_O_, _P_).
@@ -9185,7 +9185,7 @@
             1. If _numericIndex_ is not *undefined*, then
               1. If ! IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *false*.
               1. If IsAccessorDescriptor(_Desc_) is *true*, return *false*.
-              1. If _Desc_ has a [[Configurable]] field and if _Desc_.[[Configurable]] is *true*, return *false*.
+              1. If _Desc_ has a [[Configurable]] field and if _Desc_.[[Configurable]] is *false*, return *false*.
               1. If _Desc_ has an [[Enumerable]] field and if _Desc_.[[Enumerable]] is *false*, return *false*.
               1. If _Desc_ has a [[Writable]] field and if _Desc_.[[Writable]] is *false*, return *false*.
               1. If _Desc_ has a [[Value]] field, then
@@ -9204,7 +9204,7 @@
           1. If Type(_P_) is String, then
             1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
-              1. Return ? IntegerIndexedElementGet(_O_, _numericIndex_).
+              1. Return ! IntegerIndexedElementGet(_O_, _numericIndex_).
           1. Return ? OrdinaryGet(_O_, _P_, _Receiver_).
         </emu-alg>
       </emu-clause>
@@ -9219,6 +9219,22 @@
             1. If _numericIndex_ is not *undefined*, then
               1. Return ? IntegerIndexedElementSet(_O_, _numericIndex_, _V_).
           1. Return ? OrdinarySet(_O_, _P_, _V_, _Receiver_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-integer-indexed-exotic-objects-delete-p">
+        <h1>[[Delete]] ( _P_ )</h1>
+        <p>When the [[Delete]] internal method of an Integer-Indexed exotic object _O_ is called with property key _P_, the following steps are taken:</p>
+        <emu-alg>
+          1. Assert: IsPropertyKey(_P_) is *true*.
+          1. Assert: _O_ is an Integer-Indexed exotic object.
+          1. If Type(_P_) is String, then
+            1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
+            1. If _numericIndex_ is not *undefined*, then
+              1. If IsDetachedBuffer(_O_.[[ViewedArrayBuffer]]) is *true*, return *true*.
+              1. If ! IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *true*.
+              1. Return *false*.
+          1. Return ? OrdinaryDelete(_O_, _P_).
         </emu-alg>
       </emu-clause>
 
@@ -9250,6 +9266,7 @@
           1. Set _A_.[[DefineOwnProperty]] as specified in <emu-xref href="#sec-integer-indexed-exotic-objects-defineownproperty-p-desc"></emu-xref>.
           1. Set _A_.[[Get]] as specified in <emu-xref href="#sec-integer-indexed-exotic-objects-get-p-receiver"></emu-xref>.
           1. Set _A_.[[Set]] as specified in <emu-xref href="#sec-integer-indexed-exotic-objects-set-p-v-receiver"></emu-xref>.
+          1. Set _A_.[[Delete]] as specified in <emu-xref href="#sec-integer-indexed-exotic-objects-delete-p"></emu-xref>.
           1. Set _A_.[[OwnPropertyKeys]] as specified in <emu-xref href="#sec-integer-indexed-exotic-objects-ownpropertykeys"></emu-xref>.
           1. Set _A_.[[Prototype]] to _prototype_.
           1. Return _A_.
@@ -9274,7 +9291,7 @@
         <emu-alg>
           1. Assert: _O_ is an Integer-Indexed exotic object.
           1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
-          1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+          1. If IsDetachedBuffer(_buffer_) is *true*, return *undefined*.
           1. If ! IsValidIntegerIndex(_O_, _index_) is *false*, return *undefined*.
           1. Let _offset_ be _O_.[[ByteOffset]].
           1. Let _arrayTypeName_ be the String value of _O_.[[TypedArrayName]].
@@ -9293,7 +9310,7 @@
           1. If _O_.[[ContentType]] is ~BigInt~, let _numValue_ be ? ToBigInt(_value_).
           1. Otherwise, let _numValue_ be ? ToNumber(_value_).
           1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
-          1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+          1. If IsDetachedBuffer(_buffer_) is *true*, return *false*.
           1. If ! IsValidIntegerIndex(_O_, _index_) is *false*, return *false*.
           1. Let _offset_ be _O_.[[ByteOffset]].
           1. Let _arrayTypeName_ be the String value of _O_.[[TypedArrayName]].
@@ -34610,7 +34627,7 @@ THH:mm:ss.sss
           1. Let _captured_ be 0.
           1. Repeat, while _k_ &lt; _len_,
             1. Let _Pk_ be ! ToString(𝔽(_k_)).
-            1. Let _kValue_ be ? Get(_O_, _Pk_).
+            1. Let _kValue_ be ! Get(_O_, _Pk_).
             1. Let _selected_ be ! ToBoolean(? Call(_callbackfn_, _thisArg_, &laquo; _kValue_, 𝔽(_k_), _O_ &raquo;)).
             1. If _selected_ is *true*, then
               1. Append _kValue_ to the end of _kept_.
@@ -34706,7 +34723,7 @@ THH:mm:ss.sss
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_,
             1. Let _Pk_ be ! ToString(𝔽(_k_)).
-            1. Let _kValue_ be ? Get(_O_, _Pk_).
+            1. Let _kValue_ be ! Get(_O_, _Pk_).
             1. Let _mappedValue_ be ? Call(_callbackfn_, _thisArg_, &laquo; _kValue_, 𝔽(_k_), _O_ &raquo;).
             1. Perform ? Set(_A_, _Pk_, _mappedValue_, *true*).
             1. Set _k_ to _k_ + 1.
@@ -34849,33 +34866,34 @@ THH:mm:ss.sss
           1. Else, let _final_ be min(_relativeEnd_, _len_).
           1. Let _count_ be max(_final_ - _k_, 0).
           1. Let _A_ be ? TypedArraySpeciesCreate(_O_, &laquo; 𝔽(_count_) &raquo;).
-          1. Let _srcName_ be the String value of _O_.[[TypedArrayName]].
-          1. Let _srcType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _srcName_.
-          1. Let _targetName_ be the String value of _A_.[[TypedArrayName]].
-          1. Let _targetType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _targetName_.
-          1. If _srcType_ is different from _targetType_, then
-            1. Let _n_ be 0.
-            1. Repeat, while _k_ &lt; _final_,
-              1. Let _Pk_ be ! ToString(𝔽(_k_)).
-              1. Let _kValue_ be ? Get(_O_, _Pk_).
-              1. Perform ! Set(_A_, ! ToString(𝔽(_n_)), _kValue_, *true*).
-              1. Set _k_ to _k_ + 1.
-              1. Set _n_ to _n_ + 1.
-          1. Else if _count_ &gt; 0, then
-            1. Let _srcBuffer_ be _O_.[[ViewedArrayBuffer]].
-            1. If IsDetachedBuffer(_srcBuffer_) is *true*, throw a *TypeError* exception.
-            1. Let _targetBuffer_ be _A_.[[ViewedArrayBuffer]].
-            1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for Element Type _srcType_.
-            1. NOTE: If _srcType_ and _targetType_ are the same, the transfer must be performed in a manner that preserves the bit-level encoding of the source data.
-            1. Let _srcByteOffet_ be _O_.[[ByteOffset]].
-            1. Let _targetByteIndex_ be _A_.[[ByteOffset]].
-            1. Let _srcByteIndex_ be (_k_ &times; _elementSize_) + _srcByteOffet_.
-            1. Let _limit_ be _targetByteIndex_ + _count_ &times; _elementSize_.
-            1. Repeat, while _targetByteIndex_ &lt; _limit_,
-              1. Let _value_ be GetValueFromBuffer(_srcBuffer_, _srcByteIndex_, ~Uint8~, *true*, ~Unordered~).
-              1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, ~Uint8~, _value_, *true*, ~Unordered~).
-              1. Set _srcByteIndex_ to _srcByteIndex_ + 1.
-              1. Set _targetByteIndex_ to _targetByteIndex_ + 1.
+          1. If _count_ &gt; 0, then
+            1. If IsDetachedBuffer(_O_.[[ViewedArrayBuffer]]) is *true*, throw a *TypeError* exception.
+            1. Let _srcName_ be the String value of _O_.[[TypedArrayName]].
+            1. Let _srcType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _srcName_.
+            1. Let _targetName_ be the String value of _A_.[[TypedArrayName]].
+            1. Let _targetType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _targetName_.
+            1. If _srcType_ is different from _targetType_, then
+              1. Let _n_ be 0.
+              1. Repeat, while _k_ &lt; _final_,
+                1. Let _Pk_ be ! ToString(𝔽(_k_)).
+                1. Let _kValue_ be ! Get(_O_, _Pk_).
+                1. Perform ! Set(_A_, ! ToString(𝔽(_n_)), _kValue_, *true*).
+                1. Set _k_ to _k_ + 1.
+                1. Set _n_ to _n_ + 1.
+            1. Else,
+              1. Let _srcBuffer_ be _O_.[[ViewedArrayBuffer]].
+              1. Let _targetBuffer_ be _A_.[[ViewedArrayBuffer]].
+              1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for Element Type _srcType_.
+              1. NOTE: If _srcType_ and _targetType_ are the same, the transfer must be performed in a manner that preserves the bit-level encoding of the source data.
+              1. Let _srcByteOffset_ be _O_.[[ByteOffset]].
+              1. Let _targetByteIndex_ be _A_.[[ByteOffset]].
+              1. Let _srcByteIndex_ be (_k_ &times; _elementSize_) + _srcByteOffset_.
+              1. Let _limit_ be _targetByteIndex_ + _count_ &times; _elementSize_.
+              1. Repeat, while _targetByteIndex_ &lt; _limit_,
+                1. Let _value_ be GetValueFromBuffer(_srcBuffer_, _srcByteIndex_, ~Uint8~, *true*, ~Unordered~).
+                1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, ~Uint8~, _value_, *true*, ~Unordered~).
+                1. Set _srcByteIndex_ to _srcByteIndex_ + 1.
+                1. Set _targetByteIndex_ to _targetByteIndex_ + 1.
           1. Return _A_.
         </emu-alg>
         <p>This function is not generic. The *this* value must be an object with a [[TypedArrayName]] internal slot.</p>
@@ -36573,7 +36591,7 @@ THH:mm:ss.sss
           1. Let _O_ be the *this* value.
           1. Perform ? RequireInternalSlot(_O_, [[ArrayBufferData]]).
           1. If IsSharedArrayBuffer(_O_) is *true*, throw a *TypeError* exception.
-          1. If IsDetachedBuffer(_O_) is *true*, throw a *TypeError* exception.
+          1. If IsDetachedBuffer(_O_) is *true*, return *+0*<sub>𝔽</sub>.
           1. Let _length_ be _O_.[[ArrayBufferByteLength]].
           1. Return 𝔽(_length_).
         </emu-alg>
