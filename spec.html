@@ -9159,11 +9159,7 @@
           1. Assert: _O_ is an Integer-Indexed exotic object.
           1. If Type(_P_) is String, then
             1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
-            1. If _numericIndex_ is not *undefined*, then
-              1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
-              1. If IsDetachedBuffer(_buffer_) is *true*, return *false*.
-              1. If ! IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *false*.
-              1. Return *true*.
+            1. If _numericIndex_ is not *undefined*, return ! IsValidIntegerIndex(_O_, _numericIndex_).
           1. Return ? OrdinaryHasProperty(_O_, _P_).
         </emu-alg>
       </emu-clause>
@@ -9225,9 +9221,7 @@
           1. If Type(_P_) is String, then
             1. Let _numericIndex_ be ! CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
-              1. If IsDetachedBuffer(_O_.[[ViewedArrayBuffer]]) is *true*, return *true*.
-              1. If ! IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *true*.
-              1. Return *false*.
+              1. If ! IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *true*; else return *false*.
           1. Return ? OrdinaryDelete(_O_, _P_).
         </emu-alg>
       </emu-clause>
@@ -9238,9 +9232,9 @@
         <emu-alg>
           1. Let _keys_ be a new empty List.
           1. Assert: _O_ is an Integer-Indexed exotic object.
-          1. Let _len_ be _O_.[[ArrayLength]].
-          1. For each integer _i_ starting with 0 such that _i_ &lt; _len_, in ascending order, do
-            1. Add ! ToString(𝔽(_i_)) as the last element of _keys_.
+          1. If IsDetachedBuffer(_O_.[[ViewedArrayBuffer]]) is *false*, then
+            1. For each integer _i_ starting with 0 such that _i_ &lt; _O_.[[ArrayLength]], in ascending order, do
+              1. Add ! ToString(𝔽(_i_)) as the last element of _keys_.
           1. For each own property key _P_ of _O_ such that Type(_P_) is String and _P_ is not an integer index, in ascending chronological order of property creation, do
             1. Add _P_ as the last element of _keys_.
           1. For each own property key _P_ of _O_ such that Type(_P_) is Symbol, in ascending chronological order of property creation, do
@@ -9272,6 +9266,7 @@
         <p>The abstract operation IsValidIntegerIndex takes arguments _O_ and _index_ (a Number). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: _O_ is an Integer-Indexed exotic object.
+          1. If IsDetachedBuffer(O.[[ViewedArrayBuffer]]) is *true*, return *false*.
           1. If ! IsIntegralNumber(_index_) is *false*, return *false*.
           1. If _index_ is *-0*<sub>𝔽</sub>, return *false*.
           1. If ℝ(_index_) &lt; 0 or ℝ(_index_) &ge; _O_.[[ArrayLength]], return *false*.
@@ -9284,15 +9279,13 @@
         <p>The abstract operation IntegerIndexedElementGet takes arguments _O_ and _index_ (a Number). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: _O_ is an Integer-Indexed exotic object.
-          1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
-          1. If IsDetachedBuffer(_buffer_) is *true*, return *undefined*.
           1. If ! IsValidIntegerIndex(_O_, _index_) is *false*, return *undefined*.
           1. Let _offset_ be _O_.[[ByteOffset]].
           1. Let _arrayTypeName_ be the String value of _O_.[[TypedArrayName]].
           1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
           1. Let _indexedPosition_ be (ℝ(_index_) &times; _elementSize_) + _offset_.
           1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
-          1. Return GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, ~Unordered~).
+          1. Return GetValueFromBuffer(_O_.[[ViewedArrayBuffer]], _indexedPosition_, _elementType_, *true*, ~Unordered~).
         </emu-alg>
       </emu-clause>
 
@@ -9303,15 +9296,13 @@
           1. Assert: _O_ is an Integer-Indexed exotic object.
           1. If _O_.[[ContentType]] is ~BigInt~, let _numValue_ be ? ToBigInt(_value_).
           1. Otherwise, let _numValue_ be ? ToNumber(_value_).
-          1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
-          1. If IsDetachedBuffer(_buffer_) is *true*, return *false*.
           1. If ! IsValidIntegerIndex(_O_, _index_) is *false*, return *false*.
           1. Let _offset_ be _O_.[[ByteOffset]].
           1. Let _arrayTypeName_ be the String value of _O_.[[TypedArrayName]].
           1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
           1. Let _indexedPosition_ be (ℝ(_index_) &times; _elementSize_) + _offset_.
           1. Let _elementType_ be the Element Type value in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _arrayTypeName_.
-          1. Perform SetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _numValue_, *true*, ~Unordered~).
+          1. Perform SetValueInBuffer(_O_.[[ViewedArrayBuffer]], _indexedPosition_, _elementType_, _numValue_, *true*, ~Unordered~).
           1. Return *true*.
         </emu-alg>
       </emu-clause>
