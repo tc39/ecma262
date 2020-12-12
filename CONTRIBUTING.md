@@ -37,6 +37,8 @@ To make a feature request, document the problem and a sketch of the solution wit
 
 Your goal will be to convince others that your proposal is a useful addition to the language and recruit TC39 members to help turn your request into a proposal and shepherd it into the language. Once a proposal is introduced to the committee, new features are considered by the committee according to the [TC39 process document](https://tc39.es/process-document/).
 
+You can look at [existing proposals](https://github.com/tc39/proposals/) for examples of how proposals are structured, and some delegates use [this template](https://github.com/tc39/template-for-proposals) when creating repositories for their proposals. Proposals need to have a repository and be moved to the TC39 org on GitHub once they reach Stage 1.
+
 ##### TC39 meetings and champions
 If you have a new proposal you want to get into the language, you first need a TC39 "champion": a member of the committee who will make the case for the proposal at [in-person TC39 meetings](https://github.com/tc39/agendas#agendas) and help it move through the process. If you are a TC39 member, you can be a champion; otherwise, find a TC39 member to work with for this (e.g., through es-discuss or #tc39). Proposals may have multiple champions (a "champion group").
 
