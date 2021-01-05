@@ -26,6 +26,7 @@ If you are changing the signature or behavior of an existing construct, please c
 
 * [Web IDL](https://heycam.github.io/webidl/) — [file an issue](https://github.com/heycam/webidl/issues/new)
 * [HTML Standard](https://html.spec.whatwg.org/) — [file an issue](https://github.com/whatwg/html/issues/new)
+* [ECMAScript Intl API](https://tc39.es/ecma402/) - [file an issue](https://github.com/tc39/ecma402/issues/new)
 
 #### New feature proposals
 TC39 is open to accepting new feature requests for ECMAScript, referred to as "proposals". Proposals go through a four-stage process which is documented in the [TC39 process document](https://tc39.es/process-document/).
