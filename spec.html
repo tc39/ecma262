@@ -5740,38 +5740,20 @@
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-createlistiteratorRecord" oldids="sec-createlistiterator" aoid="CreateListIteratorRecord">
+    <emu-clause id="sec-createlistiteratorRecord" oldids="sec-createlistiterator,sec-listiteratornext-functions,sec-listiterator-next" aoid="CreateListIteratorRecord">
       <h1>CreateListIteratorRecord ( _list_ )</h1>
       <p>The abstract operation CreateListIteratorRecord takes argument _list_. It creates an Iterator (<emu-xref href="#sec-iterator-interface"></emu-xref>) object record whose next method returns the successive elements of _list_. It performs the following steps when called:</p>
       <emu-alg>
-        1. Let _iterator_ be ! OrdinaryObjectCreate(%IteratorPrototype%, &laquo; [[IteratedList]], [[ListNextIndex]] &raquo;).
-        1. Set _iterator_.[[IteratedList]] to _list_.
-        1. Set _iterator_.[[ListNextIndex]] to 0.
-        1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-listiteratornext-functions" title></emu-xref>.
-        1. Let _next_ be ! CreateBuiltinFunction(_steps_, &laquo; &raquo;).
-        1. Return Record { [[Iterator]]: _iterator_, [[NextMethod]]: _next_, [[Done]]: *false* }.
+        1. Let _closure_ be a new Abstract Closure with no parameters that captures _list_ and performs the following steps when called:
+          1. For each element _E_ of _list_, do
+            1. Perform ? Yield(_E_).
+          1. Return *undefined*.
+        1. Let _iterator_ be ! CreateIteratorFromClosure(_closure_, ~empty~, %IteratorPrototype%).
+        1. Return Record { [[Iterator]]: _iterator_, [[NextMethod]]: %GeneratorFunction.prototype.prototype.next%, [[Done]]: *false* }.
       </emu-alg>
       <emu-note>
         <p>The list iterator object is never directly accessible to ECMAScript code.</p>
       </emu-note>
-
-      <emu-clause id="sec-listiteratornext-functions" oldids="sec-listiterator-next">
-        <h1>ListIteratorNext Functions</h1>
-        <p>A ListIteratorNext function is an anonymous built-in function. When called with no arguments, it performs the following steps:</p>
-        <emu-alg>
-          1. Let _O_ be the *this* value.
-          1. Assert: Type(_O_) is Object.
-          1. Assert: _O_ has an [[IteratedList]] internal slot.
-          1. Let _list_ be _O_.[[IteratedList]].
-          1. Let _index_ be _O_.[[ListNextIndex]].
-          1. Let _len_ be the number of elements of _list_.
-          1. If _index_ &ge; _len_, then
-            1. Return CreateIterResultObject(*undefined*, *true*).
-          1. Set _O_.[[ListNextIndex]] to _index_ + 1.
-          1. Return CreateIterResultObject(_list_[_index_], *false*).
-        </emu-alg>
-        <p>The *"length"* property of a ListIteratorNext function is *+0*<sub>𝔽</sub>.</p>
-      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-iterabletolist" aoid="IterableToList">
@@ -20443,7 +20425,8 @@
       <emu-grammar>GeneratorBody : FunctionBody</emu-grammar>
       <emu-alg>
         1. Perform ? FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
-        1. Let _G_ be ? OrdinaryCreateFromConstructor(_functionObject_, *"%GeneratorFunction.prototype.prototype%"*, &laquo; [[GeneratorState]], [[GeneratorContext]] &raquo;).
+        1. Let _G_ be ? OrdinaryCreateFromConstructor(_functionObject_, *"%GeneratorFunction.prototype.prototype%"*, &laquo; [[GeneratorState]], [[GeneratorContext]], [[GeneratorBrand]] &raquo;).
+        1. Set _G_.[[GeneratorBrand]] to ~empty~.
         1. Perform GeneratorStart(_G_, |FunctionBody|).
         1. Return Completion { [[Type]]: ~return~, [[Value]]: _G_, [[Target]]: ~empty~ }.
       </emu-alg>
@@ -20537,17 +20520,13 @@
       </emu-note>
       <emu-grammar>YieldExpression : `yield`</emu-grammar>
       <emu-alg>
-        1. Let _generatorKind_ be ! GetGeneratorKind().
-        1. If _generatorKind_ is ~async~, return ? AsyncGeneratorYield(*undefined*).
-        1. Otherwise, return ? GeneratorYield(CreateIterResultObject(*undefined*, *false*)).
+        1. Return ? Yield(*undefined*).
       </emu-alg>
       <emu-grammar>YieldExpression : `yield` AssignmentExpression</emu-grammar>
       <emu-alg>
-        1. Let _generatorKind_ be ! GetGeneratorKind().
         1. Let _exprRef_ be the result of evaluating |AssignmentExpression|.
         1. Let _value_ be ? GetValue(_exprRef_).
-        1. If _generatorKind_ is ~async~, return ? AsyncGeneratorYield(_value_).
-        1. Otherwise, return ? GeneratorYield(CreateIterResultObject(_value_, *false*)).
+        1. Return ? Yield(_value_).
       </emu-alg>
       <emu-grammar>YieldExpression : `yield` `*` AssignmentExpression</emu-grammar>
       <emu-alg>
@@ -20767,7 +20746,8 @@
       </emu-grammar>
       <emu-alg>
         1. Perform ? FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
-        1. Let _generator_ be ? OrdinaryCreateFromConstructor(_functionObject_, *"%AsyncGeneratorFunction.prototype.prototype%"*, &laquo; [[AsyncGeneratorState]], [[AsyncGeneratorContext]], [[AsyncGeneratorQueue]] &raquo;).
+        1. Let _generator_ be ? OrdinaryCreateFromConstructor(_functionObject_, *"%AsyncGeneratorFunction.prototype.prototype%"*, &laquo; [[AsyncGeneratorState]], [[AsyncGeneratorContext]], [[AsyncGeneratorQueue]], [[GeneratorBrand]] &raquo;).
+        1. Set _generator_.[[GeneratorBrand]] to ~empty~.
         1. Perform ! AsyncGeneratorStart(_generator_, |FunctionBody|).
         1. Return Completion { [[Type]]: ~return~, [[Value]]: _generator_, [[Target]]: ~empty~ }.
       </emu-alg>
@@ -30380,13 +30360,23 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-string.prototype-@@iterator">
+      <emu-clause id="sec-string.prototype-@@iterator" oldids="sec-createstringiterator,sec-properties-of-string-iterator-instances,table-46,table-internal-slots-of-string-iterator-instances">
         <h1>String.prototype [ @@iterator ] ( )</h1>
         <p>When the `@@iterator` method is called it returns an Iterator object (<emu-xref href="#sec-iterator-interface"></emu-xref>) that iterates over the code points of a String value, returning each code point as a String value. The following steps are taken:</p>
         <emu-alg>
           1. Let _O_ be ? RequireObjectCoercible(*this* value).
-          1. Let _S_ be ? ToString(_O_).
-          1. Return CreateStringIterator(_S_).
+          1. Let _s_ be ? ToString(_O_).
+          1. Let _closure_ be a new Abstract Closure with no parameters that captures _s_ and performs the following steps when called:
+            1. Let _position_ be 0.
+            1. Let _len_ be the length of _s_.
+            1. Repeat, while _position_ &lt; _len_,
+              1. Let _cp_ be ! CodePointAt(_s_, _position_).
+              1. Let _nextIndex_ be _position_ + _cp_.[[CodeUnitCount]].
+              1. Let _resultString_ be the substring of _s_ from _position_ to _nextIndex_.
+              1. Set _position_ to _nextIndex_.
+              1. Perform ? Yield(_resultString_).
+            1. Return *undefined*.
+          1. Return ! CreateIteratorFromClosure(_closure_, *"%StringIteratorPrototype%"*, %StringIteratorPrototype%).
         </emu-alg>
         <p>The value of the *"name"* property of this function is *"[Symbol.iterator]"*.</p>
       </emu-clause>
@@ -30408,18 +30398,6 @@ THH:mm:ss.sss
       <h1>String Iterator Objects</h1>
       <p>A String Iterator is an object, that represents a specific iteration over some specific String instance object. There is not a named constructor for String Iterator objects. Instead, String iterator objects are created by calling certain methods of String instance objects.</p>
 
-      <emu-clause id="sec-createstringiterator" aoid="CreateStringIterator">
-        <h1>CreateStringIterator ( _string_ )</h1>
-        <p>The abstract operation CreateStringIterator takes argument _string_. This operation is used to create iterator objects for String methods that return such iterators. It performs the following steps when called:</p>
-        <emu-alg>
-          1. Assert: Type(_string_) is String.
-          1. Let _iterator_ be ! OrdinaryObjectCreate(%StringIteratorPrototype%, &laquo; [[IteratedString]], [[StringNextIndex]] &raquo;).
-          1. Set _iterator_.[[IteratedString]] to _string_.
-          1. Set _iterator_.[[StringNextIndex]] to 0.
-          1. Return _iterator_.
-        </emu-alg>
-      </emu-clause>
-
       <emu-clause id="sec-%stringiteratorprototype%-object">
         <h1>The %StringIteratorPrototype% Object</h1>
         <p>The <dfn>%StringIteratorPrototype%</dfn> object:</p>
@@ -30433,21 +30411,7 @@ THH:mm:ss.sss
         <emu-clause id="sec-%stringiteratorprototype%.next">
           <h1>%StringIteratorPrototype%.next ( )</h1>
           <emu-alg>
-            1. Let _O_ be the *this* value.
-            1. If Type(_O_) is not Object, throw a *TypeError* exception.
-            1. If _O_ does not have all of the internal slots of a String Iterator Instance (<emu-xref href="#sec-properties-of-string-iterator-instances"></emu-xref>), throw a *TypeError* exception.
-            1. Let _S_ be _O_.[[IteratedString]].
-            1. If _S_ is *undefined*, return CreateIterResultObject(*undefined*, *true*).
-            1. Let _position_ be _O_.[[StringNextIndex]].
-            1. Let _len_ be the length of _S_.
-            1. If _position_ &ge; _len_, then
-              1. Set _O_.[[IteratedString]] to *undefined*.
-              1. Return CreateIterResultObject(*undefined*, *true*).
-            1. Let _cp_ be ! CodePointAt(_S_, _position_).
-            1. Let _nextIndex_ be _position_ + _cp_.[[CodeUnitCount]].
-            1. Let _resultString_ be the substring of _S_ from _position_ to _nextIndex_.
-            1. Set _O_.[[StringNextIndex]] to _nextIndex_.
-            1. Return CreateIterResultObject(_resultString_, *false*).
+            1. Return ? GeneratorResume(*this* value, ~empty~, *"%StringIteratorPrototype%"*).
           </emu-alg>
         </emu-clause>
 
@@ -30456,41 +30420,6 @@ THH:mm:ss.sss
           <p>The initial value of the @@toStringTag property is the String value *"String Iterator"*.</p>
           <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
         </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-properties-of-string-iterator-instances">
-        <h1>Properties of String Iterator Instances</h1>
-        <p>String Iterator instances are ordinary objects that inherit properties from the %StringIteratorPrototype% intrinsic object. String Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-internal-slots-of-string-iterator-instances"></emu-xref>.</p>
-        <emu-table id="table-internal-slots-of-string-iterator-instances" caption="Internal Slots of String Iterator Instances" oldids="table-46">
-          <table>
-            <tbody>
-            <tr>
-              <th>
-                Internal Slot
-              </th>
-              <th>
-                Description
-              </th>
-            </tr>
-            <tr>
-              <td>
-                [[IteratedString]]
-              </td>
-              <td>
-                The String value whose code units are being iterated.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[StringNextIndex]]
-              </td>
-              <td>
-                The integer index of the next string element (code unit) to be examined by this iterator.
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </emu-table>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -32580,19 +32509,27 @@ THH:mm:ss.sss
       <h1>RegExp String Iterator Objects</h1>
       <p>A RegExp String Iterator is an object, that represents a specific iteration over some specific String instance object, matching against some specific RegExp instance object. There is not a named constructor for RegExp String Iterator objects. Instead, RegExp String Iterator objects are created by calling certain methods of RegExp instance objects.</p>
 
-      <emu-clause id="sec-createregexpstringiterator" aoid="CreateRegExpStringIterator">
+      <emu-clause id="sec-createregexpstringiterator" aoid="CreateRegExpStringIterator" oldids="sec-properties-of-regexp-string-iterator-instances,table-regexp-string-iterator-instance-slots">
         <h1>CreateRegExpStringIterator ( _R_, _S_, _global_, _fullUnicode_ )</h1>
+        <p>The abstract operation CreateRegExpStringIterator takes arguments _R_, _S_, _global_, and _fullUnicode_. It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: Type(_S_) is String.
           1. Assert: Type(_global_) is Boolean.
           1. Assert: Type(_fullUnicode_) is Boolean.
-          1. Let _iterator_ be ! OrdinaryObjectCreate(%RegExpStringIteratorPrototype%, &laquo; [[IteratingRegExp]], [[IteratedString]], [[Global]], [[Unicode]], [[Done]] &raquo;).
-          1. Set _iterator_.[[IteratingRegExp]] to _R_.
-          1. Set _iterator_.[[IteratedString]] to _S_.
-          1. Set _iterator_.[[Global]] to _global_.
-          1. Set _iterator_.[[Unicode]] to _fullUnicode_.
-          1. Set _iterator_.[[Done]] to *false*.
-          1. Return _iterator_.
+          1. Let _closure_ be a new Abstract Closure with no parameters that captures _R_, _S_, _global_, and _fullUnicode_ and performs the following steps when called:
+            1. Repeat,
+              1. Let _match_ be ? RegExpExec(_R_, _S_).
+              1. If _match_ is *null*, return *undefined*.
+              1. If _global_ is *false*, then
+                1. Perform ? Yield(_match_).
+                1. Return *undefined*.
+              1. Let _matchStr_ be ? ToString(? Get(_match_, *"0"*)).
+              1. If _matchStr_ is the empty String, then
+                1. Let _thisIndex_ be ℝ(? ToLength(? Get(_R_, *"lastIndex"*))).
+                1. Let _nextIndex_ be ! AdvanceStringIndex(_S_, _thisIndex_, _fullUnicode_).
+                1. Perform ? Set(_R_, *"lastIndex"*, 𝔽(_nextIndex_), *true*).
+              1. Perform ? Yield(_match_).
+          1. Return ! CreateIteratorFromClosure(_closure_, *"%RegExpStringIteratorPrototype%"*, %RegExpStringIteratorPrototype%).
         </emu-alg>
       </emu-clause>
 
@@ -32609,30 +32546,7 @@ THH:mm:ss.sss
         <emu-clause id="sec-%regexpstringiteratorprototype%.next">
           <h1>%RegExpStringIteratorPrototype%.next ( )</h1>
           <emu-alg>
-            1. Let _O_ be the *this* value.
-            1. If Type(_O_) is not Object, throw a *TypeError* exception.
-            1. If _O_ does not have all of the internal slots of a RegExp String Iterator Object Instance (see <emu-xref href="#sec-properties-of-regexp-string-iterator-instances"></emu-xref>), throw a *TypeError* exception.
-            1. If _O_.[[Done]] is *true*, then
-              1. Return ! CreateIterResultObject(*undefined*, *true*).
-            1. Let _R_ be _O_.[[IteratingRegExp]].
-            1. Let _S_ be _O_.[[IteratedString]].
-            1. Let _global_ be _O_.[[Global]].
-            1. Let _fullUnicode_ be _O_.[[Unicode]].
-            1. Let _match_ be ? RegExpExec(_R_, _S_).
-            1. If _match_ is *null*, then
-              1. Set _O_.[[Done]] to *true*.
-              1. Return ! CreateIterResultObject(*undefined*, *true*).
-            1. Else,
-              1. If _global_ is *true*, then
-                1. Let _matchStr_ be ? ToString(? Get(_match_, *"0"*)).
-                1. If _matchStr_ is the empty String, then
-                  1. Let _thisIndex_ be ℝ(? ToLength(? Get(_R_, *"lastIndex"*))).
-                  1. Let _nextIndex_ be AdvanceStringIndex(_S_, _thisIndex_, _fullUnicode_).
-                  1. Perform ? Set(_R_, *"lastIndex"*, 𝔽(_nextIndex_), *true*).
-                1. Return ! CreateIterResultObject(_match_, *false*).
-              1. Else,
-                1. Set _O_.[[Done]] to *true*.
-                1. Return ! CreateIterResultObject(_match_, *false*).
+            1. Return ? GeneratorResume(*this* value, ~empty~, *"%RegExpStringIteratorPrototype%"*).
           </emu-alg>
         </emu-clause>
 
@@ -32641,41 +32555,6 @@ THH:mm:ss.sss
           <p>The initial value of the @@toStringTag property is the String value *"RegExp String Iterator"*.</p>
           <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
         </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-properties-of-regexp-string-iterator-instances">
-        <h1>Properties of RegExp String Iterator Instances</h1>
-        <p>RegExp String Iterator instances are ordinary objects that inherit properties from the %RegExpStringIteratorPrototype% intrinsic object. RegExp String Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-regexp-string-iterator-instance-slots"></emu-xref>.</p>
-        <emu-table id="table-regexp-string-iterator-instance-slots" caption="Internal Slots of RegExp String Iterator Instances">
-          <table>
-            <tbody>
-              <tr>
-                <th>Internal Slot</th>
-                <th>Description</th>
-              </tr>
-              <tr>
-                <td>[[IteratingRegExp]]</td>
-                <td>The regular expression used for iteration. IsRegExp([[IteratingRegExp]]) is initially *true*.</td>
-              </tr>
-              <tr>
-                <td>[[IteratedString]]</td>
-                <td>The String value being iterated upon.</td>
-              </tr>
-              <tr>
-                <td>[[Global]]</td>
-                <td>A Boolean value to indicate whether the [[IteratingRegExp]] is global or not.</td>
-              </tr>
-              <tr>
-                <td>[[Unicode]]</td>
-                <td>A Boolean value to indicate whether the [[IteratingRegExp]] is in Unicode mode or not.</td>
-              </tr>
-              <tr>
-                <td>[[Done]]</td>
-                <td>A Boolean value to indicate whether the iteration is complete or not.</td>
-              </tr>
-            </tbody>
-          </table>
-        </emu-table>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -34022,17 +33901,31 @@ THH:mm:ss.sss
       <h1>Array Iterator Objects</h1>
       <p>An Array Iterator is an object, that represents a specific iteration over some specific Array instance object. There is not a named constructor for Array Iterator objects. Instead, Array iterator objects are created by calling certain methods of Array instance objects.</p>
 
-      <emu-clause id="sec-createarrayiterator" aoid="CreateArrayIterator">
+      <emu-clause id="sec-createarrayiterator" aoid="CreateArrayIterator" oldids="sec-properties-of-array-iterator-instances,table-48,table-internal-slots-of-array-iterator-instances">
         <h1>CreateArrayIterator ( _array_, _kind_ )</h1>
         <p>The abstract operation CreateArrayIterator takes arguments _array_ and _kind_. This operation is used to create iterator objects for Array methods that return such iterators. It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: Type(_array_) is Object.
           1. Assert: _kind_ is ~key+value~, ~key~, or ~value~.
-          1. Let _iterator_ be ! OrdinaryObjectCreate(%ArrayIteratorPrototype%, &laquo; [[IteratedArrayLike]], [[ArrayLikeNextIndex]], [[ArrayLikeIterationKind]] &raquo;).
-          1. Set _iterator_.[[IteratedArrayLike]] to _array_.
-          1. Set _iterator_.[[ArrayLikeNextIndex]] to 0.
-          1. Set _iterator_.[[ArrayLikeIterationKind]] to _kind_.
-          1. Return _iterator_.
+          1. Let _closure_ be a new Abstract Closure with no parameters that captures _kind_ and _array_ and performs the following steps when called:
+            1. Let _index_ be 0.
+            1. Repeat,
+              1. If _array_ has a [[TypedArrayName]] internal slot, then
+                1. If IsDetachedBuffer(_array_.[[ViewedArrayBuffer]]) is *true*, throw a *TypeError* exception.
+                1. Let _len_ be _array_.[[ArrayLength]].
+              1. Else,
+                1. Let _len_ be ? LengthOfArrayLike(_array_).
+              1. If _index_ &ge; _len_, return *undefined*.
+              1. If _kind_ is ~key~, perform ? Yield(𝔽(_index_)).
+              1. Else,
+                1. Let _elementKey_ be ! ToString(𝔽(_index_)).
+                1. Let _elementValue_ be ? Get(_array_, _elementKey_).
+                1. If _kind_ is ~value~, perform ? Yield(_elementValue_).
+                1. Else,
+                  1. Assert: _kind_ is ~key+value~.
+                  1. Perform ? Yield(! CreateArrayFromList(&laquo; 𝔽(_index_), _elementValue_ &raquo;)).
+              1. Set _index_ to _index_ + 1.
+          1. Return ! CreateIteratorFromClosure(_closure_, *"%ArrayIteratorPrototype%"*, %ArrayIteratorPrototype%).
         </emu-alg>
       </emu-clause>
 
@@ -34049,30 +33942,7 @@ THH:mm:ss.sss
         <emu-clause id="sec-%arrayiteratorprototype%.next">
           <h1>%ArrayIteratorPrototype%.next ( )</h1>
           <emu-alg>
-            1. Let _O_ be the *this* value.
-            1. If Type(_O_) is not Object, throw a *TypeError* exception.
-            1. If _O_ does not have all of the internal slots of an Array Iterator Instance (<emu-xref href="#sec-properties-of-array-iterator-instances"></emu-xref>), throw a *TypeError* exception.
-            1. Let _a_ be _O_.[[IteratedArrayLike]].
-            1. If _a_ is *undefined*, return CreateIterResultObject(*undefined*, *true*).
-            1. Let _index_ be _O_.[[ArrayLikeNextIndex]].
-            1. Let _itemKind_ be _O_.[[ArrayLikeIterationKind]].
-            1. If _a_ has a [[TypedArrayName]] internal slot, then
-              1. If IsDetachedBuffer(_a_.[[ViewedArrayBuffer]]) is *true*, throw a *TypeError* exception.
-              1. Let _len_ be _a_.[[ArrayLength]].
-            1. Else,
-              1. Let _len_ be ? LengthOfArrayLike(_a_).
-            1. If _index_ &ge; _len_, then
-              1. Set _O_.[[IteratedArrayLike]] to *undefined*.
-              1. Return CreateIterResultObject(*undefined*, *true*).
-            1. Set _O_.[[ArrayLikeNextIndex]] to _index_ + 1.
-            1. If _itemKind_ is ~key~, return CreateIterResultObject(𝔽(_index_), *false*).
-            1. Let _elementKey_ be ! ToString(𝔽(_index_)).
-            1. Let _elementValue_ be ? Get(_a_, _elementKey_).
-            1. If _itemKind_ is ~value~, let _result_ be _elementValue_.
-            1. Else,
-              1. Assert: _itemKind_ is ~key+value~.
-              1. Let _result_ be ! CreateArrayFromList(&laquo; 𝔽(_index_), _elementValue_ &raquo;).
-            1. Return CreateIterResultObject(_result_, *false*).
+            1. Return ? GeneratorResume(*this* value, ~empty~, *"%ArrayIteratorPrototype%"*).
           </emu-alg>
         </emu-clause>
 
@@ -34081,49 +33951,6 @@ THH:mm:ss.sss
           <p>The initial value of the @@toStringTag property is the String value *"Array Iterator"*.</p>
           <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
         </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-properties-of-array-iterator-instances">
-        <h1>Properties of Array Iterator Instances</h1>
-        <p>Array Iterator instances are ordinary objects that inherit properties from the %ArrayIteratorPrototype% intrinsic object. Array Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-internal-slots-of-array-iterator-instances"></emu-xref>.</p>
-        <emu-table id="table-internal-slots-of-array-iterator-instances" caption="Internal Slots of Array Iterator Instances" oldids="table-48">
-          <table>
-            <tbody>
-            <tr>
-              <th>
-                Internal Slot
-              </th>
-              <th>
-                Description
-              </th>
-            </tr>
-            <tr>
-              <td>
-                [[IteratedArrayLike]]
-              </td>
-              <td>
-                The array-like object that is being iterated.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[ArrayLikeNextIndex]]
-              </td>
-              <td>
-                The integer index of the next element to be examined by this iterator.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[ArrayLikeIterationKind]]
-              </td>
-              <td>
-                A String value that identifies what is returned for each element of the iteration. The possible values are: ~key~, ~value~, ~key+value~.
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </emu-table>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -35568,16 +35395,30 @@ THH:mm:ss.sss
       <h1>Map Iterator Objects</h1>
       <p>A Map Iterator is an object, that represents a specific iteration over some specific Map instance object. There is not a named constructor for Map Iterator objects. Instead, map iterator objects are created by calling certain methods of Map instance objects.</p>
 
-      <emu-clause id="sec-createmapiterator" aoid="CreateMapIterator">
+      <emu-clause id="sec-createmapiterator" aoid="CreateMapIterator" oldids="sec-properties-of-map-iterator-instances,table-50,table-internal-slots-of-map-iterator-instances">
         <h1>CreateMapIterator ( _map_, _kind_ )</h1>
         <p>The abstract operation CreateMapIterator takes arguments _map_ and _kind_. This operation is used to create iterator objects for Map methods that return such iterators. It performs the following steps when called:</p>
         <emu-alg>
+          1. Assert: _kind_ is ~key+value~, ~key~, or ~value~.
           1. Perform ? RequireInternalSlot(_map_, [[MapData]]).
-          1. Let _iterator_ be ! OrdinaryObjectCreate(%MapIteratorPrototype%, &laquo; [[IteratedMap]], [[MapNextIndex]], [[MapIterationKind]] &raquo;).
-          1. Set _iterator_.[[IteratedMap]] to _map_.
-          1. Set _iterator_.[[MapNextIndex]] to 0.
-          1. Set _iterator_.[[MapIterationKind]] to _kind_.
-          1. Return _iterator_.
+          1. Let _closure_ be a new Abstract Closure with no parameters that captures _map_ and _kind_ and performs the following steps when called:
+            1. Let _entries_ be the List that is _map_.[[MapData]].
+            1. Let _index_ be 0.
+            1. Let _numEntries_ be the number of elements of _entries_.
+            1. Repeat, while _index_ &lt; _numEntries_,
+              1. Let _e_ be the Record { [[Key]], [[Value]] } that is the value of _entries_[_index_].
+              1. Set _index_ to _index_ + 1.
+              1. If _e_.[[Key]] is not ~empty~, then
+                1. If _kind_ is ~key~, let _result_ be _e_.[[Key]].
+                1. Else if _kind_ is ~value~, let _result_ be _e_.[[Value]].
+                1. Else,
+                  1. Assert: _kind_ is ~key+value~.
+                  1. Let _result_ be ! CreateArrayFromList(&laquo; _e_.[[Key]], _e_.[[Value]] &raquo;).
+                1. Perform ? Yield(_result_).
+                1. NOTE: the number of elements in _entries_ may have changed while execution of this abstract operation was paused by Yield.
+                1. Set _numEntries_ to the number of elements of _entries_.
+            1. Return *undefined*.
+          1. Return ! CreateIteratorFromClosure(_closure_, *"%MapIteratorPrototype%"*, %MapIteratorPrototype%).
         </emu-alg>
       </emu-clause>
 
@@ -35594,30 +35435,7 @@ THH:mm:ss.sss
         <emu-clause id="sec-%mapiteratorprototype%.next">
           <h1>%MapIteratorPrototype%.next ( )</h1>
           <emu-alg>
-            1. Let _O_ be the *this* value.
-            1. If Type(_O_) is not Object, throw a *TypeError* exception.
-            1. If _O_ does not have all of the internal slots of a Map Iterator Instance (<emu-xref href="#sec-properties-of-map-iterator-instances"></emu-xref>), throw a *TypeError* exception.
-            1. Let _m_ be _O_.[[IteratedMap]].
-            1. Let _index_ be _O_.[[MapNextIndex]].
-            1. Let _itemKind_ be _O_.[[MapIterationKind]].
-            1. If _m_ is *undefined*, return CreateIterResultObject(*undefined*, *true*).
-            1. Assert: _m_ has a [[MapData]] internal slot.
-            1. Let _entries_ be the List that is _m_.[[MapData]].
-            1. Let _numEntries_ be the number of elements of _entries_.
-            1. NOTE: _numEntries_ must be redetermined each time this method is evaluated.
-            1. Repeat, while _index_ &lt; _numEntries_,
-              1. Let _e_ be the Record { [[Key]], [[Value]] } that is the value of _entries_[_index_].
-              1. Set _index_ to _index_ + 1.
-              1. Set _O_.[[MapNextIndex]] to _index_.
-              1. If _e_.[[Key]] is not ~empty~, then
-                1. If _itemKind_ is ~key~, let _result_ be _e_.[[Key]].
-                1. Else if _itemKind_ is ~value~, let _result_ be _e_.[[Value]].
-                1. Else,
-                  1. Assert: _itemKind_ is ~key+value~.
-                  1. Let _result_ be ! CreateArrayFromList(&laquo; _e_.[[Key]], _e_.[[Value]] &raquo;).
-                1. Return CreateIterResultObject(_result_, *false*).
-            1. Set _O_.[[IteratedMap]] to *undefined*.
-            1. Return CreateIterResultObject(*undefined*, *true*).
+            1. Return ? GeneratorResume(*this* value, ~empty~, *"%MapIteratorPrototype%"*).
           </emu-alg>
         </emu-clause>
 
@@ -35626,49 +35444,6 @@ THH:mm:ss.sss
           <p>The initial value of the @@toStringTag property is the String value *"Map Iterator"*.</p>
           <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
         </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-properties-of-map-iterator-instances">
-        <h1>Properties of Map Iterator Instances</h1>
-        <p>Map Iterator instances are ordinary objects that inherit properties from the %MapIteratorPrototype% intrinsic object. Map Iterator instances are initially created with the internal slots described in <emu-xref href="#table-internal-slots-of-map-iterator-instances"></emu-xref>.</p>
-        <emu-table id="table-internal-slots-of-map-iterator-instances" caption="Internal Slots of Map Iterator Instances" oldids="table-50">
-          <table>
-            <tbody>
-            <tr>
-              <th>
-                Internal Slot
-              </th>
-              <th>
-                Description
-              </th>
-            </tr>
-            <tr>
-              <td>
-                [[IteratedMap]]
-              </td>
-              <td>
-                The Map object that is being iterated.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[MapNextIndex]]
-              </td>
-              <td>
-                The integer index of the next [[MapData]] element to be examined by this iterator.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[MapIterationKind]]
-              </td>
-              <td>
-                A String value that identifies what is returned for each element of the iteration. The possible values are: ~key~, ~value~, ~key+value~.
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </emu-table>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -35902,16 +35677,29 @@ THH:mm:ss.sss
       <h1>Set Iterator Objects</h1>
       <p>A Set Iterator is an ordinary object, with the structure defined below, that represents a specific iteration over some specific Set instance object. There is not a named constructor for Set Iterator objects. Instead, set iterator objects are created by calling certain methods of Set instance objects.</p>
 
-      <emu-clause id="sec-createsetiterator" aoid="CreateSetIterator">
+      <emu-clause id="sec-createsetiterator" aoid="CreateSetIterator" oldids="sec-properties-of-set-iterator-instances,table-51,table-internal-slots-of-set-iterator-instances">
         <h1>CreateSetIterator ( _set_, _kind_ )</h1>
         <p>The abstract operation CreateSetIterator takes arguments _set_ and _kind_. This operation is used to create iterator objects for Set methods that return such iterators. It performs the following steps when called:</p>
         <emu-alg>
+          1. Assert: _kind_ is ~key+value~ or ~value~.
           1. Perform ? RequireInternalSlot(_set_, [[SetData]]).
-          1. Let _iterator_ be ! OrdinaryObjectCreate(%SetIteratorPrototype%, &laquo; [[IteratedSet]], [[SetNextIndex]], [[SetIterationKind]] &raquo;).
-          1. Set _iterator_.[[IteratedSet]] to _set_.
-          1. Set _iterator_.[[SetNextIndex]] to 0.
-          1. Set _iterator_.[[SetIterationKind]] to _kind_.
-          1. Return _iterator_.
+          1. Let _closure_ be a new Abstract Closure with no parameters that captures _set_ and _kind_ and performs the following steps when called:
+            1. Let _index_ be 0.
+            1. Let _entries_ be the List that is _set_.[[SetData]].
+            1. Let _numEntries_ be the number of elements of _entries_.
+            1. Repeat, while _index_ &lt; _numEntries_,
+              1. Let _e_ be _entries_[_index_].
+              1. Set _index_ to _index_ + 1.
+              1. If _e_ is not ~empty~, then
+                1. If _kind_ is ~key+value~, then
+                  1. Perform ? Yield(! CreateArrayFromList(&laquo; _e_, _e_ &raquo;)).
+                1. Else,
+                  1. Assert: _kind_ is ~value~.
+                  1. Perform ? Yield(_e_).
+                1. NOTE: the number of elements in _entries_ may have changed while execution of this abstract operation was paused by Yield.
+                1. Set _numEntries_ to the number of elements of _entries_.
+            1. Return *undefined*.
+          1. Return ! CreateIteratorFromClosure(_closure_, *"%SetIteratorPrototype%"*, %SetIteratorPrototype%).
         </emu-alg>
       </emu-clause>
 
@@ -35928,28 +35716,7 @@ THH:mm:ss.sss
         <emu-clause id="sec-%setiteratorprototype%.next">
           <h1>%SetIteratorPrototype%.next ( )</h1>
           <emu-alg>
-            1. Let _O_ be the *this* value.
-            1. If Type(_O_) is not Object, throw a *TypeError* exception.
-            1. If _O_ does not have all of the internal slots of a Set Iterator Instance (<emu-xref href="#sec-properties-of-set-iterator-instances"></emu-xref>), throw a *TypeError* exception.
-            1. Let _s_ be _O_.[[IteratedSet]].
-            1. Let _index_ be _O_.[[SetNextIndex]].
-            1. Let _itemKind_ be _O_.[[SetIterationKind]].
-            1. If _s_ is *undefined*, return CreateIterResultObject(*undefined*, *true*).
-            1. Assert: _s_ has a [[SetData]] internal slot.
-            1. Let _entries_ be the List that is _s_.[[SetData]].
-            1. Let _numEntries_ be the number of elements of _entries_.
-            1. NOTE: _numEntries_ must be redetermined each time this method is evaluated.
-            1. Repeat, while _index_ &lt; _numEntries_,
-              1. Let _e_ be _entries_[_index_].
-              1. Set _index_ to _index_ + 1.
-              1. Set _O_.[[SetNextIndex]] to _index_.
-              1. If _e_ is not ~empty~, then
-                1. If _itemKind_ is ~key+value~, then
-                  1. Return CreateIterResultObject(CreateArrayFromList(&laquo; _e_, _e_ &raquo;), *false*).
-                1. Assert: _itemKind_ is ~value~.
-                1. Return CreateIterResultObject(_e_, *false*).
-            1. Set _O_.[[IteratedSet]] to *undefined*.
-            1. Return CreateIterResultObject(*undefined*, *true*).
+            1. Return ? GeneratorResume(*this* value, ~empty~, *"%SetIteratorPrototype%"*).
           </emu-alg>
         </emu-clause>
 
@@ -35958,49 +35725,6 @@ THH:mm:ss.sss
           <p>The initial value of the @@toStringTag property is the String value *"Set Iterator"*.</p>
           <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
         </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-properties-of-set-iterator-instances">
-        <h1>Properties of Set Iterator Instances</h1>
-        <p>Set Iterator instances are ordinary objects that inherit properties from the %SetIteratorPrototype% intrinsic object. Set Iterator instances are initially created with the internal slots specified in <emu-xref href="#table-internal-slots-of-set-iterator-instances"></emu-xref>.</p>
-        <emu-table id="table-internal-slots-of-set-iterator-instances" caption="Internal Slots of Set Iterator Instances" oldids="table-51">
-          <table>
-            <tbody>
-            <tr>
-              <th>
-                Internal Slot
-              </th>
-              <th>
-                Description
-              </th>
-            </tr>
-            <tr>
-              <td>
-                [[IteratedSet]]
-              </td>
-              <td>
-                The Set object that is being iterated.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[SetNextIndex]]
-              </td>
-              <td>
-                The integer index of the next [[SetData]] element to be examined by this iterator.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[SetIterationKind]]
-              </td>
-              <td>
-                A String value that identifies what is returned for each element of the iteration. The possible values are ~value~ and ~key+value~.
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </emu-table>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -38985,7 +38709,7 @@ THH:mm:ss.sss
         <p>The `next` method performs the following steps:</p>
         <emu-alg>
           1. Let _g_ be the *this* value.
-          1. Return ? GeneratorResume(_g_, _value_).
+          1. Return ? GeneratorResume(_g_, _value_, ~empty~).
         </emu-alg>
       </emu-clause>
 
@@ -38995,7 +38719,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _g_ be the *this* value.
           1. Let _C_ be Completion { [[Type]]: ~return~, [[Value]]: _value_, [[Target]]: ~empty~ }.
-          1. Return ? GeneratorResumeAbrupt(_g_, _C_).
+          1. Return ? GeneratorResumeAbrupt(_g_, _C_, ~empty~).
         </emu-alg>
       </emu-clause>
 
@@ -39005,7 +38729,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _g_ be the *this* value.
           1. Let _C_ be ThrowCompletion(_exception_).
-          1. Return ? GeneratorResumeAbrupt(_g_, _C_).
+          1. Return ? GeneratorResumeAbrupt(_g_, _C_, ~empty~).
         </emu-alg>
       </emu-clause>
 
@@ -39046,6 +38770,14 @@ THH:mm:ss.sss
               The execution context that is used when executing the code of this generator.
             </td>
           </tr>
+          <tr>
+            <td>
+              [[GeneratorBrand]]
+            </td>
+            <td>
+              A brand used to distinguish different kinds of generators. The [[GeneratorBrand]] of generators declared by ECMAScript source text is always ~empty~.
+            </td>
+          </tr>
           </tbody>
         </table>
       </emu-table>
@@ -39056,13 +38788,17 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-generatorstart" aoid="GeneratorStart">
         <h1>GeneratorStart ( _generator_, _generatorBody_ )</h1>
-        <p>The abstract operation GeneratorStart takes arguments _generator_ and _generatorBody_. It performs the following steps when called:</p>
+        <p>The abstract operation GeneratorStart takes arguments _generator_ and _generatorBody_ (a Parse Node or an Abstract Closure with no parameters). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: The value of _generator_.[[GeneratorState]] is *undefined*.
           1. Let _genContext_ be the running execution context.
           1. Set the Generator component of _genContext_ to _generator_.
           1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context the following steps will be performed:
-            1. Let _result_ be the result of evaluating _generatorBody_.
+            1. If _generatorBody_ is a Parse Node, then
+              1. Let _result_ be the result of evaluating _generatorBody_.
+            1. Else,
+              1. Assert: _generatorBody_ is an Abstract Closure with no parameters.
+              1. Let _result_ be _generatorBody_().
             1. Assert: If we return here, the generator either threw an exception or performed either an implicit or explicit return.
             1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
             1. Set _generator_.[[GeneratorState]] to ~completed~.
@@ -39080,10 +38816,12 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-generatorvalidate" aoid="GeneratorValidate">
-        <h1>GeneratorValidate ( _generator_ )</h1>
-        <p>The abstract operation GeneratorValidate takes argument _generator_. It performs the following steps when called:</p>
+        <h1>GeneratorValidate ( _generator_, _generatorBrand_ )</h1>
+        <p>The abstract operation GeneratorValidate takes arguments _generator_ and _generatorBrand_. It performs the following steps when called:</p>
         <emu-alg>
           1. Perform ? RequireInternalSlot(_generator_, [[GeneratorState]]).
+          1. Perform ? RequireInternalSlot(_generator_, [[GeneratorBrand]]).
+          1. If _generator_.[[GeneratorBrand]] is not the same value as _generatorBrand_, throw a *TypeError* exception.
           1. Assert: _generator_ also has a [[GeneratorContext]] internal slot.
           1. Let _state_ be _generator_.[[GeneratorState]].
           1. If _state_ is ~executing~, throw a *TypeError* exception.
@@ -39092,10 +38830,10 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-generatorresume" aoid="GeneratorResume">
-        <h1>GeneratorResume ( _generator_, _value_ )</h1>
-        <p>The abstract operation GeneratorResume takes arguments _generator_ and _value_. It performs the following steps when called:</p>
+        <h1>GeneratorResume ( _generator_, _value_, _generatorBrand_ )</h1>
+        <p>The abstract operation GeneratorResume takes arguments _generator_, _value_, and _generatorBrand_. It performs the following steps when called:</p>
         <emu-alg>
-          1. Let _state_ be ? GeneratorValidate(_generator_).
+          1. Let _state_ be ? GeneratorValidate(_generator_, _generatorBrand_).
           1. If _state_ is ~completed~, return CreateIterResultObject(*undefined*, *true*).
           1. Assert: _state_ is either ~suspendedStart~ or ~suspendedYield~.
           1. Let _genContext_ be _generator_.[[GeneratorContext]].
@@ -39110,10 +38848,10 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-generatorresumeabrupt" aoid="GeneratorResumeAbrupt">
-        <h1>GeneratorResumeAbrupt ( _generator_, _abruptCompletion_ )</h1>
-        <p>The abstract operation GeneratorResumeAbrupt takes arguments _generator_ and _abruptCompletion_. It performs the following steps when called:</p>
+        <h1>GeneratorResumeAbrupt ( _generator_, _abruptCompletion_, _generatorBrand_ )</h1>
+        <p>The abstract operation GeneratorResumeAbrupt takes arguments _generator_, _abruptCompletion_ (a Completion Record whose [[Type]] is ~return~ or ~throw~), and _generatorBrand_. It performs the following steps when called:</p>
         <emu-alg>
-          1. Let _state_ be ? GeneratorValidate(_generator_).
+          1. Let _state_ be ? GeneratorValidate(_generator_, _generatorBrand_).
           1. If _state_ is ~suspendedStart~, then
             1. Set _generator_.[[GeneratorState]] to ~completed~.
             1. Once a generator enters the ~completed~ state it never leaves it and its associated execution context is never resumed. Any execution state associated with _generator_ can be discarded at this point.
@@ -39164,6 +38902,30 @@ THH:mm:ss.sss
           1. NOTE: This returns to the evaluation of the operation that had most previously resumed evaluation of _genContext_.
         </emu-alg>
       </emu-clause>
+
+      <emu-clause id="sec-yield" aoid="Yield">
+        <h1>Yield ( _value_ )</h1>
+        <p>The abstract operation Yield takes argument _value_ (an ECMAScript language value). It performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _generatorKind_ be ! GetGeneratorKind().
+          1. If _generatorKind_ is ~async~, return ? AsyncGeneratorYield(_value_).
+          1. Otherwise, return ? GeneratorYield(! CreateIterResultObject(_value_, *false*)).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-createiteratorfromclosure" aoid="CreateIteratorFromClosure">
+        <h1>CreateIteratorFromClosure ( _closure_, _generatorBrand_, _generatorPrototype_ )</h1>
+        <p>The abstract operation CreateIteratorFromClosure takes arguments _closure_ (an Abstract Closure with no parameters), _generatorBrand_, and _generatorPrototype_ (an Object). It performs the following steps when called:</p>
+        <emu-alg>
+          1. NOTE: _closure_ can contain uses of the Yield shorthand to yield an IteratorResult object.
+          1. Let _internalSlotsList_ be &laquo; [[GeneratorState]], [[GeneratorContext]], [[GeneratorBrand]] &raquo;.
+          1. Let _generator_ be ! OrdinaryObjectCreate(_generatorPrototype_, _internalSlotsList_).
+          1. Set _generator_.[[GeneratorBrand]] to _generatorBrand_.
+          1. Set _generator_.[[GeneratorState]] to *undefined*.
+          1. Perform ! GeneratorStart(_generator_, _closure_).
+          1. Return _generator_.
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
   </emu-clause>
 
@@ -39195,7 +38957,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _generator_ be the *this* value.
           1. Let _completion_ be NormalCompletion(_value_).
-          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_).
+          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_, ~empty~).
         </emu-alg>
       </emu-clause>
 
@@ -39204,7 +38966,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _generator_ be the *this* value.
           1. Let _completion_ be Completion { [[Type]]: ~return~, [[Value]]: _value_, [[Target]]: ~empty~ }.
-          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_).
+          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_, ~empty~).
         </emu-alg>
       </emu-clause>
 
@@ -39213,7 +38975,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _generator_ be the *this* value.
           1. Let _completion_ be ThrowCompletion(_exception_).
-          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_).
+          1. Return ! AsyncGeneratorEnqueue(_generator_, _completion_, ~empty~).
         </emu-alg>
       </emu-clause>
 
@@ -39245,6 +39007,10 @@ THH:mm:ss.sss
           <tr>
             <td>[[AsyncGeneratorQueue]]</td>
             <td>A List of AsyncGeneratorRequest records which represent requests to resume the async generator.</td>
+          </tr>
+          <tr>
+            <td>[[GeneratorBrand]]</td>
+            <td>A brand used to distinguish different kinds of async generators. The [[GeneratorBrand]] of async generators declared by ECMAScript source text is always ~empty~.</td>
           </tr>
           </tbody>
         </table>
@@ -39282,14 +39048,18 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-asyncgeneratorstart" aoid="AsyncGeneratorStart">
         <h1>AsyncGeneratorStart ( _generator_, _generatorBody_ )</h1>
-        <p>The abstract operation AsyncGeneratorStart takes arguments _generator_ and _generatorBody_. It performs the following steps when called:</p>
+        <p>The abstract operation AsyncGeneratorStart takes arguments _generator_ and _generatorBody_ (a Parse Node or an Abstract Closure with no parameters). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: _generator_ is an AsyncGenerator instance.
           1. Assert: _generator_.[[AsyncGeneratorState]] is *undefined*.
           1. Let _genContext_ be the running execution context.
           1. Set the Generator component of _genContext_ to _generator_.
           1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context the following steps will be performed:
-            1. Let _result_ be the result of evaluating _generatorBody_.
+            1. If _generatorBody_ is a Parse Node, then
+              1. Let _result_ be the result of evaluating _generatorBody_.
+            1. Else,
+              1. Assert: _generatorBody_ is an Abstract Closure with no parameters.
+              1. Let _result_ be _generatorBody_().
             1. Assert: If we return here, the async generator either threw an exception or performed either an implicit or explicit return.
             1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
             1. Set _generator_.[[AsyncGeneratorState]] to ~completed~.
@@ -39306,9 +39076,20 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-asyncgeneratorvalidate" aoid="AsyncGeneratorValidate">
+        <h1>AsyncGeneratorValidate ( _generator_, _generatorBrand_ )</h1>
+        <p>The abstract operation AsyncGeneratorValidate takes arguments _generator_ and _generatorBrand_. It performs the following steps when called:</p>
+        <emu-alg>
+          1. Perform ? RequireInternalSlot(_generator_, [[AsyncGeneratorContext]]).
+          1. Perform ? RequireInternalSlot(_generator_, [[AsyncGeneratorState]]).
+          1. Perform ? RequireInternalSlot(_generator_, [[AsyncGeneratorQueue]]).
+          1. If _generator_.[[GeneratorBrand]] is not the same value as _generatorBrand_, throw a *TypeError* exception.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-asyncgeneratorresolve" aoid="AsyncGeneratorResolve">
         <h1>AsyncGeneratorResolve ( _generator_, _value_, _done_ )</h1>
-        <p>The abstract operation AsyncGeneratorResolve takes arguments _generator_, _value_, and _done_. It performs the following steps when called:</p>
+        <p>The abstract operation AsyncGeneratorResolve takes arguments _generator_, _value_, and _done_ (a Boolean). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: _generator_ is an AsyncGenerator instance.
           1. Let _queue_ be _generator_.[[AsyncGeneratorQueue]].
@@ -39415,12 +39196,12 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-asyncgeneratorenqueue" aoid="AsyncGeneratorEnqueue">
-        <h1>AsyncGeneratorEnqueue ( _generator_, _completion_ )</h1>
-        <p>The abstract operation AsyncGeneratorEnqueue takes arguments _generator_ and _completion_. It performs the following steps when called:</p>
+        <h1>AsyncGeneratorEnqueue ( _generator_, _completion_, _generatorBrand_ )</h1>
+        <p>The abstract operation AsyncGeneratorEnqueue takes arguments _generator_, _completion_ (a Completion Record), and _generatorBrand_. It performs the following steps when called:</p>
         <emu-alg>
-          1. Assert: _completion_ is a Completion Record.
           1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-          1. If Type(_generator_) is not Object, or if _generator_ does not have an [[AsyncGeneratorState]] internal slot, then
+          1. Let _check_ be AsyncGeneratorValidate(_generator_, _generatorBrand_).
+          1. If _check_ is an abrupt completion, then
             1. Let _badGeneratorError_ be a newly created *TypeError* object.
             1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _badGeneratorError_ &raquo;).
             1. Return _promiseCapability_.[[Promise]].
@@ -39454,6 +39235,20 @@ THH:mm:ss.sss
             1. NOTE: When one of the above steps returns, it returns to the evaluation of the |YieldExpression| production that originally called this abstract operation.
           1. Return ! AsyncGeneratorResolve(_generator_, _value_, *false*).
           1. NOTE: This returns to the evaluation of the operation that had most previously resumed evaluation of _genContext_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-createasynciteratorfromclosure" aoid="CreateAsyncIteratorFromClosure">
+        <h1>CreateAsyncIteratorFromClosure ( _closure_, _generatorBrand_, _generatorPrototype_ )</h1>
+        <p>The abstract operation CreateAsyncIteratorFromClosure takes arguments _closure_ (an Abstract Closure with no parameters), _generatorBrand_, and _generatorPrototype_ (an Object). It performs the following steps when called:</p>
+        <emu-alg>
+          1. NOTE: _closure_ can contain uses of the Await shorthand and uses of the Yield shorthand to yield an IteratorResult object.
+          1. Let _internalSlotsList_ be &laquo; [[AsyncGeneratorState]], [[AsyncGeneratorContext]], [[AsyncGeneratorQueue]], [[GeneratorBrand]] &raquo;.
+          1. Let _generator_ be ! OrdinaryObjectCreate(_generatorPrototype_, _internalSlotsList_).
+          1. Set _generator_.[[GeneratorBrand]] to _generatorBrand_.
+          1. Set _generator_.[[AsyncGeneratorState]] to *undefined*.
+          1. Perform ! AsyncGeneratorStart(_generator_, _closure_).
+          1. Return _generator_.
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -40514,6 +40309,7 @@ THH:mm:ss.sss
         <emu-note>See NOTE for <emu-xref href="#sec-function-p1-p2-pn-body"></emu-xref>.</emu-note>
       </emu-clause>
     </emu-clause>
+
     <emu-clause id="sec-async-function-constructor-properties">
       <h1>Properties of the AsyncFunction Constructor</h1>
 
@@ -40537,6 +40333,7 @@ THH:mm:ss.sss
         <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
       </emu-clause>
     </emu-clause>
+
     <emu-clause id="sec-async-function-prototype-properties">
       <h1>Properties of the AsyncFunction Prototype Object</h1>
       <p>The <dfn>AsyncFunction prototype object</dfn>:</p>
