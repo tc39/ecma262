@@ -12744,11 +12744,9 @@
           1. Return ? ToPropertyKey(_propName_).
         </emu-alg>
       </emu-clause>
-
-      <emu-clause id="sec-object-initializer-runtime-semantics-propertydefinitionevaluation">
+      <emu-clause id="sec-runtime-semantics-propertydefinitionevaluation" oldids="sec-object-initializer-runtime-semantics-propertydefinitionevaluation,sec-method-definitions-runtime-semantics-propertydefinitionevaluation,sec-generator-function-definitions-runtime-semantics-propertydefinitionevaluation,sec-asyncgenerator-definitions-propertydefinitionevaluation,sec-async-function-definitions-PropertyDefinitionEvaluation" type="sdo" aoid="PropertyDefinitionEvaluation">
         <h1>Runtime Semantics: PropertyDefinitionEvaluation</h1>
         <p>With parameters _object_ and _enumerable_.</p>
-        <emu-see-also-para op="PropertyDefinitionEvaluation"></emu-see-also-para>
         <emu-grammar>PropertyDefinitionList : PropertyDefinitionList `,` PropertyDefinition</emu-grammar>
         <emu-alg>
           1. Perform ? PropertyDefinitionEvaluation of |PropertyDefinitionList| with arguments _object_ and _enumerable_.
@@ -12786,6 +12784,82 @@
         <emu-note>
           <p>An alternative semantics for this production is given in <emu-xref href="#sec-__proto__-property-names-in-object-initializers"></emu-xref>.</p>
         </emu-note>
+        <emu-grammar>MethodDefinition : PropertyName `(` UniqueFormalParameters `)` `{` FunctionBody `}`</emu-grammar>
+        <emu-alg>
+          1. Let _methodDef_ be ? DefineMethod of |MethodDefinition| with argument _object_.
+          1. Perform SetFunctionName(_methodDef_.[[Closure]], _methodDef_.[[Key]]).
+          1. Let _desc_ be the PropertyDescriptor { [[Value]]: _methodDef_.[[Closure]], [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
+          1. Return ? DefinePropertyOrThrow(_object_, _methodDef_.[[Key]], _desc_).
+        </emu-alg>
+        <emu-grammar>MethodDefinition : `get` PropertyName `(` `)` `{` FunctionBody `}`</emu-grammar>
+        <emu-alg>
+          1. Let _propKey_ be the result of evaluating |PropertyName|.
+          1. ReturnIfAbrupt(_propKey_).
+          1. Let _scope_ be the running execution context's LexicalEnvironment.
+          1. Let _sourceText_ be the source text matched by |MethodDefinition|.
+          1. Let _formalParameterList_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
+          1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, _formalParameterList_, |FunctionBody|, ~non-lexical-this~, _scope_).
+          1. Perform MakeMethod(_closure_, _object_).
+          1. Perform SetFunctionName(_closure_, _propKey_, *"get"*).
+          1. Let _desc_ be the PropertyDescriptor { [[Get]]: _closure_, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
+          1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        </emu-alg>
+        <emu-grammar>MethodDefinition : `set` PropertyName `(` PropertySetParameterList `)` `{` FunctionBody `}`</emu-grammar>
+        <emu-alg>
+          1. Let _propKey_ be the result of evaluating |PropertyName|.
+          1. ReturnIfAbrupt(_propKey_).
+          1. Let _scope_ be the running execution context's LexicalEnvironment.
+          1. Let _sourceText_ be the source text matched by |MethodDefinition|.
+          1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |PropertySetParameterList|, |FunctionBody|, ~non-lexical-this~, _scope_).
+          1. Perform MakeMethod(_closure_, _object_).
+          1. Perform SetFunctionName(_closure_, _propKey_, *"set"*).
+          1. Let _desc_ be the PropertyDescriptor { [[Set]]: _closure_, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
+          1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        </emu-alg>
+        <emu-grammar>GeneratorMethod : `*` PropertyName `(` UniqueFormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
+        <emu-alg>
+          1. Let _propKey_ be the result of evaluating |PropertyName|.
+          1. ReturnIfAbrupt(_propKey_).
+          1. Let _scope_ be the running execution context's LexicalEnvironment.
+          1. Let _sourceText_ be the source text matched by |GeneratorMethod|.
+          1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |GeneratorBody|, ~non-lexical-this~, _scope_).
+          1. Perform MakeMethod(_closure_, _object_).
+          1. Perform SetFunctionName(_closure_, _propKey_).
+          1. Let _prototype_ be ! OrdinaryObjectCreate(%GeneratorFunction.prototype.prototype%).
+          1. Perform DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
+          1. Let _desc_ be the PropertyDescriptor { [[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
+          1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        </emu-alg>
+        <emu-grammar>
+          AsyncGeneratorMethod : `async` `*` PropertyName `(` UniqueFormalParameters `)` `{` AsyncGeneratorBody `}`
+        </emu-grammar>
+        <emu-alg>
+          1. Let _propKey_ be the result of evaluating |PropertyName|.
+          1. ReturnIfAbrupt(_propKey_).
+          1. Let _scope_ be the running execution context's LexicalEnvironment.
+          1. Let _sourceText_ be the source text matched by |AsyncGeneratorMethod|.
+          1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _scope_).
+          1. Perform ! MakeMethod(_closure_, _object_).
+          1. Perform ! SetFunctionName(_closure_, _propKey_).
+          1. Let _prototype_ be ! OrdinaryObjectCreate(%AsyncGeneratorFunction.prototype.prototype%).
+          1. Perform ! DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
+          1. Let _desc_ be PropertyDescriptor { [[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
+          1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        </emu-alg>
+        <emu-grammar>
+          AsyncMethod : `async` PropertyName `(` UniqueFormalParameters `)` `{` AsyncFunctionBody `}`
+        </emu-grammar>
+        <emu-alg>
+          1. Let _propKey_ be the result of evaluating |PropertyName|.
+          1. ReturnIfAbrupt(_propKey_).
+          1. Let _scope_ be the LexicalEnvironment of the running execution context.
+          1. Let _sourceText_ be the source text matched by |AsyncMethod|.
+          1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _scope_).
+          1. Perform ! MakeMethod(_closure_, _object_).
+          1. Perform ! SetFunctionName(_closure_, _propKey_).
+          1. Let _desc_ be the PropertyDescriptor { [[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
+          1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
+        </emu-alg>
       </emu-clause>
     </emu-clause>
 
@@ -20191,44 +20265,6 @@
         1. Return the Record { [[Key]]: _propKey_, [[Closure]]: _closure_ }.
       </emu-alg>
     </emu-clause>
-
-    <emu-clause id="sec-method-definitions-runtime-semantics-propertydefinitionevaluation">
-      <h1>Runtime Semantics: PropertyDefinitionEvaluation</h1>
-      <p>With parameters _object_ and _enumerable_.</p>
-      <emu-see-also-para op="PropertyDefinitionEvaluation"></emu-see-also-para>
-      <emu-grammar>MethodDefinition : PropertyName `(` UniqueFormalParameters `)` `{` FunctionBody `}`</emu-grammar>
-      <emu-alg>
-        1. Let _methodDef_ be ? DefineMethod of |MethodDefinition| with argument _object_.
-        1. Perform SetFunctionName(_methodDef_.[[Closure]], _methodDef_.[[Key]]).
-        1. Let _desc_ be the PropertyDescriptor { [[Value]]: _methodDef_.[[Closure]], [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
-        1. Return ? DefinePropertyOrThrow(_object_, _methodDef_.[[Key]], _desc_).
-      </emu-alg>
-      <emu-grammar>MethodDefinition : `get` PropertyName `(` `)` `{` FunctionBody `}`</emu-grammar>
-      <emu-alg>
-        1. Let _propKey_ be the result of evaluating |PropertyName|.
-        1. ReturnIfAbrupt(_propKey_).
-        1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _sourceText_ be the source text matched by |MethodDefinition|.
-        1. Let _formalParameterList_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, _formalParameterList_, |FunctionBody|, ~non-lexical-this~, _scope_).
-        1. Perform MakeMethod(_closure_, _object_).
-        1. Perform SetFunctionName(_closure_, _propKey_, *"get"*).
-        1. Let _desc_ be the PropertyDescriptor { [[Get]]: _closure_, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
-      </emu-alg>
-      <emu-grammar>MethodDefinition : `set` PropertyName `(` PropertySetParameterList `)` `{` FunctionBody `}`</emu-grammar>
-      <emu-alg>
-        1. Let _propKey_ be the result of evaluating |PropertyName|.
-        1. ReturnIfAbrupt(_propKey_).
-        1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _sourceText_ be the source text matched by |MethodDefinition|.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |PropertySetParameterList|, |FunctionBody|, ~non-lexical-this~, _scope_).
-        1. Perform MakeMethod(_closure_, _object_).
-        1. Perform SetFunctionName(_closure_, _propKey_, *"set"*).
-        1. Let _desc_ be the PropertyDescriptor { [[Set]]: _closure_, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
-      </emu-alg>
-    </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-generator-function-definitions">
@@ -20457,26 +20493,6 @@
       <emu-note>
         <p>An anonymous |GeneratorDeclaration| can only occur as part of an `export default` declaration, and its function code is therefore always strict mode code.</p>
       </emu-note>
-    </emu-clause>
-
-    <emu-clause id="sec-generator-function-definitions-runtime-semantics-propertydefinitionevaluation">
-      <h1>Runtime Semantics: PropertyDefinitionEvaluation</h1>
-      <p>With parameters _object_ and _enumerable_.</p>
-      <emu-see-also-para op="PropertyDefinitionEvaluation"></emu-see-also-para>
-      <emu-grammar>GeneratorMethod : `*` PropertyName `(` UniqueFormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
-      <emu-alg>
-        1. Let _propKey_ be the result of evaluating |PropertyName|.
-        1. ReturnIfAbrupt(_propKey_).
-        1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _sourceText_ be the source text matched by |GeneratorMethod|.
-        1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |GeneratorBody|, ~non-lexical-this~, _scope_).
-        1. Perform MakeMethod(_closure_, _object_).
-        1. Perform SetFunctionName(_closure_, _propKey_).
-        1. Let _prototype_ be ! OrdinaryObjectCreate(%GeneratorFunction.prototype.prototype%).
-        1. Perform DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
-        1. Let _desc_ be the PropertyDescriptor { [[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
-      </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-generator-function-definitions-runtime-semantics-namedevaluation">
@@ -20782,27 +20798,6 @@
       <emu-note>
         <p>An anonymous |AsyncGeneratorDeclaration| can only occur as part of an `export default` declaration.</p>
       </emu-note>
-    </emu-clause>
-
-    <emu-clause id="sec-asyncgenerator-definitions-propertydefinitionevaluation">
-      <h1>Runtime Semantics: PropertyDefinitionEvaluation</h1>
-      <p>With parameter _object_ and _enumerable_.</p>
-      <emu-grammar>
-        AsyncGeneratorMethod : `async` `*` PropertyName `(` UniqueFormalParameters `)` `{` AsyncGeneratorBody `}`
-      </emu-grammar>
-      <emu-alg>
-        1. Let _propKey_ be the result of evaluating |PropertyName|.
-        1. ReturnIfAbrupt(_propKey_).
-        1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncGeneratorMethod|.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _scope_).
-        1. Perform ! MakeMethod(_closure_, _object_).
-        1. Perform ! SetFunctionName(_closure_, _propKey_).
-        1. Let _prototype_ be ! OrdinaryObjectCreate(%AsyncGeneratorFunction.prototype.prototype%).
-        1. Perform ! DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
-        1. Let _desc_ be PropertyDescriptor { [[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
-      </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-asyncgenerator-definitions-namedevaluation">
@@ -21445,25 +21440,6 @@
         1. Else,
           1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _declResult_.[[Value]] &raquo;).
         1. Return Completion { [[Type]]: ~return~, [[Value]]: _promiseCapability_.[[Promise]], [[Target]]: ~empty~ }.
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-async-function-definitions-PropertyDefinitionEvaluation">
-      <h1>Runtime Semantics: PropertyDefinitionEvaluation</h1>
-      <p>With parameters _object_ and _enumerable_.</p>
-      <emu-grammar>
-        AsyncMethod : `async` PropertyName `(` UniqueFormalParameters `)` `{` AsyncFunctionBody `}`
-      </emu-grammar>
-      <emu-alg>
-        1. Let _propKey_ be the result of evaluating |PropertyName|.
-        1. ReturnIfAbrupt(_propKey_).
-        1. Let _scope_ be the LexicalEnvironment of the running execution context.
-        1. Let _sourceText_ be the source text matched by |AsyncMethod|.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _scope_).
-        1. Perform ! MakeMethod(_closure_, _object_).
-        1. Perform ! SetFunctionName(_closure_, _propKey_).
-        1. Let _desc_ be the PropertyDescriptor { [[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
-        1. Return ? DefinePropertyOrThrow(_object_, _propKey_, _desc_).
       </emu-alg>
     </emu-clause>
 
@@ -42635,7 +42611,7 @@ THH:mm:ss.sss
       <emu-note>
         <p>The List returned by PropertyNameList does not include string literal property names defined as using a |ComputedPropertyName|.</p>
       </emu-note>
-      <p>In <emu-xref href="#sec-object-initializer-runtime-semantics-propertydefinitionevaluation"></emu-xref> the PropertyDefinitionEvaluation algorithm for the production
+      <p>In <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> the PropertyDefinitionEvaluation algorithm for the production
         <br>
         <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>
         <br>
@@ -43173,7 +43149,7 @@ THH:mm:ss.sss
   <p><emu-xref href="#sec-try-statement"></emu-xref>: In ECMAScript 2015, it is an early error for a |Catch| clause to contain a `var` declaration for the same |Identifier| that appears as the |Catch| clause parameter. In previous editions, such a variable declaration would be instantiated in the enclosing variable environment but the declaration's |Initializer| value would be assigned to the |Catch| parameter.</p>
   <p><emu-xref href="#sec-try-statement"></emu-xref>, <emu-xref href="#sec-evaldeclarationinstantiation"></emu-xref>: In ECMAScript 2015, a runtime *SyntaxError* is thrown if a |Catch| clause evaluates a non-strict direct `eval` whose eval code includes a `var` or `FunctionDeclaration` declaration that binds the same |Identifier| that appears as the |Catch| clause parameter.</p>
   <p><emu-xref href="#sec-try-statement-runtime-semantics-evaluation"></emu-xref>: In ECMAScript 2015, the completion value of a |TryStatement| is never the value ~empty~. If the |Block| part of a |TryStatement| evaluates to a normal completion whose value is ~empty~, the completion value of the |TryStatement| is *undefined*. If the |Block| part of a |TryStatement| evaluates to a throw completion and it has a |Catch| part that evaluates to a normal completion whose value is ~empty~, the completion value of the |TryStatement| is *undefined* if there is no |Finally| clause or if its |Finally| clause evaluates to an ~empty~ normal completion.</p>
-  <p><emu-xref href="#sec-method-definitions-runtime-semantics-propertydefinitionevaluation"></emu-xref> In ECMAScript 2015, the function objects that are created as the values of the [[Get]] or [[Set]] attribute of accessor properties in an |ObjectLiteral| are not constructor functions and they do not have a *"prototype"* own property. In the previous edition, they were constructors and had a *"prototype"* property.</p>
+  <p><emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> In ECMAScript 2015, the function objects that are created as the values of the [[Get]] or [[Set]] attribute of accessor properties in an |ObjectLiteral| are not constructor functions and they do not have a *"prototype"* own property. In the previous edition, they were constructors and had a *"prototype"* property.</p>
   <p><emu-xref href="#sec-object.freeze"></emu-xref>: In ECMAScript 2015, if the argument to `Object.freeze` is not an object it is treated as if it was a non-extensible ordinary object with no own properties. In the previous edition, a non-object argument always causes a *TypeError* to be thrown.</p>
   <p><emu-xref href="#sec-object.getownpropertydescriptor"></emu-xref>: In ECMAScript 2015, if the argument to `Object.getOwnPropertyDescriptor` is not an object an attempt is made to coerce the argument using ToObject. If the coercion is successful the result is used in place of the original argument value. In the previous edition, a non-object argument always causes a *TypeError* to be thrown.</p>
   <p><emu-xref href="#sec-object.getownpropertynames"></emu-xref>: In ECMAScript 2015, if the argument to `Object.getOwnPropertyNames` is not an object an attempt is made to coerce the argument using ToObject. If the coercion is successful the result is used in place of the original argument value. In the previous edition, a non-object argument always causes a *TypeError* to be thrown.</p>
