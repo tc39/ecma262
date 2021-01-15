@@ -19662,17 +19662,44 @@
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-function-definitions-runtime-semantics-namedevaluation">
-      <h1>Runtime Semantics: NamedEvaluation</h1>
-      <p>With parameter _name_.</p>
+    <emu-clause id="sec-runtime-semantics-instantiateordinaryfunctionexpression" type="sdo" aoid="InstantiateOrdinaryFunctionExpression">
+      <h1>Runtime Semantics: InstantiateOrdinaryFunctionExpression</h1>
+      <p>With optional parameter _name_.</p>
       <emu-grammar>FunctionExpression : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
+        1. If _name_ is not present, set _name_ to *""*.
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _sourceText_ be the source text matched by |FunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _scope_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Perform MakeConstructor(_closure_).
         1. Return _closure_.
+      </emu-alg>
+      <emu-grammar>FunctionExpression : `function` BindingIdentifier `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
+      <emu-alg>
+        1. Assert: _name_ is not present.
+        1. Set _name_ to StringValue of |BindingIdentifier|.
+        1. Let _scope_ be the running execution context's LexicalEnvironment.
+        1. Let _funcEnv_ be NewDeclarativeEnvironment(_scope_).
+        1. Perform _funcEnv_.CreateImmutableBinding(_name_, *false*).
+        1. Let _sourceText_ be the source text matched by |FunctionExpression|.
+        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _funcEnv_).
+        1. Perform SetFunctionName(_closure_, _name_).
+        1. Perform MakeConstructor(_closure_).
+        1. Perform _funcEnv_.InitializeBinding(_name_, _closure_).
+        1. Return _closure_.
+      </emu-alg>
+      <emu-note>
+        <p>The |BindingIdentifier| in a |FunctionExpression| can be referenced from inside the |FunctionExpression|'s |FunctionBody| to allow the function to call itself recursively. However, unlike in a |FunctionDeclaration|, the |BindingIdentifier| in a |FunctionExpression| cannot be referenced from and does not affect the scope enclosing the |FunctionExpression|.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>FunctionExpression : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return InstantiateOrdinaryFunctionExpression of |FunctionExpression| with argument _name_.
       </emu-alg>
     </emu-clause>
 
@@ -19689,26 +19716,12 @@
       <emu-alg>
         1. Return NormalCompletion(~empty~).
       </emu-alg>
-      <emu-grammar>FunctionExpression : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
+      <emu-grammar>
+        FunctionExpression : `function` BindingIdentifier? `(` FormalParameters `)` `{` FunctionBody `}`
+      </emu-grammar>
       <emu-alg>
-        1. Return the result of performing NamedEvaluation for this |FunctionExpression| with argument *""*.
+        1. Return InstantiateOrdinaryFunctionExpression of |FunctionExpression|.
       </emu-alg>
-      <emu-grammar>FunctionExpression : `function` BindingIdentifier `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
-      <emu-alg>
-        1. Let _scope_ be the running execution context's LexicalEnvironment.
-        1. Let _funcEnv_ be NewDeclarativeEnvironment(_scope_).
-        1. Let _name_ be StringValue of |BindingIdentifier|.
-        1. Perform _funcEnv_.CreateImmutableBinding(_name_, *false*).
-        1. Let _sourceText_ be the source text matched by |FunctionExpression|.
-        1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _funcEnv_).
-        1. Perform SetFunctionName(_closure_, _name_).
-        1. Perform MakeConstructor(_closure_).
-        1. Perform _funcEnv_.InitializeBinding(_name_, _closure_).
-        1. Return _closure_.
-      </emu-alg>
-      <emu-note>
-        <p>The |BindingIdentifier| in a |FunctionExpression| can be referenced from inside the |FunctionExpression|'s |FunctionBody| to allow the function to call itself recursively. However, unlike in a |FunctionDeclaration|, the |BindingIdentifier| in a |FunctionExpression| cannot be referenced from and does not affect the scope enclosing the |FunctionExpression|.</p>
-      </emu-note>
       <emu-note>
         <p>A *"prototype"* property is automatically created for every function defined using a |FunctionDeclaration| or |FunctionExpression|, to allow for the possibility that the function will be used as a constructor.</p>
       </emu-note>
@@ -19819,11 +19832,12 @@
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-arrow-function-definitions-runtime-semantics-namedevaluation">
-      <h1>Runtime Semantics: NamedEvaluation</h1>
-      <p>With parameter _name_.</p>
+    <emu-clause id="sec-runtime-semantics-instantiatearrowfunctionexpression" type="sdo" aoid="InstantiateArrowFunctionExpression">
+      <h1>Runtime Semantics: InstantiateArrowFunctionExpression</h1>
+      <p>With optional parameter _name_.</p>
       <emu-grammar>ArrowFunction : ArrowParameters `=>` ConciseBody</emu-grammar>
       <emu-alg>
+        1. If _name_ is not present, set _name_ to *""*.
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _sourceText_ be the source text matched by |ArrowFunction|.
         1. Let _parameters_ be CoveredFormalsList of |ArrowParameters|.
@@ -19836,11 +19850,20 @@
       </emu-note>
     </emu-clause>
 
+    <emu-clause id="sec-arrow-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>ArrowFunction : ArrowParameters `=>` ConciseBody</emu-grammar>
+      <emu-alg>
+        1. Return InstantiateArrowFunctionExpression of |ArrowFunction| with argument _name_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-arrow-function-definitions-runtime-semantics-evaluation">
       <h1>Runtime Semantics: Evaluation</h1>
       <emu-grammar>ArrowFunction : ArrowParameters `=>` ConciseBody</emu-grammar>
       <emu-alg>
-        1. Return the result of performing NamedEvaluation for this |ArrowFunction| with argument *""*.
+        1. Return InstantiateArrowFunctionExpression of |ArrowFunction|.
       </emu-alg>
       <emu-grammar>ExpressionBody : AssignmentExpression</emu-grammar>
       <emu-alg>
@@ -20175,11 +20198,12 @@
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-generator-function-definitions-runtime-semantics-namedevaluation">
-      <h1>Runtime Semantics: NamedEvaluation</h1>
-      <p>With parameter _name_.</p>
+    <emu-clause id="sec-runtime-semantics-instantiategeneratorfunctionexpression" type="sdo" aoid="InstantiateGeneratorFunctionExpression">
+      <h1>Runtime Semantics: InstantiateGeneratorFunctionExpression</h1>
+      <p>With optional parameter _name_.</p>
       <emu-grammar>GeneratorExpression : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
+        1. If _name_ is not present, set _name_ to *""*.
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _sourceText_ be the source text matched by |GeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _scope_).
@@ -20188,19 +20212,12 @@
         1. Perform DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Return _closure_.
       </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-generator-function-definitions-runtime-semantics-evaluation">
-      <h1>Runtime Semantics: Evaluation</h1>
-      <emu-grammar>GeneratorExpression : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
-      <emu-alg>
-        1. Return the result of performing NamedEvaluation for this |GeneratorExpression| with argument *""*.
-      </emu-alg>
       <emu-grammar>GeneratorExpression : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
+        1. Assert: _name_ is not present.
+        1. Set _name_ to StringValue of |BindingIdentifier|.
         1. Let _scope_ be the running execution context's LexicalEnvironment.
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_scope_).
-        1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform _funcEnv_.CreateImmutableBinding(_name_, *false*).
         1. Let _sourceText_ be the source text matched by |GeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _funcEnv_).
@@ -20213,6 +20230,25 @@
       <emu-note>
         <p>The |BindingIdentifier| in a |GeneratorExpression| can be referenced from inside the |GeneratorExpression|'s |FunctionBody| to allow the generator code to call itself recursively. However, unlike in a |GeneratorDeclaration|, the |BindingIdentifier| in a |GeneratorExpression| cannot be referenced from and does not affect the scope enclosing the |GeneratorExpression|.</p>
       </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>GeneratorExpression : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
+      <emu-alg>
+        1. Return InstantiateGeneratorFunctionExpression of |GeneratorExpression| with argument _name_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-generator-function-definitions-runtime-semantics-evaluation">
+      <h1>Runtime Semantics: Evaluation</h1>
+      <emu-grammar>
+        GeneratorExpression : `function` `*` BindingIdentifier? `(` FormalParameters `)` `{` GeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Return InstantiateGeneratorFunctionExpression of |GeneratorExpression|.
+      </emu-alg>
       <emu-grammar>YieldExpression : `yield`</emu-grammar>
       <emu-alg>
         1. Return ? Yield(*undefined*).
@@ -20381,13 +20417,14 @@
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-asyncgenerator-definitions-namedevaluation">
-      <h1>Runtime Semantics: NamedEvaluation</h1>
-      <p>With parameter _name_.</p>
+    <emu-clause id="sec-runtime-semantics-instantiateasyncgeneratorfunctionexpression" type="sdo" aoid="InstantiateAsyncGeneratorFunctionExpression">
+      <h1>Runtime Semantics: InstantiateAsyncGeneratorFunctionExpression</h1>
+      <p>With optional parameter _name_.</p>
       <emu-grammar>
         AsyncGeneratorExpression : `async` `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
       </emu-grammar>
       <emu-alg>
+        1. If _name_ is not present, set _name_ to *""*.
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _sourceText_ be the source text matched by |AsyncGeneratorExpression|.
         1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _scope_).
@@ -20396,25 +20433,14 @@
         1. Perform ! DefinePropertyOrThrow(_closure_, *"prototype"*, PropertyDescriptor { [[Value]]: _prototype_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
         1. Return _closure_.
       </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-asyncgenerator-definitions-evaluation">
-      <h1>Runtime Semantics: Evaluation</h1>
-
-      <emu-grammar>
-        AsyncGeneratorExpression : `async` `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
-      </emu-grammar>
-      <emu-alg>
-        1. Return the result of performing NamedEvaluation for this |AsyncGeneratorExpression| with argument *""*.
-      </emu-alg>
-
       <emu-grammar>
         AsyncGeneratorExpression : `async` `function` `*` BindingIdentifier `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
       </emu-grammar>
       <emu-alg>
+        1. Assert: _name_ is not present.
+        1. Set _name_ to StringValue of |BindingIdentifier|.
         1. Let _scope_ be the running execution context's LexicalEnvironment.
         1. Let _funcEnv_ be ! NewDeclarativeEnvironment(_scope_).
-        1. Let _name_ be StringValue of |BindingIdentifier|.
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
         1. Let _sourceText_ be the source text matched by |AsyncGeneratorExpression|.
         1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _funcEnv_).
@@ -20427,6 +20453,27 @@
       <emu-note>
         <p>The |BindingIdentifier| in an |AsyncGeneratorExpression| can be referenced from inside the |AsyncGeneratorExpression|'s |AsyncGeneratorBody| to allow the generator code to call itself recursively. However, unlike in an |AsyncGeneratorDeclaration|, the |BindingIdentifier| in an |AsyncGeneratorExpression| cannot be referenced from and does not affect the scope enclosing the |AsyncGeneratorExpression|.</p>
       </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgenerator-definitions-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>
+        AsyncGeneratorExpression : `async` `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Return InstantiateAsyncGeneratorFunctionExpression of |AsyncGeneratorExpression| with argument _name_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-asyncgenerator-definitions-evaluation">
+      <h1>Runtime Semantics: Evaluation</h1>
+      <emu-grammar>
+        AsyncGeneratorExpression : `async` `function` `*` BindingIdentifier? `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Return InstantiateAsyncGeneratorFunctionExpression of |AsyncGeneratorExpression|.
+      </emu-alg>
     </emu-clause>
   </emu-clause>
 
@@ -20807,6 +20854,40 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-runtime-semantics-instantiateasyncfunctionexpression" type="sdo" aoid="InstantiateAsyncFunctionExpression">
+      <h1>Runtime Semantics: InstantiateAsyncFunctionExpression</h1>
+      <p>With optional parameter _name_.</p>
+      <emu-grammar>
+        AsyncFunctionExpression : `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. If _name_ is not present, set _name_ to *""*.
+        1. Let _scope_ be the LexicalEnvironment of the running execution context.
+        1. Let _sourceText_ be the source text matched by |AsyncFunctionExpression|.
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _scope_).
+        1. Perform SetFunctionName(_closure_, _name_).
+        1. Return _closure_.
+      </emu-alg>
+      <emu-grammar>
+        AsyncFunctionExpression : `async` `function` BindingIdentifier `(` FormalParameters `)` `{` AsyncFunctionBody `}`
+      </emu-grammar>
+      <emu-alg>
+        1. Assert: _name_ is not present.
+        1. Set _name_ to StringValue of |BindingIdentifier|.
+        1. Let _scope_ be the LexicalEnvironment of the running execution context.
+        1. Let _funcEnv_ be ! NewDeclarativeEnvironment(_scope_).
+        1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
+        1. Let _sourceText_ be the source text matched by |AsyncFunctionExpression|.
+        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _funcEnv_).
+        1. Perform ! SetFunctionName(_closure_, _name_).
+        1. Perform ! _funcEnv_.InitializeBinding(_name_, _closure_).
+        1. Return _closure_.
+      </emu-alg>
+      <emu-note>
+        <p>The |BindingIdentifier| in an |AsyncFunctionExpression| can be referenced from inside the |AsyncFunctionExpression|'s |AsyncFunctionBody| to allow the function to call itself recursively. However, unlike in a |FunctionDeclaration|, the |BindingIdentifier| in a |AsyncFunctionExpression| cannot be referenced from and does not affect the scope enclosing the |AsyncFunctionExpression|.</p>
+      </emu-note>
+    </emu-clause>
+
     <emu-clause id="sec-runtime-semantics-evaluateasyncfunctionbody" oldids="sec-async-function-definitions-EvaluateBody" type="sdo" aoid="EvaluateAsyncFunctionBody">
       <h1>Runtime Semantics: EvaluateAsyncFunctionBody</h1>
       <p>With parameters _functionObject_ and _argumentsList_ (a List).</p>
@@ -20831,11 +20912,7 @@
         AsyncFunctionExpression : `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Let _scope_ be the LexicalEnvironment of the running execution context.
-        1. Let _sourceText_ be the source text matched by |AsyncFunctionExpression|.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _scope_).
-        1. Perform SetFunctionName(_closure_, _name_).
-        1. Return _closure_.
+        1. Return InstantiateAsyncFunctionExpression of |AsyncFunctionExpression| with argument _name_.
       </emu-alg>
     </emu-clause>
 
@@ -20847,36 +20924,20 @@
       <emu-alg>
         1. Return NormalCompletion(~empty~).
       </emu-alg>
-
       <emu-grammar>
         AsyncFunctionDeclaration : `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
       </emu-grammar>
       <emu-alg>
         1. Return NormalCompletion(~empty~).
       </emu-alg>
-
       <emu-grammar>
-        AsyncFunctionExpression : `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
+        AsyncFunctionExpression :
+          `async` `function` BindingIdentifier `(` FormalParameters `)` `{` AsyncFunctionBody `}`
+          `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return the result of performing NamedEvaluation for this |AsyncFunctionExpression| with argument *""*.
+        1. Return InstantiateAsyncFunctionExpression of |AsyncFunctionExpression|.
       </emu-alg>
-
-      <emu-grammar>
-        AsyncFunctionExpression : `async` `function` BindingIdentifier `(` FormalParameters `)` `{` AsyncFunctionBody `}`
-      </emu-grammar>
-      <emu-alg>
-        1. Let _scope_ be the LexicalEnvironment of the running execution context.
-        1. Let _funcEnv_ be ! NewDeclarativeEnvironment(_scope_).
-        1. Let _name_ be StringValue of |BindingIdentifier|.
-        1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
-        1. Let _sourceText_ be the source text matched by |AsyncFunctionExpression|.
-        1. Let _closure_ be ! OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _funcEnv_).
-        1. Perform ! SetFunctionName(_closure_, _name_).
-        1. Perform ! _funcEnv_.InitializeBinding(_name_, _closure_).
-        1. Return _closure_.
-      </emu-alg>
-
       <emu-grammar>
         AwaitExpression : `await` UnaryExpression
       </emu-grammar>
@@ -20978,13 +21039,14 @@
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-async-arrow-function-definitions-runtime-semantics-namedevaluation">
-      <h1>Runtime Semantics: NamedEvaluation</h1>
-      <p>With parameter _name_.</p>
+    <emu-clause id="sec-runtime-semantics-instantiateasyncarrowfunctionexpression" type="sdo" aoid="InstantiateAsyncArrowFunctionExpression">
+      <h1>Runtime Semantics: InstantiateAsyncArrowFunctionExpression</h1>
+      <p>With optional parameter _name_.</p>
       <emu-grammar>
         AsyncArrowFunction : `async` AsyncArrowBindingIdentifier `=>` AsyncConciseBody
       </emu-grammar>
       <emu-alg>
+        1. If _name_ is not present, set _name_ to *""*.
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _sourceText_ be the source text matched by |AsyncArrowFunction|.
         1. Let _parameters_ be |AsyncArrowBindingIdentifier|.
@@ -20996,6 +21058,7 @@
         AsyncArrowFunction : CoverCallExpressionAndAsyncArrowHead `=>` AsyncConciseBody
       </emu-grammar>
       <emu-alg>
+        1. If _name_ is not present, set _name_ to *""*.
         1. Let _scope_ be the LexicalEnvironment of the running execution context.
         1. Let _sourceText_ be the source text matched by |AsyncArrowFunction|.
         1. Let _head_ be CoveredAsyncArrowHead of |CoverCallExpressionAndAsyncArrowHead|.
@@ -21006,19 +21069,28 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-async-arrow-function-definitions-runtime-semantics-namedevaluation">
+      <h1>Runtime Semantics: NamedEvaluation</h1>
+      <p>With parameter _name_.</p>
+      <emu-grammar>
+        AsyncArrowFunction :
+          `async` AsyncArrowBindingIdentifier `=>` AsyncConciseBody
+          CoverCallExpressionAndAsyncArrowHead `=>` AsyncConciseBody
+      </emu-grammar>
+      <emu-alg>
+        1. Return InstantiateAsyncArrowFunctionExpression of |AsyncArrowFunction| with argument _name_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-async-arrow-function-definitions-runtime-semantics-evaluation">
       <h1>Runtime Semantics: Evaluation</h1>
       <emu-grammar>
-        AsyncArrowFunction : `async` AsyncArrowBindingIdentifier `=>` AsyncConciseBody
+        AsyncArrowFunction :
+          `async` AsyncArrowBindingIdentifier `=>` AsyncConciseBody
+          CoverCallExpressionAndAsyncArrowHead `=>` AsyncConciseBody
       </emu-grammar>
       <emu-alg>
-        1. Return the result of performing NamedEvaluation for this |AsyncArrowFunction| with argument *""*.
-      </emu-alg>
-      <emu-grammar>
-        AsyncArrowFunction : CoverCallExpressionAndAsyncArrowHead `=>` AsyncConciseBody
-      </emu-grammar>
-      <emu-alg>
-        1. Return the result of performing NamedEvaluation for this |AsyncArrowFunction| with argument *""*.
+        1. Return InstantiateAsyncArrowFunctionExpression of |AsyncArrowFunction|.
       </emu-alg>
     </emu-clause>
   </emu-clause>
