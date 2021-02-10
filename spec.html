@@ -32488,78 +32488,54 @@ THH:mm:ss.sss
       <emu-clause id="sec-array.prototype.sort">
         <h1>Array.prototype.sort ( _comparefn_ )</h1>
         <p>The elements of this array are sorted. The sort must be stable (that is, elements that compare equal must remain in their original order). If _comparefn_ is not *undefined*, it should be a function that accepts two arguments _x_ and _y_ and returns a negative value if _x_ &lt; _y_, zero if _x_ = _y_, or a positive value if _x_ &gt; _y_.</p>
-        <p>Upon entry, the following steps are performed to initialize evaluation of the `sort` function:</p>
+        <p>The following steps are taken:</p>
         <emu-alg>
-          1. If _comparefn_ is not *undefined* and IsCallable(_comparefn_) is *false*, throw a *TypeError* exception.
+          1. [id="step-array-sort-comparefn"] If _comparefn_ is not *undefined* and IsCallable(_comparefn_) is *false*, throw a *TypeError* exception.
           1. Let _obj_ be ? ToObject(*this* value).
-          1. Let _len_ be ? LengthOfArrayLike(_obj_).
-        </emu-alg>
-        <p>Within this specification of the `sort` method, an object, _obj_, is said to be <em>sparse</em> if the following algorithm returns *true*:</p>
-        <emu-alg>
-          1. For each integer _i_ in the range 0 &le; _i_ &lt; _len_, do
-            1. Let _prop_ be ! ToString(𝔽(_i_)).
-            1. Let _elem_ be _obj_.[[GetOwnProperty]](_prop_).
-            1. If _elem_ is *undefined*, return *true*.
-          1. Return *false*.
+          1. [id="step-array-sort-len"] Let _len_ be ? LengthOfArrayLike(_obj_).
+          1. Let _items_ be a new empty List.
+          1. Let _k_ be 0.
+          1. Repeat, while _k_ &lt; _len_,
+            1. Let _Pk_ be ! ToString(𝔽(_k_)).
+            1. Let _kPresent_ be ? HasProperty(_obj_, _Pk_).
+            1. If _kPresent_ is *true*, then
+              1. Let _kValue_ be ? Get(_obj_, _Pk_).
+              1. Append _kValue_ to _items_.
+            1. Set _k_ to _k_ + 1.
+          1. Let _itemCount_ be the number of elements in _items_.
+          1. [id="step-array-sort"] Sort _items_ using an implementation-defined sequence of calls to SortCompare. If any such call returns an abrupt completion, stop before performing any further calls to SortCompare or steps in this algorithm and return that completion.
+          1. Let _j_ be 0.
+          1. Repeat, while _j_ &lt; _itemCount_,
+            1. Perform ? Set(_obj_, ! ToString(𝔽(_j_)), _items_[_j_], *true*).
+            1. Set _j_ to _j_ + 1.
+          1. Repeat, while _j_ &lt; _len_,
+            1. Perform ? DeletePropertyOrThrow(_obj_, ! ToString(𝔽(_j_))).
+            1. Set _j_ to _j_ + 1.
+          1. Return _obj_.
         </emu-alg>
         <p>The <em>sort order</em> is the ordering, after completion of this function, of the <emu-xref href="#integer-index">integer-indexed</emu-xref> property values of _obj_ whose integer indexes are less than _len_. The result of the `sort` function is then determined as follows:</p>
-        <p>If _comparefn_ is not *undefined* and is not a consistent comparison function for the elements of this array (see below), the sort order is implementation-defined. The sort order is also implementation-defined if _comparefn_ is *undefined* and SortCompare does not act as a consistent comparison function.</p>
-        <p>Let _proto_ be _obj_.[[GetPrototypeOf]](). If _proto_ is not *null* and there exists an integer _j_ such that all of the conditions below are satisfied then the sort order is implementation-defined:</p>
+        <p>The sort order is implementation-defined if any of the following conditions is true:</p>
         <ul>
           <li>
-            _obj_ is sparse
+            If _comparefn_ is not *undefined* and is not a consistent comparison function for the elements of _items_ (see below).
           </li>
           <li>
-            0 &le; _j_ &lt; _len_
-          </li>
-          <li>
-            HasProperty(_proto_, ToString(𝔽(_j_))) is *true*.
-          </li>
-        </ul>
-        <p>The sort order is also implementation-defined if _obj_ is sparse and any of the following conditions are true:</p>
-        <ul>
-          <li>
-            IsExtensible(_obj_) is *false*.
-          </li>
-          <li>
-            Any integer index property of _obj_ whose name is a non-negative integer less than _len_ is a data property whose [[Configurable]] attribute is *false*.
-          </li>
-        </ul>
-        <p>The sort order is also implementation-defined if any of the following conditions are true:</p>
-        <ul>
-          <li>
-            If _obj_ is an exotic object (including Proxy exotic objects) whose behaviour for [[Get]], [[Set]], [[Delete]], and [[GetOwnProperty]] is not the ordinary object implementation of these internal methods.
-          </li>
-          <li>
-            If any index property of _obj_ whose name is a non-negative integer less than _len_ is an accessor property or is a data property whose [[Writable]] attribute is *false*.
-          </li>
-          <li>
-            If _comparefn_ is *undefined* and the application of ToString to any value passed as an argument to SortCompare modifies _obj_ or any object on _obj_'s prototype chain.
+            If _comparefn_ is *undefined* and SortCompare does not act as a consistent comparison function.
           </li>
           <li>
             If _comparefn_ is *undefined* and all applications of ToString, to any specific value passed as an argument to SortCompare, do not produce the same result.
           </li>
         </ul>
-        <p>The following steps are taken:</p>
-        <emu-alg>
-          1. Perform an implementation-defined sequence of calls to the Get, <emu-xref href="#sec-set-o-p-v-throw">Set</emu-xref>, DeletePropertyOrThrow, and HasOwnProperty abstract operation with _obj_ as the first argument, and to SortCompare (described below), such that:
-            * The property key argument for each call to Get, <emu-xref href="#sec-set-o-p-v-throw">Set</emu-xref>, HasOwnProperty, or DeletePropertyOrThrow is the string representation of a non-negative integer less than _len_.
-            * The `Throw` argument for every call to <emu-xref href="#sec-set-o-p-v-throw">Set</emu-xref> is *true*.
-            * The arguments for calls to SortCompare are values returned by a previous call to the Get abstract operation, unless the properties accessed by those previous calls did not exist according to HasOwnProperty. If both prospective arguments to SortCompare correspond to non-existent properties, use *+0*<sub>𝔽</sub> instead of calling SortCompare. If only the first prospective argument is non-existent, use *1*<sub>𝔽</sub>. If only the second prospective argument is non-existent, use *-1*<sub>𝔽</sub>.
-            * If _obj_ is not sparse then DeletePropertyOrThrow must not be called.
-            * If an abrupt completion is returned from any of these operations, it is immediately returned as the value of this function.
-          1. Return _obj_.
-        </emu-alg>
-        <p>Unless the sort order is specified above to be implementation-defined, the returned object must have the following two characteristics:</p>
+        <p>Unless the sort order is specified above to be implementation-defined, _items_ must satisfy all of the following conditions after executing step <emu-xref href="#step-array-sort"></emu-xref> of the algorithm above:</p>
         <ul>
           <li>
-            There must be some mathematical permutation &pi; of the non-negative integers less than _len_, such that for every non-negative integer _j_ less than _len_, if property <emu-eqn>old[_j_]</emu-eqn> existed, then <emu-eqn>new[&pi;(_j_)]</emu-eqn> is exactly the same value as <emu-eqn>old[_j_]</emu-eqn>. But if property <emu-eqn>old[_j_]</emu-eqn> did not exist, then <emu-eqn>new[&pi;(_j_)]</emu-eqn> does not exist.
+            There must be some mathematical permutation &pi; of the non-negative integers less than _itemCount_, such that for every non-negative integer _j_ less than _itemCount_, the element <emu-eqn>old[_j_]</emu-eqn> is exactly the same as <emu-eqn>new[&pi;(_j_)]</emu-eqn>.
           </li>
           <li>
-            Then for all non-negative integers _j_ and _k_, each less than _len_, if <emu-eqn>SortCompare(old[_j_], old[_k_]) &lt; 0</emu-eqn> (see SortCompare below), then <emu-eqn>new[&pi;(_j_)] &lt; new[&pi;(_k_)]</emu-eqn>.
+            Then for all non-negative integers _j_ and _k_, each less than _itemCount_, if <emu-eqn>SortCompare(old[_j_], old[_k_]) &lt; 0</emu-eqn> (see SortCompare below), then <emu-eqn>&pi;(_j_) &lt; &pi;(_k_)</emu-eqn>.
           </li>
         </ul>
-        <p>Here the notation <emu-eqn>old[_j_]</emu-eqn> is used to refer to the hypothetical result of calling <emu-eqn>Get(_obj_, _j_)</emu-eqn> before this function is executed, and the notation <emu-eqn>new[_j_]</emu-eqn> to refer to the hypothetical result of calling <emu-eqn>Get(_obj_, _j_)</emu-eqn> after this function has been executed.</p>
+        <p>Here the notation <emu-eqn>old[_j_]</emu-eqn> is used to refer to <emu-eqn>_items_[_j_]</emu-eqn> before step <emu-xref href="#step-array-sort"></emu-xref> is executed, and the notation <emu-eqn>new[_j_]</emu-eqn> to refer to <emu-eqn>_items_[_j_]</emu-eqn> after step <emu-xref href="#step-array-sort"></emu-xref> has been executed.</p>
         <p>A function _comparefn_ is a consistent comparison function for a set of values _S_ if all of the requirements below are met for all values _a_, _b_, and _c_ (possibly the same value) in the set _S_: The notation <emu-eqn>_a_ &lt;<sub>CF</sub> _b_</emu-eqn> means <emu-eqn>_comparefn_(_a_, _b_) &lt; 0</emu-eqn>; <emu-eqn>_a_ =<sub>CF</sub> _b_</emu-eqn> means <emu-eqn>_comparefn_(_a_, _b_) = 0</emu-eqn> (of either sign); and <emu-eqn>_a_ &gt;<sub>CF</sub> _b_</emu-eqn> means <emu-eqn>_comparefn_(_a_, _b_) &gt; 0</emu-eqn>.</p>
         <ul>
           <li>
@@ -33677,16 +33653,15 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-%typedarray%.prototype.sort">
         <h1>%TypedArray%.prototype.sort ( _comparefn_ )</h1>
-        <p>%TypedArray%`.prototype.sort` is a distinct function that, except as described below, implements the same requirements as those of `Array.prototype.sort` as defined in <emu-xref href="#sec-array.prototype.sort"></emu-xref>. The implementation of the %TypedArray%`.prototype.sort` specification may be optimized with the knowledge that the *this* value is an object that has a fixed length and whose <emu-xref href="#integer-index">integer-indexed</emu-xref> properties are not sparse. The only internal methods of the *this* value that the algorithm may call are [[Get]] and [[Set]].</p>
+        <p>%TypedArray%`.prototype.sort` is a distinct function that, except as described below, implements the same requirements as those of `Array.prototype.sort` as defined in <emu-xref href="#sec-array.prototype.sort"></emu-xref>. The implementation of the %TypedArray%`.prototype.sort` specification may be optimized with the knowledge that the *this* value is an object that has a fixed length and whose <emu-xref href="#integer-index">integer-indexed</emu-xref> properties are not sparse.</p>
         <p>This function is not generic. The *this* value must be an object with a [[TypedArrayName]] internal slot.</p>
-        <p>Upon entry, the following steps are performed to initialize evaluation of the `sort` function. These steps are used instead of the entry steps in <emu-xref href="#sec-array.prototype.sort"></emu-xref>:</p>
+        <p>Upon entry, the following steps are performed to initialize evaluation of the `sort` function. These steps are used instead of steps <emu-xref href="#step-array-sort-comparefn"></emu-xref>–<emu-xref href="#step-array-sort-len"></emu-xref> in <emu-xref href="#sec-array.prototype.sort"></emu-xref>:</p>
         <emu-alg>
           1. If _comparefn_ is not *undefined* and IsCallable(_comparefn_) is *false*, throw a *TypeError* exception.
           1. Let _obj_ be the *this* value.
           1. Let _buffer_ be ? ValidateTypedArray(_obj_).
           1. Let _len_ be _obj_.[[ArrayLength]].
         </emu-alg>
-        <p>The implementation-defined sort order condition for exotic objects is not applied by %TypedArray%`.prototype.sort`.</p>
         <p>The following version of SortCompare is used by %TypedArray%`.prototype.sort`. It performs a numeric comparison rather than the string comparison used in <emu-xref href="#sec-array.prototype.sort"></emu-xref>.</p>
         <p>The abstract operation TypedArraySortCompare takes arguments _x_ and _y_. It also has access to the _comparefn_ and _buffer_ values of the current invocation of the `sort` method. It performs the following steps when called:</p>
         <emu-alg>
