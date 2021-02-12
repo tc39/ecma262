@@ -3592,10 +3592,12 @@
           1. Let _asyncContext_ be the running execution context.
           1. Let _promise_ be ? PromiseResolve(%Promise%, _value_).
           1. Let _stepsFulfilled_ be the algorithm steps defined in <emu-xref href="#await-fulfilled" title></emu-xref>.
-          1. Let _onFulfilled_ be ! CreateBuiltinFunction(_stepsFulfilled_, &laquo; [[AsyncContext]] &raquo;).
+          1. Let _lengthFulfilled_ be the number of non-optional parameters of the function definition in <emu-xref href="#await-fulfilled" title></emu-xref>.
+          1. Let _onFulfilled_ be ! CreateBuiltinFunction(_stepsFulfilled_, _lengthFulfilled_, *""*, &laquo; [[AsyncContext]] &raquo;).
           1. Set _onFulfilled_.[[AsyncContext]] to _asyncContext_.
           1. Let _stepsRejected_ be the algorithm steps defined in <emu-xref href="#await-rejected" title></emu-xref>.
-          1. Let _onRejected_ be ! CreateBuiltinFunction(_stepsRejected_, &laquo; [[AsyncContext]] &raquo;).
+          1. Let _lengthRejected_ be the number of non-optional parameters of the function definition in <emu-xref href="#await-rejected" title></emu-xref>.
+          1. Let _onRejected_ be ! CreateBuiltinFunction(_stepsRejected_, _lengthRejected_, *""*, &laquo; [[AsyncContext]] &raquo;).
           1. Set _onRejected_.[[AsyncContext]] to _asyncContext_.
           1. Perform ! PerformPromiseThen(_promise_, _onFulfilled_, _onRejected_).
           1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
@@ -9511,7 +9513,7 @@
       <emu-alg>
         1. Let _intrinsics_ be a new Record.
         1. Set _realmRec_.[[Intrinsics]] to _intrinsics_.
-        1. Set fields of _intrinsics_ with the values listed in <emu-xref href="#table-well-known-intrinsic-objects"></emu-xref>. The field names are the names listed in column one of the table. The value of each field is a new object value fully and recursively populated with property values as defined by the specification of each object in clauses <emu-xref href="#sec-global-object"></emu-xref> through <emu-xref href="#sec-reflection"></emu-xref>. All object property values are newly created object values. All values that are built-in function objects are created by performing CreateBuiltinFunction(_steps_, _slots_, _realmRec_, _prototype_) where _steps_ is the definition of that function provided by this specification, _slots_ is a list of the names, if any, of the function's specified internal slots, and _prototype_ is the specified value of the function's [[Prototype]] internal slot. The creation of the intrinsics and their properties must be ordered to avoid any dependencies upon objects that have not yet been created.
+        1. Set fields of _intrinsics_ with the values listed in <emu-xref href="#table-well-known-intrinsic-objects"></emu-xref>. The field names are the names listed in column one of the table. The value of each field is a new object value fully and recursively populated with property values as defined by the specification of each object in clauses <emu-xref href="#sec-global-object"></emu-xref> through <emu-xref href="#sec-reflection"></emu-xref>. All object property values are newly created object values. All values that are built-in function objects are created by performing CreateBuiltinFunction(_steps_, _length_, _name_, _slots_, _realmRec_, _prototype_) where _steps_ is the definition of that function provided by this specification, _name_ is the initial value of the function's `name` property, _length_ is the initial value of the function's `length` property, _slots_ is a list of the names, if any, of the function's specified internal slots, and _prototype_ is the specified value of the function's [[Prototype]] internal slot. The creation of the intrinsics and their properties must be ordered to avoid any dependencies upon objects that have not yet been created.
         1. Perform AddRestrictedFunctionProperties(_intrinsics_.[[%Function.prototype%]], _realmRec_).
         1. Return _intrinsics_.
       </emu-alg>
@@ -11166,8 +11168,8 @@
     </emu-clause>
 
     <emu-clause id="sec-createbuiltinfunction" aoid="CreateBuiltinFunction">
-      <h1>CreateBuiltinFunction ( _steps_, _internalSlotsList_ [ , _realm_ [ , _prototype_ ] ] )</h1>
-      <p>The abstract operation CreateBuiltinFunction takes arguments _steps_ and _internalSlotsList_ (a List of names of internal slots) and optional arguments _realm_ and _prototype_. _internalSlotsList_ contains the names of additional internal slots that must be defined as part of the object. This operation creates a built-in function object. It performs the following steps when called:</p>
+      <h1>CreateBuiltinFunction ( _steps_, _length_, _name_, _internalSlotsList_ [ , _realm_ [ , _prototype_ [ , _prefix_ ] ] ] )</h1>
+      <p>The abstract operation CreateBuiltinFunction takes arguments _steps_, _length_, _name_, and _internalSlotsList_ (a List of names of internal slots) and optional arguments _realm_, _prototype_, and _prefix_. _internalSlotsList_ contains the names of additional internal slots that must be defined as part of the object. This operation creates a built-in function object. It performs the following steps when called:</p>
       <emu-alg>
         1. Assert: _steps_ is either a set of algorithm steps or other definition of a function's behaviour provided in this specification.
         1. If _realm_ is not present, set _realm_ to the current Realm Record.
@@ -11178,6 +11180,11 @@
         1. Set _func_.[[Prototype]] to _prototype_.
         1. Set _func_.[[Extensible]] to *true*.
         1. Set _func_.[[InitialName]] to *null*.
+        1. Perform ! SetFunctionLength(_func_, _length_).
+        1. If _prefix_ is not present, then
+          1. Perform ! SetFunctionName(_func_, _name_).
+        1. Else,
+          1. Perform ! SetFunctionName(_func_, _name_, _prefix_).
         1. Return _func_.
       </emu-alg>
       <p>Each built-in function defined in this specification is created by calling the CreateBuiltinFunction abstract operation.</p>
@@ -11668,7 +11675,8 @@
           <p>The abstract operation MakeArgGetter takes arguments _name_ (a String) and _env_ (an Environment Record). It creates a built-in function object that when executed returns the value bound for _name_ in _env_. It performs the following steps when called:</p>
           <emu-alg>
             1. Let _steps_ be the steps of an ArgGetter function as specified below.
-            1. Let _getter_ be ! CreateBuiltinFunction(_steps_, &laquo; [[Name]], [[Env]] &raquo;).
+            1. Let _length_ be the number of non-optional parameters of an ArgGetter function as specified below.
+            1. Let _getter_ be ! CreateBuiltinFunction(_steps_, _length_, *""*, &laquo; [[Name]], [[Env]] &raquo;).
             1. Set _getter_.[[Name]] to _name_.
             1. Set _getter_.[[Env]] to _env_.
             1. Return _getter_.
@@ -11690,7 +11698,8 @@
           <p>The abstract operation MakeArgSetter takes arguments _name_ (a String) and _env_ (an Environment Record). It creates a built-in function object that when executed sets the value bound for _name_ in _env_. It performs the following steps when called:</p>
           <emu-alg>
             1. Let _steps_ be the steps of an ArgSetter function as specified below.
-            1. Let _setter_ be ! CreateBuiltinFunction(_steps_, &laquo; [[Name]], [[Env]] &raquo;).
+            1. Let _length_ be the number of non-optional parameters of an ArgSetter function as specified below.
+            1. Let _setter_ be ! CreateBuiltinFunction(_steps_, _length_, *""*, &laquo; [[Name]], [[Env]] &raquo;).
             1. Set _setter_.[[Name]] to _name_.
             1. Set _setter_.[[Env]] to _env_.
             1. Return _setter_.
@@ -23629,13 +23638,14 @@
   <p>Unless otherwise specified every built-in function and every built-in constructor has the Function prototype object, which is the initial value of the expression `Function.prototype` (<emu-xref href="#sec-properties-of-the-function-prototype-object"></emu-xref>), as the value of its [[Prototype]] internal slot.</p>
   <p>Unless otherwise specified every built-in prototype object has the Object prototype object, which is the initial value of the expression `Object.prototype` (<emu-xref href="#sec-properties-of-the-object-prototype-object"></emu-xref>), as the value of its [[Prototype]] internal slot, except the Object prototype object itself.</p>
   <p>Built-in function objects that are not identified as constructors do not implement the [[Construct]] internal method unless otherwise specified in the description of a particular function.</p>
-  <p>Each built-in function defined in this specification is created by calling the CreateBuiltinFunction abstract operation (<emu-xref href="#sec-createbuiltinfunction"></emu-xref>).</p>
+  <p>Each built-in function defined in this specification is created by calling the CreateBuiltinFunction abstract operation (<emu-xref href="#sec-createbuiltinfunction"></emu-xref>). The values of the _length_ and _name_ parameters are the initial values of the *"length"* and *"name"* properties as discussed below. The values of the _prefix_ parameter are similarly discussed below.</p>
   <p>Every built-in function object, including constructors, has a *"length"* property whose value is a non-negative integral Number. Unless otherwise specified, this value is equal to the number of required parameters shown in the subclause headings for the function description. Optional parameters and rest parameters are not included in the parameter count.</p>
   <emu-note>
     <p>For example, the function object that is the initial value of the *"map"* property of the Array prototype object is described under the subclause heading &laquo;Array.prototype.map (callbackFn [ , thisArg])&raquo; which shows the two named arguments callbackFn and thisArg, the latter being optional; therefore the value of the *"length"* property of that function object is *1*<sub>𝔽</sub>.</p>
   </emu-note>
   <p>Unless otherwise specified, the *"length"* property of a built-in function object has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
-  <p>Every built-in function object, including constructors, has a *"name"* property whose value is a String. Unless otherwise specified, this value is the name that is given to the function in this specification. Functions that are identified as anonymous functions use the empty String as the value of the *"name"* property. For functions that are specified as properties of objects, the name value is the property name string used to access the function. Functions that are specified as get or set accessor functions of built-in properties have *"get "* or *"set "* prepended to the property name string. The value of the *"name"* property is explicitly specified for each built-in functions whose property key is a Symbol value. The *"name"* property is set using SetFunctionName.</p>
+  <p>Every built-in function object, including constructors, has a *"name"* property whose value is a String. Unless otherwise specified, this value is the name that is given to the function in this specification. Functions that are identified as anonymous functions use the empty String as the value of the *"name"* property. For functions that are specified as properties of objects, the name value is the property name string used to access the function. Functions that are specified as get or set accessor functions of built-in properties have *"get"* or *"set"* (respectively) passed to the _prefix_ parameter when calling CreateBuiltinFunction.
+  <p>The value of the *"name"* property is explicitly specified for each built-in functions whose property key is a Symbol value. If such an explicitly specified value starts with the prefix *"get "* or *"set "* and the function for which it is specified is a get or set accessor function of a built-in property, the value without the prefix is passed to the _name_ parameter, and the value *"get"* or *"set"* (respectively) is passed to the _prefix_ parameter when calling CreateBuiltinFunction.</p>
   <p>Unless otherwise specified, the *"name"* property of a built-in function object has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
   <p>Every other data property described in clauses <emu-xref href="#sec-global-object"></emu-xref> through <emu-xref href="#sec-reflection"></emu-xref> and in Annex <emu-xref href="#sec-additional-built-in-properties"></emu-xref> has the attributes { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true* } unless otherwise specified.</p>
   <p>Every accessor property described in clauses <emu-xref href="#sec-global-object"></emu-xref> through <emu-xref href="#sec-reflection"></emu-xref> and in Annex <emu-xref href="#sec-additional-built-in-properties"></emu-xref> has the attributes { [[Enumerable]]: *false*, [[Configurable]]: *true* } unless otherwise specified. If only a get accessor function is described, the set accessor function is the default value, *undefined*. If only a set accessor is described the get accessor is the default value, *undefined*.</p>
@@ -24643,7 +24653,8 @@
           1. Let _obj_ be ! OrdinaryObjectCreate(%Object.prototype%).
           1. Assert: _obj_ is an extensible ordinary object with no own properties.
           1. Let _stepsDefine_ be the algorithm steps defined in <emu-xref href="#sec-create-data-property-on-object-functions" title></emu-xref>.
-          1. Let _adder_ be ! CreateBuiltinFunction(_stepsDefine_, &laquo; &raquo;).
+          1. Let _lengthDefine_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-create-data-property-on-object-functions" title></emu-xref>.
+          1. Let _adder_ be ! CreateBuiltinFunction(_stepsDefine_, _lengthDefine_, *""*, &laquo; &raquo;).
           1. Return ? AddEntriesFromIterable(_obj_, _iterable_, _adder_).
         </emu-alg>
         <emu-note>
@@ -37588,7 +37599,8 @@ THH:mm:ss.sss
           1. Let _valueWrapper_ be PromiseResolve(%Promise%, _value_).
           1. IfAbruptRejectPromise(_valueWrapper_, _promiseCapability_).
           1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-async-from-sync-iterator-value-unwrap-functions" title></emu-xref>.
-          1. Let _onFulfilled_ be ! CreateBuiltinFunction(_steps_, &laquo; [[Done]] &raquo;).
+          1. Let _length_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-async-from-sync-iterator-value-unwrap-functions" title></emu-xref>.
+          1. Let _onFulfilled_ be ! CreateBuiltinFunction(_steps_, _length_, *""*, &laquo; [[Done]] &raquo;).
           1. Set _onFulfilled_.[[Done]] to _done_.
           1. Perform ! PerformPromiseThen(_valueWrapper_, _onFulfilled_, *undefined*, _promiseCapability_).
           1. Return _promiseCapability_.[[Promise]].
@@ -37751,11 +37763,13 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _alreadyResolved_ be the Record { [[Value]]: *false* }.
           1. Let _stepsResolve_ be the algorithm steps defined in <emu-xref href="#sec-promise-resolve-functions" title></emu-xref>.
-          1. Let _resolve_ be ! CreateBuiltinFunction(_stepsResolve_, &laquo; [[Promise]], [[AlreadyResolved]] &raquo;).
+          1. Let _lengthResolve_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-promise-resolve-functions" title></emu-xref>.
+          1. Let _resolve_ be ! CreateBuiltinFunction(_stepsResolve_, _lengthResolve_, *""*, &laquo; [[Promise]], [[AlreadyResolved]] &raquo;).
           1. Set _resolve_.[[Promise]] to _promise_.
           1. Set _resolve_.[[AlreadyResolved]] to _alreadyResolved_.
           1. Let _stepsReject_ be the algorithm steps defined in <emu-xref href="#sec-promise-reject-functions" title></emu-xref>.
-          1. Let _reject_ be ! CreateBuiltinFunction(_stepsReject_, &laquo; [[Promise]], [[AlreadyResolved]] &raquo;).
+          1. Let _lengthReject_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-promise-reject-functions" title></emu-xref>.
+          1. Let _reject_ be ! CreateBuiltinFunction(_stepsReject_, _lengthReject_, *""*, &laquo; [[Promise]], [[AlreadyResolved]] &raquo;).
           1. Set _reject_.[[Promise]] to _promise_.
           1. Set _reject_.[[AlreadyResolved]] to _alreadyResolved_.
           1. Return the Record { [[Resolve]]: _resolve_, [[Reject]]: _reject_ }.
@@ -37830,7 +37844,8 @@ THH:mm:ss.sss
           1. NOTE: _C_ is assumed to be a constructor function that supports the parameter conventions of the Promise constructor (see <emu-xref href="#sec-promise-executor"></emu-xref>).
           1. Let _promiseCapability_ be the PromiseCapability Record { [[Promise]]: *undefined*, [[Resolve]]: *undefined*, [[Reject]]: *undefined* }.
           1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-getcapabilitiesexecutor-functions" title></emu-xref>.
-          1. Let _executor_ be ! CreateBuiltinFunction(_steps_, &laquo; [[Capability]] &raquo;).
+          1. Let _length_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-getcapabilitiesexecutor-functions" title></emu-xref>.
+          1. Let _executor_ be ! CreateBuiltinFunction(_steps_, _length_, *""*, &laquo; [[Capability]] &raquo;).
           1. Set _executor_.[[Capability]] to _promiseCapability_.
           1. Let _promise_ be ? Construct(_C_, &laquo; _executor_ &raquo;).
           1. If IsCallable(_promiseCapability_.[[Resolve]]) is *false*, throw a *TypeError* exception.
@@ -38080,7 +38095,8 @@ THH:mm:ss.sss
               1. Append *undefined* to _values_.
               1. Let _nextPromise_ be ? Call(_promiseResolve_, _constructor_, &laquo; _nextValue_ &raquo;).
               1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-promise.all-resolve-element-functions" title></emu-xref>.
-              1. Let _resolveElement_ be ! CreateBuiltinFunction(_steps_, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
+              1. Let _length_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-promise.all-resolve-element-functions" title></emu-xref>.
+              1. Let _resolveElement_ be ! CreateBuiltinFunction(_steps_, _length_, *""*, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
               1. Set _resolveElement_.[[AlreadyCalled]] to *false*.
               1. Set _resolveElement_.[[Index]] to _index_.
               1. Set _resolveElement_.[[Values]] to _values_.
@@ -38160,8 +38176,9 @@ THH:mm:ss.sss
               1. ReturnIfAbrupt(_nextValue_).
               1. Append *undefined* to _values_.
               1. Let _nextPromise_ be ? Call(_promiseResolve_, _constructor_, &laquo; _nextValue_ &raquo;).
-              1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-promise.allsettled-resolve-element-functions" title></emu-xref>.
-              1. Let _resolveElement_ be ! CreateBuiltinFunction(_steps_, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
+              1. Let _resolveSteps_ be the algorithm steps defined in <emu-xref href="#sec-promise.allsettled-resolve-element-functions" title></emu-xref>.
+              1. Let _resolveLength_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-promise.allsettled-resolve-element-functions" title></emu-xref>.
+              1. Let _resolveElement_ be ! CreateBuiltinFunction(_resolveSteps_, _resolveLength_, *""*, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
               1. Let _alreadyCalled_ be the Record { [[Value]]: *false* }.
               1. Set _resolveElement_.[[AlreadyCalled]] to _alreadyCalled_.
               1. Set _resolveElement_.[[Index]] to _index_.
@@ -38169,7 +38186,8 @@ THH:mm:ss.sss
               1. Set _resolveElement_.[[Capability]] to _resultCapability_.
               1. Set _resolveElement_.[[RemainingElements]] to _remainingElementsCount_.
               1. Let _rejectSteps_ be the algorithm steps defined in <emu-xref href="#sec-promise.allsettled-reject-element-functions" title></emu-xref>.
-              1. Let _rejectElement_ be ! CreateBuiltinFunction(_rejectSteps_, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
+              1. Let _rejectLength_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-promise.allsettled-reject-element-functions" title></emu-xref>.
+              1. Let _rejectElement_ be ! CreateBuiltinFunction(_rejectSteps_, _rejectLength_, *""*, &laquo; [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] &raquo;).
               1. Set _rejectElement_.[[AlreadyCalled]] to _alreadyCalled_.
               1. Set _rejectElement_.[[Index]] to _index_.
               1. Set _rejectElement_.[[Values]] to _values_.
@@ -38280,8 +38298,9 @@ THH:mm:ss.sss
               1. ReturnIfAbrupt(_nextValue_).
               1. Append *undefined* to _errors_.
               1. Let _nextPromise_ be ? Call(_promiseResolve_, _constructor_, &laquo; _nextValue_ &raquo;).
-              1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-promise.any-reject-element-functions" title></emu-xref>.
-              1. Let _rejectElement_ be ! CreateBuiltinFunction(_steps_, &laquo; [[AlreadyCalled]], [[Index]], [[Errors]], [[Capability]], [[RemainingElements]] &raquo;).
+              1. Let _rejectSteps_ be the algorithm steps defined in <emu-xref href="#sec-promise.any-reject-element-functions" title></emu-xref>.
+              1. Let _rejectLength_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-promise.any-reject-element-functions" title></emu-xref>.
+              1. Let _rejectElement_ be ! CreateBuiltinFunction(_rejectSteps_, _rejectLength_, *""*, &laquo; [[AlreadyCalled]], [[Index]], [[Errors]], [[Capability]], [[RemainingElements]] &raquo;).
               1. Set _rejectElement_.[[AlreadyCalled]] to *false*.
               1. Set _rejectElement_.[[Index]] to _index_.
               1. Set _rejectElement_.[[Errors]] to _errors_.
@@ -38459,11 +38478,13 @@ THH:mm:ss.sss
             1. Let _catchFinally_ be _onFinally_.
           1. Else,
             1. Let _stepsThenFinally_ be the algorithm steps defined in <emu-xref href="#sec-thenfinallyfunctions" title></emu-xref>.
-            1. Let _thenFinally_ be ! CreateBuiltinFunction(_stepsThenFinally_, &laquo; [[Constructor]], [[OnFinally]] &raquo;).
+            1. Let _lengthThenFinally_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-thenfinallyfunctions" title></emu-xref>.
+            1. Let _thenFinally_ be ! CreateBuiltinFunction(_stepsThenFinally_, _lengthThenFinally_, *""*, &laquo; [[Constructor]], [[OnFinally]] &raquo;).
             1. Set _thenFinally_.[[Constructor]] to _C_.
             1. Set _thenFinally_.[[OnFinally]] to _onFinally_.
             1. Let _stepsCatchFinally_ be the algorithm steps defined in <emu-xref href="#sec-catchfinallyfunctions" title></emu-xref>.
-            1. Let _catchFinally_ be ! CreateBuiltinFunction(_stepsCatchFinally_, &laquo; [[Constructor]], [[OnFinally]] &raquo;).
+            1. Let _lengthCatchFinally_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-catchfinallyfunctions" title></emu-xref>.
+            1. Let _catchFinally_ be ! CreateBuiltinFunction(_stepsCatchFinally_, _lengthCatchFinally_, *""*, &laquo; [[Constructor]], [[OnFinally]] &raquo;).
             1. Set _catchFinally_.[[Constructor]] to _C_.
             1. Set _catchFinally_.[[OnFinally]] to _onFinally_.
           1. Return ? Invoke(_promise_, *"then"*, &laquo; _thenFinally_, _catchFinally_ &raquo;).
@@ -39299,10 +39320,12 @@ THH:mm:ss.sss
                 1. Set _generator_.[[AsyncGeneratorState]] to ~awaiting-return~.
                 1. Let _promise_ be ? PromiseResolve(%Promise%, _completion_.[[Value]]).
                 1. Let _stepsFulfilled_ be the algorithm steps defined in <emu-xref href="#async-generator-resume-next-return-processor-fulfilled" title></emu-xref>.
-                1. Let _onFulfilled_ be ! CreateBuiltinFunction(_stepsFulfilled_, &laquo; [[Generator]] &raquo;).
+                1. Let _lengthFulfilled_ be the number of non-optional parameters of the function definition in <emu-xref href="#async-generator-resume-next-return-processor-fulfilled" title></emu-xref>.
+                1. Let _onFulfilled_ be ! CreateBuiltinFunction(_stepsFulfilled_, _lengthFulfilled_, *""*, &laquo; [[Generator]] &raquo;).
                 1. Set _onFulfilled_.[[Generator]] to _generator_.
                 1. Let _stepsRejected_ be the algorithm steps defined in <emu-xref href="#async-generator-resume-next-return-processor-rejected" title></emu-xref>.
-                1. Let _onRejected_ be ! CreateBuiltinFunction(_stepsRejected_, &laquo; [[Generator]] &raquo;).
+                1. Let _lengthRejected_ be the number of non-optional parameters of the function definition in <emu-xref href="#async-generator-resume-next-return-processor-rejected" title></emu-xref>.
+                1. Let _onRejected_ be ! CreateBuiltinFunction(_stepsRejected_, _lengthRejected_, *""*, &laquo; [[Generator]] &raquo;).
                 1. Set _onRejected_.[[Generator]] to _generator_.
                 1. Perform ! PerformPromiseThen(_promise_, _onFulfilled_, _onRejected_).
                 1. Return *undefined*.
@@ -39738,7 +39761,8 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _p_ be ? ProxyCreate(_target_, _handler_).
           1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-proxy-revocation-functions" title></emu-xref>.
-          1. Let _revoker_ be ! CreateBuiltinFunction(_steps_, &laquo; [[RevocableProxy]] &raquo;).
+          1. Let _length_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-proxy-revocation-functions" title></emu-xref>.
+          1. Let _revoker_ be ! CreateBuiltinFunction(_steps_, _length_, *""*, &laquo; [[RevocableProxy]] &raquo;).
           1. Set _revoker_.[[RevocableProxy]] to _p_.
           1. Let _result_ be ! OrdinaryObjectCreate(%Object.prototype%).
           1. Perform ! CreateDataPropertyOrThrow(_result_, *"proxy"*, _p_).
