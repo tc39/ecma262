@@ -36077,33 +36077,53 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-getwaiterlist" aoid="GetWaiterList">
         <h1>GetWaiterList ( _block_, _i_ )</h1>
-        <p>A <dfn>WaiterList</dfn> is a semantic object that contains an ordered list of those agents that are waiting on a location (_block_, _i_) in shared memory; _block_ is a Shared Data Block and _i_ a byte offset into the memory of _block_. A WaiterList object also optionally contains a Synchronize event denoting the previous leaving of its critical section.</p>
-        <p>Initially a WaiterList object has an empty list and no Synchronize event.</p>
-        <p>The agent cluster has a store of WaiterList objects; the store is indexed by (_block_, _i_). WaiterLists are agent-independent: a lookup in the store of WaiterLists by (_block_, _i_) will result in the same WaiterList object in any agent in the agent cluster.</p>
-        <p>Each WaiterList has a <dfn>critical section</dfn> that controls exclusive access to that WaiterList during evaluation. Only a single agent may enter a WaiterList's critical section at one time. Entering and leaving a WaiterList's critical section is controlled by the abstract operations EnterCriticalSection and LeaveCriticalSection. Operations on a WaiterList&mdash;adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, setting and retrieving the Synchronize event&mdash;may only be performed by agents that have entered the WaiterList's critical section.</p>
+        <p>A <dfn id="waiterlist-record">WaiterList Record</dfn> is a Record value used to explain waiting and notification of agents via `Atomics.wait` and `Atomics.notify`. It has fields as defined by <emu-xref href="#table-waiterlist-record-fields"></emu-xref>.</p>
+        <emu-table id="table-waiterlist-record-fields" caption="WaiterList Record Fields">
+          <table>
+            <tbody>
+            <tr>
+              <th>Field Name</th>
+              <th>Value</th>
+              <th>Meaning</th>
+            </tr>
+            <tr>
+              <td>[[Waiters]]</td>
+              <td>A list of agent signifiers.</td>
+              <td>The list of agent signifiers whose corresponding <emu-xref href="#agent">agents</emu-xref> are waiting on the memory location.</td>
+            </tr>
+            <tr>
+              <td>[[MostRecentLeaveEvent]]</td>
+              <td>Synchronize event | ~empty~</td>
+              <td>The event of the most recent leaving of its critical section, or ~empty~ if its critical section has never been entered. </td>
+            </tr>
+            </tbody>
+          </table>
+        </emu-table>
+        <p>The agent cluster has a store of WaiterList Records; the store is indexed by (_block_, _i_). WaiterList Records are agent-independent: a lookup in the store of WaiterList Records by (_block_, _i_) will result in the same WaiterList Record in any agent in the agent cluster.</p>
+        <p>Each WaiterList Record has a <dfn>critical section</dfn> that controls exclusive access to that WaiterList Record during evaluation. Only a single agent may enter a WaiterList Record's critical section at one time. Entering and leaving a WaiterList Record's critical section is controlled by the abstract operations EnterCriticalSection and LeaveCriticalSection. Operations on a WaiterList Record&mdash;adding and removing waiting agents, traversing the list of agents, suspending and notifying agents on the list, setting and retrieving the Synchronize event&mdash;may only be performed by agents that have entered the WaiterList Record's critical section.</p>
         <p>The abstract operation GetWaiterList takes arguments _block_ (a Shared Data Block) and _i_ (a non-negative integer). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: _block_ is a Shared Data Block.
           1. Assert: _i_ and _i_ + 3 are valid byte offsets within the memory of _block_.
           1. Assert: _i_ is divisible by 4.
-          1. Return the WaiterList that is referenced by the pair (_block_, _i_).
+          1. Return the WaiterList Record that is referenced by the pair (_block_, _i_).
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-entercriticalsection" aoid="EnterCriticalSection">
         <h1>EnterCriticalSection ( _WL_ )</h1>
-        <p>The abstract operation EnterCriticalSection takes argument _WL_ (a WaiterList). It performs the following steps when called:</p>
+        <p>The abstract operation EnterCriticalSection takes argument _WL_ (a WaiterList Record). It performs the following steps when called:</p>
         <emu-alg>
-          1. Assert: The calling agent is not in the critical section for any WaiterList.
+          1. Assert: The calling agent is not in the critical section for any WaiterList Record.
           1. Wait until no agent is in the critical section for _WL_, then enter the critical section for _WL_ (without allowing any other agent to enter).
-          1. If _WL_ has a Synchronize event, then
+          1. If _WL_.[[MostRecentLeaveEvent]] is not ~empty~, then
             1. NOTE: A _WL_ whose critical section has been entered at least once has a Synchronize event set by LeaveCriticalSection.
             1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
             1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
             1. Let _entererEventList_ be _eventsRecord_.[[EventList]].
             1. Let _enterEvent_ be a new Synchronize event.
             1. Append _enterEvent_ to _entererEventList_.
-            1. Let _leaveEvent_ be the Synchronize event in _WL_.
+            1. Let _leaveEvent_ be _WL_.[[MostRecentLeaveEvent]].
             1. Append (_leaveEvent_, _enterEvent_) to _eventsRecord_.[[AgentSynchronizesWith]].
         </emu-alg>
         <p>EnterCriticalSection has <dfn>contention</dfn> when an agent attempting to enter the critical section must wait for another agent to leave it. When there is no contention, FIFO order of EnterCriticalSection calls is observable. When there is contention, an implementation may choose an arbitrary order but may not cause an agent to wait indefinitely.</p>
@@ -36111,7 +36131,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-leavecriticalsection" aoid="LeaveCriticalSection">
         <h1>LeaveCriticalSection ( _WL_ )</h1>
-        <p>The abstract operation LeaveCriticalSection takes argument _WL_ (a WaiterList). It performs the following steps when called:</p>
+        <p>The abstract operation LeaveCriticalSection takes argument _WL_ (a WaiterList Record). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
           1. Let _execution_ be the [[CandidateExecution]] field of the calling surrounding's Agent Record.
@@ -36119,34 +36139,34 @@ THH:mm:ss.sss
           1. Let _leaverEventList_ be _eventsRecord_.[[EventList]].
           1. Let _leaveEvent_ be a new Synchronize event.
           1. Append _leaveEvent_ to _leaverEventList_.
-          1. Set the Synchronize event in _WL_ to _leaveEvent_.
+          1. Set _WL_.[[MostRecentLeaveEvent]] to _leaveEvent_.
           1. Leave the critical section for _WL_.
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-addwaiter" aoid="AddWaiter">
         <h1>AddWaiter ( _WL_, _W_ )</h1>
-        <p>The abstract operation AddWaiter takes arguments _WL_ (a WaiterList) and _W_ (an agent signifier). It performs the following steps when called:</p>
+        <p>The abstract operation AddWaiter takes arguments _WL_ (a WaiterList Record) and _W_ (an agent signifier). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
-          1. Assert: _W_ is not on the list of waiters in any WaiterList.
-          1. Add _W_ to the end of the list of waiters in _WL_.
+          1. Assert: _W_ is not in the [[Waiters]] list of any WaiterList Record.
+          1. Append _W_ to the end of _WL_.[[Waiters]].
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-removewaiter" aoid="RemoveWaiter">
         <h1>RemoveWaiter ( _WL_, _W_ )</h1>
-        <p>The abstract operation RemoveWaiter takes arguments _WL_ (a WaiterList) and _W_ (an agent signifier). It performs the following steps when called:</p>
+        <p>The abstract operation RemoveWaiter takes arguments _WL_ (a WaiterList Record) and _W_ (an agent signifier). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
-          1. Assert: _W_ is on the list of waiters in _WL_.
-          1. Remove _W_ from the list of waiters in _WL_.
+          1. Assert: _W_ is in _WL_.[[Waiters]].
+          1. Remove _W_ from _WL_.[[Waiters]].
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-removewaiters" aoid="RemoveWaiters">
         <h1>RemoveWaiters ( _WL_, _c_ )</h1>
-        <p>The abstract operation RemoveWaiters takes arguments _WL_ (a WaiterList) and _c_ (a non-negative integer or +&infin;). It performs the following steps when called:</p>
+        <p>The abstract operation RemoveWaiters takes arguments _WL_ (a WaiterList Record) and _c_ (a non-negative integer or +&infin;). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
           1. Let _L_ be a new empty List.
@@ -36162,11 +36182,11 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-suspendagent" aoid="SuspendAgent" oldids="sec-suspend">
         <h1>SuspendAgent ( _WL_, _W_, _timeout_ )</h1>
-        <p>The abstract operation SuspendAgent takes arguments _WL_ (a WaiterList), _W_ (an agent signifier), and _timeout_ (a non-negative integer). It performs the following steps when called:</p>
+        <p>The abstract operation SuspendAgent takes arguments _WL_ (a WaiterList Record), _W_ (an agent signifier), and _timeout_ (a non-negative integer). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
           1. Assert: _W_ is equivalent to AgentSignifier().
-          1. Assert: _W_ is on the list of waiters in _WL_.
+          1. Assert: _W_ is in _WL_.[[Waiters]].
           1. Assert: AgentCanSuspend() is *true*.
           1. Perform LeaveCriticalSection(_WL_) and suspend _W_ for up to _timeout_ milliseconds, performing the combined operation in such a way that a notification that arrives after the critical section is exited but before the suspension takes effect is not lost. _W_ can notify either because the timeout expired or because it was notified explicitly by another agent calling NotifyWaiter(_WL_, _W_), and not for any other reasons at all.
           1. Perform EnterCriticalSection(_WL_).
@@ -36177,7 +36197,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-notifywaiter" aoid="NotifyWaiter">
         <h1>NotifyWaiter ( _WL_, _W_ )</h1>
-        <p>The abstract operation NotifyWaiter takes arguments _WL_ (a WaiterList) and _W_ (an agent signifier). It performs the following steps when called:</p>
+        <p>The abstract operation NotifyWaiter takes arguments _WL_ (a WaiterList Record) and _W_ (an agent signifier). It performs the following steps when called:</p>
         <emu-alg>
           1. Assert: The calling agent is in the critical section for _WL_.
           1. Notify the agent _W_.
