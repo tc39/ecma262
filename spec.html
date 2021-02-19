@@ -11632,14 +11632,14 @@
     </emu-clause>
 
     <emu-clause id="sec-createbuiltinfunction" aoid="CreateBuiltinFunction">
-      <h1>CreateBuiltinFunction ( _steps_, _length_, _name_, _internalSlotsList_ [ , _realm_ [ , _prototype_ [ , _prefix_ ] ] ] )</h1>
-      <p>The abstract operation CreateBuiltinFunction takes arguments _steps_, _length_, _name_, and _internalSlotsList_ (a List of names of internal slots) and optional arguments _realm_, _prototype_, and _prefix_. _internalSlotsList_ contains the names of additional internal slots that must be defined as part of the object. This operation creates a built-in function object. It performs the following steps when called:</p>
+      <h1>CreateBuiltinFunction ( _behaviour_, _length_, _name_, _internalSlotsList_ [ , _realm_ [ , _prototype_ [ , _prefix_ ] ] ] )</h1>
+      <p>The abstract operation CreateBuiltinFunction takes arguments _behaviour_, _length_ (a non-negative integer or +&infin;), _name_ (a property key), and _internalSlotsList_ (a List of names of internal slots) and optional arguments _realm_ (a Realm Record), _prototype_ (an Object or *null*), and _prefix_ (a String). _internalSlotsList_ contains the names of additional internal slots that must be defined as part of the object. This operation creates a built-in function object. It performs the following steps when called:</p>
       <emu-alg>
-        1. Assert: _steps_ is either a set of algorithm steps or other definition of a function's behaviour provided in this specification.
-        1. If _realm_ is not present or _realm_ is ~empty~, set _realm_ to the current Realm Record.
+        1. Assert: _behaviour_ is either an Abstract Closure, a set of algorithm steps, or some other definition of a function's behaviour provided in this specification.
+        1. If _realm_ is not present, set _realm_ to the current Realm Record.
         1. Assert: _realm_ is a Realm Record.
         1. If _prototype_ is not present, set _prototype_ to _realm_.[[Intrinsics]].[[%Function.prototype%]].
-        1. Let _func_ be a new built-in function object that when called performs the action described by _steps_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
+        1. Let _func_ be a new built-in function object that, when called, performs the action described by _behaviour_ using the provided arguments as the values of the corresponding parameters specified by _behaviour_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
         1. Set _func_.[[Realm]] to _realm_.
         1. Set _func_.[[Prototype]] to _prototype_.
         1. Set _func_.[[Extensible]] to *true*.
@@ -21515,7 +21515,7 @@
         1. Set the running execution context's PrivateEnvironment to _classPrivateEnvironment_.
         1. If _constructor_ is ~empty~, then
           1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-default-constructor-functions" title></emu-xref>.
-          1. Let _F_ be ! CreateBuiltinFunction(_steps_, 0, _className_, &laquo; [[ConstructorKind]], [[SourceText]] &raquo;, ~empty~, _constructorParent_).
+          1. Let _F_ be ! CreateBuiltinFunction(_steps_, 0, _className_, &laquo; [[ConstructorKind]], [[SourceText]] &raquo;, the current Realm Record, _constructorParent_).
         1. Else,
           1. Let _constructorInfo_ be ! DefineMethod of _constructor_ with arguments _proto_ and _constructorParent_.
           1. Let _F_ be _constructorInfo_.[[Closure]].
@@ -25507,34 +25507,23 @@
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-object.fromentries">
+      <emu-clause id="sec-object.fromentries" oldids="sec-create-data-property-on-object-functions">
         <h1>Object.fromEntries ( _iterable_ )</h1>
         <p>When the `fromEntries` method is called with argument _iterable_, the following steps are taken:</p>
         <emu-alg>
           1. Perform ? RequireObjectCoercible(_iterable_).
           1. Let _obj_ be ! OrdinaryObjectCreate(%Object.prototype%).
           1. Assert: _obj_ is an extensible ordinary object with no own properties.
-          1. Let _stepsDefine_ be the algorithm steps defined in <emu-xref href="#sec-create-data-property-on-object-functions" title></emu-xref>.
-          1. Let _lengthDefine_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-create-data-property-on-object-functions" title></emu-xref>.
-          1. Let _adder_ be ! CreateBuiltinFunction(_stepsDefine_, _lengthDefine_, *""*, &laquo; &raquo;).
+          1. Let _closure_ be a new Abstract Closure with parameters (_key_, _value_) that captures _obj_ and performs the following steps when called:
+            1. Let _propertyKey_ be ? ToPropertyKey(_key_).
+            1. Perform ! CreateDataPropertyOrThrow(_obj_, _propertyKey_, _value_).
+            1. Return *undefined*.
+          1. Let _adder_ be ! CreateBuiltinFunction(_closure_, 2, *""*, &laquo; &raquo;).
           1. Return ? AddEntriesFromIterable(_obj_, _iterable_, _adder_).
         </emu-alg>
         <emu-note>
           The function created for _adder_ is never directly accessible to ECMAScript code.
         </emu-note>
-
-        <emu-clause id="sec-create-data-property-on-object-functions">
-          <h1>CreateDataPropertyOnObject Functions</h1>
-          <p>A CreateDataPropertyOnObject function is an anonymous built-in function. When a CreateDataPropertyOnObject function is called with arguments _key_ and _value_, the following steps are taken:</p>
-          <emu-alg>
-            1. Let _O_ be the *this* value.
-            1. Assert: Type(_O_) is Object.
-            1. Assert: _O_ is an extensible ordinary object.
-            1. Let _propertyKey_ be ? ToPropertyKey(_key_).
-            1. Perform ! CreateDataPropertyOrThrow(_O_, _propertyKey_, _value_).
-            1. Return *undefined*.
-          </emu-alg>
-        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-object.getownpropertydescriptor">
