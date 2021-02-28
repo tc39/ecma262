@@ -10736,10 +10736,14 @@
       <p>The [[Call]] internal method of an ECMAScript function object _F_ takes arguments _thisArgument_ (an ECMAScript language value) and _argumentsList_ (a List of ECMAScript language values). It performs the following steps when called:</p>
       <emu-alg>
         1. Assert: _F_ is an ECMAScript function object.
-        1. If _F_.[[IsClassConstructor]] is *true*, throw a *TypeError* exception.
         1. Let _callerContext_ be the running execution context.
         1. Let _calleeContext_ be PrepareForOrdinaryCall(_F_, *undefined*).
         1. Assert: _calleeContext_ is now the running execution context.
+        1. If _F_.[[IsClassConstructor]] is *true*, then
+          1. Let _error_ be a newly created *TypeError* object.
+          1. NOTE: _error_ is created in _calleeContext_ with _F_'s associated Realm Record.
+          1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+          1. Return ThrowCompletion(_error_).
         1. Perform OrdinaryCallBindThis(_F_, _calleeContext_, _thisArgument_).
         1. Let _result_ be OrdinaryCallEvaluateBody(_F_, _argumentsList_).
         1. [id="step-call-pop-context-stack"] Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
@@ -10917,10 +10921,11 @@
       <h1>MakeConstructor ( _F_ [ , _writablePrototype_ [ , _prototype_ ] ] )</h1>
       <p>The abstract operation MakeConstructor takes argument _F_ (a function object) and optional arguments _writablePrototype_ (a Boolean) and _prototype_ (an Object). It converts _F_ into a constructor. It performs the following steps when called:</p>
       <emu-alg>
-        1. Assert: _F_ is an ECMAScript function object.
-        1. Assert: IsConstructor(_F_) is *false*.
-        1. Assert: _F_ is an extensible object that does not have a *"prototype"* own property.
-        1. Set _F_.[[Construct]] to the definition specified in <emu-xref href="#sec-ecmascript-function-objects-construct-argumentslist-newtarget"></emu-xref>.
+        1. Assert: _F_ is an ECMAScript function object or a built-in function object.
+        1. If _F_ is an ECMAScript function object, then
+          1. Assert: IsConstructor(_F_) is *false*.
+          1. Assert: _F_ is an extensible object that does not have a *"prototype"* own property.
+          1. Set _F_.[[Construct]] to the definition specified in <emu-xref href="#sec-ecmascript-function-objects-construct-argumentslist-newtarget"></emu-xref>.
         1. Set _F_.[[ConstructorKind]] to ~base~.
         1. If _writablePrototype_ is not present, set _writablePrototype_ to *true*.
         1. If _prototype_ is not present, then
@@ -11158,7 +11163,7 @@
       <p>The abstract operation CreateBuiltinFunction takes arguments _steps_, _length_, _name_, and _internalSlotsList_ (a List of names of internal slots) and optional arguments _realm_, _prototype_, and _prefix_. _internalSlotsList_ contains the names of additional internal slots that must be defined as part of the object. This operation creates a built-in function object. It performs the following steps when called:</p>
       <emu-alg>
         1. Assert: _steps_ is either a set of algorithm steps or other definition of a function's behaviour provided in this specification.
-        1. If _realm_ is not present, set _realm_ to the current Realm Record.
+        1. If _realm_ is not present or _realm_ is ~empty~, set _realm_ to the current Realm Record.
         1. Assert: _realm_ is a Realm Record.
         1. If _prototype_ is not present, set _prototype_ to _realm_.[[Intrinsics]].[[%Function.prototype%]].
         1. Let _func_ be a new built-in function object that when called performs the action described by _steps_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
@@ -20703,23 +20708,18 @@
         1. Let _proto_ be ! OrdinaryObjectCreate(_protoParent_).
         1. If |ClassBody_opt| is not present, let _constructor_ be ~empty~.
         1. Else, let _constructor_ be ConstructorMethod of |ClassBody|.
-        1. If _constructor_ is ~empty~, then
-          1. If |ClassHeritage_opt| is present, then
-            1. Let _constructorText_ be the source text
-              <pre><code class="javascript">constructor(...args) { super(...args); }</code></pre>
-          1. Else,
-            1. Let _constructorText_ be the source text
-              <pre><code class="javascript">constructor() {}</code></pre>
-          1. Set _constructor_ to ParseText(_constructorText_, |MethodDefinition[~Yield, ~Await]|).
-          1. Assert: _constructor_ is a Parse Node.
         1. Set the running execution context's LexicalEnvironment to _classScope_.
-        1. Let _constructorInfo_ be ! DefineMethod of _constructor_ with arguments _proto_ and _constructorParent_.
-        1. Let _F_ be _constructorInfo_.[[Closure]].
-        1. Perform SetFunctionName(_F_, _className_).
-        1. Perform MakeConstructor(_F_, *false*, _proto_).
+        1. If _constructor_ is ~empty~, then
+          1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-default-constructor-functions" title></emu-xref>.
+          1. Let _F_ be ! CreateBuiltinFunction(_steps_, 0, _className_, &laquo; [[ConstructorKind]], [[SourceText]] &raquo;, ~empty~, _constructorParent_).
+        1. Else,
+          1. Let _constructorInfo_ be ! DefineMethod of _constructor_ with arguments _proto_ and _constructorParent_.
+          1. Let _F_ be _constructorInfo_.[[Closure]].
+          1. Perform ! MakeClassConstructor(_F_).
+          1. Perform ! SetFunctionName(_F_, _className_).
+        1. Perform ! MakeConstructor(_F_, *false*, _proto_).
         1. If |ClassHeritage_opt| is present, set _F_.[[ConstructorKind]] to ~derived~.
-        1. Perform MakeClassConstructor(_F_).
-        1. Perform CreateMethodProperty(_proto_, *"constructor"*, _F_).
+        1. Perform ! CreateMethodProperty(_proto_, *"constructor"*, _F_).
         1. If |ClassBody_opt| is not present, let _methods_ be a new empty List.
         1. Else, let _methods_ be NonConstructorMethodDefinitions of |ClassBody|.
         1. For each |ClassElement| _m_ of _methods_, do
@@ -20735,6 +20735,24 @@
           1. Perform _classScope_.InitializeBinding(_classBinding_, _F_).
         1. Return _F_.
       </emu-alg>
+
+      <emu-clause id="sec-default-constructor-functions">
+        <h1>Default Constructor Functions</h1>
+        <p>When a Default Constructor Function is called with zero or more arguments which form the rest parameter ..._args_, the following steps are taken:</p>
+        <emu-alg>
+          1. If NewTarget is *undefined*, throw a *TypeError* exception.
+          1. Let _F_ be the active function object.
+          1. If _F_.[[ConstructorKind]] is ~derived~, then
+            1. NOTE: This branch behaves similarly to `constructor(...args) { super(...args); }`. The most notable distinction is that while the aforementioned ECMAScript source text observably calls the @@iterator method on `%Array.prototype%`, a Default Constructor Function does not.
+            1. Let _func_ be ! _F_.[[GetPrototypeOf]]().
+            1. If IsConstructor(_func_) is *false*, throw a *TypeError* exception.
+            1. Return ? Construct(_func_, _args_, NewTarget).
+          1. Else,
+            1. NOTE: This branch behaves similarly to `constructor() {}`.
+            1. Return ? OrdinaryCreateFromConstructor(NewTarget, *"%Object.prototype%"*).
+        </emu-alg>
+        <p>The *"length"* property of a default constructor function is *+0*<sub>𝔽</sub>.</p>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-runtime-semantics-bindingclassdeclarationevaluation" type="sdo" aoid="BindingClassDeclarationEvaluation">
@@ -25192,9 +25210,9 @@
         <p>When the `toString` method is called, the following steps are taken:</p>
         <emu-alg>
           1. Let _func_ be the *this* value.
-          1. If _func_ is a <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref>, return an implementation-defined String source code representation of _func_. The representation must have the syntax of a |NativeFunction|. Additionally, if _func_ has an [[InitialName]] internal slot and _func_.[[InitialName]] is a String, the portion of the returned String that would be matched by |NativeFunctionAccessor?| |PropertyName| must be the value of _func_.[[InitialName]].
           1. If Type(_func_) is Object and _func_ has a [[SourceText]] internal slot and _func_.[[SourceText]] is a sequence of Unicode code points and ! HostHasSourceTextAvailable(_func_) is *true*, then
             1. Return ! CodePointsToString(_func_.[[SourceText]]).
+          1. If _func_ is a <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref>, return an implementation-defined String source code representation of _func_. The representation must have the syntax of a |NativeFunction|. Additionally, if _func_ has an [[InitialName]] internal slot and _func_.[[InitialName]] is a String, the portion of the returned String that would be matched by |NativeFunctionAccessor?| |PropertyName| must be the value of _func_.[[InitialName]].
           1. If Type(_func_) is Object and IsCallable(_func_) is *true*, return an implementation-defined String source code representation of _func_. The representation must have the syntax of a |NativeFunction|.
           1. Throw a *TypeError* exception.
         </emu-alg>
