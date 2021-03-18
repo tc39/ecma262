@@ -8563,17 +8563,57 @@
       <emu-clause id="sec-object-environment-records">
         <h1>Object Environment Records</h1>
         <p>Each <dfn>object Environment Record</dfn> is associated with an object called its <em>binding object</em>. An object Environment Record binds the set of string identifier names that directly correspond to the property names of its binding object. Property keys that are not strings in the form of an |IdentifierName| are not included in the set of bound identifiers. Both own and inherited properties are included in the set regardless of the setting of their [[Enumerable]] attribute. Because properties can be dynamically added and deleted from objects, the set of identifiers bound by an object Environment Record may potentially change as a side-effect of any operation that adds or deletes properties. Any bindings that are created as a result of such a side-effect are considered to be a mutable binding even if the Writable attribute of the corresponding property has the value *false*. Immutable bindings do not exist for object Environment Records.</p>
-        <p>Object Environment Records created for `with` statements (<emu-xref href="#sec-with-statement"></emu-xref>) can provide their binding object as an implicit *this* value for use in function calls. The capability is controlled by a _withEnvironment_ Boolean value that is associated with each object Environment Record.</p>
+        <p>Object Environment Records created for `with` statements (<emu-xref href="#sec-with-statement"></emu-xref>) can provide their binding object as an implicit *this* value for use in function calls. The capability is controlled by a Boolean [[IsWithEnvironment]] field.</p>
+        <p>Object Environment Records have the additional state fields listed in <emu-xref href="#table-additional-fields-of-object-environment-records"></emu-xref>.</p>
+        <emu-table id="table-additional-fields-of-object-environment-records" caption="Additional Fields of Object Environment Records">
+          <table>
+            <tbody>
+            <tr>
+              <th>
+                Field Name
+              </th>
+              <th>
+                Value
+              </th>
+              <th>
+                Meaning
+              </th>
+            </tr>
+            <tr>
+              <td>
+                [[BindingObject]]
+              </td>
+              <td>
+                Object
+              </td>
+              <td>
+                The binding object of this Environment Record.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[IsWithEnvironment]]
+              </td>
+              <td>
+                Boolean
+              </td>
+              <td>
+                Indicates whether this Environment Record is created for a `with` statement.
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </emu-table>
         <p>The behaviour of the concrete specification methods for object Environment Records is defined by the following algorithms.</p>
 
         <emu-clause id="sec-object-environment-records-hasbinding-n">
           <h1>HasBinding ( _N_ )</h1>
           <p>The HasBinding concrete method of an object Environment Record _envRec_ takes argument _N_ (a String). It determines if its associated binding object has a property whose name is the value of the argument _N_. It performs the following steps when called:</p>
           <emu-alg>
-            1. Let _bindings_ be the binding object for _envRec_.
+            1. Let _bindings_ be _envRec_.[[BindingObject]].
             1. Let _foundBinding_ be ? HasProperty(_bindings_, _N_).
             1. If _foundBinding_ is *false*, return *false*.
-            1. If the _withEnvironment_ flag of _envRec_ is *false*, return *true*.
+            1. If _envRec_.[[IsWithEnvironment]] is *false*, return *true*.
             1. Let _unscopables_ be ? Get(_bindings_, @@unscopables).
             1. If Type(_unscopables_) is Object, then
               1. Let _blocked_ be ! ToBoolean(? Get(_unscopables_, _N_)).
@@ -8586,7 +8626,7 @@
           <h1>CreateMutableBinding ( _N_, _D_ )</h1>
           <p>The CreateMutableBinding concrete method of an object Environment Record _envRec_ takes arguments _N_ (a String) and _D_ (a Boolean). It creates in an Environment Record's associated binding object a property whose name is the String value and initializes it to the value *undefined*. If _D_ has the value *true*, the new property's [[Configurable]] attribute is set to *true*; otherwise it is set to *false*. It performs the following steps when called:</p>
           <emu-alg>
-            1. Let _bindings_ be the binding object for _envRec_.
+            1. Let _bindings_ be _envRec_.[[BindingObject]].
             1. Return ? DefinePropertyOrThrow(_bindings_, _N_, PropertyDescriptor { [[Value]]: *undefined*, [[Writable]]: *true*, [[Enumerable]]: *true*, [[Configurable]]: _D_ }).
           </emu-alg>
           <emu-note>
@@ -8614,7 +8654,7 @@
           <h1>SetMutableBinding ( _N_, _V_, _S_ )</h1>
           <p>The SetMutableBinding concrete method of an object Environment Record _envRec_ takes arguments _N_ (a String), _V_ (an ECMAScript language value), and _S_ (a Boolean). It attempts to set the value of the Environment Record's associated binding object's property whose name is the value of the argument _N_ to the value of argument _V_. A property named _N_ normally already exists but if it does not or is not currently writable, error handling is determined by _S_. It performs the following steps when called:</p>
           <emu-alg>
-            1. Let _bindings_ be the binding object for _envRec_.
+            1. Let _bindings_ be _envRec_.[[BindingObject]].
             1. Let _stillExists_ be ? HasProperty(_bindings_, _N_).
             1. If _stillExists_ is *false* and _S_ is *true*, throw a *ReferenceError* exception.
             1. Return ? Set(_bindings_, _N_, _V_, _S_).
@@ -8625,7 +8665,7 @@
           <h1>GetBindingValue ( _N_, _S_ )</h1>
           <p>The GetBindingValue concrete method of an object Environment Record _envRec_ takes arguments _N_ (a String) and _S_ (a Boolean). It returns the value of its associated binding object's property whose name is the String value of the argument identifier _N_. The property should already exist but if it does not the result depends upon _S_. It performs the following steps when called:</p>
           <emu-alg>
-            1. Let _bindings_ be the binding object for _envRec_.
+            1. Let _bindings_ be _envRec_.[[BindingObject]].
             1. Let _value_ be ? HasProperty(_bindings_, _N_).
             1. If _value_ is *false*, then
               1. If _S_ is *false*, return the value *undefined*; otherwise throw a *ReferenceError* exception.
@@ -8637,7 +8677,7 @@
           <h1>DeleteBinding ( _N_ )</h1>
           <p>The DeleteBinding concrete method of an object Environment Record _envRec_ takes argument _N_ (a String). It can only delete bindings that correspond to properties of the environment object whose [[Configurable]] attribute have the value *true*. It performs the following steps when called:</p>
           <emu-alg>
-            1. Let _bindings_ be the binding object for _envRec_.
+            1. Let _bindings_ be _envRec_.[[BindingObject]].
             1. Return ? _bindings_.[[Delete]](_N_).
           </emu-alg>
         </emu-clause>
@@ -8668,7 +8708,7 @@
           <h1>WithBaseObject ( )</h1>
           <p>The WithBaseObject concrete method of an object Environment Record _envRec_ takes no arguments. It performs the following steps when called:</p>
           <emu-alg>
-            1. If the _withEnvironment_ flag of _envRec_ is *true*, return the binding object for _envRec_.
+            1. If _envRec_.[[IsWithEnvironment]] is *true*, return _envRec_.[[BindingObject]].
             1. Otherwise, return *undefined*.
           </emu-alg>
         </emu-clause>
@@ -9054,7 +9094,7 @@
             1. If _DclRec_.HasBinding(_N_) is *true*, then
               1. Return _DclRec_.DeleteBinding(_N_).
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
-            1. Let _globalObject_ be the binding object for _ObjRec_.
+            1. Let _globalObject_ be _ObjRec_.[[BindingObject]].
             1. Let _existingProp_ be ? HasOwnProperty(_globalObject_, _N_).
             1. If _existingProp_ is *true*, then
               1. Let _status_ be ? _ObjRec_.DeleteBinding(_N_).
@@ -9128,7 +9168,7 @@
           <p>The HasRestrictedGlobalProperty concrete method of a global Environment Record _envRec_ takes argument _N_ (a String). It determines if the argument identifier is the name of a property of the global object that must not be shadowed by a global lexical binding. It performs the following steps when called:</p>
           <emu-alg>
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
-            1. Let _globalObject_ be the binding object for _ObjRec_.
+            1. Let _globalObject_ be _ObjRec_.[[BindingObject]].
             1. Let _existingProp_ be ? _globalObject_.[[GetOwnProperty]](_N_).
             1. If _existingProp_ is *undefined*, return *false*.
             1. If _existingProp_.[[Configurable]] is *true*, return *false*.
@@ -9144,7 +9184,7 @@
           <p>The CanDeclareGlobalVar concrete method of a global Environment Record _envRec_ takes argument _N_ (a String). It determines if a corresponding CreateGlobalVarBinding call would succeed if called for the same argument _N_. Redundant var declarations and var declarations for pre-existing global object properties are allowed. It performs the following steps when called:</p>
           <emu-alg>
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
-            1. Let _globalObject_ be the binding object for _ObjRec_.
+            1. Let _globalObject_ be _ObjRec_.[[BindingObject]].
             1. Let _hasProperty_ be ? HasOwnProperty(_globalObject_, _N_).
             1. If _hasProperty_ is *true*, return *true*.
             1. Return ? IsExtensible(_globalObject_).
@@ -9156,7 +9196,7 @@
           <p>The CanDeclareGlobalFunction concrete method of a global Environment Record _envRec_ takes argument _N_ (a String). It determines if a corresponding CreateGlobalFunctionBinding call would succeed if called for the same argument _N_. It performs the following steps when called:</p>
           <emu-alg>
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
-            1. Let _globalObject_ be the binding object for _ObjRec_.
+            1. Let _globalObject_ be _ObjRec_.[[BindingObject]].
             1. Let _existingProp_ be ? _globalObject_.[[GetOwnProperty]](_N_).
             1. If _existingProp_ is *undefined*, return ? IsExtensible(_globalObject_).
             1. If _existingProp_.[[Configurable]] is *true*, return *true*.
@@ -9170,7 +9210,7 @@
           <p>The CreateGlobalVarBinding concrete method of a global Environment Record _envRec_ takes arguments _N_ (a String) and _D_ (a Boolean). It creates and initializes a mutable binding in the associated object Environment Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is reused and assumed to be initialized. It performs the following steps when called:</p>
           <emu-alg>
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
-            1. Let _globalObject_ be the binding object for _ObjRec_.
+            1. Let _globalObject_ be _ObjRec_.[[BindingObject]].
             1. Let _hasProperty_ be ? HasOwnProperty(_globalObject_, _N_).
             1. Let _extensible_ be ? IsExtensible(_globalObject_).
             1. If _hasProperty_ is *false* and _extensible_ is *true*, then
@@ -9188,7 +9228,7 @@
           <p>The CreateGlobalFunctionBinding concrete method of a global Environment Record _envRec_ takes arguments _N_ (a String), _V_ (an ECMAScript language value), and _D_ (a Boolean). It creates and initializes a mutable binding in the associated object Environment Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is replaced. It performs the following steps when called:</p>
           <emu-alg>
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
-            1. Let _globalObject_ be the binding object for _ObjRec_.
+            1. Let _globalObject_ be _ObjRec_.[[BindingObject]].
             1. Let _existingProp_ be ? _globalObject_.[[GetOwnProperty]](_N_).
             1. If _existingProp_ is *undefined* or _existingProp_.[[Configurable]] is *true*, then
               1. Let _desc_ be the PropertyDescriptor { [[Value]]: _V_, [[Writable]]: *true*, [[Enumerable]]: *true*, [[Configurable]]: _D_ }.
@@ -9336,8 +9376,9 @@
         <h1>NewObjectEnvironment ( _O_, _W_, _E_ )</h1>
         <p>The abstract operation NewObjectEnvironment takes arguments _O_ (an Object), _W_ (a Boolean), and _E_ (an Environment Record or *null*). It performs the following steps when called:</p>
         <emu-alg>
-          1. Let _env_ be a new object Environment Record containing _O_ as the binding object.
-          1. Set the _withEnvironment_ flag of _env_ to _W_.
+          1. Let _env_ be a new object Environment Record.
+          1. Set _env_.[[BindingObject]] to _O_.
+          1. Set _env_.[[IsWithEnvironment]] to _W_.
           1. Set _env_.[[OuterEnv]] to _E_.
           1. Return _env_.
         </emu-alg>
