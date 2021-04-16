@@ -31,7 +31,7 @@ export function Date(...args) {
     // [[Construct]] branch
     initializeDate(this, ...args);
   } else {
-    // [[Call]] branch
+    // [[Calxxl]] branch
     return ToDateString(clockGetTime());
   }
 }
