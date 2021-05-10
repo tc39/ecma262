@@ -16874,6 +16874,9 @@
           <li>
             The SV of <emu-grammar>UnicodeEscapeSequence :: `u{` CodePoint `}`</emu-grammar> is the result of performing UTF16EncodeCodePoint on the MV of |CodePoint|.
           </li>
+          <li>
+            The SV of <emu-grammar>TemplateEscapeSequence :: `0`</emu-grammar> is the String value consisting of the code unit 0x0000 (NULL).
+          </li>
         </ul>
       </emu-clause>
 
@@ -17000,11 +17003,17 @@
 
         TemplateCharacter ::
           `$` [lookahead != `{`]
-          `\` EscapeSequence
+          `\` TemplateEscapeSequence
           `\` NotEscapeSequence
           LineContinuation
           LineTerminatorSequence
           SourceCharacter but not one of ``` or `\` or `$` or LineTerminator
+
+        TemplateEscapeSequence ::
+          CharacterEscapeSequence
+          `0` [lookahead &notin; DecimalDigit]
+          HexEscapeSequence
+          UnicodeEscapeSequence
 
         NotEscapeSequence ::
           `0` DecimalDigit
@@ -17025,7 +17034,6 @@
         CodePoint ::
           HexDigits[~Sep] [> but only if MV of |HexDigits| &le; 0x10FFFF]
       </emu-grammar>
-      <p>A conforming implementation must not use the extended definition of |EscapeSequence| described in <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref> when parsing a |TemplateCharacter|.</p>
       <emu-note>
         <p>|TemplateSubstitutionTail| is used by the |InputElementTemplateTail| alternative lexical goal.</p>
       </emu-note>
@@ -17056,7 +17064,7 @@
             The TV of <emu-grammar>TemplateCharacter :: `$`</emu-grammar> is the String value consisting of the code unit 0x0024 (DOLLAR SIGN).
           </li>
           <li>
-            The TV of <emu-grammar>TemplateCharacter :: `\` EscapeSequence</emu-grammar> is the SV of |EscapeSequence|.
+            The TV of <emu-grammar>TemplateCharacter :: `\` TemplateEscapeSequence</emu-grammar> is the SV of |TemplateEscapeSequence|.
           </li>
           <li>
             The TV of <emu-grammar>TemplateCharacter :: `\` NotEscapeSequence</emu-grammar> is *undefined*.
@@ -17096,13 +17104,13 @@
             The TRV of <emu-grammar>TemplateCharacter :: `$`</emu-grammar> is the String value consisting of the code unit 0x0024 (DOLLAR SIGN).
           </li>
           <li>
-            The TRV of <emu-grammar>TemplateCharacter :: `\` EscapeSequence</emu-grammar> is the string-concatenation of the code unit 0x005C (REVERSE SOLIDUS) and the TRV of |EscapeSequence|.
+            The TRV of <emu-grammar>TemplateCharacter :: `\` TemplateEscapeSequence</emu-grammar> is the string-concatenation of the code unit 0x005C (REVERSE SOLIDUS) and the TRV of |TemplateEscapeSequence|.
           </li>
           <li>
             The TRV of <emu-grammar>TemplateCharacter :: `\` NotEscapeSequence</emu-grammar> is the string-concatenation of the code unit 0x005C (REVERSE SOLIDUS) and the TRV of |NotEscapeSequence|.
           </li>
           <li>
-            The TRV of <emu-grammar>EscapeSequence :: `0`</emu-grammar> is the String value consisting of the code unit 0x0030 (DIGIT ZERO).
+            The TRV of <emu-grammar>TemplateEscapeSequence :: `0`</emu-grammar> is the String value consisting of the code unit 0x0030 (DIGIT ZERO).
           </li>
           <li>
             The TRV of <emu-grammar>NotEscapeSequence :: `0` DecimalDigit</emu-grammar> is the string-concatenation of the code unit 0x0030 (DIGIT ZERO) and the TRV of |DecimalDigit|.
@@ -17181,7 +17189,7 @@
           </li>
         </ul>
         <emu-note>
-          <p>TV excludes the code units of |LineContinuation| while TRV includes them. &lt;CR&gt;&lt;LF&gt; and &lt;CR&gt; |LineTerminatorSequence|s are normalized to &lt;LF&gt; for both TV and TRV. An explicit |EscapeSequence| is needed to include a &lt;CR&gt; or &lt;CR&gt;&lt;LF&gt; sequence.</p>
+          <p>TV excludes the code units of |LineContinuation| while TRV includes them. &lt;CR&gt;&lt;LF&gt; and &lt;CR&gt; |LineTerminatorSequence|s are normalized to &lt;LF&gt; for both TV and TRV. An explicit |TemplateEscapeSequence| is needed to include a &lt;CR&gt; or &lt;CR&gt;&lt;LF&gt; sequence.</p>
         </emu-note>
       </emu-clause>
     </emu-clause>
@@ -27092,7 +27100,7 @@
         When processing strict mode code, an implementation must not relax the early error rules of <emu-xref href="#sec-numeric-literals-early-errors"></emu-xref>.
       </li>
       <li>
-        |TemplateCharacter| must not be extended to include <emu-xref href="#prod-annexB-LegacyOctalEscapeSequence"></emu-xref> or <emu-xref href="#prod-annexB-NonOctalDecimalEscapeSequence"></emu-xref> as defined in <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref>.
+        |TemplateEscapeSequence| must not be extended to include <emu-xref href="#prod-annexB-LegacyOctalEscapeSequence"></emu-xref> or <emu-xref href="#prod-annexB-NonOctalDecimalEscapeSequence"></emu-xref> as defined in <emu-xref href="#sec-additional-syntax-string-literals"></emu-xref>.
       </li>
       <li>
         When processing strict mode code, the extensions defined in <emu-xref href="#sec-labelled-function-declarations"></emu-xref>, <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics"></emu-xref>, <emu-xref href="#sec-functiondeclarations-in-ifstatement-statement-clauses"></emu-xref>, and <emu-xref href="#sec-initializers-in-forin-statement-heads"></emu-xref> must not be supported.
@@ -45068,6 +45076,7 @@ THH:mm:ss.sss
     <emu-prodref name="TemplateTail"></emu-prodref>
     <emu-prodref name="TemplateCharacters"></emu-prodref>
     <emu-prodref name="TemplateCharacter"></emu-prodref>
+    <emu-prodref name="TemplateEscapeSequence"></emu-prodref>
     <emu-prodref name="NotEscapeSequence"></emu-prodref>
     <emu-prodref name="NotCodePoint"></emu-prodref>
     <emu-prodref name="CodePoint"></emu-prodref>
@@ -45419,7 +45428,7 @@ THH:mm:ss.sss
         NonOctalDecimalEscapeSequence :: one of
           `8` `9`
       </emu-grammar>
-      <p>This definition of |EscapeSequence| is not used in strict mode or when parsing |TemplateCharacter|.</p>
+      <p>This definition of |EscapeSequence| is not used in strict mode.</p>
       <emu-note>
         <p>It is possible for string literals to precede a Use Strict Directive that places the enclosing code in <emu-xref href="#sec-strict-mode-code">strict mode</emu-xref>, and implementations must take care to not use this extended definition of |EscapeSequence| with such literals. For example, attempting to parse the following source text must fail:</p>
         <pre><code class="javascript">
