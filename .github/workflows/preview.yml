@@ -1,0 +1,51 @@
+name: Upload Preview
+
+on:
+  workflow_run:
+    workflows: ["Build Preview"]
+    types:
+      - completed
+
+jobs:
+  upload:
+    name: 'upload PR preview'
+    runs-on: ubuntu-latest
+    if: >
+      ${{
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.repository == 'tc39/ecma262'
+      }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ljharb/actions/node/install@56f291b2a0d9e3bce72634356ae949b1e054b9f8
+        name: 'nvm install lts/* && npm ci'
+        with:
+          node-version: lts/*
+          use-npm-ci: true
+      - name: 'Download artifact'
+        uses: actions/github-script@v3.1.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const artifacts = await github.actions.listWorkflowRunArtifacts({
+               owner,
+               repo,
+               run_id: ${{ github.event.workflow_run.id }},
+            });
+            const { id: artifact_id } = artifacts.data.artifacts.find((artifact) => artifact.name == 'out');
+            const download = await github.actions.downloadArtifact({
+               owner,
+               repo,
+               artifact_id,
+               archive_format: 'zip',
+            });
+            const fs = require('fs');
+            fs.writeFileSync('${{ github.workspace }}/out.zip', Buffer.from(download.data));
+      - run: unzip -o out.zip -d out
+      - run: node scripts/publish-preview
+        env:
+          CI_PREVIEW_TOKEN: ${{ secrets.CI_PREVIEW_TOKEN }}
+          PULL_REQUEST: ${{ github.event.workflow_run.pull_requests['0'].number }}
+          GITHUB_HEAD_SHA: ${{ github.event.workflow_run.head_commit.id }}
