@@ -21438,7 +21438,7 @@
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-runtime-semantics-classdefinitionevaluation" type="sdo" aoid="ClassDefinitionEvaluation">
+    <emu-clause id="sec-runtime-semantics-classdefinitionevaluation" oldids="sec-default-constructor-functions" type="sdo" aoid="ClassDefinitionEvaluation">
       <h1>Runtime Semantics: ClassDefinitionEvaluation</h1>
       <p>With parameters _classBinding_ and _className_.</p>
       <emu-note>
@@ -21484,8 +21484,19 @@
         1. Set the running execution context's LexicalEnvironment to _classScope_.
         1. Set the running execution context's PrivateEnvironment to _classPrivateEnvironment_.
         1. If _constructor_ is ~empty~, then
-          1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-default-constructor-functions" title></emu-xref>.
-          1. Let _F_ be ! CreateBuiltinFunction(_steps_, 0, _className_, &laquo; [[ConstructorKind]], [[SourceText]] &raquo;, the current Realm Record, _constructorParent_).
+          1. Let _defaultConstructor_ be a new Abstract Closure with no parameters that captures nothing and performs the following steps when called:
+            1. Let _args_ be the List of arguments that was passed to this function by [[Call]] or [[Construct]].
+            1. If NewTarget is *undefined*, throw a *TypeError* exception.
+            1. Let _F_ be the active function object.
+            1. If _F_.[[ConstructorKind]] is ~derived~, then
+              1. NOTE: This branch behaves similarly to `constructor(...args) { super(...args); }`. The most notable distinction is that while the aforementioned ECMAScript source text observably calls the @@iterator method on `%Array.prototype%`, this function does not.
+              1. Let _func_ be ! _F_.[[GetPrototypeOf]]().
+              1. If IsConstructor(_func_) is *false*, throw a *TypeError* exception.
+              1. Return ? Construct(_func_, _args_, NewTarget).
+            1. Else,
+              1. NOTE: This branch behaves similarly to `constructor() {}`.
+              1. Return ? OrdinaryCreateFromConstructor(NewTarget, *"%Object.prototype%"*).
+          1. Let _F_ be ! CreateBuiltinFunction(_defaultConstructor_, 0, _className_, &laquo; [[ConstructorKind]], [[SourceText]] &raquo;, the current Realm Record, _constructorParent_).
         1. Else,
           1. Let _constructorInfo_ be ! DefineMethod of _constructor_ with arguments _proto_ and _constructorParent_.
           1. Let _F_ be _constructorInfo_.[[Closure]].
@@ -21542,24 +21553,6 @@
         1. Set the running execution context's PrivateEnvironment to _outerPrivateEnvironment_.
         1. Return _F_.
       </emu-alg>
-
-      <emu-clause id="sec-default-constructor-functions">
-        <h1>Default Constructor Functions</h1>
-        <p>When a Default Constructor Function is called with zero or more arguments which form the rest parameter ..._args_, the following steps are taken:</p>
-        <emu-alg>
-          1. If NewTarget is *undefined*, throw a *TypeError* exception.
-          1. Let _F_ be the active function object.
-          1. If _F_.[[ConstructorKind]] is ~derived~, then
-            1. NOTE: This branch behaves similarly to `constructor(...args) { super(...args); }`. The most notable distinction is that while the aforementioned ECMAScript source text observably calls the @@iterator method on `%Array.prototype%`, a Default Constructor Function does not.
-            1. Let _func_ be ! _F_.[[GetPrototypeOf]]().
-            1. If IsConstructor(_func_) is *false*, throw a *TypeError* exception.
-            1. Return ? Construct(_func_, _args_, NewTarget).
-          1. Else,
-            1. NOTE: This branch behaves similarly to `constructor() {}`.
-            1. Return ? OrdinaryCreateFromConstructor(NewTarget, *"%Object.prototype%"*).
-        </emu-alg>
-        <p>The *"length"* property of a default constructor function is *+0*<sub>𝔽</sub>.</p>
-      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-runtime-semantics-bindingclassdeclarationevaluation" type="sdo" aoid="BindingClassDeclarationEvaluation">
