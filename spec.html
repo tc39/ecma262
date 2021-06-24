@@ -3548,7 +3548,7 @@
       </emu-table>
       <p>The term &ldquo;<dfn>abrupt completion</dfn>&rdquo; refers to any completion with a [[Type]] value other than ~normal~.</p>
 
-      <emu-clause id="await" aoid="Await">
+      <emu-clause id="await" oldids="await-fulfilled,await-rejected" aoid="Await">
         <h1>Await</h1>
 
         <p>Algorithm steps that say</p>
@@ -3562,14 +3562,22 @@
         <emu-alg>
           1. Let _asyncContext_ be the running execution context.
           1. Let _promise_ be ? PromiseResolve(%Promise%, _value_).
-          1. Let _stepsFulfilled_ be the algorithm steps defined in <emu-xref href="#await-fulfilled" title></emu-xref>.
-          1. Let _lengthFulfilled_ be the number of non-optional parameters of the function definition in <emu-xref href="#await-fulfilled" title></emu-xref>.
-          1. Let _onFulfilled_ be ! CreateBuiltinFunction(_stepsFulfilled_, _lengthFulfilled_, *""*, &laquo; [[AsyncContext]] &raquo;).
-          1. Set _onFulfilled_.[[AsyncContext]] to _asyncContext_.
-          1. Let _stepsRejected_ be the algorithm steps defined in <emu-xref href="#await-rejected" title></emu-xref>.
-          1. Let _lengthRejected_ be the number of non-optional parameters of the function definition in <emu-xref href="#await-rejected" title></emu-xref>.
-          1. Let _onRejected_ be ! CreateBuiltinFunction(_stepsRejected_, _lengthRejected_, *""*, &laquo; [[AsyncContext]] &raquo;).
-          1. Set _onRejected_.[[AsyncContext]] to _asyncContext_.
+          1. Let _fulfilledClosure_ be a new Abstract Closure with parameters (_value_) that captures _asyncContext_ and performs the following steps when called:
+            1. Let _prevContext_ be the running execution context.
+            1. Suspend _prevContext_.
+            1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
+            1. Resume the suspended evaluation of _asyncContext_ using NormalCompletion(_value_) as the result of the operation that suspended it.
+            1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
+            1. Return *undefined*.
+          1. Let _onFulfilled_ be ! CreateBuiltinFunction(_fulfilledClosure_, 1, *""*, &laquo; &raquo;).
+          1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_reason_) that captures _asyncContext_ and performs the following steps when called:
+            1. Let _prevContext_ be the running execution context.
+            1. Suspend _prevContext_.
+            1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
+            1. Resume the suspended evaluation of _asyncContext_ using ThrowCompletion(_reason_) as the result of the operation that suspended it.
+            1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
+            1. Return *undefined*.
+          1. Let _onRejected_ be ! CreateBuiltinFunction(_rejectedClosure_, 1, *""*, &laquo; &raquo;).
           1. Perform ! PerformPromiseThen(_promise_, _onFulfilled_, _onRejected_).
           1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
           1. Set the code evaluation state of _asyncContext_ such that when evaluation is resumed with a Completion _completion_, the following steps of the algorithm that invoked Await will be performed, with _completion_ available.
@@ -3593,44 +3601,6 @@
             1. ReturnIfAbrupt(_result_).
           </emu-alg>
         </emu-note>
-
-        <emu-clause id="await-fulfilled">
-          <h1>Await Fulfilled Functions</h1>
-          <p>An Await fulfilled function is an anonymous built-in function that is used as part of the Await specification device to deliver the promise fulfillment value to the caller as a normal completion. Each Await fulfilled function has an [[AsyncContext]] internal slot.</p>
-          <p>When an Await fulfilled function is called with argument _value_, the following steps are taken:</p>
-
-          <emu-alg>
-            1. Let _F_ be the active function object.
-            1. Let _asyncContext_ be _F_.[[AsyncContext]].
-            1. Let _prevContext_ be the running execution context.
-            1. Suspend _prevContext_.
-            1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
-            1. Resume the suspended evaluation of _asyncContext_ using NormalCompletion(_value_) as the result of the operation that suspended it.
-            1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
-            1. Return *undefined*.
-          </emu-alg>
-
-          <p>The *"length"* property of an Await fulfilled function is *1*<sub>𝔽</sub>.</p>
-        </emu-clause>
-
-        <emu-clause id="await-rejected">
-          <h1>Await Rejected Functions</h1>
-          <p>An Await rejected function is an anonymous built-in function that is used as part of the Await specification device to deliver the promise rejection reason to the caller as an abrupt throw completion. Each Await rejected function has an [[AsyncContext]] internal slot.</p>
-          <p>When an Await rejected function is called with argument _reason_, the following steps are taken:</p>
-
-          <emu-alg>
-            1. Let _F_ be the active function object.
-            1. Let _asyncContext_ be _F_.[[AsyncContext]].
-            1. Let _prevContext_ be the running execution context.
-            1. Suspend _prevContext_.
-            1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
-            1. Resume the suspended evaluation of _asyncContext_ using ThrowCompletion(_reason_) as the result of the operation that suspended it.
-            1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
-            1. Return *undefined*.
-          </emu-alg>
-
-          <p>The *"length"* property of an Await rejected function is *1*<sub>𝔽</sub>.</p>
-        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-normalcompletion" aoid="NormalCompletion">
