@@ -38619,17 +38619,20 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-newpromisecapability" aoid="NewPromiseCapability">
+      <emu-clause id="sec-newpromisecapability" oldids="sec-getcapabilitiesexecutor-functions" aoid="NewPromiseCapability">
         <h1>NewPromiseCapability ( _C_ )</h1>
         <p>The abstract operation NewPromiseCapability takes argument _C_. It attempts to use _C_ as a constructor in the fashion of the built-in Promise constructor to create a Promise object and extract its `resolve` and `reject` functions. The Promise object plus the `resolve` and `reject` functions are used to initialize a new PromiseCapability Record. It performs the following steps when called:</p>
         <emu-alg>
           1. If IsConstructor(_C_) is *false*, throw a *TypeError* exception.
           1. NOTE: _C_ is assumed to be a constructor function that supports the parameter conventions of the Promise constructor (see <emu-xref href="#sec-promise-executor"></emu-xref>).
           1. Let _promiseCapability_ be the PromiseCapability Record { [[Promise]]: *undefined*, [[Resolve]]: *undefined*, [[Reject]]: *undefined* }.
-          1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-getcapabilitiesexecutor-functions" title></emu-xref>.
-          1. Let _length_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-getcapabilitiesexecutor-functions" title></emu-xref>.
-          1. Let _executor_ be ! CreateBuiltinFunction(_steps_, _length_, *""*, &laquo; [[Capability]] &raquo;).
-          1. Set _executor_.[[Capability]] to _promiseCapability_.
+          1. Let _executorClosure_ be a new Abstract Closure with parameters (_resolve_, _reject_) that captures _promiseCapability_ and performs the following steps when called:
+            1. If _promiseCapability_.[[Resolve]] is not *undefined*, throw a *TypeError* exception.
+            1. If _promiseCapability_.[[Reject]] is not *undefined*, throw a *TypeError* exception.
+            1. Set _promiseCapability_.[[Resolve]] to _resolve_.
+            1. Set _promiseCapability_.[[Reject]] to _reject_.
+            1. Return *undefined*.
+          1. Let _executor_ be ! CreateBuiltinFunction(_executorClosure_, 2, *""*, &laquo; &raquo;).
           1. Let _promise_ be ? Construct(_C_, &laquo; _executor_ &raquo;).
           1. If IsCallable(_promiseCapability_.[[Resolve]]) is *false*, throw a *TypeError* exception.
           1. If IsCallable(_promiseCapability_.[[Reject]]) is *false*, throw a *TypeError* exception.
@@ -38639,23 +38642,6 @@ THH:mm:ss.sss
         <emu-note>
           <p>This abstract operation supports Promise subclassing, as it is generic on any constructor that calls a passed executor function argument in the same way as the Promise constructor. It is used to generalize static methods of the Promise constructor to any subclass.</p>
         </emu-note>
-
-        <emu-clause id="sec-getcapabilitiesexecutor-functions">
-          <h1>GetCapabilitiesExecutor Functions</h1>
-          <p>A GetCapabilitiesExecutor function is an anonymous built-in function that has a [[Capability]] internal slot.</p>
-          <p>When a GetCapabilitiesExecutor function is called with arguments _resolve_ and _reject_, the following steps are taken:</p>
-          <emu-alg>
-            1. Let _F_ be the active function object.
-            1. Assert: _F_ has a [[Capability]] internal slot whose value is a PromiseCapability Record.
-            1. Let _promiseCapability_ be _F_.[[Capability]].
-            1. If _promiseCapability_.[[Resolve]] is not *undefined*, throw a *TypeError* exception.
-            1. If _promiseCapability_.[[Reject]] is not *undefined*, throw a *TypeError* exception.
-            1. Set _promiseCapability_.[[Resolve]] to _resolve_.
-            1. Set _promiseCapability_.[[Reject]] to _reject_.
-            1. Return *undefined*.
-          </emu-alg>
-          <p>The *"length"* property of a GetCapabilitiesExecutor function is *2*<sub>𝔽</sub>.</p>
-        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-ispromise" aoid="IsPromise">
