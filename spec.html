@@ -830,7 +830,12 @@
         <p>In the above:</p>
         <ul>
           <li>_seq_ is a sequence of terminal symbols from the production's grammar; and</li>
-          <li>_set_ is a finite non-empty set of terminal sequences. For convenience, _set_ can also be written as a nonterminal from the production's grammar, in which case it represents the set of all terminal sequences to which that nonterminal could expand. It is considered an editorial error if the nonterminal could expand to infinitely many distinct terminal sequences.</li>
+          <li>_set_ is either:
+            <ul>
+              <li>an explicit non-empty set of terminal sequences. In the syntactic grammar, such a sequence can also include a "[no LineTerminator here]" phrase.</li>
+              <li>a non-empty sequence of symbols from the production's grammar, including one nonterminal. This sequence represents the set of all terminal sequences to which that sequence could expand. In the syntactic grammar, it is considered an editorial error if the nonterminal could expand to infinitely many distinct terminal sequences. In other grammars, it is considered an editorial error if the nonterminal's expansion is not a regular set (i.e., if it isn't equivalent to a regular expression over code points).</li>
+            </ul>
+          </li>
         </ul>
         <p>As an example, given the definitions:</p>
         <emu-grammar type="definition" example>
@@ -50315,7 +50320,7 @@ THH:mm:ss.sss
 
     <emu-annex id="sec-regular-expressions-patterns">
       <h1>Regular Expressions Patterns</h1>
-      <p>The syntax of <emu-xref href="#sec-patterns"></emu-xref> is modified and extended as follows. These changes introduce ambiguities that are broken by the ordering of grammar productions and by contextual information. When parsing using the following grammar, each alternative is considered only if previous production alternatives do not match.</p>
+      <p>The syntax of <emu-xref href="#sec-patterns"></emu-xref> is modified and extended as follows.</p>
       <p>This alternative pattern grammar and semantics only changes the syntax and semantics of BMP patterns. The following grammar extensions include productions parameterized with the [UnicodeMode] parameter. However, none of these extensions change the syntax of Unicode patterns recognized when parsing with the [UnicodeMode] parameter present on the goal symbol.</p>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
@@ -50345,13 +50350,13 @@ THH:mm:ss.sss
 
         ExtendedAtom[NamedCaptureGroups] ::
           `.`
-          `\` AtomEscape[~UnicodeMode, ?NamedCaptureGroups]
-          `\` [lookahead == `c`]
+          `\` [lookahead &notin; { `b`, `B` }] AtomEscape[~UnicodeMode, ?NamedCaptureGroups]
+          `\` [lookahead == `c`] [lookahead != `c` AsciiLetter]
           CharacterClass[~UnicodeMode, ~UnicodeSetsMode]
           `(` GroupSpecifier[~UnicodeMode]? Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?NamedCaptureGroups] `)`
           `(?:` Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?NamedCaptureGroups] `)`
           InvalidBracedQuantifier
-          ExtendedPatternCharacter
+          [lookahead &notin; InvalidBracedQuantifier] ExtendedPatternCharacter
 
         InvalidBracedQuantifier ::
           `{` DecimalDigits[~Sep] `}`
@@ -50363,10 +50368,14 @@ THH:mm:ss.sss
 
         AtomEscape[UnicodeMode, NamedCaptureGroups] ::
           [+UnicodeMode] DecimalEscape
-          [~UnicodeMode] DecimalEscape [> but only if the CapturingGroupNumber of |DecimalEscape| is &le; CountLeftCapturingParensWithin(the |Pattern| containing |DecimalEscape|)]
+          [~UnicodeMode] ConstrainedDecimalEscape
           CharacterClassEscape[?UnicodeMode]
-          CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
+          [+UnicodeMode] CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
+          [~UnicodeMode] [lookahead &notin; ConstrainedDecimalEscape] CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
           [+NamedCaptureGroups] `k` GroupName[?UnicodeMode]
+
+        ConstrainedDecimalEscape ::
+          DecimalEscape [> but only if the CapturingGroupNumber of |DecimalEscape| is &le; CountLeftCapturingParensWithin(the |Pattern| containing |DecimalEscape|)]
 
         CharacterEscape[UnicodeMode, NamedCaptureGroups] ::
           ControlEscape
@@ -50375,7 +50384,7 @@ THH:mm:ss.sss
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?UnicodeMode]
           [~UnicodeMode] LegacyOctalEscapeSequence
-          IdentityEscape[?UnicodeMode, ?NamedCaptureGroups]
+          [lookahead &notin; HexEscapeSequence] [lookahead &notin; RegExpUnicodeEscapeSequence] IdentityEscape[?UnicodeMode, ?NamedCaptureGroups]
 
         IdentityEscape[UnicodeMode, NamedCaptureGroups] ::
           [+UnicodeMode] SyntaxCharacter
@@ -50383,20 +50392,23 @@ THH:mm:ss.sss
           [~UnicodeMode] SourceCharacterIdentityEscape[?NamedCaptureGroups]
 
         SourceCharacterIdentityEscape[NamedCaptureGroups] ::
-          [~NamedCaptureGroups] SourceCharacter but not `c`
-          [+NamedCaptureGroups] SourceCharacter but not one of `c` or `k`
+          [~NamedCaptureGroups] SourceCharacter but not one of `0` `1` `2` `3` `4` `5` `6` `7` `c` `f` `n` `r` `t` `v` `d` `s` `w` `D` `S` `W`
+          [+NamedCaptureGroups] SourceCharacter but not one of `0` `1` `2` `3` `4` `5` `6` `7` `c` `f` `n` `r` `t` `v` `d` `s` `w` `D` `S` `W` `k`
+          `or`
+          [~NamedCaptureGroups] SourceCharacter but not one of OctalDigit or ControlEscape or CharacterClassEscape or `c`
+          [+NamedCaptureGroups] SourceCharacter but not one of OctalDigit or ControlEscape or CharacterClassEscape or `c` or `k`
 
         ClassAtomNoDash[UnicodeMode, NamedCaptureGroups] ::
           SourceCharacter but not one of `\` or `]` or `-`
           `\` ClassEscape[?UnicodeMode, ?NamedCaptureGroups]
-          `\` [lookahead == `c`]
+          `\` [lookahead == `c`] [lookahead != `c` ClassControlLetter] [lookahead != `c` AsciiLetter]
 
         ClassEscape[UnicodeMode, NamedCaptureGroups] ::
           `b`
           [+UnicodeMode] `-`
           [~UnicodeMode] `c` ClassControlLetter
           CharacterClassEscape[?UnicodeMode]
-          CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
+          [lookahead != `b`] CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
 
         ClassControlLetter ::
           DecimalDigit
