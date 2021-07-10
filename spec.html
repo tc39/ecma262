@@ -4458,53 +4458,68 @@
           </ul>
         </emu-note>
 
-        <emu-clause id="sec-runtime-semantics-mv-s">
-          <h1>Runtime Semantics: MV</h1>
-          <p>The conversion of a String to a Number value is similar overall to the determination of the Number value for a numeric literal (see <emu-xref href="#sec-literals-numeric-literals"></emu-xref>), but some of the details are different, so the process for converting a String numeric literal to a value of Number type is given here. This value is determined in two steps: first, a mathematical value (MV) is derived from the String numeric literal; second, this mathematical value is rounded as described below. The MV on any grammar symbol, not provided below, is the MV for that symbol defined in <emu-xref href="#sec-static-semantics-mv"></emu-xref>.</p>
-          <ul>
-            <li>
-              The MV of <emu-grammar>StringNumericLiteral ::: [empty]</emu-grammar> is 0.
-            </li>
-            <li>
-              The MV of <emu-grammar>StringNumericLiteral ::: StrWhiteSpace</emu-grammar> is 0.
-            </li>
-            <li>
-              The MV of <emu-grammar>StringNumericLiteral ::: StrWhiteSpace? StrNumericLiteral StrWhiteSpace?</emu-grammar> is the MV of |StrNumericLiteral|, no matter whether white space is present or not.
-            </li>
-            <li>
-              The MV of <emu-grammar>StrDecimalLiteral ::: `-` StrUnsignedDecimalLiteral</emu-grammar> is the negative of the MV of |StrUnsignedDecimalLiteral|. (Note that if the MV of |StrUnsignedDecimalLiteral| is 0, the negative of this MV is also 0. The rounding rule described below handles the conversion of this signless mathematical zero to a floating-point *+0*<sub>𝔽</sub> or *-0*<sub>𝔽</sub> as appropriate.)
-            </li>
-            <li>
-              The MV of <emu-grammar>StrUnsignedDecimalLiteral ::: `Infinity`</emu-grammar> is 10<sup>10000</sup> (a value so large that it will round to *+&infin;*<sub>𝔽</sub>).
-            </li>
-            <li>
-              The MV of <emu-grammar>StrUnsignedDecimalLiteral ::: DecimalDigits `.` DecimalDigits</emu-grammar> is the MV of the first |DecimalDigits| plus (the MV of the second |DecimalDigits| times 10<sup>-_n_</sup>), where _n_ is the number of code points in the second |DecimalDigits|.
-            </li>
-            <li>
-              The MV of <emu-grammar>StrUnsignedDecimalLiteral ::: DecimalDigits `.` ExponentPart</emu-grammar> is the MV of |DecimalDigits| times 10<sup>_e_</sup>, where _e_ is the MV of |ExponentPart|.
-            </li>
-            <li>
-              The MV of <emu-grammar>StrUnsignedDecimalLiteral ::: DecimalDigits `.` DecimalDigits ExponentPart</emu-grammar> is (the MV of the first |DecimalDigits| plus (the MV of the second |DecimalDigits| times 10<sup>-_n_</sup>)) times 10<sup>_e_</sup>, where _n_ is the number of code points in the second |DecimalDigits| and _e_ is the MV of |ExponentPart|.
-            </li>
-            <li>
-              The MV of <emu-grammar>StrUnsignedDecimalLiteral ::: `.` DecimalDigits</emu-grammar> is the MV of |DecimalDigits| times 10<sup>-_n_</sup>, where _n_ is the number of code points in |DecimalDigits|.
-            </li>
-            <li>
-              The MV of <emu-grammar>StrUnsignedDecimalLiteral ::: `.` DecimalDigits ExponentPart</emu-grammar> is the MV of |DecimalDigits| times 10<sup>_e_ - _n_</sup>, where _n_ is the number of code points in |DecimalDigits| and _e_ is the MV of |ExponentPart|.
-            </li>
-            <li>
-              The MV of <emu-grammar>StrUnsignedDecimalLiteral ::: DecimalDigits ExponentPart</emu-grammar> is the MV of |DecimalDigits| times 10<sup>_e_</sup>, where _e_ is the MV of |ExponentPart|.
-            </li>
-          </ul>
-          <p>Once the exact MV for a String numeric literal has been determined, it is then rounded to a value of the Number type. If the MV is 0, then the rounded value is *+0*<sub>𝔽</sub> unless the first non white space code point in the String numeric literal is `-`, in which case the rounded value is *-0*<sub>𝔽</sub>. Otherwise, the rounded value must be the Number value for the MV (in the sense defined in <emu-xref href="#sec-ecmascript-language-types-number-type"></emu-xref>), unless the literal includes a |StrUnsignedDecimalLiteral| and the literal has more than 20 significant digits, in which case the Number value may be either the Number value for the MV of a literal produced by replacing each significant digit after the 20th with a 0 digit or the Number value for the MV of a literal produced by replacing each significant digit after the 20th with a 0 digit and then incrementing the literal at the 20th digit position. A digit is significant if it is not part of an |ExponentPart| and</p>
-          <ul>
-            <li>
-              it is not `0`; or
-            </li>
-            <li>
-              there is a non-zero digit to its left and there is a non-zero digit, not in the |ExponentPart|, to its right.
-            </li>
-          </ul>
+        <emu-clause id="sec-runtime-semantics-stringnumericvalue" type="sdo" aoid="StringNumericValue" oldids="sec-runtime-semantics-mv-s">
+          <h1>Runtime Semantics: StringNumericValue</h1>
+          <p>The conversion of a String to a Number value is similar overall to the determination of the Number value for a numeric literal (see <emu-xref href="#sec-literals-numeric-literals"></emu-xref>), but some of the details are different, so the process for converting a String numeric literal to a value of the Number type is given here.</p>
+          <emu-grammar>StringNumericLiteral ::: StrWhiteSpace?</emu-grammar>
+          <emu-alg>
+            1. Return *+0*<sub>𝔽</sub>.
+          </emu-alg>
+          <emu-grammar>StringNumericLiteral ::: StrWhiteSpace? StrNumericLiteral StrWhiteSpace?</emu-grammar>
+          <emu-alg>
+            1. Return StringNumericValue of |StrNumericLiteral|.
+          </emu-alg>
+          <emu-grammar>StrNumericLiteral ::: NonDecimalIntegerLiteral</emu-grammar>
+          <emu-alg>
+            1. Return 𝔽(MV of |NonDecimalIntegerLiteral|).
+          </emu-alg>
+          <emu-grammar>StrDecimalLiteral ::: `-` StrUnsignedDecimalLiteral</emu-grammar>
+          <emu-alg>
+            1. Let _a_ be StringNumericValue of |StrUnsignedDecimalLiteral|.
+            1. If _a_ is *+0*<sub>𝔽</sub>, return *-0*<sub>𝔽</sub>.
+            1. Return -_a_.
+          </emu-alg>
+          <emu-grammar>StrUnsignedDecimalLiteral ::: `Infinity`</emu-grammar>
+          <emu-alg>
+            1. Return *+&infin;*<sub>𝔽</sub>.
+          </emu-alg>
+          <emu-grammar>StrUnsignedDecimalLiteral ::: DecimalDigits `.` DecimalDigits? ExponentPart?</emu-grammar>
+          <emu-alg>
+            1. Let _a_ be MV of the first |DecimalDigits|.
+            1. If the second |DecimalDigits| is present, then
+              1. Let _b_ be MV of the second |DecimalDigits|.
+              1. Let _n_ be the number of code points in the second |DecimalDigits|.
+            1. Else,
+              1. Let _b_ be 0.
+              1. Let _n_ be 0.
+            1. If |ExponentPart| is present, let _e_ be MV of |ExponentPart|. Otherwise, let _e_ be 0.
+            1. Return RoundMVResult((_a_ + (_b_ &times; 10<sup>-_n_</sup>)) &times; 10<sup>_e_</sup>).
+          </emu-alg>
+          <emu-grammar>StrUnsignedDecimalLiteral ::: `.` DecimalDigits ExponentPart?</emu-grammar>
+          <emu-alg>
+            1. Let _b_ be MV of |DecimalDigits|.
+            1. If |ExponentPart| is present, let _e_ be MV of |ExponentPart|. Otherwise, let _e_ be 0.
+            1. Let _n_ be the number of code points in |DecimalDigits|.
+            1. Return RoundMVResult(_b_ &times; 10<sup>_e_ - _n_</sup>).
+          </emu-alg>
+          <emu-grammar>StrUnsignedDecimalLiteral ::: DecimalDigits ExponentPart?</emu-grammar>
+          <emu-alg>
+            1. Let _a_ be MV of |DecimalDigits|.
+            1. If |ExponentPart| is present, let _e_ be MV of |ExponentPart|. Otherwise, let _e_ be 0.
+            1. Return RoundMVResult(_a_ &times; 10<sup>_e_</sup>).
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-roundmvresult" aoid="RoundMVResult">
+          <h1>RoundMVResult ( _n_ )</h1>
+          <p>The abstract operation RoundMVResult takes argument _n_ (a mathematical value). It converts _n_ to a Number in an implementation-defined manner. For the purposes of this abstract operation, a digit is significant if it is not zero or there is a non-zero digit to its left and there is a non-zero digit to its right. For the purposes of this abstract operation, "the mathematical value denoted by" a representation of a mathematical value is the inverse of "the decimal representation of" a mathematical value. It performs the following steps when called:</p>
+          <emu-alg>
+            1. If the decimal representation of _n_ has 20 or fewer significant digits, return 𝔽(_n_).
+            1. Let _option1_ be the mathematical value denoted by the result of replacing each significant digit in the decimal representation of _n_ after the 20th with a 0 digit.
+            1. Let _option2_ be the mathematical value denoted by the result of replacing each significant digit in the decimal representation of _n_ after the 20th with a 0 digit and then incrementing it at the 20th position (with carrying as necessary).
+            1. Let _chosen_ be an implementation-defined choice of either _option1_ or _option2_.
+            1. Return 𝔽(_chosen_).
+          </emu-alg>
         </emu-clause>
       </emu-clause>
     </emu-clause>
@@ -14183,22 +14198,12 @@
         <h1>Static Semantics: NumericValue</h1>
         <emu-grammar>NumericLiteral :: DecimalLiteral</emu-grammar>
         <emu-alg>
-          1. Return the Number value that results from rounding the MV of |DecimalLiteral| as described below.
+          1. Return RoundMVResult(MV of |DecimalLiteral|).
         </emu-alg>
         <emu-grammar>NumericLiteral :: NonDecimalIntegerLiteral</emu-grammar>
         <emu-alg>
-          1. Return the Number value that results from rounding the MV of |NonDecimalIntegerLiteral| as described below.
+          1. Return 𝔽(MV of |NonDecimalIntegerLiteral|).
         </emu-alg>
-        <p>Once the exact MV for a numeric literal has been determined, it is then rounded to a value of the Number type. If the MV is 0, then the rounded value is *+0*<sub>𝔽</sub>; otherwise, the rounded value must be the Number value for the MV (as specified in <emu-xref href="#sec-ecmascript-language-types-number-type"></emu-xref>), unless the literal is a |DecimalLiteral| and the literal has more than 20 significant digits, in which case the Number value may be either the Number value for the MV of a literal produced by replacing each significant digit after the 20th with a `0` digit or the Number value for the MV of a literal produced by replacing each significant digit after the 20th with a `0` digit and then incrementing the literal at the 20th significant digit position. A digit is <em>significant</em> if it is not part of an |ExponentPart| and</p>
-        <ul>
-          <li>
-            it is not `0`; or
-          </li>
-          <li>
-            there is a non-zero digit to its left and there is a non-zero digit, not in the |ExponentPart|, to its right.
-          </li>
-        </ul>
-
         <emu-grammar>NumericLiteral :: NonDecimalIntegerLiteral BigIntLiteralSuffix</emu-grammar>
         <emu-alg>
           1. Return the BigInt value that represents the MV of |NonDecimalIntegerLiteral|.
@@ -24689,11 +24694,9 @@
         1. Let _trimmedString_ be ! TrimString(_inputString_, ~start~).
         1. If neither _trimmedString_ nor any prefix of _trimmedString_ satisfies the syntax of a |StrDecimalLiteral| (see <emu-xref href="#sec-tonumber-applied-to-the-string-type"></emu-xref>), return *NaN*.
         1. Let _numberString_ be the longest prefix of _trimmedString_, which might be _trimmedString_ itself, that satisfies the syntax of a |StrDecimalLiteral|.
-        1. Let _mathFloat_ be MV of _numberString_.
-        1. If _mathFloat_ = 0, then
-          1. If the first code unit of _trimmedString_ is the code unit 0x002D (HYPHEN-MINUS), return *-0*<sub>𝔽</sub>.
-          1. Return *+0*<sub>𝔽</sub>.
-        1. Return 𝔽(_mathFloat_).
+        1. Let _parsedNumber_ be ParseText(! StringToCodePoints(_numberString_), |StrDecimalLiteral|).
+        1. Assert: _parsedNumber_ is a Parse Node.
+        1. Return StringNumericValue of _parsedNumber_.
       </emu-alg>
       <emu-note>
         <p>`parseFloat` may interpret only a leading portion of _string_ as a Number value; it ignores any code units that cannot be interpreted as part of the notation of a decimal literal, and no indication is given that any such code units were ignored.</p>
