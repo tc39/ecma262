@@ -14523,9 +14523,21 @@
           1. If Type(_P_) is Symbol, return OrdinaryGetOwnProperty(_O_, _P_).
           1. Let _exports_ be _O_.[[Exports]].
           1. If _P_ is not an element of _exports_, return *undefined*.
-          1. Let _value_ be ? _O_.[[Get]](_P_, _O_).
+          1. Let _m_ be _O_.[[Module]].
+          1. Let _binding_ be ! _m_.ResolveExport(_P_).
+          1. Assert: _binding_ is a ResolvedBinding Record.
+          1. Let _targetModule_ be _binding_.[[Module]].
+          1. Assert: _targetModule_ is not *undefined*.
+          1. If _binding_.[[BindingName]] is *"\*namespace\*"*, then
+            1. Return ? GetModuleNamespace(_targetModule_).
+          1. Let _targetEnv_ be _targetModule_.[[Environment]].
+          1. If _targetEnv_ is *undefined*, throw a *ReferenceError* exception.
+          1. Let _value_ be ? _targetEnv_.GetBindingValue(_binding_.[[BindingName]], *true*).
           1. Return PropertyDescriptor { [[Value]]: _value_, [[Writable]]: *true*, [[Enumerable]]: *true*, [[Configurable]]: *false* }.
         </emu-alg>
+        <emu-note>
+          <p>ResolveExport is side-effect free. Each time this operation is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result. An implementation might choose to pre-compute or cache the ResolveExport results for the [[Exports]] of each module namespace exotic object.</p>
+        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-module-namespace-exotic-objects-defineownproperty-p-desc" type="internal method">
@@ -14583,23 +14595,13 @@
         </dl>
         <emu-alg>
           1. Assert: IsPropertyKey(_P_) is *true*.
-          1. If Type(_P_) is Symbol, then
-            1. Return ? OrdinaryGet(_O_, _P_, _Receiver_).
-          1. Let _exports_ be _O_.[[Exports]].
-          1. If _P_ is not an element of _exports_, return *undefined*.
-          1. Let _m_ be _O_.[[Module]].
-          1. Let _binding_ be ! _m_.ResolveExport(_P_).
-          1. Assert: _binding_ is a ResolvedBinding Record.
-          1. Let _targetModule_ be _binding_.[[Module]].
-          1. Assert: _targetModule_ is not *undefined*.
-          1. If _binding_.[[BindingName]] is *"\*namespace\*"*, then
-            1. Return ? GetModuleNamespace(_targetModule_).
-          1. Let _targetEnv_ be _targetModule_.[[Environment]].
-          1. If _targetEnv_ is *undefined*, throw a *ReferenceError* exception.
-          1. Return ? _targetEnv_.GetBindingValue(_binding_.[[BindingName]], *true*).
+          1. Let _desc_ be ? _O_.[[GetOwnProperty]](_P_).
+          1. If _desc_ is *undefined*, return *undefined*.
+          1. Assert: ! IsDataDescriptor(_desc_) is *true*.
+          1. Return _desc_.[[Value]].
         </emu-alg>
         <emu-note>
-          <p>ResolveExport is side-effect free. Each time this operation is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result. An implementation might choose to pre-compute or cache the ResolveExport results for the [[Exports]] of each module namespace exotic object.</p>
+          <p>This method is just OrdinaryGet with irrelevant steps omitted.</p>
         </emu-note>
       </emu-clause>
 
