@@ -169,7 +169,10 @@
     <p>An <dfn id="implementation-defined">implementation-defined</dfn> facility is one that defers its definition to an external source without further qualification. This specification does not make any recommendations for particular behaviours, and conforming implementations are free to choose any behaviour within the constraints put forth by this specification.</p>
     <p>An <dfn id="implementation-approximated">implementation-approximated</dfn> facility is one that defers its definition to an external source while recommending an ideal behaviour. While conforming implementations are free to choose any behaviour within the constraints put forth by this specification, they are encouraged to strive to approximate the ideal. Some mathematical operations, such as <emu-xref href="#sec-math.exp"><code>Math.exp</code></emu-xref>, are implementation-approximated.</p>
     <p>A <dfn id="host">host</dfn> is an external source that further defines facilities listed in Annex <emu-xref href="#sec-host-layering-points"></emu-xref> but does not further define other implementation-defined or implementation-approximated facilities. In informal use, a host refers to the set of all implementations, such as the set of all web browsers, that interface with this specification in the same way via Annex <emu-xref href="#sec-host-layering-points"></emu-xref>. A host is often an external specification, such as WHATWG HTML (<a href="https://html.spec.whatwg.org/">https://html.spec.whatwg.org/</a>). In other words, facilities that are host-defined are often further defined in external specifications.</p>
-    <p>A <dfn id="host-hook">host hook</dfn> is an abstract operation that is defined in whole or in part by an external source. All host hooks must be listed in Annex <emu-xref href="#sec-host-layering-points"></emu-xref>.</p>
+    <p>A <dfn id="host-hook">host hook</dfn> is an abstract operation that is defined in whole or in part by an external source. All host hooks must be listed in Annex <emu-xref href="#sec-host-layering-points"></emu-xref>. A host hook must conform to at least the following requirements:</p>
+    <ul>
+      <li>It must return either a normal completion or a throw completion.</li>
+    </ul>
     <p>A <dfn id="host-defined">host-defined</dfn> facility is one that defers its definition to an external source without further qualification and is listed in Annex <emu-xref href="#sec-host-layering-points"></emu-xref>. Implementations that are not hosts may also provide definitions for host-defined facilities.</p>
     <p>A <dfn id="host-environment">host environment</dfn> is a particular choice of definition for all host-defined facilities. A host environment typically includes objects or functions which allow obtaining input and providing output as host-defined properties of the global object.</p>
     <p>This specification follows the editorial convention of always using the most specific term. For example, if a facility is host-defined, it should not be referred to as implementation-defined.</p>
@@ -3835,7 +3838,15 @@
           </tbody>
         </table>
       </emu-table>
-      <p>The term &ldquo;<dfn>abrupt completion</dfn>&rdquo; refers to any completion with a [[Type]] value other than ~normal~.</p>
+      <p>The following shorthand terms are sometimes used to refer to completions.</p>
+      <ul>
+        <li><dfn>normal completion</dfn> refers to any completion with a [[Type]] value of ~normal~.</li>
+        <li><dfn>break completion</dfn> refers to any completion with a [[Type]] value of ~break~.</li>
+        <li><dfn>continue completion</dfn> refers to any completion with a [[Type]] value of ~continue~.</li>
+        <li><dfn>return completion</dfn> refers to any completion with a [[Type]] value of ~return~.</li>
+        <li><dfn>throw completion</dfn> refers to any completion with a [[Type]] value of ~throw~.</li>
+        <li><dfn>abrupt completion</dfn> refers to any completion with a [[Type]] value other than ~normal~.</li>
+      </ul>
       <p>Callable objects that are defined in this specification only return a normal completion or a throw completion. Returning any other kind of completion is considered an editorial error.</p>
       <p>Implementation-defined callable objects must return either a normal completion or a throw completion.</p>
 
@@ -11662,10 +11673,9 @@
       </h1>
       <dl class="header">
       </dl>
-      <p>The implementation of HostMakeJobCallback must conform to the following requirements:</p>
+      <p>An implementation of HostMakeJobCallback must conform to the following requirements:</p>
       <ul>
-        <li>It must always complete normally (i.e., not return an abrupt completion).</li>
-        <li>It must always return a JobCallback Record whose [[Callback]] field is _callback_.</li>
+        <li>It must complete normally with a JobCallback Record whose [[Callback]] field is _callback_.</li>
       </ul>
       <p>The default implementation of HostMakeJobCallback performs the following steps when called:</p>
       <emu-alg>
@@ -11688,9 +11698,9 @@
       </h1>
       <dl class="header">
       </dl>
-      <p>The implementation of HostCallJobCallback must conform to the following requirements:</p>
+      <p>An implementation of HostCallJobCallback must conform to the following requirements:</p>
       <ul>
-        <li>It must always perform and return the result of Call(_jobCallback_.[[Callback]], _V_, _argumentsList_).</li>
+        <li>It must perform and return the result of Call(_jobCallback_.[[Callback]], _V_, _argumentsList_).</li>
       </ul>
       <emu-note>
         <p>This requirement means that hosts cannot change the [[Call]] behaviour of function objects defined in this specification.</p>
@@ -11715,7 +11725,7 @@
         <dd>It schedules _job_ to be performed at some future time. The Abstract Closures used with this algorithm are intended to be related to the handling of Promises, or otherwise, to be scheduled with equal priority to Promise handling operations.</dd>
       </dl>
 
-      <p>The implementation of HostEnqueuePromiseJob must conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref> as well as the following:</p>
+      <p>An implementation of HostEnqueuePromiseJob must conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref> as well as the following:</p>
       <ul>
         <li>If _realm_ is not *null*, each time _job_ is invoked the implementation must perform implementation-defined steps such that execution is <emu-xref href="#job-preparedtoevaluatecode">prepared to evaluate ECMAScript code</emu-xref> at the time of _job_'s invocation.</li>
         <li>Let _scriptOrModule_ be GetActiveScriptOrModule() at the time HostEnqueuePromiseJob is invoked. If _realm_ is not *null*, each time _job_ is invoked the implementation must perform implementation-defined steps such that _scriptOrModule_ is the <emu-xref href="#job-activescriptormodule">active script or module</emu-xref> at the time of _job_'s invocation.</li>
@@ -12020,16 +12030,21 @@
     <emu-clause id="sec-weakref-host-hooks">
       <h1>Host Hooks</h1>
 
-      <emu-clause id="sec-host-cleanup-finalization-registry" type="abstract operation">
+      <emu-clause id="sec-host-cleanup-finalization-registry" type="host-defined abstract operation">
         <h1>
           HostEnqueueFinalizationRegistryCleanupJob (
             _finalizationRegistry_: a FinalizationRegistry,
           )
         </h1>
         <dl class="header">
-          <dt>description</dt>
-          <dd>HostEnqueueFinalizationRegistryCleanupJob is an implementation-defined abstract operation that is expected to call CleanupFinalizationRegistry(_finalizationRegistry_) at some point in the future, if possible. The host's responsibility is to make this call at a time which does not interrupt synchronous ECMAScript code execution.</dd>
         </dl>
+        <p>Let _cleanupJob_ be a new Job Abstract Closure with no parameters that captures _finalizationRegistry_ and performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _cleanupResult_ be CleanupFinalizationRegistry(_finalizationRegistry_).
+          1. If _cleanupResult_ is an abrupt completion, perform any host-defined steps for reporting the error.
+          1. Return NormalCompletion(~empty~).
+        </emu-alg>
+        <p>An implementation of HostEnqueueFinalizationRegistryCleanupJob schedules _cleanupJob_ to be performed at some future time, if possible. It must also conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref>.</p>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -12078,7 +12093,7 @@
         1. Choose any such _cell_.
         1. Remove _cell_ from _finalizationRegistry_.[[Cells]].
         1. Perform ? HostCallJobCallback(_callback_, *undefined*, &laquo; _cell_.[[HeldValue]] &raquo;).
-      1. Return NormalCompletion(*undefined*).
+      1. Return NormalCompletion(~empty~).
     </emu-alg>
   </emu-clause>
 </emu-clause>
@@ -18913,15 +18928,14 @@
             <dd>It allows hosts to provide property keys and values for the object returned from `import.meta`.</dd>
           </dl>
 
-          <p>The implementation of HostGetImportMetaProperties must conform to the following requirements:</p>
+          <p>An implementation of HostGetImportMetaProperties must conform to the following requirements:</p>
           <ul>
-            <li>It must return a List, whose values are all Records with two fields, [[Key]] and [[Value]].</li>
+            <li>It must return a normal completion with a value of a List whose values are all Records with two fields, [[Key]] and [[Value]].</li>
             <li>Each such Record's [[Key]] field must be a property key, i.e., IsPropertyKey must return *true* when applied to it.</li>
             <li>Each such Record's [[Value]] field must be an ECMAScript value.</li>
-            <li>It must always complete normally (i.e., not return an abrupt completion).</li>
           </ul>
 
-          <p>The default implementation of HostGetImportMetaProperties is to return a new empty List.</p>
+          <p>The default implementation of HostGetImportMetaProperties is to return NormalCompletion(&laquo; &raquo;).</p>
         </emu-clause>
 
         <emu-clause id="sec-hostfinalizeimportmeta" type="host-defined abstract operation">
@@ -18938,9 +18952,9 @@
 
           <p>Most hosts will be able to simply define HostGetImportMetaProperties, and leave HostFinalizeImportMeta with its default behaviour. However, HostFinalizeImportMeta provides an "escape hatch" for hosts which need to directly manipulate the object before it is exposed to ECMAScript code.</p>
 
-          <p>The implementation of HostFinalizeImportMeta must conform to the following requirements:</p>
+          <p>An implementation of HostFinalizeImportMeta must conform to the following requirements:</p>
           <ul>
-            <li>It must always complete normally (i.e., not return an abrupt completion).</li>
+            <li>It must complete normally (i.e., not return an abrupt completion).</li>
           </ul>
 
           <p>The default implementation of HostFinalizeImportMeta is to return NormalCompletion(~empty~).</p>
@@ -26289,10 +26303,10 @@
           <p>there will be no active script or module at the time the <emu-xref href="#sec-import-calls">`import()`</emu-xref> expression runs. More generally, this can happen in any situation where the host pushes execution contexts with *null* ScriptOrModule components onto the execution context stack.</p>
         </emu-note>
 
-        <p>The implementation of HostResolveImportedModule must conform to the following requirements:</p>
+        <p>An implementation of HostResolveImportedModule must conform to the following requirements:</p>
         <ul>
           <li>
-            The normal return value must be an instance of a concrete subclass of Module Record.
+            If it completes normally, the [[Value]] slot of the completion must contain an instance of a concrete subclass of Module Record.
           </li>
           <li>
             If a Module Record corresponding to the pair _referencingScriptOrModule_, _specifier_ does not exist or cannot be created, an exception must be thrown.
@@ -26316,11 +26330,11 @@
           <dt>description</dt>
           <dd>It performs any necessary setup work in order to make available the module corresponding to _specifier_ occurring within the context of the script or module represented by _referencingScriptOrModule_. _referencingScriptOrModule_ may be *null* if there is no active script or module when the <emu-xref href="#sec-import-calls">`import()`</emu-xref> expression occurs. It then performs FinishDynamicImport to finish the dynamic import process.</dd>
         </dl>
-        <p>The implementation of HostImportModuleDynamically must conform to the following requirements:</p>
+        <p>An implementation of HostImportModuleDynamically must conform to the following requirements:</p>
 
         <ul>
           <li>
-            The abstract operation must always complete normally with *undefined*. Success or failure must instead be signaled as discussed below.
+            It must return NormalCompletion(*undefined*). Success or failure must instead be signaled as discussed below.
           </li>
           <li>
             The host environment must conform to one of the two following sets of requirements:
@@ -27169,7 +27183,11 @@
           <dt>description</dt>
           <dd>It allows host environments to block certain ECMAScript functions which allow developers to compile strings into ECMAScript code.</dd>
         </dl>
-        <p>An implementation of HostEnsureCanCompileStrings may complete normally or abruptly. Any abrupt completions will be propagated to its callers. The default implementation of HostEnsureCanCompileStrings is to unconditionally return an empty normal completion.</p>
+        <p>An implementation of HostEnsureCanCompileStrings must conform to the following requirements:</p>
+        <ul>
+          <li>It must propagate any throw completion to its callers.</li>
+        </ul>
+        <p>The default implementation of HostEnsureCanCompileStrings is to return NormalCompletion(~empty~).</p>
       </emu-clause>
 
       <emu-clause id="sec-evaldeclarationinstantiation" type="abstract operation">
@@ -28716,7 +28734,12 @@
         <dt>description</dt>
         <dd>It allows host environments to prevent the source text from being provided for _func_.</dd>
       </dl>
-      <p>An implementation of HostHasSourceTextAvailable must complete normally in all cases. This operation must be deterministic with respect to its parameters. Each time it is called with a specific _func_ as its argument, it must return the same completion record. The default implementation of HostHasSourceTextAvailable is to unconditionally return a normal completion with a value of *true*.</p>
+      <p>An implementation of HostHasSourceTextAvailable must conform to the following requirements:</p>
+      <ul>
+        <li>It must complete normally (i.e. not return an abrupt completion).</li>
+        <li>It must be deterministic with respect to its parameters. Each time it is called with a specific _func_ as its argument, it must return the same completion record.</li>
+      </ul>
+      <p>The default implementation of HostHasSourceTextAvailable is to return NormalCompletion(*true*).</p>
     </emu-clause>
   </emu-clause>
 
@@ -42021,7 +42044,11 @@ THH:mm:ss.sss
           <dt>description</dt>
           <dd>It allows host environments to track promise rejections.</dd>
         </dl>
-        <p>An implementation of HostPromiseRejectionTracker must complete normally in all cases. The default implementation of HostPromiseRejectionTracker is to unconditionally return an empty normal completion.</p>
+        <p>An implementation of HostPromiseRejectionTracker must conform to the following requirements:</p>
+        <ul>
+          <li>It must complete normally (i.e. not return an abrupt completion).</li>
+        </ul>
+        <p>The default implementation of HostPromiseRejectionTracker is to return NormalCompletion(~empty~).</p>
 
         <emu-note>
           <p>HostPromiseRejectionTracker is called in two scenarios:</p>
