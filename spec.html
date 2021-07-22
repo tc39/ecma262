@@ -17744,7 +17744,7 @@
         <p>In certain contexts, |ObjectLiteral| is used as a cover grammar for a more restricted secondary grammar. The |CoverInitializedName| production is necessary to fully cover these secondary grammars. However, use of this production results in an early Syntax Error in normal contexts where an actual |ObjectLiteral| is expected.</p>
       </emu-note>
 
-      <emu-clause id="sec-object-initializer-static-semantics-early-errors">
+      <emu-clause id="sec-object-initializer-static-semantics-early-errors" oldids="sec-__proto__-property-names-in-object-initializers">
         <h1>Static Semantics: Early Errors</h1>
         <emu-grammar>PropertyDefinition : MethodDefinition</emu-grammar>
         <ul>
@@ -17764,6 +17764,19 @@
         </ul>
         <emu-note>
           <p>This production exists so that |ObjectLiteral| can serve as a cover grammar for |ObjectAssignmentPattern|. It cannot occur in an actual object initializer.</p>
+        </emu-note>
+        <emu-grammar>
+          ObjectLiteral : `{` PropertyDefinitionList `}`
+
+          ObjectLiteral : `{` PropertyDefinitionList `,` `}`
+        </emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>. This rule is not applied if this |PropertyDefinition| is contained within a |Script| that is being parsed for JSON.parse (see step <emu-xref href="#step-json-parse-parse"></emu-xref> of <emu-xref href="#sec-json.parse">JSON.parse</emu-xref>).
+          </li>
+        </ul>
+        <emu-note>
+          <p>The List returned by PropertyNameList does not include property names defined using a |ComputedPropertyName|.</p>
         </emu-note>
       </emu-clause>
 
@@ -17860,18 +17873,25 @@
         <emu-alg>
           1. Let _propKey_ be the result of evaluating |PropertyName|.
           1. ReturnIfAbrupt(_propKey_).
-          1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true*, then
+          1. If this |PropertyDefinition| is contained within a |Script| that is being evaluated for JSON.parse (see step <emu-xref href="#step-json-parse-eval"></emu-xref> of <emu-xref href="#sec-json.parse">JSON.parse</emu-xref>), then
+            1. Let _isProtoSetter_ be *false*.
+          1. Else if _propKey_ is the String value *"__proto__"* and if IsComputedPropertyKey of |PropertyName| is *false*, then
+            1. Let _isProtoSetter_ be *true*.
+          1. Else,
+            1. Let _isProtoSetter_ be *false*.
+          1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and _isProtoSetter_ is *false*, then
             1. Let _propValue_ be ? NamedEvaluation of |AssignmentExpression| with argument _propKey_.
           1. Else,
             1. Let _exprValueRef_ be the result of evaluating |AssignmentExpression|.
             1. Let _propValue_ be ? GetValue(_exprValueRef_).
+          1. If _isProtoSetter_ is *true*, then
+            1. If Type(_propValue_) is either Object or Null, then
+              1. Return ! _object_.[[SetPrototypeOf]](_propValue_).
+            1. Return NormalCompletion(~empty~).
           1. Assert: _enumerable_ is *true*.
           1. Assert: _object_ is an ordinary, extensible object with no non-configurable properties.
           1. Return ! CreateDataPropertyOrThrow(_object_, _propKey_, _propValue_).
         </emu-alg>
-        <emu-note>
-          <p>An alternative semantics for this production is given in <emu-xref href="#sec-__proto__-property-names-in-object-initializers"></emu-xref>.</p>
-        </emu-note>
         <emu-grammar>
           MethodDefinition :
             ClassElementName `(` UniqueFormalParameters `)` `{` FunctionBody `}`
@@ -28302,7 +28322,7 @@
       </emu-clause>
     </emu-clause>
 
-    <emu-clause id="sec-properties-of-the-object-prototype-object">
+    <emu-clause id="sec-properties-of-the-object-prototype-object" oldids="sec-additional-properties-of-the-object.prototype-object">
       <h1>Properties of the Object Prototype Object</h1>
       <p>The <dfn>Object prototype object</dfn>:</p>
       <ul>
@@ -28413,6 +28433,95 @@
         <emu-alg>
           1. Return ? ToObject(*this* value).
         </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-object.prototype.__proto__" legacy normative-optional>
+        <h1>Object.prototype.__proto__</h1>
+        <p>`Object.prototype.__proto__` is an accessor property with attributes { [[Enumerable]]: *false*, [[Configurable]]: *true* }. The [[Get]] and [[Set]] attributes are defined as follows:</p>
+
+        <emu-clause id="sec-get-object.prototype.__proto__">
+          <h1>get Object.prototype.__proto__</h1>
+          <p>The value of the [[Get]] attribute is a built-in function that requires no arguments. It performs the following steps when called:</p>
+          <emu-alg>
+            1. Let _O_ be ? ToObject(*this* value).
+            1. Return ? _O_.[[GetPrototypeOf]]().
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-set-object.prototype.__proto__">
+          <h1>set Object.prototype.__proto__</h1>
+          <p>The value of the [[Set]] attribute is a built-in function that takes an argument _proto_. It performs the following steps when called:</p>
+          <emu-alg>
+            1. Let _O_ be ? RequireObjectCoercible(*this* value).
+            1. If Type(_proto_) is neither Object nor Null, return *undefined*.
+            1. If Type(_O_) is not Object, return *undefined*.
+            1. Let _status_ be ? _O_.[[SetPrototypeOf]](_proto_).
+            1. If _status_ is *false*, throw a *TypeError* exception.
+            1. Return *undefined*.
+          </emu-alg>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-object.prototype-legacy-accessor-methods" legacy normative-optional>
+        <h1>Legacy Object.prototype Accessor Methods</h1>
+
+        <emu-clause id="sec-object.prototype.__defineGetter__">
+          <h1>Object.prototype.__defineGetter__ ( _P_, _getter_ )</h1>
+          <p>When the `__defineGetter__` method is called with arguments _P_ and _getter_, the following steps are taken:</p>
+          <emu-alg>
+            1. Let _O_ be ? ToObject(*this* value).
+            1. If IsCallable(_getter_) is *false*, throw a *TypeError* exception.
+            1. Let _desc_ be PropertyDescriptor { [[Get]]: _getter_, [[Enumerable]]: *true*, [[Configurable]]: *true* }.
+            1. Let _key_ be ? ToPropertyKey(_P_).
+            1. Perform ? DefinePropertyOrThrow(_O_, _key_, _desc_).
+            1. Return *undefined*.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-object.prototype.__defineSetter__">
+          <h1>Object.prototype.__defineSetter__ ( _P_, _setter_ )</h1>
+          <p>When the `__defineSetter__` method is called with arguments _P_ and _setter_, the following steps are taken:</p>
+          <emu-alg>
+            1. Let _O_ be ? ToObject(*this* value).
+            1. If IsCallable(_setter_) is *false*, throw a *TypeError* exception.
+            1. Let _desc_ be PropertyDescriptor { [[Set]]: _setter_, [[Enumerable]]: *true*, [[Configurable]]: *true* }.
+            1. Let _key_ be ? ToPropertyKey(_P_).
+            1. Perform ? DefinePropertyOrThrow(_O_, _key_, _desc_).
+            1. Return *undefined*.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-object.prototype.__lookupGetter__">
+          <h1>Object.prototype.__lookupGetter__ ( _P_ )</h1>
+          <p>When the `__lookupGetter__` method is called with argument _P_, the following steps are taken:</p>
+          <emu-alg>
+            1. Let _O_ be ? ToObject(*this* value).
+            1. Let _key_ be ? ToPropertyKey(_P_).
+            1. Repeat,
+              1. Let _desc_ be ? _O_.[[GetOwnProperty]](_key_).
+              1. If _desc_ is not *undefined*, then
+                1. If IsAccessorDescriptor(_desc_) is *true*, return _desc_.[[Get]].
+                1. Return *undefined*.
+              1. Set _O_ to ? _O_.[[GetPrototypeOf]]().
+              1. If _O_ is *null*, return *undefined*.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-object.prototype.__lookupSetter__">
+          <h1>Object.prototype.__lookupSetter__ ( _P_ )</h1>
+          <p>When the `__lookupSetter__` method is called with argument _P_, the following steps are taken:</p>
+          <emu-alg>
+            1. Let _O_ be ? ToObject(*this* value).
+            1. Let _key_ be ? ToPropertyKey(_P_).
+            1. Repeat,
+              1. Let _desc_ be ? _O_.[[GetOwnProperty]](_key_).
+              1. If _desc_ is not *undefined*, then
+                1. If IsAccessorDescriptor(_desc_) is *true*, return _desc_.[[Set]].
+                1. Return *undefined*.
+              1. Set _O_ to ? _O_.[[GetPrototypeOf]]().
+              1. If _O_ is *null*, return *undefined*.
+          </emu-alg>
+        </emu-clause>
       </emu-clause>
     </emu-clause>
 
@@ -40567,9 +40676,11 @@ THH:mm:ss.sss
         1. Let _jsonString_ be ? ToString(_text_).
         1. [id="step-json-parse-validate"] Parse ! StringToCodePoints(_jsonString_) as a JSON text as specified in ECMA-404. Throw a *SyntaxError* exception if it is not a valid JSON text as defined in that specification.
         1. Let _scriptString_ be the string-concatenation of *"("*, _jsonString_, and *");"*.
-        1. Let _script_ be ParseText(! StringToCodePoints(_scriptString_), |Script|).
+        1. [id="step-json-parse-parse"] Let _script_ be ParseText(! StringToCodePoints(_scriptString_), |Script|).
+        1. NOTE: The early error rules defined in <emu-xref href="#sec-object-initializer-static-semantics-early-errors"></emu-xref> have special handling for the above invocation of ParseText.
         1. Assert: _script_ is a Parse Node.
-        1. Let _completion_ be the result of evaluating _script_. The extended PropertyDefinitionEvaluation semantics defined in <emu-xref href="#sec-__proto__-property-names-in-object-initializers"></emu-xref> must not be used during the evaluation.
+        1. [id="step-json-parse-eval"] Let _completion_ be the result of evaluating _script_.
+        1. NOTE: The PropertyDefinitionEvaluation semantics defined in <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> have special handling for the above evaluation.
         1. Let _unfiltered_ be _completion_.[[Value]].
         1. [id="step-json-parse-assert-type"] Assert: _unfiltered_ is either a String, Number, Boolean, Null, or an Object that is defined by either an |ArrayLiteral| or an |ObjectLiteral|.
         1. If IsCallable(_reviver_) is *true*, then
@@ -40583,7 +40694,7 @@ THH:mm:ss.sss
       <p>The *"length"* property of the `parse` function is *2*<sub>𝔽</sub>.</p>
       <emu-note>
         <p>Valid JSON text is a subset of the ECMAScript |PrimaryExpression| syntax. Step <emu-xref href="#step-json-parse-validate"></emu-xref> verifies that _jsonString_ conforms to that subset, and step <emu-xref href="#step-json-parse-assert-type"></emu-xref> asserts that that parsing and evaluation returns a value of an appropriate type.</p>
-        <p>However, because <emu-xref href="#sec-__proto__-property-names-in-object-initializers"></emu-xref> applies when evaluating ECMAScript source text and does not apply during `JSON.parse`, the same source text can produce different results when evaluated as a |PrimaryExpression| rather than as JSON. Furthermore, the Early Error for duplicate *"__proto__"* properties in object literals, which likewise does not apply during `JSON.parse`, means that not all texts accepted by `JSON.parse` are valid as a |PrimaryExpression|, despite matching the grammar.</p>
+        <p>However, because <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> behaves differently during `JSON.parse`, the same source text can produce different results when evaluated as a |PrimaryExpression| rather than as JSON. Furthermore, the Early Error for duplicate *"__proto__"* properties in object literals, which likewise does not apply during `JSON.parse`, means that not all texts accepted by `JSON.parse` are valid as a |PrimaryExpression|, despite matching the grammar.</p>
       </emu-note>
 
       <emu-clause id="sec-internalizejsonproperty" type="abstract operation">
@@ -45794,95 +45905,6 @@ THH:mm:ss.sss
       </emu-annex>
     </emu-annex>
 
-    <emu-annex id="sec-additional-properties-of-the-object.prototype-object">
-      <h1>Additional Properties of the Object.prototype Object</h1>
-
-      <emu-annex id="sec-object.prototype.__proto__">
-        <h1>Object.prototype.__proto__</h1>
-        <p>`Object.prototype.__proto__` is an accessor property with attributes { [[Enumerable]]: *false*, [[Configurable]]: *true* }. The [[Get]] and [[Set]] attributes are defined as follows:</p>
-
-        <emu-annex id="sec-get-object.prototype.__proto__">
-          <h1>get Object.prototype.__proto__</h1>
-          <p>The value of the [[Get]] attribute is a built-in function that requires no arguments. It performs the following steps when called:</p>
-          <emu-alg>
-            1. Let _O_ be ? ToObject(*this* value).
-            1. Return ? _O_.[[GetPrototypeOf]]().
-          </emu-alg>
-        </emu-annex>
-
-        <emu-annex id="sec-set-object.prototype.__proto__">
-          <h1>set Object.prototype.__proto__</h1>
-          <p>The value of the [[Set]] attribute is a built-in function that takes an argument _proto_. It performs the following steps when called:</p>
-          <emu-alg>
-            1. Let _O_ be ? RequireObjectCoercible(*this* value).
-            1. If Type(_proto_) is neither Object nor Null, return *undefined*.
-            1. If Type(_O_) is not Object, return *undefined*.
-            1. Let _status_ be ? _O_.[[SetPrototypeOf]](_proto_).
-            1. If _status_ is *false*, throw a *TypeError* exception.
-            1. Return *undefined*.
-          </emu-alg>
-        </emu-annex>
-      </emu-annex>
-
-      <emu-annex id="sec-object.prototype.__defineGetter__">
-        <h1>Object.prototype.__defineGetter__ ( _P_, _getter_ )</h1>
-        <p>When the `__defineGetter__` method is called with arguments _P_ and _getter_, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _O_ be ? ToObject(*this* value).
-          1. If IsCallable(_getter_) is *false*, throw a *TypeError* exception.
-          1. Let _desc_ be PropertyDescriptor { [[Get]]: _getter_, [[Enumerable]]: *true*, [[Configurable]]: *true* }.
-          1. Let _key_ be ? ToPropertyKey(_P_).
-          1. Perform ? DefinePropertyOrThrow(_O_, _key_, _desc_).
-          1. Return *undefined*.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-object.prototype.__defineSetter__">
-        <h1>Object.prototype.__defineSetter__ ( _P_, _setter_ )</h1>
-        <p>When the `__defineSetter__` method is called with arguments _P_ and _setter_, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _O_ be ? ToObject(*this* value).
-          1. If IsCallable(_setter_) is *false*, throw a *TypeError* exception.
-          1. Let _desc_ be PropertyDescriptor { [[Set]]: _setter_, [[Enumerable]]: *true*, [[Configurable]]: *true* }.
-          1. Let _key_ be ? ToPropertyKey(_P_).
-          1. Perform ? DefinePropertyOrThrow(_O_, _key_, _desc_).
-          1. Return *undefined*.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-object.prototype.__lookupGetter__">
-        <h1>Object.prototype.__lookupGetter__ ( _P_ )</h1>
-        <p>When the `__lookupGetter__` method is called with argument _P_, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _O_ be ? ToObject(*this* value).
-          1. Let _key_ be ? ToPropertyKey(_P_).
-          1. Repeat,
-            1. Let _desc_ be ? _O_.[[GetOwnProperty]](_key_).
-            1. If _desc_ is not *undefined*, then
-              1. If IsAccessorDescriptor(_desc_) is *true*, return _desc_.[[Get]].
-              1. Return *undefined*.
-            1. Set _O_ to ? _O_.[[GetPrototypeOf]]().
-            1. If _O_ is *null*, return *undefined*.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-object.prototype.__lookupSetter__">
-        <h1>Object.prototype.__lookupSetter__ ( _P_ )</h1>
-        <p>When the `__lookupSetter__` method is called with argument _P_, the following steps are taken:</p>
-        <emu-alg>
-          1. Let _O_ be ? ToObject(*this* value).
-          1. Let _key_ be ? ToPropertyKey(_P_).
-          1. Repeat,
-            1. Let _desc_ be ? _O_.[[GetOwnProperty]](_key_).
-            1. If _desc_ is not *undefined*, then
-              1. If IsAccessorDescriptor(_desc_) is *true*, return _desc_.[[Set]].
-              1. Return *undefined*.
-            1. Set _O_ to ? _O_.[[GetPrototypeOf]]().
-            1. If _O_ is *null*, return *undefined*.
-        </emu-alg>
-      </emu-annex>
-    </emu-annex>
-
     <emu-annex id="sec-additional-properties-of-the-string.prototype-object">
       <h1>Additional Properties of the String.prototype Object</h1>
 
@@ -46149,55 +46171,6 @@ THH:mm:ss.sss
 
   <emu-annex id="sec-other-additional-features">
     <h1>Other Additional Features</h1>
-
-    <emu-annex id="sec-__proto__-property-names-in-object-initializers">
-      <h1>__proto__ Property Names in Object Initializers</h1>
-      <p>The following Early Error rule is added to those in <emu-xref href="#sec-object-initializer-static-semantics-early-errors"></emu-xref>. This rule is <b>not</b> applied under any of the following circumstances:</p>
-      <ul>
-        <li>when |ObjectLiteral| appears in a context where |ObjectAssignmentPattern| is required,</li>
-        <li>when initially parsing a |CoverParenthesizedExpressionAndArrowParameterList| or a |CoverCallExpressionAndAsyncArrowHead|, or</li>
-        <li>when parsing text for <emu-xref href="#sec-json.parse">JSON.parse</emu-xref>.</li>
-      </ul>
-      <emu-grammar>
-        ObjectLiteral :
-          `{` PropertyDefinitionList `}`
-          `{` PropertyDefinitionList `,` `}`
-      </emu-grammar>
-      <ul>
-        <li>
-          It is a Syntax Error if PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>.
-        </li>
-      </ul>
-      <emu-note>
-        <p>The List returned by PropertyNameList does not include string literal property names defined as using a |ComputedPropertyName|.</p>
-      </emu-note>
-      <p>In <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> the PropertyDefinitionEvaluation algorithm for the production
-        <br>
-        <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>
-        <br>
-        is replaced with the following definition:</p>
-      <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>
-      <emu-alg>
-        1. Let _propKey_ be the result of evaluating |PropertyName|.
-        1. ReturnIfAbrupt(_propKey_).
-        1. If _propKey_ is the String value *"__proto__"* and if IsComputedPropertyKey(|PropertyName|) is *false*, then
-          1. Let _isProtoSetter_ be *true*.
-        1. Else,
-          1. Let _isProtoSetter_ be *false*.
-        1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and _isProtoSetter_ is *false*, then
-          1. Let _propValue_ be ? NamedEvaluation of |AssignmentExpression| with argument _propKey_.
-        1. Else,
-          1. Let _exprValueRef_ be the result of evaluating |AssignmentExpression|.
-          1. Let _propValue_ be ? GetValue(_exprValueRef_).
-        1. If _isProtoSetter_ is *true*, then
-          1. If Type(_propValue_) is either Object or Null, then
-            1. Return _object_.[[SetPrototypeOf]](_propValue_).
-          1. Return NormalCompletion(~empty~).
-        1. Assert: _enumerable_ is *true*.
-        1. Assert: _object_ is an ordinary, extensible object with no non-configurable properties.
-        1. Return ! CreateDataPropertyOrThrow(_object_, _propKey_, _propValue_).
-      </emu-alg>
-    </emu-annex>
 
     <emu-annex id="sec-labelled-function-declarations">
       <h1>Labelled Function Declarations</h1>
