@@ -3974,7 +3974,7 @@
                 One of:
                 <ul>
                   <li>
-                    any ECMAScript language value except *undefined* or *null*,
+                    any ECMAScript language value,
                   </li>
                   <li>
                     an Environment Record, or
@@ -4018,7 +4018,7 @@
         <emu-alg>
           1. Assert: _V_ is a Reference Record.
           1. If _V_.[[Base]] is ~unresolvable~, return *false*.
-          1. If Type(_V_.[[Base]]) is Boolean, String, Symbol, BigInt, Number, or Object, return *true*; otherwise return *false*.
+          1. If _V_.[[Base]] is an Environment Record, return *false*; otherwise return *true*.
         </emu-alg>
       </emu-clause>
 
@@ -4077,7 +4077,7 @@
           1. If _V_ is not a Reference Record, return _V_.
           1. If IsUnresolvableReference(_V_) is *true*, throw a *ReferenceError* exception.
           1. If IsPropertyReference(_V_) is *true*, then
-            1. [id="step-getvalue-toobject"] Let _baseObj_ be ! ToObject(_V_.[[Base]]).
+            1. [id="step-getvalue-toobject"] Let _baseObj_ be ? ToObject(_V_.[[Base]]).
             1. If IsPrivateReference(_V_) is *true*, then
               1. Return ? PrivateGet(_V_.[[ReferencedName]], _baseObj_).
             1. Return ? _baseObj_.[[Get]](_V_.[[ReferencedName]], GetThisValue(_V_)).
@@ -4109,7 +4109,7 @@
             1. Let _globalObj_ be GetGlobalObject().
             1. Return ? Set(_globalObj_, _V_.[[ReferencedName]], _W_, *false*).
           1. If IsPropertyReference(_V_) is *true*, then
-            1. [id="step-putvalue-toobject"] Let _baseObj_ be ! ToObject(_V_.[[Base]]).
+            1. [id="step-putvalue-toobject"] Let _baseObj_ be ? ToObject(_V_.[[Base]]).
             1. If IsPrivateReference(_V_) is *true*, then
               1. Return ? PrivateSet(_V_.[[ReferencedName]], _baseObj_, _W_).
             1. Let _succeeded_ be ? _baseObj_.[[Set]](_V_.[[ReferencedName]], _W_, GetThisValue(_V_)).
@@ -18588,15 +18588,14 @@
           1. Let _baseReference_ be the result of evaluating |MemberExpression|.
           1. Let _baseValue_ be ? GetValue(_baseReference_).
           1. If the code matched by this |MemberExpression| is strict mode code, let _strict_ be *true*; else let _strict_ be *false*.
-          1. Return ? EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
+          1. Return ! EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
         </emu-alg>
         <emu-grammar>MemberExpression : MemberExpression `.` PrivateIdentifier</emu-grammar>
         <emu-alg>
           1. Let _baseReference_ be the result of evaluating |MemberExpression|.
           1. Let _baseValue_ be ? GetValue(_baseReference_).
-          1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
           1. Let _fieldNameString_ be the StringValue of |PrivateIdentifier|.
-          1. Return ! MakePrivateReference(_bv_, _fieldNameString_).
+          1. Return ! MakePrivateReference(_baseValue_, _fieldNameString_).
         </emu-alg>
         <emu-grammar>CallExpression : CallExpression `[` Expression `]`</emu-grammar>
         <emu-alg>
@@ -18610,15 +18609,14 @@
           1. Let _baseReference_ be the result of evaluating |CallExpression|.
           1. Let _baseValue_ be ? GetValue(_baseReference_).
           1. If the code matched by this |CallExpression| is strict mode code, let _strict_ be *true*; else let _strict_ be *false*.
-          1. Return ? EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
+          1. Return ! EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
         </emu-alg>
         <emu-grammar>CallExpression : CallExpression `.` PrivateIdentifier</emu-grammar>
         <emu-alg>
           1. Let _baseReference_ be the result of evaluating |CallExpression|.
           1. Let _baseValue_ be ? GetValue(_baseReference_).
-          1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
           1. Let _fieldNameString_ be the StringValue of |PrivateIdentifier|.
-          1. Return ! MakePrivateReference(_bv_, _fieldNameString_).
+          1. Return ! MakePrivateReference(_baseValue_, _fieldNameString_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -18636,9 +18634,8 @@
       <emu-alg>
         1. Let _propertyNameReference_ be the result of evaluating _expression_.
         1. Let _propertyNameValue_ be ? GetValue(_propertyNameReference_).
-        1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
         1. Let _propertyKey_ be ? ToPropertyKey(_propertyNameValue_).
-        1. Return the Reference Record { [[Base]]: _bv_, [[ReferencedName]]: _propertyKey_, [[Strict]]: _strict_, [[ThisValue]]: ~empty~ }.
+        1. Return the Reference Record { [[Base]]: _baseValue_, [[ReferencedName]]: _propertyKey_, [[Strict]]: _strict_, [[ThisValue]]: ~empty~ }.
       </emu-alg>
     </emu-clause>
     <emu-clause id="sec-evaluate-property-access-with-identifier-key" type="abstract operation" oldids="sec-evaluate-identifier-key-property-access">
@@ -18653,9 +18650,8 @@
       </dl>
       <emu-alg>
         1. Assert: _identifierName_ is an |IdentifierName|.
-        1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
         1. Let _propertyNameString_ be StringValue of _identifierName_.
-        1. Return the Reference Record { [[Base]]: _bv_, [[ReferencedName]]: _propertyNameString_, [[Strict]]: _strict_, [[ThisValue]]: ~empty~ }.
+        1. Return the Reference Record { [[Base]]: _baseValue_, [[ReferencedName]]: _propertyNameString_, [[Strict]]: _strict_, [[ThisValue]]: ~empty~ }.
       </emu-alg>
     </emu-clause>
 
@@ -18833,8 +18829,7 @@
           1. Let _env_ be GetThisEnvironment().
           1. Assert: _env_.HasSuperBinding() is *true*.
           1. Let _baseValue_ be ? _env_.GetSuperBase().
-          1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
-          1. Return the Reference Record { [[Base]]: _bv_, [[ReferencedName]]: _propertyKey_, [[Strict]]: _strict_, [[ThisValue]]: _actualThis_ }.
+          1. Return the Reference Record { [[Base]]: _baseValue_, [[ReferencedName]]: _propertyKey_, [[Strict]]: _strict_, [[ThisValue]]: _actualThis_ }.
           1. NOTE: This returns a Super Reference Record.
         </emu-alg>
       </emu-clause>
@@ -18968,13 +18963,12 @@
         <emu-grammar>OptionalChain : `?.` IdentifierName</emu-grammar>
         <emu-alg>
           1. If the code matched by this |OptionalChain| is strict mode code, let _strict_ be *true*; else let _strict_ be *false*.
-          1. Return ? EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
+          1. Return ! EvaluatePropertyAccessWithIdentifierKey(_baseValue_, |IdentifierName|, _strict_).
         </emu-alg>
         <emu-grammar>OptionalChain : `?.` PrivateIdentifier</emu-grammar>
         <emu-alg>
-          1. Let _bv_ be ? RequireObjectCoercible(_baseValue_).
           1. Let _fieldNameString_ be the StringValue of |PrivateIdentifier|.
-          1. Return ! MakePrivateReference(_bv_, _fieldNameString_).
+          1. Return ! MakePrivateReference(_baseValue_, _fieldNameString_).
         </emu-alg>
         <emu-grammar>OptionalChain : OptionalChain Arguments</emu-grammar>
         <emu-alg>
@@ -18999,16 +18993,15 @@
           1. Let _newReference_ be ? ChainEvaluation of _optionalChain_ with arguments _baseValue_ and _baseReference_.
           1. Let _newValue_ be ? GetValue(_newReference_).
           1. If the code matched by this |OptionalChain| is strict mode code, let _strict_ be *true*; else let _strict_ be *false*.
-          1. Return ? EvaluatePropertyAccessWithIdentifierKey(_newValue_, |IdentifierName|, _strict_).
+          1. Return ! EvaluatePropertyAccessWithIdentifierKey(_newValue_, |IdentifierName|, _strict_).
         </emu-alg>
         <emu-grammar>OptionalChain : OptionalChain `.` PrivateIdentifier</emu-grammar>
         <emu-alg>
           1. Let _optionalChain_ be |OptionalChain|.
           1. Let _newReference_ be ? ChainEvaluation of _optionalChain_ with arguments _baseValue_ and _baseReference_.
           1. Let _newValue_ be ? GetValue(_newReference_).
-          1. Let _nv_ be ? RequireObjectCoercible(_newValue_).
           1. Let _fieldNameString_ be the StringValue of |PrivateIdentifier|.
-          1. Return ! MakePrivateReference(_nv_, _fieldNameString_).
+          1. Return ! MakePrivateReference(_newValue_, _fieldNameString_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -19288,7 +19281,7 @@
           1. If IsPropertyReference(_ref_) is *true*, then
             1. Assert: ! IsPrivateReference(_ref_) is *false*.
             1. If IsSuperReference(_ref_) is *true*, throw a *ReferenceError* exception.
-            1. [id="step-delete-operator-toobject"] Let _baseObj_ be ! ToObject(_ref_.[[Base]]).
+            1. [id="step-delete-operator-toobject"] Let _baseObj_ be ? ToObject(_ref_.[[Base]]).
             1. Let _deleteStatus_ be ? _baseObj_.[[Delete]](_ref_.[[ReferencedName]]).
             1. If _deleteStatus_ is *false* and _ref_.[[Strict]] is *true*, throw a *TypeError* exception.
             1. Return _deleteStatus_.
