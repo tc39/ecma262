@@ -948,7 +948,7 @@
       </ul>
 
       <p>In the language of this specification, numerical values are distinguished among different numeric kinds using subscript suffixes. The subscript <sub>𝔽</sub> refers to Numbers, and the subscript <sub>ℤ</sub> refers to BigInts. Numeric values without a subscript suffix refer to mathematical values.</p>
-      <p>Numeric operators such as +, &times;, =, and &ge; refer to those operations as determined by the type of the operands. When applied to mathematical values, the operators refer to the usual mathematical operations. When applied to Numbers, the operators refer to the relevant operations within IEEE 754-2019. When applied to BigInts, the operators refer to the usual mathematical operations applied to the mathematical value of the BigInt.</p>
+      <p>Numeric operators such as +, &times;, =, and &ge; refer to those operations as determined by the type of the operands. When applied to mathematical values, the operators refer to the usual mathematical operations. When applied to extended mathematical values, the operators refer to the usual mathematical operations over the extended real numbers; indeterminate forms are not defined and their use in this specification should be considered an editorial error. When applied to Numbers, the operators refer to the relevant operations within IEEE 754-2019. When applied to BigInts, the operators refer to the usual mathematical operations applied to the mathematical value of the BigInt.</p>
       <p>In general, when this specification refers to a numerical value, such as in the phrase, "the length of _y_" or "the integer represented by the four hexadecimal digits ...", without explicitly specifying a numeric kind, the phrase refers to a mathematical value. Phrases which refer to a Number or a BigInt value are explicitly annotated as such; for example, "the Number value for the number of code points in &hellip;" or "the BigInt value for &hellip;".</p>
       <p>Numeric operators applied to mixed-type operands (such as a Number and a mathematical value) are not defined and should be considered an editorial error in this specification.</p>
       <p>This specification denotes most numeric values in base 10; it also uses numeric values of the form 0x followed by digits 0-9 or A-F as base-16 values.</p>
@@ -13933,7 +13933,7 @@
           1. Assert: Type(_str_) is String.
           1. Let _len_ be the length of _str_.
           1. If ℝ(_index_) &lt; 0 or _len_ &le; ℝ(_index_), return *undefined*.
-          1. Let _resultStr_ be the String value of length 1, containing one code unit from _str_, specifically the code unit at index ℝ(_index_).
+          1. Let _resultStr_ be the substring of _str_ from ℝ(_index_) to ℝ(_index_) + 1.
           1. Return the PropertyDescriptor { [[Value]]: _resultStr_, [[Writable]]: *false*, [[Enumerable]]: *true*, [[Configurable]]: *false* }.
         </emu-alg>
       </emu-clause>
@@ -33009,6 +33009,22 @@ THH:mm:ss.sss
         1. Throw a *TypeError* exception.
       </emu-alg>
 
+      <emu-clause id="sec-string.prototype.at">
+        <h1>String.prototype.at ( _index_ )</h1>
+        <emu-alg>
+          1. Let _O_ be ? RequireObjectCoercible(*this* value).
+          1. Let _S_ be ? ToString(_O_).
+          1. Let _len_ be the length of _S_.
+          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
+          1. If _relativeIndex_ &ge; 0, then
+            1. Let _k_ be _relativeIndex_.
+          1. Else,
+            1. Let _k_ be _len_ + _relativeIndex_.
+          1. If _k_ &lt; 0 or _k_ &ge; _len_, return *undefined*.
+          1. Return the substring of _S_ from _k_ to _k_ + 1.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-string.prototype.charat">
         <h1>String.prototype.charAt ( _pos_ )</h1>
         <emu-note>
@@ -33022,7 +33038,7 @@ THH:mm:ss.sss
           1. Let _position_ be ? ToIntegerOrInfinity(_pos_).
           1. Let _size_ be the length of _S_.
           1. If _position_ &lt; 0 or _position_ &ge; _size_, return the empty String.
-          1. Return the String value of length 1, containing one code unit from _S_, namely the code unit at index _position_.
+          1. Return the substring of _S_ from _position_ to _position_ + 1.
         </emu-alg>
         <emu-note>
           <p>The `charAt` function is intentionally generic; it does not require that its *this* value be a String object. Therefore, it can be transferred to other kinds of objects for use as a method.</p>
@@ -36354,6 +36370,21 @@ THH:mm:ss.sss
         <p>The Array prototype object is specified to be an Array exotic object to ensure compatibility with ECMAScript code that was created prior to the ECMAScript 2015 specification.</p>
       </emu-note>
 
+      <emu-clause id="sec-array.prototype.at">
+        <h1>Array.prototype.at ( _index_ )</h1>
+        <emu-alg>
+          1. Let _O_ be ? ToObject(*this* value).
+          1. Let _len_ be ? LengthOfArrayLike(_O_).
+          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
+          1. If _relativeIndex_ &ge; 0, then
+            1. Let _k_ be _relativeIndex_.
+          1. Else,
+            1. Let _k_ be _len_ + _relativeIndex_.
+          1. If _k_ &lt; 0 or _k_ &ge; _len_, return *undefined*.
+          1. Return ? Get(_O_, ! ToString(𝔽(_k_))).
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-array.prototype.concat">
         <h1>Array.prototype.concat ( ..._items_ )</h1>
         <p>Returns an array containing the array elements of the object followed by the array elements of each argument.</p>
@@ -37459,6 +37490,7 @@ THH:mm:ss.sss
         <p>The initial value of the @@unscopables data property is an object created by the following steps:</p>
         <emu-alg>
           1. Let _unscopableList_ be ! OrdinaryObjectCreate(*null*).
+          1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"at"*, *true*).
           1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"copyWithin"*, *true*).
           1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"entries"*, *true*).
           1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"fill"*, *true*).
@@ -37911,6 +37943,22 @@ THH:mm:ss.sss
         <li>is an ordinary object.</li>
         <li>does not have a [[ViewedArrayBuffer]] or any other of the internal slots that are specific to _TypedArray_ instance objects.</li>
       </ul>
+
+      <emu-clause id="sec-%typedarray%.prototype.at">
+        <h1>%TypedArray%.prototype.at ( _index_ )</h1>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? ValidateTypedArray(_O_).
+          1. Let _len_ be _O_.[[ArrayLength]].
+          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
+          1. If _relativeIndex_ &ge; 0, then
+            1. Let _k_ be _relativeIndex_.
+          1. Else,
+            1. Let _k_ be _len_ + _relativeIndex_.
+          1. If _k_ &lt; 0 or _k_ &ge; _len_, return *undefined*.
+          1. Return ! Get(_O_, ! ToString(𝔽(_k_))).
+        </emu-alg>
+      </emu-clause>
 
       <emu-clause id="sec-get-%typedarray%.prototype.buffer">
         <h1>get %TypedArray%.prototype.buffer</h1>
