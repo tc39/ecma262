@@ -62,7 +62,7 @@ const request = async (url, method = 'GET', postData) => {
 	});
 };
 
-const branchURL = `https://api.github.com/repos/${slug}/compare/master...${branch}?anon=1`;
+const branchURL = `https://api.github.com/repos/${slug}/compare/HEAD...${branch}?anon=1`;
 
 const authors = request(branchURL).then((json) => JSON.parse(json)).then(data => {
 	return [...new Set(data.commits.map(x => x.author.login))];

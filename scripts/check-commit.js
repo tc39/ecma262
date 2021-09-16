@@ -4,7 +4,7 @@
 
 const exec = require('child_process').execSync;
 
-const oldestAncestor = String(exec(`bash -c 'diff -u <(git rev-list --first-parent "\${1:-origin/master}") <(git rev-list --first-parent "\${2:-HEAD}") | sed -ne "s/^ //p" | head -1' -`)).trim();
+const oldestAncestor = String(exec(`bash -c 'diff -u <(git rev-list --first-parent "\${1:-origin/HEAD}") <(git rev-list --first-parent "\${2:-HEAD}") | sed -ne "s/^ //p" | head -1' -`)).trim();
 
 console.log(`Oldest ancestor SHA: ${oldestAncestor}`);
 

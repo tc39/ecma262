@@ -8,7 +8,7 @@ An index of frequently asked questions regarding all things ECMA-262.
 
 New features start life as a proposal to the [TC39](#what-is-a-tc39) committee and must be championed (or co-championed) by at least one member of the committee. Once the proposal is raised at a committee meeting, it will become a Stage 0 proposal and move along from there. For more details on how proposal stages work, check out the [proposal process document][proposal-process-document].
 
-If you would like to contribute, please check out [Contributing to ECMAScript](https://github.com/tc39/ecma262/blob/master/CONTRIBUTING.md).
+If you would like to contribute, please check out [Contributing to ECMAScript](https://github.com/tc39/ecma262/blob/HEAD/CONTRIBUTING.md).
 
 ##### What is a "TC39"?
 
