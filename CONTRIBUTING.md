@@ -38,7 +38,7 @@ Feature requests for future versions of ECMAScript should not be made in this re
 
 ##### Creating a new proposal
 
-To make a feature request, document the problem and a sketch of the solution with others in the community, including TC39 members. One place to do this is the [TC39 Discourse](https://es.discourse.group/); another is the IRC channel #tc39 on Freenode ([instructions](https://freenode.net/kb/answer/chat)).
+To make a feature request, document the problem and a sketch of the solution with others in the community, including TC39 members. One place to do this is the [TC39 Discourse](https://es.discourse.group/); another is the [Matrix chat room][]).
 
 Your goal will be to convince others that your proposal is a useful addition to the language and recruit TC39 members to help turn your request into a proposal and shepherd it into the language. Once a proposal is introduced to the committee, new features are considered by the committee according to the [TC39 process document](https://tc39.es/process-document/).
 
@@ -46,7 +46,7 @@ You can look at [existing proposals](https://github.com/tc39/proposals/) for exa
 
 ##### TC39 meetings and champions
 
-If you have a new proposal you want to get into the language, you first need a TC39 "champion": a member of the committee who will make the case for the proposal at [in-person TC39 meetings](https://github.com/tc39/agendas#agendas) and help it move through the process. If you are a TC39 member, you can be a champion; otherwise, find a TC39 member to work with for this (e.g., through the [TC39 discussion group](https://es.discourse.group/) or the #tc39 channel on IRC). Proposals may have multiple champions (a "champion group").
+If you have a new proposal you want to get into the language, you first need a TC39 "champion": a member of the committee who will make the case for the proposal at [in-person TC39 meetings](https://github.com/tc39/agendas#agendas) and help it move through the process. If you are a TC39 member, you can be a champion; otherwise, find a TC39 member to work with for this (e.g., through the [TC39 discussion group](https://es.discourse.group/) or the [Matrix chat room][]). Proposals may have multiple champions (a "champion group").
 
 TC39 meets six times a year, mostly in the United States, to discuss proposals. It is possible for members to join meetings remotely. At meetings, we discuss ways to resolve issues and feature requests. We spend most of the time considering proposals and advancing them through the stage process. Meetings follow an agenda which is developed in the [agendas GitHub repository](https://github.com/tc39/agendas/). After the meeting, notes are published in the [notes GitHub repository](https://github.com/tc39/tc39-notes/). To advance your proposal towards inclusion in the final specification, ensure that it is included on the agenda for an upcoming meeting and propose advancement at that time.
 
@@ -60,7 +60,7 @@ TC39 is currently considering adding several new features to the language. These
   * Write [test262](https://github.com/tc39/test262) tests against the proposal, which are used to verify implementations. (If the proposal is at Stage 3, the tests can land; if earlier, they can be maintained in a PR.)
   * Implement or prototype the proposal in script engines, parsers, transpilers, polyfills, type checkers, etc., possibly behind a flag or in a separate module, and report feedback. Note that proposals before Stage 3 are highly unstable, and all proposals before Stage 4 may be modified or dropped.
 
-To track what's going on with a particular proposal, you can look in issues and commits in the individual proposal repository, read presentation slides which are linked from the TC39 agenda, and read the notes which came from the subsequent meetings. You can also reach out via IRC, the [discussion group](https://es.discourse.group/), or direct communication with a proposal champion, if the other resources are unclear.
+To track what's going on with a particular proposal, you can look in issues and commits in the individual proposal repository, read presentation slides which are linked from the TC39 agenda, and read the notes which came from the subsequent meetings. You can also reach out via the [Matrix chat room][], the [discussion group](https://es.discourse.group/), or direct communication with a proposal champion, if the other resources are unclear.
 
 #### Required legal agreements
 
@@ -72,3 +72,5 @@ Ecma TC39 accepts contributions from non-member individuals who have accepted th
 
   * [Ecma International RF Patent Policy](https://ecma-international.org/memento/Policies/Ecma_Royalty-Free_Patent_Policy_Extension_Option.htm)
   * [Ecma International Software Copyright Policy](https://ecma-international.org/memento/Policies/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.htm) ([PDF](https://ecma-international.org/memento/Policies/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.pdf))
+
+[Matrix chat room]: https://github.com/tc39/how-we-work/blob/HEAD/matrix-guide.md
