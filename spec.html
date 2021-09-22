@@ -35472,6 +35472,39 @@ THH:mm:ss.sss
         <emu-alg>
           1. Return the Matcher that is the result of evaluating |Disjunction| with argument _direction_.
         </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-atomescape" oldids="sec-characterescape,sec-decimalescape">
+        <h1>AtomEscape</h1>
+        <p>With parameter _direction_.</p>
+        <p>The production <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _n_ be the CapturingGroupNumber of |DecimalEscape|.
+          1. Assert: _n_ &le; _NcapturingParens_.
+          1. Return ! BackreferenceMatcher(_n_, _direction_).
+        </emu-alg>
+        <emu-note>
+          <p>An escape sequence of the form `\\` followed by a non-zero decimal number _n_ matches the result of the _n_<sup>th</sup> set of capturing parentheses (<emu-xref href="#sec-notation"></emu-xref>). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_<sup>th</sup> one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
+        </emu-note>
+        <p>The production <emu-grammar>AtomEscape :: CharacterEscape</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Let _cv_ be the CharacterValue of |CharacterEscape|.
+          1. Let _ch_ be the character whose character value is _cv_.
+          1. Let _A_ be a one-element CharSet containing the character _ch_.
+          1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
+        </emu-alg>
+        <p>The production <emu-grammar>AtomEscape :: CharacterClassEscape</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Evaluate |CharacterClassEscape| to obtain a CharSet _A_.
+          1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
+        </emu-alg>
+        <p>The production <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar> evaluates as follows:</p>
+        <emu-alg>
+          1. Search the enclosing |Pattern| for an instance of a |GroupSpecifier| containing a |RegExpIdentifierName| which has a CapturingGroupName equal to the CapturingGroupName of the |RegExpIdentifierName| contained in |GroupName|.
+          1. Assert: A unique such |GroupSpecifier| is found.
+          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of the located |GroupSpecifier|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing the located |GroupSpecifier|, including its immediately enclosing |Atom|.
+          1. Return ! BackreferenceMatcher(_parenIndex_, _direction_).
+        </emu-alg>
 
         <emu-clause id="sec-runtime-semantics-charactersetmatcher-abstract-operation" type="abstract operation">
           <h1>
@@ -35497,6 +35530,34 @@ THH:mm:ss.sss
               1. If _invert_ is *false* and _found_ is *false*, return ~failure~.
               1. If _invert_ is *true* and _found_ is *true*, return ~failure~.
               1. Let _cap_ be _x_'s _captures_ List.
+              1. Let _y_ be the State (_f_, _cap_).
+              1. Return _c_(_y_).
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-backreference-matcher" type="abstract operation">
+          <h1>
+            BackreferenceMatcher (
+              _n_: a positive integer,
+              _direction_: 1 or -1,
+            )
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Assert: _n_ &ge; 1.
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _n_ and _direction_ and performs the following steps when called:
+              1. Assert: _x_ is a State.
+              1. Assert: _c_ is a Continuation.
+              1. Let _cap_ be _x_'s _captures_ List.
+              1. Let _s_ be _cap_[_n_].
+              1. If _s_ is *undefined*, return _c_(_x_).
+              1. Let _e_ be _x_'s _endIndex_.
+              1. Let _len_ be the number of elements in _s_.
+              1. Let _f_ be _e_ + _direction_ &times; _len_.
+              1. If _f_ &lt; 0 or _f_ &gt; _InputLength_, return ~failure~.
+              1. Let _g_ be min(_e_, _f_).
+              1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_s_[_i_]) is not the same character value as Canonicalize(_Input_[_g_ + _i_]), return ~failure~.
               1. Let _y_ be the State (_f_, _cap_).
               1. Return _c_(_y_).
           </emu-alg>
@@ -35550,115 +35611,6 @@ THH:mm:ss.sss
             <p>In case-insignificant matches when _Unicode_ is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `&szlig;` (U+00DF) to `SS`. It may however map a code point outside the Basic Latin range to a character within, for example, `&#x17f;` (U+017F) to `s`. Such characters are not mapped if _Unicode_ is *false*. This prevents Unicode code points such as U+017F and U+212A from matching regular expressions such as `/[a-z]/i`, but they will match `/[a-z]/ui`.</p>
           </emu-note>
         </emu-clause>
-        <emu-clause id="sec-runtime-semantics-unicodematchproperty-p" type="abstract operation">
-          <h1>
-            UnicodeMatchProperty (
-              _p_: a List of Unicode code points,
-            )
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Assert: _p_ is a Unicode <emu-not-ref>property name</emu-not-ref> or property alias listed in the &ldquo;<emu-not-ref>Property name</emu-not-ref> and aliases&rdquo; column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref> or <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
-            1. Let _c_ be the canonical <emu-not-ref>property name</emu-not-ref> of _p_ as given in the &ldquo;Canonical <emu-not-ref>property name</emu-not-ref>&rdquo; column of the corresponding row.
-            1. Return the List of Unicode code points _c_.
-          </emu-alg>
-          <p>Implementations must support the Unicode property names and aliases listed in <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref> and <emu-xref href="#table-binary-unicode-properties"></emu-xref>. To ensure interoperability, implementations must not support any other property names or aliases.</p>
-          <emu-note>
-            <p>For example, `Script_Extensions` (property name) and `scx` (property alias) are valid, but `script_extensions` or `Scx` aren't.</p>
-          </emu-note>
-          <emu-note>
-            <p>The listed properties form a superset of what <a href="https://unicode.org/reports/tr18/#RL1.2">UTS18 RL1.2</a> requires.</p>
-          </emu-note>
-          <emu-import href="table-nonbinary-unicode-properties.html"></emu-import>
-          <emu-import href="table-binary-unicode-properties.html"></emu-import>
-        </emu-clause>
-        <emu-clause id="sec-runtime-semantics-unicodematchpropertyvalue-p-v" type="abstract operation">
-          <h1>
-            UnicodeMatchPropertyValue (
-              _p_: a List of Unicode code points,
-              _v_: a List of Unicode code points,
-            )
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Assert: _p_ is a canonical, unaliased Unicode property name listed in the &ldquo;Canonical property name&rdquo; column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref>.
-            1. Assert: _v_ is a property value or property value alias for Unicode property _p_ listed in the &ldquo;Property value and aliases&rdquo; column of <emu-xref href="#table-unicode-general-category-values"></emu-xref> or <emu-xref href="#table-unicode-script-values"></emu-xref>.
-            1. Let _value_ be the canonical property value of _v_ as given in the &ldquo;Canonical property value&rdquo; column of the corresponding row.
-            1. Return the List of Unicode code points _value_.
-          </emu-alg>
-          <p>Implementations must support the Unicode property value names and aliases listed in <emu-xref href="#table-unicode-general-category-values"></emu-xref> and <emu-xref href="#table-unicode-script-values"></emu-xref>. To ensure interoperability, implementations must not support any other property value names or aliases.</p>
-          <emu-note>
-            <p>For example, `Xpeo` and `Old_Persian` are valid `Script_Extensions` values, but `xpeo` and `Old Persian` aren't.</p>
-          </emu-note>
-          <emu-note>
-            <p>This algorithm differs from <a href="https://unicode.org/reports/tr44/#Matching_Symbolic">the matching rules for symbolic values listed in UAX44</a>: case, <emu-xref href="#sec-white-space">white space</emu-xref>, U+002D (HYPHEN-MINUS), and U+005F (LOW LINE) are not ignored, and the `Is` prefix is not supported.</p>
-          </emu-note>
-          <emu-import href="table-unicode-general-category-values.html"></emu-import>
-          <emu-import href="table-unicode-script-values.html"></emu-import>
-        </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-atomescape" oldids="sec-characterescape,sec-decimalescape">
-        <h1>AtomEscape</h1>
-        <p>With parameter _direction_.</p>
-        <p>The production <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Let _n_ be the CapturingGroupNumber of |DecimalEscape|.
-          1. Assert: _n_ &le; _NcapturingParens_.
-          1. Return ! BackreferenceMatcher(_n_, _direction_).
-        </emu-alg>
-        <emu-note>
-          <p>An escape sequence of the form `\\` followed by a non-zero decimal number _n_ matches the result of the _n_<sup>th</sup> set of capturing parentheses (<emu-xref href="#sec-notation"></emu-xref>). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_<sup>th</sup> one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
-        </emu-note>
-        <p>The production <emu-grammar>AtomEscape :: CharacterEscape</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Let _cv_ be the CharacterValue of |CharacterEscape|.
-          1. Let _ch_ be the character whose character value is _cv_.
-          1. Let _A_ be a one-element CharSet containing the character _ch_.
-          1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
-        </emu-alg>
-        <p>The production <emu-grammar>AtomEscape :: CharacterClassEscape</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Evaluate |CharacterClassEscape| to obtain a CharSet _A_.
-          1. Return ! CharacterSetMatcher(_A_, *false*, _direction_).
-        </emu-alg>
-        <p>The production <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar> evaluates as follows:</p>
-        <emu-alg>
-          1. Search the enclosing |Pattern| for an instance of a |GroupSpecifier| containing a |RegExpIdentifierName| which has a CapturingGroupName equal to the CapturingGroupName of the |RegExpIdentifierName| contained in |GroupName|.
-          1. Assert: A unique such |GroupSpecifier| is found.
-          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of the located |GroupSpecifier|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing the located |GroupSpecifier|, including its immediately enclosing |Atom|.
-          1. Return ! BackreferenceMatcher(_parenIndex_, _direction_).
-        </emu-alg>
-
-        <emu-clause id="sec-backreference-matcher" type="abstract operation">
-          <h1>
-            BackreferenceMatcher (
-              _n_: a positive integer,
-              _direction_: 1 or -1,
-            )
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Assert: _n_ &ge; 1.
-            1. Return a new Matcher with parameters (_x_, _c_) that captures _n_ and _direction_ and performs the following steps when called:
-              1. Assert: _x_ is a State.
-              1. Assert: _c_ is a Continuation.
-              1. Let _cap_ be _x_'s _captures_ List.
-              1. Let _s_ be _cap_[_n_].
-              1. If _s_ is *undefined*, return _c_(_x_).
-              1. Let _e_ be _x_'s _endIndex_.
-              1. Let _len_ be the number of elements in _s_.
-              1. Let _f_ be _e_ + _direction_ &times; _len_.
-              1. If _f_ &lt; 0 or _f_ &gt; _InputLength_, return ~failure~.
-              1. Let _g_ be min(_e_, _f_).
-              1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_s_[_i_]) is not the same character value as Canonicalize(_Input_[_g_ + _i_]), return ~failure~.
-              1. Let _y_ be the State (_f_, _cap_).
-              1. Return _c_(_y_).
-          </emu-alg>
-        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-characterclass">
@@ -35707,26 +35659,6 @@ THH:mm:ss.sss
           1. Let _D_ be ! CharacterRange(_A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
-
-        <emu-clause id="sec-runtime-semantics-characterrange-abstract-operation" type="abstract operation">
-          <h1>
-            CharacterRange (
-              _A_: a CharSet,
-              _B_: a CharSet,
-            )
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Assert: _A_ and _B_ each contain exactly one character.
-            1. Let _a_ be the one character in CharSet _A_.
-            1. Let _b_ be the one character in CharSet _B_.
-            1. Let _i_ be the character value of character _a_.
-            1. Let _j_ be the character value of character _b_.
-            1. Assert: _i_ &le; _j_.
-            1. Return the CharSet containing all characters with a character value greater than or equal to _i_ and less than or equal to _j_.
-          </emu-alg>
-        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-nonemptyclassrangesnodash">
@@ -35862,6 +35794,76 @@ THH:mm:ss.sss
           1. Assert: _p_ is a binary Unicode property or binary property alias listed in the &ldquo;Property name and aliases&rdquo; column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
           1. Return the CharSet containing all Unicode code points whose character database definition includes the property _p_ with value &ldquo;True&rdquo;.
         </emu-alg>
+
+        <emu-clause id="sec-runtime-semantics-characterrange-abstract-operation" type="abstract operation">
+          <h1>
+            CharacterRange (
+              _A_: a CharSet,
+              _B_: a CharSet,
+            )
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Assert: _A_ and _B_ each contain exactly one character.
+            1. Let _a_ be the one character in CharSet _A_.
+            1. Let _b_ be the one character in CharSet _B_.
+            1. Let _i_ be the character value of character _a_.
+            1. Let _j_ be the character value of character _b_.
+            1. Assert: _i_ &le; _j_.
+            1. Return the CharSet containing all characters with a character value greater than or equal to _i_ and less than or equal to _j_.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-runtime-semantics-unicodematchproperty-p" type="abstract operation">
+          <h1>
+            UnicodeMatchProperty (
+              _p_: a List of Unicode code points,
+            )
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Assert: _p_ is a Unicode <emu-not-ref>property name</emu-not-ref> or property alias listed in the &ldquo;<emu-not-ref>Property name</emu-not-ref> and aliases&rdquo; column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref> or <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
+            1. Let _c_ be the canonical <emu-not-ref>property name</emu-not-ref> of _p_ as given in the &ldquo;Canonical <emu-not-ref>property name</emu-not-ref>&rdquo; column of the corresponding row.
+            1. Return the List of Unicode code points _c_.
+          </emu-alg>
+          <p>Implementations must support the Unicode property names and aliases listed in <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref> and <emu-xref href="#table-binary-unicode-properties"></emu-xref>. To ensure interoperability, implementations must not support any other property names or aliases.</p>
+          <emu-note>
+            <p>For example, `Script_Extensions` (property name) and `scx` (property alias) are valid, but `script_extensions` or `Scx` aren't.</p>
+          </emu-note>
+          <emu-note>
+            <p>The listed properties form a superset of what <a href="https://unicode.org/reports/tr18/#RL1.2">UTS18 RL1.2</a> requires.</p>
+          </emu-note>
+          <emu-import href="table-nonbinary-unicode-properties.html"></emu-import>
+          <emu-import href="table-binary-unicode-properties.html"></emu-import>
+        </emu-clause>
+
+        <emu-clause id="sec-runtime-semantics-unicodematchpropertyvalue-p-v" type="abstract operation">
+          <h1>
+            UnicodeMatchPropertyValue (
+              _p_: a List of Unicode code points,
+              _v_: a List of Unicode code points,
+            )
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Assert: _p_ is a canonical, unaliased Unicode property name listed in the &ldquo;Canonical property name&rdquo; column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref>.
+            1. Assert: _v_ is a property value or property value alias for Unicode property _p_ listed in the &ldquo;Property value and aliases&rdquo; column of <emu-xref href="#table-unicode-general-category-values"></emu-xref> or <emu-xref href="#table-unicode-script-values"></emu-xref>.
+            1. Let _value_ be the canonical property value of _v_ as given in the &ldquo;Canonical property value&rdquo; column of the corresponding row.
+            1. Return the List of Unicode code points _value_.
+          </emu-alg>
+          <p>Implementations must support the Unicode property value names and aliases listed in <emu-xref href="#table-unicode-general-category-values"></emu-xref> and <emu-xref href="#table-unicode-script-values"></emu-xref>. To ensure interoperability, implementations must not support any other property value names or aliases.</p>
+          <emu-note>
+            <p>For example, `Xpeo` and `Old_Persian` are valid `Script_Extensions` values, but `xpeo` and `Old Persian` aren't.</p>
+          </emu-note>
+          <emu-note>
+            <p>This algorithm differs from <a href="https://unicode.org/reports/tr44/#Matching_Symbolic">the matching rules for symbolic values listed in UAX44</a>: case, <emu-xref href="#sec-white-space">white space</emu-xref>, U+002D (HYPHEN-MINUS), and U+005F (LOW LINE) are not ignored, and the `Is` prefix is not supported.</p>
+          </emu-note>
+          <emu-import href="table-unicode-general-category-values.html"></emu-import>
+          <emu-import href="table-unicode-script-values.html"></emu-import>
+        </emu-clause>
       </emu-clause>
     </emu-clause>
 
