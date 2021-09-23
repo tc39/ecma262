@@ -34994,9 +34994,6 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-pattern-semantics">
       <h1>Pattern Semantics</h1>
-      <emu-note>
-        <p>This section is amended in <emu-xref href="#sec-regular-expression-patterns-semantics"></emu-xref>.</p>
-      </emu-note>
       <p>A regular expression pattern is converted into an Abstract Closure using the process described below. An implementation is encouraged to use more efficient algorithms than the ones listed below, as long as the results are the same. The Abstract Closure is used as the value of a RegExp object's [[RegExpMatcher]] internal slot.</p>
       <p>A |Pattern| is either a BMP pattern or a Unicode pattern depending upon whether or not its associated flags contain a `u`. A BMP pattern matches against a String interpreted as consisting of a sequence of 16-bit values that are Unicode code points in the range of the Basic Multilingual Plane. A Unicode pattern matches against a String interpreted as consisting of Unicode code points encoded using UTF-16. In the context of describing the behaviour of a BMP pattern &ldquo;character&rdquo; means a single 16-bit Unicode BMP code point. In the context of describing the behaviour of a Unicode pattern &ldquo;character&rdquo; means a UTF-16 encoded code point (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>). In either context, &ldquo;character value&rdquo; means the numeric value of the corresponding non-encoded code point.</p>
       <p>The syntax and semantics of |Pattern| is defined as if the source code for the |Pattern| was a List of |SourceCharacter| values where each |SourceCharacter| corresponds to a Unicode code point. If a BMP pattern contains a non-BMP |SourceCharacter| the entire pattern is encoded using UTF-16 and the individual code units of that encoding are used as the elements of the List.</p>
@@ -35059,7 +35056,7 @@ THH:mm:ss.sss
         <h1>Pattern</h1>
         <p>The production <emu-grammar>Pattern :: Disjunction</emu-grammar> evaluates as follows:</p>
         <emu-alg>
-          1. Evaluate |Disjunction| with 1 as its _direction_ argument to obtain a Matcher _m_.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument 1.
           1. Return a new Abstract Closure with parameters (_str_, _index_) that captures _m_ and performs the following steps when called:
             1. Assert: Type(_str_) is String.
             1. Assert: _index_ is a non-negative integer which is &le; the length of _str_.
@@ -35078,18 +35075,30 @@ THH:mm:ss.sss
         </emu-note>
       </emu-clause>
 
-      <emu-clause id="sec-disjunction">
-        <h1>Disjunction</h1>
-        <p>With parameter _direction_.</p>
-        <p>The production <emu-grammar>Disjunction :: Alternative</emu-grammar> evaluates as follows:</p>
+      <emu-clause id="sec-compilesubpattern" type="sdo" oldids="sec-disjunction,sec-alternative,sec-term">
+        <h1>
+          Runtime Semantics: CompileSubpattern (
+            _direction_: 1 or -1,
+          )
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns a Matcher.</dd>
+        </dl>
+        <emu-note>
+          <p>This section is amended in <emu-xref href="#sec-compilesubpattern-annexb"></emu-xref>.</p>
+        </emu-note>
+
+        <!-- Disjunction -->
+        <emu-grammar>Disjunction :: Alternative</emu-grammar>
         <emu-alg>
-          1. Evaluate |Alternative| with argument _direction_ to obtain a Matcher _m_.
+          1. Let _m_ be CompileSubpattern of |Alternative| with argument _direction_.
           1. Return _m_.
         </emu-alg>
-        <p>The production <emu-grammar>Disjunction :: Alternative `|` Disjunction</emu-grammar> evaluates as follows:</p>
+        <emu-grammar>Disjunction :: Alternative `|` Disjunction</emu-grammar>
         <emu-alg>
-          1. Evaluate |Alternative| with argument _direction_ to obtain a Matcher _m1_.
-          1. Evaluate |Disjunction| with argument _direction_ to obtain a Matcher _m2_.
+          1. Let _m1_ be CompileSubpattern of |Alternative| with argument _direction_.
+          1. Let _m2_ be CompileSubpattern of |Disjunction| with argument _direction_.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35108,22 +35117,19 @@ THH:mm:ss.sss
           <pre><code class="javascript">["abc", "ab", undefined, "ab", "c", "c", undefined]</code></pre>
           <p>The order in which the two alternatives are tried is independent of the value of _direction_.</p>
         </emu-note>
-      </emu-clause>
 
-      <emu-clause id="sec-alternative">
-        <h1>Alternative</h1>
-        <p>With parameter _direction_.</p>
-        <p>The production <emu-grammar>Alternative :: [empty]</emu-grammar> evaluates as follows:</p>
+        <!-- Alternative -->
+        <emu-grammar>Alternative :: [empty]</emu-grammar>
         <emu-alg>
           1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
             1. Return _c_(_x_).
         </emu-alg>
-        <p>The production <emu-grammar>Alternative :: Alternative Term</emu-grammar> evaluates as follows:</p>
+        <emu-grammar>Alternative :: Alternative Term</emu-grammar>
         <emu-alg>
-          1. Evaluate |Alternative| with argument _direction_ to obtain a Matcher _m1_.
-          1. Evaluate |Term| with argument _direction_ to obtain a Matcher _m2_.
+          1. Let _m1_ be CompileSubpattern of |Alternative| with argument _direction_.
+          1. Let _m2_ be CompileSubpattern of |Term| with argument _direction_.
           1. If _direction_ = 1, then
             1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
               1. Assert: _x_ is a State.
@@ -35145,23 +35151,20 @@ THH:mm:ss.sss
         <emu-note>
           <p>Consecutive |Term|s try to simultaneously match consecutive portions of _Input_. When _direction_ = 1, if the left |Alternative|, the right |Term|, and the sequel of the regular expression all have choice points, all choices in the sequel are tried before moving on to the next choice in the right |Term|, and all choices in the right |Term| are tried before moving on to the next choice in the left |Alternative|. When _direction_ = -1, the evaluation order of |Alternative| and |Term| are reversed.</p>
         </emu-note>
-      </emu-clause>
 
-      <emu-clause id="sec-term">
-        <h1>Term</h1>
-        <p>With parameter _direction_.</p>
-        <p>The production <emu-grammar>Term :: Assertion</emu-grammar> evaluates as follows:</p>
+        <!-- Term -->
+        <emu-grammar>Term :: Assertion</emu-grammar>
         <emu-alg>
           1. Return CompileAssertion of |Assertion|.
         </emu-alg>
         <emu-note>
           <p>The resulting Matcher is independent of _direction_.</p>
         </emu-note>
-        <p>The production <emu-grammar>Term :: Atom</emu-grammar> evaluates as follows:</p>
+        <emu-grammar>Term :: Atom</emu-grammar>
         <emu-alg>
           1. Return CompileAtom of |Atom| with argument _direction_.
         </emu-alg>
-        <p>The production <emu-grammar>Term :: Atom Quantifier</emu-grammar> evaluates as follows:</p>
+        <emu-grammar>Term :: Atom Quantifier</emu-grammar>
         <emu-alg>
           1. Let _m_ be CompileAtom of |Atom| with argument _direction_.
           1. Let _q_ be CompileQuantifier of |Quantifier|.
@@ -35309,7 +35312,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Evaluate |Disjunction| with 1 as its _direction_ argument to obtain a Matcher _m_.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument 1.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35326,7 +35329,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Evaluate |Disjunction| with 1 as its _direction_ argument to obtain a Matcher _m_.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument 1.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35339,7 +35342,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Assertion :: `(` `?` `&lt;=` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Evaluate |Disjunction| with -1 as its _direction_ argument to obtain a Matcher _m_.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument -1.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35356,7 +35359,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Assertion :: `(` `?` `&lt;!` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Evaluate |Disjunction| with -1 as its _direction_ argument to obtain a Matcher _m_.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument -1.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35478,7 +35481,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Evaluate |Disjunction| with argument _direction_ to obtain a Matcher _m_.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with argument _direction_.
           1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Atom|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Atom|.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _direction_, _m_, and _parenIndex_ and performs the following steps when called:
             1. Assert: _x_ is a State.
@@ -35502,7 +35505,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Atom :: `(` `?` `:` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Return the Matcher that is the result of evaluating |Disjunction| with argument _direction_.
+          1. Return CompileSubpattern of |Disjunction| with argument _direction_.
         </emu-alg>
 
         <!-- AtomEscape -->
@@ -46906,15 +46909,14 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-annex>
 
-      <emu-annex id="sec-regular-expression-patterns-semantics">
-        <h1>Pattern Semantics</h1>
-        <p>The semantics of <emu-xref href="#sec-pattern-semantics"></emu-xref> is extended as follows:</p>
-        <p>Within <emu-xref href="#sec-term"></emu-xref> reference to &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; are to be interpreted as meaning &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; or &ldquo;<emu-grammar>ExtendedAtom :: `(` Disjunction `)`</emu-grammar> &rdquo;.</p>
+      <emu-annex id="sec-compilesubpattern-annexb" oldids="sec-regular-expression-patterns-semantics">
+        <h1>Runtime Semantics: CompileSubpattern</h1>
+        <p>The semantics of CompileSubpattern is extended as follows:</p>
+        <p>Within the rule for <emu-grammar>Term :: Atom Quantifier</emu-grammar>, references to &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; are to be interpreted as meaning &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; or &ldquo;<emu-grammar>ExtendedAtom :: `(` Disjunction `)`</emu-grammar> &rdquo;.</p>
 
-        <p>Term (<emu-xref href="#sec-term"></emu-xref>) includes the following additional evaluation rules:</p>
-        <p>The production <emu-grammar>Term :: QuantifiableAssertion Quantifier</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
-        <p>The production <emu-grammar>Term :: ExtendedAtom Quantifier</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
-        <p>The production <emu-grammar>Term :: ExtendedAtom</emu-grammar> evaluates the same as the production <emu-grammar>Term :: Atom</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
+        <p>The rule for <emu-grammar>Term :: QuantifiableAssertion Quantifier</emu-grammar> is the same as for <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
+        <p>The rule for <emu-grammar>Term :: ExtendedAtom Quantifier</emu-grammar> is the same as for <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
+        <p>The rule for <emu-grammar>Term :: ExtendedAtom</emu-grammar> is the same as for <emu-grammar>Term :: Atom</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
       </emu-annex>
 
       <emu-annex id="sec-compileassertion-annexb">
