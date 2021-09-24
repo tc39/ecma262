@@ -32,6 +32,5 @@ After cloning, do `npm install` to set up your environment. You can then do `npm
 
 ## Community
 
-* [ES discourse](https://es.discourse.group/): Discourse for ECMAScript discussion and questions
-* [Es-discuss mailing list](https://esdiscuss.org): Mailing list for ECMAScript discussions
-* IRC: #tc39 on Freenode ([instructions](https://freenode.net/kb/answer/chat))
+* [ES discourse](https://es.discourse.group/): Forum for ECMAScript discussion and questions
+* [Matrix](https://github.com/tc39/how-we-work/blob/HEAD/matrix-guide.md): Chat
