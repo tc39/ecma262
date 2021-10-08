@@ -20389,14 +20389,13 @@
       <h1>
         ApplyStringOrNumericBinaryOperator (
           _lval_: an ECMAScript language value,
-          _opText_: a sequence of Unicode code points,
+          _opText_: `**`, `*`, `/`, `%`, `+`, `-`, `&lt;&lt;`, `&gt;&gt;`, `&gt;&gt;&gt;`, `&amp;`, `^`, or `|`
           _rval_: an ECMAScript language value,
         )
       </h1>
       <dl class="header">
       </dl>
       <emu-alg>
-        1. Assert: _opText_ is present in the table in step <emu-xref href="#step-applystringornumericbinaryoperator-operations-table"></emu-xref>.
         1. If _opText_ is `+`, then
           1. [id="step-binary-op-toprimitive-lval"] Let _lprim_ be ? ToPrimitive(_lval_).
           1. [id="step-binary-op-toprimitive-rval"] Let _rprim_ be ? ToPrimitive(_rval_).
@@ -20410,19 +20409,21 @@
         1. Let _lnum_ be ? ToNumeric(_lval_).
         1. Let _rnum_ be ? ToNumeric(_rval_).
         1. If Type(_lnum_) is different from Type(_rnum_), throw a *TypeError* exception.
-        1. [id="step-applystringornumericbinaryoperator-operations-table"] Let _operation_ be the abstract operation associated with _opText_ and Type(_lnum_) in the following table:
+        1. If Type(_lnum_) is BigInt, then
+          1. If _opText_ is `**`, return ? BigInt::exponentiate(_lnum_, _rnum_).
+          1. If _opText_ is `/`, return ? BigInt::divide(_lnum_, _rnum_).
+          1. If _opText_ is `%`, return ? BigInt::remainder(_lnum_, _rnum_).
+          1. If _opText_ is `&gt;&gt;&gt;`, return ? BigInt::unsignedRightShift(_lnum_, _rnum_).
+        1. Let _operation_ be the abstract operation associated with _opText_ and Type(_lnum_) in the following table:
           <figure>
             <!-- emu-format ignore -->
             <table class="lightweight-table">
               <tr><th> _opText_       </th><th> Type(_lnum_) </th><th> _operation_                </th></tr>
               <tr><td> `**`           </td><td> Number       </td><td> Number::exponentiate       </td></tr>
-              <tr><td> `**`           </td><td> BigInt       </td><td> BigInt::exponentiate       </td></tr>
               <tr><td> `*`            </td><td> Number       </td><td> Number::multiply           </td></tr>
               <tr><td> `*`            </td><td> BigInt       </td><td> BigInt::multiply           </td></tr>
               <tr><td> `/`            </td><td> Number       </td><td> Number::divide             </td></tr>
-              <tr><td> `/`            </td><td> BigInt       </td><td> BigInt::divide             </td></tr>
               <tr><td> `%`            </td><td> Number       </td><td> Number::remainder          </td></tr>
-              <tr><td> `%`            </td><td> BigInt       </td><td> BigInt::remainder          </td></tr>
               <tr><td> `+`            </td><td> Number       </td><td> Number::add                </td></tr>
               <tr><td> `+`            </td><td> BigInt       </td><td> BigInt::add                </td></tr>
               <tr><td> `-`            </td><td> Number       </td><td> Number::subtract           </td></tr>
@@ -20432,7 +20433,6 @@
               <tr><td> `&gt;&gt;`     </td><td> Number       </td><td> Number::signedRightShift   </td></tr>
               <tr><td> `&gt;&gt;`     </td><td> BigInt       </td><td> BigInt::signedRightShift   </td></tr>
               <tr><td> `&gt;&gt;&gt;` </td><td> Number       </td><td> Number::unsignedRightShift </td></tr>
-              <tr><td> `&gt;&gt;&gt;` </td><td> BigInt       </td><td> BigInt::unsignedRightShift </td></tr>
               <tr><td> `&amp;`        </td><td> Number       </td><td> Number::bitwiseAND         </td></tr>
               <tr><td> `&amp;`        </td><td> BigInt       </td><td> BigInt::bitwiseAND         </td></tr>
               <tr><td> `^`            </td><td> Number       </td><td> Number::bitwiseXOR         </td></tr>
@@ -20441,7 +20441,7 @@
               <tr><td> `|`            </td><td> BigInt       </td><td> BigInt::bitwiseOR          </td></tr>
             </table>
           </figure>
-        1. Return ? _operation_(_lnum_, _rnum_).
+        1. Return NormalCompletion(_operation_(_lnum_, _rnum_)).
       </emu-alg>
       <emu-note>
         <p>No hint is provided in the calls to ToPrimitive in steps <emu-xref href="#step-binary-op-toprimitive-lval"></emu-xref> and <emu-xref href="#step-binary-op-toprimitive-rval"></emu-xref>. All standard objects except Dates handle the absence of a hint as if ~number~ were given; Dates handle the absence of a hint as if ~string~ were given. Exotic objects may handle the absence of a hint in some other manner.</p>
