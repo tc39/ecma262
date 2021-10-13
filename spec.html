@@ -18929,11 +18929,13 @@
         <emu-alg>
           1. Let _newTarget_ be GetNewTarget().
           1. Assert: Type(_newTarget_) is Object.
-          1. Let _func_ be ! GetSuperConstructor().
           1. Let _argList_ be ? ArgumentListEvaluation of |Arguments|.
+          1. Let _thisER_ be GetThisEnvironment().
+          1. If _thisER_.[[FunctionObject]].[[ConstructorKind]] is ~base~, then
+            1. Return ? _thisER_.GetThisBinding().
+          1. Let _func_ be ! GetSuperConstructor().
           1. If IsConstructor(_func_) is *false*, throw a *TypeError* exception.
           1. Let _result_ be ? Construct(_func_, _argList_, _newTarget_).
-          1. Let _thisER_ be GetThisEnvironment().
           1. Perform ? _thisER_.BindThisValue(_result_).
           1. Let _F_ be _thisER_.[[FunctionObject]].
           1. Assert: _F_ is an ECMAScript function object.
@@ -24559,7 +24561,7 @@
         1. Set the running execution context's LexicalEnvironment to _classScope_.
         1. Set the running execution context's PrivateEnvironment to _classPrivateEnvironment_.
         1. If _constructor_ is ~empty~, then
-          1. Let _defaultConstructor_ be a new Abstract Closure with no parameters that captures nothing and performs the following steps when called:
+          1. Let _defaultConstructor_ be a new Abstract Closure with no parameters that captures _superclass_ and performs the following steps when called:
             1. Let _args_ be the List of arguments that was passed to this function by [[Call]] or [[Construct]].
             1. If NewTarget is *undefined*, throw a *TypeError* exception.
             1. Let _F_ be the active function object.
@@ -24570,6 +24572,11 @@
               1. Return ? Construct(_func_, _args_, NewTarget).
             1. Else,
               1. NOTE: This branch behaves similarly to `constructor() {}`.
+              1. If _superclass_ is *null*, then
+                1. Let _func_ be ! _F_.[[GetPrototypeOf]]().
+                1. If _func_ is *null*, then
+                  1. Let _thisER_ be GetThisEnvironment().
+                  1. Return ? _thisER_.GetThisBinding().
               1. Return ? OrdinaryCreateFromConstructor(NewTarget, *"%Object.prototype%"*).
           1. Let _F_ be ! CreateBuiltinFunction(_defaultConstructor_, 0, _className_, &laquo; [[ConstructorKind]], [[SourceText]] &raquo;, the current Realm Record, _constructorParent_).
         1. Else,
@@ -24578,7 +24585,7 @@
           1. Perform ! MakeClassConstructor(_F_).
           1. Perform ! SetFunctionName(_F_, _className_).
         1. Perform ! MakeConstructor(_F_, *false*, _proto_).
-        1. If |ClassHeritage_opt| is present, set _F_.[[ConstructorKind]] to ~derived~.
+        1. If |ClassHeritage_opt| is present and _superclass_ is not *null*, set _F_.[[ConstructorKind]] to ~derived~.
         1. Perform ! CreateMethodProperty(_proto_, *"constructor"*, _F_).
         1. If |ClassBody_opt| is not present, let _elements_ be a new empty List.
         1. Else, let _elements_ be NonConstructorElements of |ClassBody|.
