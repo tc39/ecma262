@@ -18,7 +18,7 @@ Commits in pull requests should have a first line which starts with a tag, follo
   * Markup: non-visible changes to markup in the spec
   * Meta: changes to documents about this repository (e.g. readme.md or contributing.md) and other supporting documents or scripts (e.g. `package.json`, design documents, etc.)
 
-If changes in the upstream `master` branch cause your PR to have conflicts, you should rebase your branch to `master` and force-push it to your repo (rather than doing a merge commit).
+If changes in the upstream `main` branch cause your PR to have conflicts, you should rebase your branch to `main` and force-push it to your repo (rather than doing a merge commit).
 
 Issues and PRs in the ecma262 repository are appropriate for minor modifications to the existing specification, for example to make behavior more consistent in an edge case, match what is implemented by the large majority of actual implementations, or to clarify wording. New features use the feature request process described below.
 
