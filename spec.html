@@ -6402,6 +6402,27 @@
       </emu-note>
     </emu-clause>
 
+    <emu-clause id="sec-createnonenumerabledatapropertyorthrow" type="abstract operation">
+      <h1>
+        CreateNonEnumerableDataPropertyOrThrow (
+          _O_: an Object,
+          _P_: a property key,
+          _V_: an ECMAScript language value,
+        )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to create a new non-enumerable own property of an object. It throws a *TypeError* exception if the requested property update cannot be performed.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _newDesc_ be the PropertyDescriptor { [[Value]]: _V_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.
+        1. Return ? DefinePropertyOrThrow(_O_, _P_, _newDesc_).
+      </emu-alg>
+      <emu-note>
+        <p>This abstract operation creates a property whose attributes are set to the same defaults used for properties created by the ECMAScript language assignment operator except it is not enumerable. Normally, the property will not already exist. If it does exist and is not configurable or if _O_ is not extensible, [[DefineOwnProperty]] will return *false* causing this operation to throw a *TypeError* exception.</p>
+      </emu-note>
+    </emu-clause>
+
     <emu-clause id="sec-definepropertyorthrow" type="abstract operation">
       <h1>
         DefinePropertyOrThrow (
@@ -30591,15 +30612,15 @@
       </ul>
 
       <emu-clause id="sec-error-message">
-        <h1>Error ( _message_ )</h1>
-        <p>When the `Error` function is called with argument _message_, the following steps are taken:</p>
+        <h1>Error ( _message_ [ , _options_ ] )</h1>
+        <p>When the `Error` function is called with argument _message_ and optional argument _options_, the following steps are taken:</p>
         <emu-alg>
           1. If NewTarget is *undefined*, let _newTarget_ be the active function object; else let _newTarget_ be NewTarget.
           1. Let _O_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Error.prototype%"*, &laquo; [[ErrorData]] &raquo;).
           1. If _message_ is not *undefined*, then
             1. Let _msg_ be ? ToString(_message_).
-            1. Let _msgDesc_ be the PropertyDescriptor { [[Value]]: _msg_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.
-            1. Perform ! DefinePropertyOrThrow(_O_, *"message"*, _msgDesc_).
+            1. Perform ! CreateNonEnumerableDataPropertyOrThrow(_O_, *"message"*, _msg_).
+          1. Perform ? InstallErrorCause(_O_, _options_).
           1. Return _O_.
         </emu-alg>
       </emu-clause>
@@ -30722,15 +30743,15 @@
         </ul>
 
         <emu-clause id="sec-nativeerror">
-          <h1>_NativeError_ ( _message_ )</h1>
-          <p>When a _NativeError_ function is called with argument _message_, the following steps are taken:</p>
+          <h1>_NativeError_ ( _message_ [ , _options_ ] )</h1>
+          <p>When a _NativeError_ function is called with argument _message_ and optional argument _options_, the following steps are taken:</p>
           <emu-alg>
             1. If NewTarget is *undefined*, let _newTarget_ be the active function object; else let _newTarget_ be NewTarget.
             1. [id="step-nativerror-ordinarycreatefromconstructor"] Let _O_ be ? OrdinaryCreateFromConstructor(_newTarget_, <code>"%<var>NativeError</var>.prototype%"</code>, &laquo; [[ErrorData]] &raquo;).
             1. If _message_ is not *undefined*, then
               1. Let _msg_ be ? ToString(_message_).
-              1. Let _msgDesc_ be the PropertyDescriptor { [[Value]]: _msg_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.
-              1. Perform ! DefinePropertyOrThrow(_O_, *"message"*, _msgDesc_).
+              1. Perform ! CreateNonEnumerableDataPropertyOrThrow(_O_, *"message"*, _msg_).
+            1. Perform ? InstallErrorCause(_O_, _options_).
             1. Return _O_.
           </emu-alg>
           <p>The actual value of the string passed in step <emu-xref href="#step-nativerror-ordinarycreatefromconstructor"></emu-xref> is either *"%EvalError.prototype%"*, *"%RangeError.prototype%"*, *"%ReferenceError.prototype%"*, *"%SyntaxError.prototype%"*, *"%TypeError.prototype%"*, or *"%URIError.prototype%"* corresponding to which _NativeError_ constructor is being defined.</p>
@@ -30798,15 +30819,15 @@
         </ul>
 
         <emu-clause id="sec-aggregate-error">
-          <h1>AggregateError ( _errors_, _message_ )</h1>
-          <p>When the *AggregateError* function is called with arguments _errors_ and _message_, the following steps are taken:</p>
+          <h1>AggregateError ( _errors_, _message_ [ , _options_ ] )</h1>
+          <p>When the *AggregateError* function is called with arguments _errors_ and _message_ and optional argument _options_, the following steps are taken:</p>
           <emu-alg>
             1. If NewTarget is *undefined*, let _newTarget_ be the active function object; else let _newTarget_ be NewTarget.
             1. Let _O_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%AggregateError.prototype%"*, &laquo; [[ErrorData]] &raquo;).
             1. If _message_ is not *undefined*, then
               1. Let _msg_ be ? ToString(_message_).
-              1. Let _msgDesc_ be the PropertyDescriptor { [[Value]]: _msg_, [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.
-              1. Perform ! DefinePropertyOrThrow(_O_, *"message"*, _msgDesc_).
+              1. Perform ! CreateNonEnumerableDataPropertyOrThrow(_O_, *"message"*, _msg_).
+            1. Perform ? InstallErrorCause(_O_, _options_).
             1. Let _errorsList_ be ? IterableToList(_errors_).
             1. Perform ! DefinePropertyOrThrow(_O_, *"errors"*, PropertyDescriptor { [[Configurable]]: *true*, [[Enumerable]]: *false*, [[Writable]]: *true*, [[Value]]: ! CreateArrayFromList(_errorsList_) }).
             1. Return _O_.
@@ -30858,6 +30879,29 @@
       <emu-clause id="sec-properties-of-aggregate-error-instances">
         <h1>Properties of AggregateError Instances</h1>
         <p>AggregateError instances are ordinary objects that inherit properties from their AggregateError prototype object and have an [[ErrorData]] internal slot whose value is *undefined*. The only specified use of [[ErrorData]] is by `Object.prototype.toString` (<emu-xref href="#sec-object.prototype.tostring"></emu-xref>) to identify Error, AggregateError, or _NativeError_ instances.</p>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-abstract-operations-for-error-objects">
+      <h1>Abstract Operations for Error Objects</h1>
+
+      <emu-clause id="sec-installerrorcause" type="abstract operation">
+        <h1>
+          InstallErrorCause (
+            _O_: an Object,
+            _options_: an ECMAScript language value,
+          )
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It is used to create a *"cause"* property on _O_ when a *"cause"* property is present on _options_.</dd>
+        </dl>
+        <emu-alg>
+          1. If Type(_options_) is Object and ? HasProperty(_options_, *"cause"*) is *true*, then
+            1. Let _cause_ be ? Get(_options_, *"cause"*).
+            1. Perform ! CreateNonEnumerableDataPropertyOrThrow(_O_, *"cause"*, _cause_).
+          1. Return NormalCompletion(*undefined*).
+        </emu-alg>
       </emu-clause>
     </emu-clause>
   </emu-clause>
