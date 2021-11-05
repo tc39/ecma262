@@ -14941,7 +14941,7 @@
           1. Assert: _binding_ is a ResolvedBinding Record.
           1. Let _targetModule_ be _binding_.[[Module]].
           1. Assert: _targetModule_ is not *undefined*.
-          1. If _binding_.[[BindingName]] is *"\*namespace\*"*, then
+          1. If _binding_.[[BindingName]] is ~namespace~, then
             1. Return ? GetModuleNamespace(_targetModule_).
           1. Let _targetEnv_ be _targetModule_.[[Environment]].
           1. If _targetEnv_ is ~empty~, throw a *ReferenceError* exception.
@@ -26140,7 +26140,7 @@
                 ResolveExport(_exportName_ [, _resolveSet_])
               </td>
               <td>
-                <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record" variants="ResolvedBinding Records">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String }. If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to *"\*namespace\*"*. Return *null* if the name cannot be resolved, or *"ambiguous"* if multiple bindings were found.</p>
+                <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record" variants="ResolvedBinding Records">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String | ~namespace~ }. If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to ~namespace~. Return *null* if the name cannot be resolved, or *"ambiguous"* if multiple bindings were found.</p>
                 <p>Each time this operation is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result if it completes normally.</p>
               </td>
             </tr>
@@ -27661,7 +27661,7 @@
             <dt>description</dt>
             <dd>
               <p>ResolveExport attempts to resolve an imported binding to the actual defining module and local binding name. The defining module may be the module represented by the Module Record this method was invoked on or some other module that is imported by that module. The parameter _resolveSet_ is used to detect unresolved circular import/export paths. If a pair consisting of specific Module Record and _exportName_ is reached that is already in _resolveSet_, an import circularity has been encountered. Before recursively calling ResolveExport, a pair consisting of _module_ and _exportName_ is added to _resolveSet_.</p>
-              <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]] } is returned. This record identifies the resolved binding of the originally requested export, unless this is the export of a namespace with no local binding. In this case, [[BindingName]] will be set to *"\*namespace\*"*. If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, the string *"ambiguous"* is returned.</p>
+              <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]] } is returned. This record identifies the resolved binding of the originally requested export, unless this is the export of a namespace with no local binding. In this case, [[BindingName]] will be set to ~namespace~. If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, the string *"ambiguous"* is returned.</p>
             </dd>
           </dl>
 
@@ -27681,7 +27681,7 @@
                 1. Let _importedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
                 1. If _e_.[[ImportName]] is ~all~, then
                   1. Assert: _module_ does not provide the direct binding for this export.
-                  1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: *"\*namespace\*"* }.
+                  1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
                 1. Else,
                   1. Assert: _module_ imports a specific binding for this export.
                   1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
@@ -27699,7 +27699,9 @@
                 1. If _starResolution_ is *null*, set _starResolution_ to _resolution_.
                 1. Else,
                   1. Assert: There is more than one `*` import that includes the requested name.
-                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record or SameValue(_resolution_.[[BindingName]], _starResolution_.[[BindingName]]) is *false*, return *"ambiguous"*.
+                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record, return *"ambiguous"*.
+                  1. If _resolution_.[[BindingName]] is ~namespace~ and _starResolution_.[[BindingName]] is not ~namespace~, or if _resolution_.[[BindingName]] is not ~namespace~ and _starResolution_.[[BindingName]] is ~namespace~, return *"ambiguous"*.
+                  1. If _resolution_.[[BindingName]] is a String, _starResolution_.[[BindingName]] is a String, and SameValue(_resolution_.[[BindingName]], _starResolution_.[[BindingName]]) is *false*, return *"ambiguous"*.
             1. Return _starResolution_.
           </emu-alg>
         </emu-clause>
@@ -27731,7 +27733,7 @@
               1. Else,
                 1. Let _resolution_ be ? _importedModule_.ResolveExport(_in_.[[ImportName]]).
                 1. If _resolution_ is *null* or *"ambiguous"*, throw a *SyntaxError* exception.
-                1. If _resolution_.[[BindingName]] is *"\*namespace\*"*, then
+                1. If _resolution_.[[BindingName]] is ~namespace~, then
                   1. Let _namespace_ be ? GetModuleNamespace(_resolution_.[[Module]]).
                   1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                   1. Call _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
