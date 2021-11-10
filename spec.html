@@ -6065,6 +6065,27 @@
       </emu-note>
     </emu-clause>
 
+    <emu-clause id="sec-isstringwellformedunicode" type="abstract operation">
+      <h1>
+        Static Semantics: IsStringWellFormedUnicode (
+          _string_: a String,
+        )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It interprets _string_ as a sequence of UTF-16 encoded code points, as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>, and determines whether it is a <a href="http://www.unicode.org/glossary/#well_formed_code_unit_sequence">well formed</a> UTF-16 sequence.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _strLen_ be the number of code units in _string_.
+        1. Let _k_ be 0.
+        1. Repeat, while _k_ &ne; _strLen_,
+          1. Let _cp_ be ! CodePointAt(_string_, _k_).
+          1. If _cp_.[[IsUnpairedSurrogate]] is *true*, return *false*.
+          1. Set _k_ to _k_ + _cp_.[[CodeUnitCount]].
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-samevalue" type="abstract operation">
       <h1>
         SameValue (
@@ -7424,7 +7445,7 @@
         1. Let _names2_ be the BoundNames of |ImportSpecifier|.
         1. Return the list-concatenation of _names1_ and _names2_.
       </emu-alg>
-      <emu-grammar>ImportSpecifier : IdentifierName `as` ImportedBinding</emu-grammar>
+      <emu-grammar>ImportSpecifier : ModuleExportName `as` ImportedBinding</emu-grammar>
       <emu-alg>
         1. Return the BoundNames of |ImportedBinding|.
       </emu-alg>
@@ -17975,6 +17996,12 @@
       <emu-alg>
         1. Return the string-concatenation of 0x0023 (NUMBER SIGN) and the StringValue of |IdentifierName|.
       </emu-alg>
+      <emu-grammar>
+        ModuleExportName : StringLiteral
+      </emu-grammar>
+      <emu-alg>
+        1. Return the SV of |StringLiteral|.
+      </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-identifiers-runtime-semantics-evaluation">
@@ -25934,6 +25961,10 @@
         ImportDeclaration
         ExportDeclaration
         StatementListItem[~Yield, +Await, ~Return]
+
+      ModuleExportName :
+        IdentifierName
+        StringLiteral
     </emu-grammar>
 
     <emu-clause id="sec-module-semantics">
@@ -25977,6 +26008,10 @@
         <emu-note>
           <p>The duplicate ExportedNames rule implies that multiple `export default` |ExportDeclaration| items within a |ModuleBody| is a Syntax Error. Additional error conditions relating to conflicting or duplicate declarations are checked during module linking prior to evaluation of a |Module|. If any such errors are detected the |Module| is not evaluated.</p>
         </emu-note>
+        <emu-grammar>ModuleExportName : StringLiteral</emu-grammar>
+        <ul>
+          <li>It is a Syntax Error if IsStringWellFormedUnicode(the SV of |StringLiteral|) is *false*.</li>
+        </ul>
       </emu-clause>
 
       <emu-clause id="sec-importedlocalnames" type="abstract operation">
@@ -28023,7 +28058,7 @@
 
         ImportSpecifier :
           ImportedBinding
-          IdentifierName `as` ImportedBinding
+          ModuleExportName `as` ImportedBinding
 
         ModuleSpecifier :
           StringLiteral
@@ -28123,9 +28158,9 @@
           1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _localName_, [[LocalName]]: _localName_ }.
           1. Return a List whose sole element is _entry_.
         </emu-alg>
-        <emu-grammar>ImportSpecifier : IdentifierName `as` ImportedBinding</emu-grammar>
+        <emu-grammar>ImportSpecifier : ModuleExportName `as` ImportedBinding</emu-grammar>
         <emu-alg>
-          1. Let _importName_ be the StringValue of |IdentifierName|.
+          1. Let _importName_ be the StringValue of |ModuleExportName|.
           1. Let _localName_ be the StringValue of |ImportedBinding|.
           1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_ }.
           1. Return a List whose sole element is _entry_.
@@ -28148,7 +28183,7 @@
 
         ExportFromClause :
           `*`
-          `*` `as` IdentifierName
+          `*` `as` ModuleExportName
           NamedExports
 
         NamedExports :
@@ -28161,14 +28196,17 @@
           ExportsList `,` ExportSpecifier
 
         ExportSpecifier :
-          IdentifierName
-          IdentifierName `as` IdentifierName
+          ModuleExportName
+          ModuleExportName `as` ModuleExportName
       </emu-grammar>
 
       <emu-clause id="sec-exports-static-semantics-early-errors">
         <h1>Static Semantics: Early Errors</h1>
         <emu-grammar>ExportDeclaration : `export` NamedExports `;`</emu-grammar>
         <ul>
+          <li>
+            It is a Syntax Error if ReferencedBindings of |NamedExports| contains any |StringLiteral|s.
+          </li>
           <li>
             For each |IdentifierName| _n_ in ReferencedBindings of |NamedExports|: It is a Syntax Error if StringValue of _n_ is a |ReservedWord| or if the StringValue of _n_ is one of: *"implements"*, *"interface"*, *"let"*, *"package"*, *"private"*, *"protected"*, *"public"*, or *"static"*.
           </li>
@@ -28237,13 +28275,13 @@
           1. Let _names2_ be the ExportedBindings of |ExportSpecifier|.
           1. Return the list-concatenation of _names1_ and _names2_.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName</emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName</emu-grammar>
         <emu-alg>
-          1. Return a List whose sole element is the StringValue of |IdentifierName|.
+          1. Return a List whose sole element is the StringValue of |ModuleExportName|.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName `as` IdentifierName</emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName `as` ModuleExportName</emu-grammar>
         <emu-alg>
-          1. Return a List whose sole element is the StringValue of the first |IdentifierName|.
+          1. Return a List whose sole element is the StringValue of the first |ModuleExportName|.
         </emu-alg>
       </emu-clause>
 
@@ -28280,9 +28318,9 @@
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>ExportFromClause : `*` `as` IdentifierName</emu-grammar>
+        <emu-grammar>ExportFromClause : `*` `as` ModuleExportName</emu-grammar>
         <emu-alg>
-          1. Return a List whose sole element is the StringValue of |IdentifierName|.
+          1. Return a List whose sole element is the StringValue of |ModuleExportName|.
         </emu-alg>
         <emu-grammar>ExportFromClause : NamedExports</emu-grammar>
         <emu-alg>
@@ -28315,13 +28353,13 @@
           1. Let _names2_ be the ExportedNames of |ExportSpecifier|.
           1. Return the list-concatenation of _names1_ and _names2_.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName</emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName</emu-grammar>
         <emu-alg>
-          1. Return a List whose sole element is the StringValue of |IdentifierName|.
+          1. Return a List whose sole element is the StringValue of |ModuleExportName|.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName `as` IdentifierName</emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName `as` ModuleExportName</emu-grammar>
         <emu-alg>
-          1. Return a List whose sole element is the StringValue of the second |IdentifierName|.
+          1. Return a List whose sole element is the StringValue of the second |ModuleExportName|.
         </emu-alg>
       </emu-clause>
 
@@ -28407,9 +28445,9 @@
           1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~all-but-default~, [[LocalName]]: *null*, [[ExportName]]: *null* }.
           1. Return a List whose sole element is _entry_.
         </emu-alg>
-        <emu-grammar>ExportFromClause : `*` `as` IdentifierName</emu-grammar>
+        <emu-grammar>ExportFromClause : `*` `as` ModuleExportName</emu-grammar>
         <emu-alg>
-          1. Let _exportName_ be the StringValue of |IdentifierName|.
+          1. Let _exportName_ be the StringValue of |ModuleExportName|.
           1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~all~, [[LocalName]]: *null*, [[ExportName]]: _exportName_ }.
           1. Return a List whose sole element is _entry_.
         </emu-alg>
@@ -28423,9 +28461,9 @@
           1. Let _specs2_ be the ExportEntriesForModule of |ExportSpecifier| with argument _module_.
           1. Return the list-concatenation of _specs1_ and _specs2_.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName</emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName</emu-grammar>
         <emu-alg>
-          1. Let _sourceName_ be the StringValue of |IdentifierName|.
+          1. Let _sourceName_ be the StringValue of |ModuleExportName|.
           1. If _module_ is *null*, then
             1. Let _localName_ be _sourceName_.
             1. Let _importName_ be *null*.
@@ -28434,10 +28472,10 @@
             1. Let _importName_ be _sourceName_.
           1. Return a List whose sole element is the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_, [[ExportName]]: _sourceName_ }.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName `as` IdentifierName</emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName `as` ModuleExportName</emu-grammar>
         <emu-alg>
-          1. Let _sourceName_ be the StringValue of the first |IdentifierName|.
-          1. Let _exportName_ be the StringValue of the second |IdentifierName|.
+          1. Let _sourceName_ be the StringValue of the first |ModuleExportName|.
+          1. Let _exportName_ be the StringValue of the second |ModuleExportName|.
           1. If _module_ is *null*, then
             1. Let _localName_ be _sourceName_.
             1. Let _importName_ be *null*.
@@ -28462,13 +28500,17 @@
           1. Let _names2_ be the ReferencedBindings of |ExportSpecifier|.
           1. Return the list-concatenation of _names1_ and _names2_.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName</emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName `as` ModuleExportName</emu-grammar>
+        <emu-alg>
+          1. Return the ReferencedBindings of the first |ModuleExportName|.
+        </emu-alg>
+        <emu-grammar>ModuleExportName : IdentifierName</emu-grammar>
         <emu-alg>
           1. Return a List whose sole element is the |IdentifierName|.
         </emu-alg>
-        <emu-grammar>ExportSpecifier : IdentifierName `as` IdentifierName</emu-grammar>
+        <emu-grammar>ModuleExportName : StringLiteral</emu-grammar>
         <emu-alg>
-          1. Return a List whose sole element is the first |IdentifierName|.
+          1. Return a List whose sole element is the |StringLiteral|.
         </emu-alg>
       </emu-clause>
 
@@ -46650,6 +46692,7 @@ THH:mm:ss.sss
     <emu-prodref name="ModuleBody"></emu-prodref>
     <emu-prodref name="ModuleItemList"></emu-prodref>
     <emu-prodref name="ModuleItem"></emu-prodref>
+    <emu-prodref name="ModuleExportName"></emu-prodref>
     <emu-prodref name="ImportDeclaration"></emu-prodref>
     <emu-prodref name="ImportClause"></emu-prodref>
     <emu-prodref name="ImportedDefaultBinding"></emu-prodref>
