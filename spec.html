@@ -33863,7 +33863,7 @@ THH:mm:ss.sss
           <p>The `replace` function is intentionally generic; it does not require that its *this* value be a String object. Therefore, it can be transferred to other kinds of objects for use as a method.</p>
         </emu-note>
 
-        <emu-clause id="sec-getsubstitution" type="abstract operation">
+        <emu-clause id="sec-getsubstitution" type="abstract operation" oldids="table-replacement-text-symbol-substitutions,table-45">
           <h1>
             GetSubstitution (
               _matched_: a String,
@@ -33875,136 +33875,71 @@ THH:mm:ss.sss
             )
           </h1>
           <dl class="header">
+            <dt>description</dt>
+            <dd>For the purposes of this abstract operation, a <em>decimal digit</em> is a code unit in the range 0x0030 (DIGIT ZERO) to 0x0039 (DIGIT NINE) inclusive.</dd>
           </dl>
           <emu-alg>
-            1. Let _matchLength_ be the number of code units in _matched_.
             1. Let _stringLength_ be the number of code units in _str_.
             1. Assert: _position_ &le; _stringLength_.
-            1. Let _tailPos_ be _position_ + _matchLength_.
-            1. Let _m_ be the number of elements in _captures_.
-            1. Let _result_ be the String value derived from _replacementTemplate_ by copying code unit elements from _replacementTemplate_ to _result_ while performing replacements as specified in <emu-xref href="#table-replacement-text-symbol-substitutions"></emu-xref>. These `$` replacements are done left-to-right, and, once such a replacement is performed, the new replacement text is not subject to further replacements.
+            1. Let _templateRemainder_ be _replacementTemplate_.
+            1. Let _result_ be the empty String.
+            1. Repeat, while _templateRemainder_ is not the empty String,
+              1. NOTE: The following steps isolate _ref_ (a prefix of _templateRemainder_), determine _refReplacement_ (its replacement), and then append that replacement to _result_.
+              1. If _templateRemainder_ starts with *"$$"*, then
+                1. Let _ref_ be *"$$"*.
+                1. Let _refReplacement_ be *"$"*.
+              1. Else if _templateRemainder_ starts with *"$`"*, then
+                1. Let _ref_ be *"$`"*.
+                1. Let _refReplacement_ be the substring of _str_ from 0 to _position_.
+              1. Else if _templateRemainder_ starts with *"$&amp;"*, then
+                1. Let _ref_ be *"$&amp;"*.
+                1. Let _refReplacement_ be _matched_.
+              1. Else if _templateRemainder_ starts with *"$'"* (0x0024 (DOLLAR SIGN) followed by 0x0027 (APOSTROPHE)), then
+                1. Let _ref_ be *"$'"*.
+                1. Let _matchLength_ be the number of code units in _matched_.
+                1. Let _tailPos_ be _position_ + _matchLength_.
+                1. Let _refReplacement_ be the substring of _str_ from min(_tailPos_, _stringLength_).
+              1. Else if _templateRemainder_ starts with *"$"* followed by 1 or more decimal digits, then
+                1. Let _found_ be *false*.
+                1. For each integer _d_ of &laquo; 2, 1 &raquo;, do
+                  1. If _found_ is *false* and _templateRemainder_ starts with *"$"* followed by _d_ or more decimal digits, then
+                    1. Set _found_ to *true*.
+                    1. Let _ref_ be the substring of _templateRemainder_ from 0 to 1 + _d_.
+                    1. Let _digits_ be the substring of _templateRemainder_ from 1 to 1 + _d_.
+                    1. Let _index_ be ℝ(StringToNumber(_digits_)).
+                    1. Assert: 0 &le; _index_ &le; 99.
+                    1. If _index_ = 0, then
+                      1. Let _refReplacement_ be _ref_.
+                    1. Else if _index_ &le; the number of elements in _captures_, then
+                      1. Let _capture_ be the _index_<sup>th</sup> element of _captures_.
+                      1. If _capture_ is *undefined*, then
+                        1. Let _refReplacement_ be the empty String.
+                      1. Else,
+                        1. Let _refReplacement_ be _capture_.
+                    1. Else,
+                      1. Let _refReplacement_ be _ref_.
+              1. Else if _templateRemainder_ starts with *"$&lt;"*, then
+                1. Let _gtPos_ be StringIndexOf(_templateRemainder_, *"&gt;"*, 0).
+                1. If _gtPos_ = -1 or _namedCaptures_ is *undefined*, then
+                  1. Let _ref_ be *"$&lt;"*.
+                  1. Let _refReplacement_ be _ref_.
+                1. Else,
+                  1. Let _ref_ be the substring of _templateRemainder_ from 0 to _gtPos_ + 1.
+                  1. Let _groupName_ be the substring of _templateRemainder_ from 2 to _gtPos_.
+                  1. Assert: Type(_namedCaptures_) is Object.
+                  1. Let _capture_ be ? Get(_namedCaptures_, _groupName_).
+                  1. If _capture_ is *undefined*, then
+                    1. Let _refReplacement_ be the empty String.
+                  1. Else,
+                    1. Let _refReplacement_ be ? ToString(_capture_).
+              1. Else,
+                1. Let _ref_ be the substring of _templateRemainder_ from 0 to 1.
+                1. Let _refReplacement_ be _ref_.
+              1. Let _refLength_ be the number of code units in _ref_.
+              1. Set _templateRemainder_ to the substring of _templateRemainder_ from _refLength_.
+              1. Set _result_ to the string-concatenation of _result_ and _refReplacement_.
             1. Return _result_.
           </emu-alg>
-          <emu-table id="table-replacement-text-symbol-substitutions" caption="Replacement Text Symbol Substitutions" oldids="table-45">
-            <table>
-              <tr>
-                <th>
-                  Code units
-                </th>
-                <th>
-                  Unicode Characters
-                </th>
-                <th>
-                  Replacement text
-                </th>
-              </tr>
-              <tr>
-                <td>
-                  0x0024, 0x0024
-                </td>
-                <td>
-                  `$$`
-                </td>
-                <td>
-                  `$`
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  0x0024, 0x0026
-                </td>
-                <td>
-                  `$&amp;`
-                </td>
-                <td>
-                  _matched_
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  0x0024, 0x0060
-                </td>
-                <td>
-                  <code>$`</code>
-                </td>
-                <td>
-                  The replacement is the substring of _str_ from 0 to _position_.
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  0x0024, 0x0027
-                </td>
-                <td>
-                  `$'`
-                </td>
-                <td>
-                  If _tailPos_ &ge; _stringLength_, the replacement is the empty String. Otherwise the replacement is the substring of _str_ from _tailPos_.
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  0x0024, N<br>
-                  Where<br>
-                  0x0031 &le; N &le; 0x0039
-                </td>
-                <td>
-                  `$n` where<br>
-                  `n` is one of `1 2 3 4 5 6 7 8 9` and `$n` is not followed by a decimal digit
-                </td>
-                <td>
-                  The _n_<sup>th</sup> element of _captures_, where _n_ is a single digit in the range 1 to 9. If _n_ &le; _m_ and the _n_<sup>th</sup> element of _captures_ is *undefined*, use the empty String instead. If _n_ &gt; _m_, no replacement is done.
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  0x0024, N, N<br>
-                  Where<br>
-                  0x0030 &le; N &le; 0x0039
-                </td>
-                <td>
-                  `$nn` where<br>
-                  `n` is one of `0 1 2 3 4 5 6 7 8 9`
-                </td>
-                <td>
-                  The _nn_<sup>th</sup> element of _captures_, where _nn_ is a two-digit decimal number in the range 01 to 99. If _nn_ &le; _m_ and the _nn_<sup>th</sup> element of _captures_ is *undefined*, use the empty String instead. If _nn_ is 00 or _nn_ &gt; _m_, no replacement is done.
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  0x0024, 0x003C
-                </td>
-                <td>
-                  `$&lt;`
-                </td>
-                <td>
-                  <emu-alg>
-                    1. If _namedCaptures_ is *undefined*, the replacement text is the String *"$&lt;"*.
-                    1. Else,
-                      1. Assert: Type(_namedCaptures_) is Object.
-                      1. Scan until the next `>` U+003E (GREATER-THAN SIGN).
-                      1. If none is found, the replacement text is the String *"$&lt;"*.
-                      1. Else,
-                        1. Let _groupName_ be the enclosed <emu-not-ref>substring</emu-not-ref>.
-                        1. Let _capture_ be ? Get(_namedCaptures_, _groupName_).
-                        1. If _capture_ is *undefined*, replace the text through `>` with the empty String.
-                        1. Otherwise, replace the text through `>` with ? ToString(_capture_).
-                  </emu-alg>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  0x0024
-                </td>
-                <td>
-                  `$` in any context that does not match any of the above.
-                </td>
-                <td>
-                  `$`
-                </td>
-              </tr>
-            </table>
-          </emu-table>
         </emu-clause>
       </emu-clause>
 
