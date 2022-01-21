@@ -19285,7 +19285,7 @@
           1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
           1. Let _specifierString_ be ToString(_specifier_).
           1. IfAbruptRejectPromise(_specifierString_, _promiseCapability_).
-          1. Perform ! HostImportModuleDynamically(_referencingScriptOrModule_, _specifierString_, _promiseCapability_).
+          1. Perform HostImportModuleDynamically(_referencingScriptOrModule_, _specifierString_, _promiseCapability_).
           1. Return _promiseCapability_.[[Promise]].
         </emu-alg>
       </emu-clause>
@@ -27513,7 +27513,7 @@
             ResolveExport (
               _exportName_: a String,
               optional _resolveSet_: a List of Records that have [[Module]] and [[ExportName]] fields,
-            )
+            ): a Completion Record normally containing a ResolvedBinding Record, *null*, or ~ambiguous~
           </h1>
           <dl class="header">
             <dt>for</dt>
@@ -27531,44 +27531,44 @@
             1. For each Record { [[Module]], [[ExportName]] } _r_ of _resolveSet_, do
               1. If _module_ and _r_.[[Module]] are the same Module Record and SameValue(_exportName_, _r_.[[ExportName]]) is *true*, then
                 1. Assert: This is a circular import request.
-                1. Return *null*.
+                1. Return NormalCompletion(*null*).
             1. Append the Record { [[Module]]: _module_, [[ExportName]]: _exportName_ } to _resolveSet_.
             1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
               1. If SameValue(_exportName_, _e_.[[ExportName]]) is *true*, then
                 1. Assert: _module_ provides the direct binding for this export.
-                1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }.
+                1. Return NormalCompletion(ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }).
             1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
               1. If SameValue(_exportName_, _e_.[[ExportName]]) is *true*, then
                 1. Let _importedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
                 1. If _e_.[[ImportName]] is ~all~, then
                   1. Assert: _module_ does not provide the direct binding for this export.
-                  1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
+                  1. Return NormalCompletion(ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }).
                 1. Else,
                   1. Assert: _module_ imports a specific binding for this export.
-                  1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
+                  1. Return ? _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
             1. If SameValue(_exportName_, *"default"*) is *true*, then
               1. Assert: A `default` export was not explicitly defined by this module.
-              1. Return *null*.
+              1. Return NormalCompletion(*null*).
               1. NOTE: A `default` export cannot be provided by an `export * from "mod"` declaration.
             1. Let _starResolution_ be *null*.
             1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
               1. Let _importedModule_ be ? HostResolveImportedModule(_module_, _e_.[[ModuleRequest]]).
               1. Let _resolution_ be ? _importedModule_.ResolveExport(_exportName_, _resolveSet_).
-              1. If _resolution_ is ~ambiguous~, return ~ambiguous~.
+              1. If _resolution_ is ~ambiguous~, return NormalCompletion(~ambiguous~).
               1. If _resolution_ is not *null*, then
                 1. Assert: _resolution_ is a ResolvedBinding Record.
                 1. If _starResolution_ is *null*, set _starResolution_ to _resolution_.
                 1. Else,
                   1. Assert: There is more than one `*` import that includes the requested name.
-                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record, return ~ambiguous~.
-                  1. If _resolution_.[[BindingName]] is ~namespace~ and _starResolution_.[[BindingName]] is not ~namespace~, or if _resolution_.[[BindingName]] is not ~namespace~ and _starResolution_.[[BindingName]] is ~namespace~, return ~ambiguous~.
-                  1. If _resolution_.[[BindingName]] is a String, _starResolution_.[[BindingName]] is a String, and SameValue(_resolution_.[[BindingName]], _starResolution_.[[BindingName]]) is *false*, return ~ambiguous~.
-            1. Return _starResolution_.
+                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record, return NormalCompletion(~ambiguous~).
+                  1. If _resolution_.[[BindingName]] is ~namespace~ and _starResolution_.[[BindingName]] is not ~namespace~, or if _resolution_.[[BindingName]] is not ~namespace~ and _starResolution_.[[BindingName]] is ~namespace~, return NormalCompletion(~ambiguous~).
+                  1. If _resolution_.[[BindingName]] is a String, _starResolution_.[[BindingName]] is a String, and SameValue(_resolution_.[[BindingName]], _starResolution_.[[BindingName]]) is *false*, return NormalCompletion(~ambiguous~).
+            1. Return NormalCompletion(_starResolution_).
           </emu-alg>
         </emu-clause>
 
         <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
-          <h1>InitializeEnvironment ( )</h1>
+          <h1>InitializeEnvironment (): a Completion Record normally containing ~unused~</h1>
           <dl class="header">
             <dt>for</dt>
             <dd>a Source Text Module Record _module_</dd>
@@ -27631,7 +27631,7 @@
                   1. Let _fo_ be InstantiateFunctionObject of _d_ with arguments _env_ and _privateEnv_.
                   1. Call _env_.InitializeBinding(_dn_, _fo_).
             1. Remove _moduleContext_ from the execution context stack.
-            1. Return NormalCompletion(~empty~).
+            1. Return NormalCompletion(~unused~).
           </emu-alg>
         </emu-clause>
 
@@ -27639,7 +27639,7 @@
           <h1>
             ExecuteModule (
               optional _capability_: unknown,
-            )
+            ): a Completion Record normally containing ~unused~
           </h1>
           <dl class="header">
             <dt>for</dt>
@@ -27661,11 +27661,12 @@
               1. Let _result_ be the result of evaluating _module_.[[ECMAScriptCode]].
               1. Suspend _moduleContext_ and remove it from the execution context stack.
               1. Resume the context that is now on the top of the execution context stack as the running execution context.
-              1. Return Completion(_result_).
+              1. If _result_ is an abrupt completion, then
+                1. Return Completion(_result_).
             1. Else,
               1. Assert: _capability_ is a PromiseCapability Record.
               1. Perform ! AsyncBlockStart(_capability_, _module_.[[ECMAScriptCode]], _moduleContext_).
-              1. Return NormalCompletion(~empty~).
+            1. Return NormalCompletion(~unused~).
           </emu-alg>
         </emu-clause>
       </emu-clause>
@@ -27675,7 +27676,7 @@
           HostResolveImportedModule (
             _referencingScriptOrModule_: a Script Record, a Module Record, or *null*,
             _specifier_: a |ModuleSpecifier| String,
-          )
+          ): a Completion Record normally containing a Module Record
         </h1>
         <dl class="header">
           <dt>description</dt>
@@ -27711,7 +27712,7 @@
             _referencingScriptOrModule_: a Script Record, a Module Record, or *null*,
             _specifier_: a |ModuleSpecifier| String,
             _promiseCapability_: a PromiseCapability Record,
-          )
+          ): ~unused~
         </h1>
         <dl class="header">
           <dt>description</dt>
@@ -27721,7 +27722,7 @@
 
         <ul>
           <li>
-            It must return NormalCompletion(*undefined*). Success or failure must instead be signaled as discussed below.
+            It must return ~unused~. Success or failure must instead be signaled as discussed below.
           </li>
           <li>
             The host environment must conform to one of the two following sets of requirements:
@@ -27765,7 +27766,7 @@
             _specifier_: unknown,
             _promiseCapability_: a PromiseCapability Record,
             _innerPromise_: unknown,
-          )
+          ): ~unused~
         </h1>
         <dl class="header">
           <dt>description</dt>
@@ -27781,11 +27782,11 @@
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _namespace_.[[Value]] &raquo;).
             1. Else,
               1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _namespace_.[[Value]] &raquo;).
-            1. Return *undefined*.
+            1. Return ~unused~.
           1. Let _onFulfilled_ be CreateBuiltinFunction(_fulfilledClosure_, 0, *""*, &laquo; &raquo;).
           1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_error_) that captures _promiseCapability_ and performs the following steps when called:
             1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _error_ &raquo;).
-            1. Return *undefined*.
+            1. Return ~unused~.
           1. Let _onRejected_ be CreateBuiltinFunction(_rejectedClosure_, 0, *""*, &laquo; &raquo;).
           1. Perform ! PerformPromiseThen(_innerPromise_, _onFulfilled_, _onRejected_).
         </emu-alg>
