@@ -37612,7 +37612,7 @@ THH:mm:ss.sss
         </emu-note>
       </emu-clause>
 
-      <emu-clause id="sec-array.prototype.sort">
+      <emu-clause id="sec-array.prototype.sort" oldids="sec-sortcompare">
         <h1>Array.prototype.sort ( _comparefn_ )</h1>
         <p>The elements of this array are sorted. The sort must be stable (that is, elements that compare equal must remain in their original order). If _comparefn_ is not *undefined*, it should be a function that accepts two arguments _x_ and _y_ and returns a negative Number if _x_ &lt; _y_, a positive Number if _x_ &gt; _y_, or a zero otherwise.</p>
         <p>When the `sort` method is called, the following steps are taken:</p>
@@ -37620,6 +37620,21 @@ THH:mm:ss.sss
           1. [id="step-array-sort-comparefn"] If _comparefn_ is not *undefined* and IsCallable(_comparefn_) is *false*, throw a *TypeError* exception.
           1. Let _obj_ be ? ToObject(*this* value).
           1. [id="step-array-sort-len"] Let _len_ be ? LengthOfArrayLike(_obj_).
+          1. Let _SortCompare_ be a new Abstract Closure with parameters (_x_, _y_) that captures _comparefn_ and performs the following steps when called:
+            1. If _x_ and _y_ are both *undefined*, return *+0*<sub>𝔽</sub>.
+            1. If _x_ is *undefined*, return *1*<sub>𝔽</sub>.
+            1. If _y_ is *undefined*, return *-1*<sub>𝔽</sub>.
+            1. If _comparefn_ is not *undefined*, then
+              1. Let _v_ be ? ToNumber(? Call(_comparefn_, *undefined*, &laquo; _x_, _y_ &raquo;)).
+              1. If _v_ is *NaN*, return *+0*<sub>𝔽</sub>.
+              1. Return _v_.
+            1. [id="step-sortcompare-tostring-x"] Let _xString_ be ? ToString(_x_).
+            1. [id="step-sortcompare-tostring-y"] Let _yString_ be ? ToString(_y_).
+            1. Let _xSmaller_ be ! IsLessThan(_xString_, _yString_, *true*).
+            1. If _xSmaller_ is *true*, return *-1*<sub>𝔽</sub>.
+            1. Let _ySmaller_ be ! IsLessThan(_yString_, _xString_, *true*).
+            1. If _ySmaller_ is *true*, return *1*<sub>𝔽</sub>.
+            1. Return *+0*<sub>𝔽</sub>.
           1. Let _items_ be a new empty List.
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _len_,
@@ -37630,7 +37645,7 @@ THH:mm:ss.sss
               1. Append _kValue_ to _items_.
             1. Set _k_ to _k_ + 1.
           1. Let _itemCount_ be the number of elements in _items_.
-          1. [id="step-array-sort"] Sort _items_ using an implementation-defined sequence of calls to SortCompare. If any such call returns an abrupt completion, stop before performing any further calls to SortCompare or steps in this algorithm and return that Completion Record.
+          1. [id="step-array-sort"] Sort _items_ using an implementation-defined sequence of calls to _SortCompare_. If any such call returns an abrupt completion, stop before performing any further calls to _SortCompare_ or steps in this algorithm and return that Completion Record.
           1. Let _j_ be 0.
           1. Repeat, while _j_ &lt; _itemCount_,
             1. Perform ? Set(_obj_, ! ToString(𝔽(_j_)), _items_[_j_], *true*).
@@ -37647,10 +37662,10 @@ THH:mm:ss.sss
             If _comparefn_ is not *undefined* and is not a consistent comparator for the elements of _items_.
           </li>
           <li>
-            If _comparefn_ is *undefined* and SortCompare does not act as a consistent comparator.
+            If _comparefn_ is *undefined* and _SortCompare_ does not act as a consistent comparator.
           </li>
           <li>
-            If _comparefn_ is *undefined* and all applications of ToString, to any specific value passed as an argument to SortCompare, do not produce the same result.
+            If _comparefn_ is *undefined* and all applications of ToString, to any specific value passed as an argument to _SortCompare_, do not produce the same result.
           </li>
         </ul>
         <p>Unless the sort order is specified above to be implementation-defined, _items_ must satisfy all of the following conditions after executing step <emu-xref href="#step-array-sort"></emu-xref> of the algorithm above:</p>
@@ -37659,11 +37674,11 @@ THH:mm:ss.sss
             There must be some mathematical permutation &pi; of the non-negative integers less than _itemCount_, such that for every non-negative integer _j_ less than _itemCount_, the element <emu-eqn>old[_j_]</emu-eqn> is exactly the same as <emu-eqn>new[&pi;(_j_)]</emu-eqn>.
           </li>
           <li>
-            Then for all non-negative integers _j_ and _k_, each less than _itemCount_, if <emu-eqn>SortCompare(old[_j_], old[_k_]) &lt; 0</emu-eqn> (see SortCompare below), then <emu-eqn>&pi;(_j_) &lt; &pi;(_k_)</emu-eqn>.
+            Then for all non-negative integers _j_ and _k_, each less than _itemCount_, if <emu-eqn>_SortCompare_(old[_j_], old[_k_]) &lt; 0</emu-eqn>, then <emu-eqn>&pi;(_j_) &lt; &pi;(_k_)</emu-eqn>.
           </li>
         </ul>
         <p>Here the notation <emu-eqn>old[_j_]</emu-eqn> is used to refer to <emu-eqn>_items_[_j_]</emu-eqn> before step <emu-xref href="#step-array-sort"></emu-xref> is executed, and the notation <emu-eqn>new[_j_]</emu-eqn> to refer to <emu-eqn>_items_[_j_]</emu-eqn> after step <emu-xref href="#step-array-sort"></emu-xref> has been executed.</p>
-        <p>An abstract operation or function _comparator_ is a <dfn id="consistent-comparator">consistent comparator</dfn> for a set of values _S_ if all of the requirements below are met for all values _a_, _b_, and _c_ (possibly the same value) in the set _S_: The notation <emu-eqn>_a_ &lt;<sub>C</sub> _b_</emu-eqn> means <emu-eqn>_comparator_(_a_, _b_) &lt; 0</emu-eqn>; <emu-eqn>_a_ =<sub>C</sub> _b_</emu-eqn> means <emu-eqn>_comparator_(_a_, _b_) = 0</emu-eqn> (of either sign); and <emu-eqn>_a_ &gt;<sub>C</sub> _b_</emu-eqn> means <emu-eqn>_comparator_(_a_, _b_) &gt; 0</emu-eqn>.</p>
+        <p>An abstract closure or function _comparator_ is a <dfn id="consistent-comparator">consistent comparator</dfn> for a set of values _S_ if all of the requirements below are met for all values _a_, _b_, and _c_ (possibly the same value) in the set _S_: The notation <emu-eqn>_a_ &lt;<sub>C</sub> _b_</emu-eqn> means <emu-eqn>_comparator_(_a_, _b_) &lt; 0</emu-eqn>; <emu-eqn>_a_ =<sub>C</sub> _b_</emu-eqn> means <emu-eqn>_comparator_(_a_, _b_) = 0</emu-eqn> (of either sign); and <emu-eqn>_a_ &gt;<sub>C</sub> _b_</emu-eqn> means <emu-eqn>_comparator_(_a_, _b_) &gt; 0</emu-eqn>.</p>
         <ul>
           <li>
             Calling _comparator_(_a_, _b_) always returns the same value _v_ when given a specific pair of values _a_ and _b_ as its two arguments. Furthermore, Type(_v_) is Number, and _v_ is not *NaN*. Note that this implies that exactly one of _a_ &lt;<sub>C</sub> _b_, _a_ =<sub>C</sub> _b_, and _a_ &gt;<sub>C</sub> _b_ will be true for a given pair of _a_ and _b_.
@@ -37691,43 +37706,14 @@ THH:mm:ss.sss
           <p>The above conditions are necessary and sufficient to ensure that _comparator_ divides the set _S_ into equivalence classes and that these equivalence classes are totally ordered.</p>
         </emu-note>
         <emu-note>
+          <p>Because non-existent property values always compare greater than *undefined* property values, and *undefined* always compares greater than any other value, *undefined* property values always sort to the end of the result, followed by non-existent property values.</p>
+        </emu-note>
+        <emu-note>
+          <p>Method calls performed by the ToString abstract operations in steps <emu-xref href="#step-sortcompare-tostring-x"></emu-xref> and <emu-xref href="#step-sortcompare-tostring-y"></emu-xref> have the potential to cause _SortCompare_ to not behave as a consistent comparator.</p>
+        </emu-note>
+        <emu-note>
           <p>The `sort` function is intentionally generic; it does not require that its *this* value be an Array. Therefore, it can be transferred to other kinds of objects for use as a method.</p>
         </emu-note>
-
-        <emu-clause id="sec-sortcompare" type="abstract operation">
-          <h1>
-            SortCompare (
-              _x_: unknown,
-              _y_: unknown,
-            ): either a normal completion containing a Number or an abrupt completion
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>It also has access to the _comparefn_ argument passed to the current invocation of the `sort` method.</dd>
-          </dl>
-          <emu-alg>
-            1. If _x_ and _y_ are both *undefined*, return *+0*<sub>𝔽</sub>.
-            1. If _x_ is *undefined*, return *1*<sub>𝔽</sub>.
-            1. If _y_ is *undefined*, return *-1*<sub>𝔽</sub>.
-            1. If _comparefn_ is not *undefined*, then
-              1. Let _v_ be ? ToNumber(? Call(_comparefn_, *undefined*, &laquo; _x_, _y_ &raquo;)).
-              1. If _v_ is *NaN*, return *+0*<sub>𝔽</sub>.
-              1. Return _v_.
-            1. [id="step-sortcompare-tostring-x"] Let _xString_ be ? ToString(_x_).
-            1. [id="step-sortcompare-tostring-y"] Let _yString_ be ? ToString(_y_).
-            1. Let _xSmaller_ be ! IsLessThan(_xString_, _yString_, *true*).
-            1. If _xSmaller_ is *true*, return *-1*<sub>𝔽</sub>.
-            1. Let _ySmaller_ be ! IsLessThan(_yString_, _xString_, *true*).
-            1. If _ySmaller_ is *true*, return *1*<sub>𝔽</sub>.
-            1. Return *+0*<sub>𝔽</sub>.
-          </emu-alg>
-          <emu-note>
-            <p>Because non-existent property values always compare greater than *undefined* property values, and *undefined* always compares greater than any other value, *undefined* property values always sort to the end of the result, followed by non-existent property values.</p>
-          </emu-note>
-          <emu-note>
-            <p>Method calls performed by the ToString abstract operations in steps <emu-xref href="#step-sortcompare-tostring-x"></emu-xref> and <emu-xref href="#step-sortcompare-tostring-y"></emu-xref> have the potential to cause SortCompare to not behave as a consistent comparator.</p>
-          </emu-note>
-        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-array.prototype.splice">
@@ -39021,7 +39007,7 @@ THH:mm:ss.sss
         <p>This function is not generic. The *this* value must be an object with a [[TypedArrayName]] internal slot.</p>
       </emu-clause>
 
-      <emu-clause id="sec-%typedarray%.prototype.sort">
+      <emu-clause id="sec-%typedarray%.prototype.sort" oldids="sec-typedarraysortcompare">
         <h1>%TypedArray%.prototype.sort ( _comparefn_ )</h1>
         <p>%TypedArray%`.prototype.sort` is a distinct function that, except as described below, implements the same requirements as those of `Array.prototype.sort` as defined in <emu-xref href="#sec-array.prototype.sort"></emu-xref>. The implementation of the %TypedArray%`.prototype.sort` specification may be optimized with the knowledge that the *this* value is an object that has a fixed length and whose <emu-xref href="#integer-index">integer-indexed</emu-xref> properties are not sparse.</p>
         <p>This function is not generic. The *this* value must be an object with a [[TypedArrayName]] internal slot.</p>
@@ -39032,21 +39018,8 @@ THH:mm:ss.sss
           1. Perform ? ValidateTypedArray(_obj_).
           1. Let _buffer_ be _obj_.[[ViewedArrayBuffer]].
           1. Let _len_ be _obj_.[[ArrayLength]].
-        </emu-alg>
-        <p>%TypedArray%`.prototype.sort` calls TypedArraySortCompare rather than SortCompare.</p>
-
-        <emu-clause id="sec-typedarraysortcompare" type="abstract operation">
-          <h1>
-            TypedArraySortCompare (
-              _x_: unknown,
-              _y_: unknown,
-            ): either a normal completion containing a Number or an abrupt completion
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>It also has access to the _comparefn_ and _buffer_ values of the current invocation of the %TypedArray%`.prototype.sort` method. It performs a numeric comparison rather than the string comparison used in <emu-xref href="#sec-array.prototype.sort"></emu-xref>.</dd>
-          </dl>
-          <emu-alg>
+          1. NOTE: The following closure performs a numeric comparison rather than the string comparison used in <emu-xref href="#sec-array.prototype.sort"></emu-xref>.
+          1. Let _SortCompare_ be a new Abstract Closure with parameters (_x_, _y_) that captures _comparefn_ and _buffer_ and performs the following steps when called:
             1. Assert: Both Type(_x_) and Type(_y_) are Number or both are BigInt.
             1. If _comparefn_ is not *undefined*, then
               1. Let _v_ be ? ToNumber(? Call(_comparefn_, *undefined*, &laquo; _x_, _y_ &raquo;)).
@@ -39061,11 +39034,10 @@ THH:mm:ss.sss
             1. If _x_ is *-0*<sub>𝔽</sub> and _y_ is *+0*<sub>𝔽</sub>, return *-1*<sub>𝔽</sub>.
             1. If _x_ is *+0*<sub>𝔽</sub> and _y_ is *-0*<sub>𝔽</sub>, return *1*<sub>𝔽</sub>.
             1. Return *+0*<sub>𝔽</sub>.
-          </emu-alg>
-          <emu-note>
-            <p>Because *NaN* always compares greater than any other value, *NaN* property values always sort to the end of the result when _comparefn_ is not provided.</p>
-          </emu-note>
-        </emu-clause>
+        </emu-alg>
+        <emu-note>
+          <p>Because *NaN* always compares greater than any other value, *NaN* property values always sort to the end of the result when _comparefn_ is not provided.</p>
+        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-%typedarray%.prototype.subarray">
@@ -47812,7 +47784,7 @@ THH:mm:ss.sss
   <p><emu-xref href="#sec-date.prototype.tostring"></emu-xref>: Previous editions did not specify the value returned by `Date.prototype.toString` when this time value is *NaN*. ECMAScript 2015 specifies the result to be the String value *"Invalid Date"*.</p>
   <p><emu-xref href="#sec-regexp-pattern-flags"></emu-xref>, <emu-xref href="#sec-escaperegexppattern"></emu-xref>: Any LineTerminator code points in the value of the *"source"* property of a RegExp instance must be expressed using an escape sequence. Edition 5.1 only required the escaping of `/`.</p>
   <p><emu-xref href="#sec-regexp.prototype-@@match"></emu-xref>, <emu-xref href="#sec-regexp.prototype-@@replace"></emu-xref>: In previous editions, the specifications for `String.prototype.match` and `String.prototype.replace` was incorrect for cases where the pattern argument was a RegExp value whose `global` flag is set. The previous specifications stated that for each attempt to match the pattern, if `lastIndex` did not change it should be incremented by 1. The correct behaviour is that `lastIndex` should be incremented by one only if the pattern matched the empty String.</p>
-  <p><emu-xref href="#sec-array.prototype.sort"></emu-xref>, <emu-xref href="#sec-sortcompare"></emu-xref>: Previous editions did not specify how a *NaN* value returned by a _comparefn_ was interpreted by `Array.prototype.sort`. ECMAScript 2015 specifies that such as value is treated as if *+0*<sub>𝔽</sub> was returned from the _comparefn_. ECMAScript 2015 also specifies that ToNumber is applied to the result returned by a _comparefn_. In previous editions, the effect of a _comparefn_ result that is not a Number value was implementation-defined. In practice, implementations call ToNumber.</p>
+  <p><emu-xref href="#sec-array.prototype.sort"></emu-xref>: Previous editions did not specify how a *NaN* value returned by a _comparefn_ was interpreted by `Array.prototype.sort`. ECMAScript 2015 specifies that such as value is treated as if *+0*<sub>𝔽</sub> was returned from the _comparefn_. ECMAScript 2015 also specifies that ToNumber is applied to the result returned by a _comparefn_. In previous editions, the effect of a _comparefn_ result that is not a Number value was implementation-defined. In practice, implementations call ToNumber.</p>
 </emu-annex>
 
 <emu-annex id="sec-additions-and-changes-that-introduce-incompatibilities-with-prior-editions">
