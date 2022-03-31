@@ -18247,9 +18247,11 @@
 
         Initializer[In, Yield, Await] :
           `=` AssignmentExpression[?In, ?Yield, ?Await]
+          `←` StaplExpression[?Await, ~Params]
       </emu-grammar>
       <emu-note>
         <p>|MethodDefinition| is defined in <emu-xref href="#sec-method-definitions"></emu-xref>.</p>
+        <p>|Initializer| for APL is Normative Optional.</p>
       </emu-note>
       <emu-note>
         <p>In certain contexts, |ObjectLiteral| is used as a cover grammar for a more restricted secondary grammar. The |CoverInitializedName| production is necessary to fully cover these secondary grammars. However, use of this production results in an early Syntax Error in normal contexts where an actual |ObjectLiteral| is expected.</p>
@@ -20936,6 +20938,638 @@
         </emu-alg>
       </emu-clause>
     </emu-clause>
+  </emu-clause>
+  <emu-clause id="sec-apl-expression-rules" normative-optional>
+    <h1>Stapl Expressions</h1>
+    <emu-note>
+      It is a truth universally acknowledged, that any programming language in possession of Arrays must
+      be in want of an APL implementation.
+    </emu-note>
+    <emu-grammar>
+      StaplExpression[?Await, ?Params]:
+        DiadicOperatorExpression[?Await, ?Params]
+        DiadicExpression[?Await, ?Params]
+        MonadicOperatorExpression[?Await, ?Params]
+        MonadicExpression[?Await, ?Params]
+        StaplList[?Await, ?Params]
+
+      StaplList[?Await, ?Params]:
+        StaplListElement[?Await, ?Params] WhiteSpace StaplList[?Await, ?Params]
+        StaplListElement[?Await, ?Params]
+        `(` StaplExpression[?Await, ?Param] `)`
+
+      StaplParams : one of
+        `⍺ ⍵`
+
+      StaplListElement[?Await, ?Params] :
+        [+Params] StaplParams
+        IdentifierReference
+        NumericLiteral
+        StringLiteral
+        TemplateLiteral[~Yield, ?Await, ~Tagged]
+        [+Await] `await` StaplListElement
+
+      StaplFunctionDefinition:
+       `{` StaplExpression[+Params] `}`
+
+      MonadicFunction:
+        MonadicFunctionIdentifier
+        StaplFunctionDefinition
+
+      MonadicFunctionIdentifier: one of
+        `? ⌈ ⌊ ⍴ ∼ ∣ − + × ÷ ∈ ○ ⍟ ⌽`
+
+      DiadicFunction:
+        DiadicFunctionIdentifier
+        StaplFunctionDefinition
+
+      DiadicFunctionIdentifier : one of
+        `+ − × ÷ ⋆ ∈ ⌈ ⌊ ⍴ ↑ ↓ ⊥ ⊤ ∣ , \ / ⍳ ⌹ ⌽ ⊖ ⍟ ⍕ ⍉ ! ¨ < ≤ = ≥ > ≠ ∨ ∧ ⍱ ⊣ ⊢`
+    </emu-grammar>
+
+    <emu-clause id="sec-monadic-operators">
+      <h1>Monadic Operators</h1>
+      <h2>Syntax</h2>
+      <emu-grammar type="definition">
+        MonadicOperatorExpression[?Await, ?Params]:
+          StaplFunction MonadicOperator StaplExpression[?Await, ?Params]
+
+        MonadicOperatorIdentifier : one of
+          `/`
+
+      </emu-grammar>
+      <emu-note>
+        <ul>
+          <li>The `/` operator performs a reduction applying the function on the right to the data on the left.</li>
+        </ul>
+      </emu-note>
+
+      <emu-clause id="sec-monadic-operator-runtime-semantics-evaluation" type="sdo">
+        <h1>Runtime Semantics: Evaluation</h1>
+        <emu-grammar> MonadicOperatorExpression: StaplFunction MonadicOperator StaplExpression</emu-grammar>
+        <emu-alg>
+          1. Let _fn_ be the resulting function object of ! ToStaplFunction(|StaplFunction|).
+          1. Let _op_ be the resulting function object of ! ToStaplMonadicOperation(|MonadicOperator|).
+          1. Let _arr_ be the resulting array of ? ToStaplValue(|StaplExpression|)
+          1. Return ? Call(_op_, Undefined, _fn_, _arr_).
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+
+    <emu-clause id="sec-monadic-expressions">
+      <h1>Monadic Expressions</h1>
+      <h2>Syntax</h2>
+      <emu-grammar type="definition">
+        MonadicExpression[?Await, ?Params]:
+          MonadicFunction StaplExpression[?Await, ?Params]
+
+      </emu-grammar>
+      <emu-clause id="sec-monadic-expression-runtime-semantics-evaluation" type="sdo">
+        <h1>Runtime Semantics: Evaluation</h1>
+        <emu-grammar> MonadicExpression: MonadicFunction StaplExpression</emu-grammar>
+        <emu-alg>
+          1. Let _fn_ be the resulting function object of ! ToMonadicStaplFunction(|MonadicFunction|).
+          1. Let _arr_ be the resulting array of ? ToStaplValue(|StaplExpression|)
+          1. Return ? Call(_fn_, Undefined, _arr_).
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+
+    <emu-clause id="sec-diadic-Expressions">
+      <h1>Diadic Expressions</h1>
+      <h2>Syntax</h2>
+      <emu-grammar type="definition">
+        DiadicExpression[?Await, ?Params]:
+          StaplList[?Await, ?Params] DiadicFunction StaplExpression[?Await, ?Params]
+      </emu-grammar>
+      <emu-clause id="sec-diadic-expression-runtime-semantics-evaluation" type="sdo">
+        <h1>Runtime Semantics: Evaluation</h1>
+        <emu-grammar> DiadicExpression: StaplList DiadicFunction StaplExpression</emu-grammar>
+        <emu-alg>
+          1. Let _fn_ be the resulting function object of ! ToDiadicStaplFunction(|DiadicFunction|).
+          1. Let _rhs_ be the resulting array of ? ToStaplValue(|StaplList|)
+          1. Let _lhs_ be the resulting array of ? ToStaplValue(|StaplExpression|)
+          1. Return ? Call(_fn_, Undefined, _rhs_, _lhs_).
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-diadic-operators">
+      <h1>Diadic Operators</h1>
+      <h2>Syntax</h2>
+      <emu-grammar type="definition">
+        DiadicOperatorExpression[?Await, ?Params]:
+          MonadicComposition[?Await, ?Params]
+          DiadicComposition[?Await, ?Params]
+
+        MonadicComposition[?Await, ?Params]:
+          MonadicFunction `∘` MonadicExpression[?Await, ?Params]
+          MonadicFunction `⍥` MonadicExpression[?Await, ?Params]
+
+        DiadicComposition[?Await, ?Params]:
+          StaplList[?Await, ?Params] DiadicFunction `∘` MonadicExpression[?Await, ?Params]
+          StaplList[?Await, ?Params] DiadicFunction `⍥` MonadicFunction StaplExpression[?Await, ?Params]
+      </emu-grammar>
+      <emu-note>
+        <ul>
+          <li>The `∘` operator is the "jot" operator and is used for composing a series of monadic applications to a value with a diadic function</li>
+          <li>The `⍥` operator is the "over" operator and is used for applying monadic transformations
+            on the left and right of a diadic function</li>
+        </ul>
+      </emu-note>
+
+      <emu-clause id="sec-diadic-operator-runtime-semantics-evaluation" type="sdo">
+        <h1>Runtime Semantics: Evaluation</h1>
+        <emu-grammar> MonadicComposition: MonadicFunction `∘` MonadicExpression</emu-grammar>
+        <emu-grammar> MonadicComposition: MonadicFunction `⍥` MonadicExpression</emu-grammar>
+        <emu-alg>
+          1. Let _fn_ be the resulting function object of ! ToStaplMonadicFunction(|MonadicFunction|).
+          1. Let _arr_ be the resulting array object of evaluating MonadicExpression.
+          1. Return ? Call(_fn_, Undefined, _arr_).
+        </emu-alg>
+        <emu-grammar> DiadicComposition: StaplList DiadicFunction `∘` MonadicExpression</emu-grammar>
+        <emu-alg>
+          1. Let _fn_ be the resulting function object of ! ToStaplDiadicFunction(|DiadicFunction|).
+          1. Let _innerArr_ be the resulting array object of evaluating MonadicExpression.
+          1. Let _outerArr_ be the result of evaluating StaplList.
+          1. Return ? Call(_fn_, Undefined, _outerArr_, _innerArr_).
+        </emu-alg>
+        <emu-grammar> DiadicComposition: StaplList DiadicFunction `⍥` MonadicFunction StaplExpression</emu-grammar>
+        <emu-alg>
+          1. Let _innerFn_ be the resulting function object of ! ToStaplMonadicFunction(|MonadicFunction|).
+          1. Let _outerFn_ be the resulting function object of ! ToStaplDiadicFunction(|DiadicFunction|).
+          1. Let _innerArr_ be the resulting array object of evaluating MonadicExpression.
+          1. Let _outerArr_ be the result of evaluating StaplList.
+          1. Let _innerResult_ be the result of ? Call(_innerfn_, Undefined, _innerArr_).
+          1. Let _outerResult_ be the result of ? Call(_innerfn_, Undefined, _outerArr_).
+          1. Return ? Call(_outerFn_, Undefined, _outerResult_, _innerResult_).
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
+    <emu-clause id="sec-to-stapl-monadic-function" type="abstract operation">
+      <h1>
+        ToStaplMonadicFunction (
+          _parseNode_: MonadicFunction
+        ): a Function
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. If _opText_ is not a MonadicFunctionIdentifier
+          1. Return ?ToCustomStaplFunction(_parseNode_);
+        1. Let _opText_ be the source text matched by |MonadicFunctionIdentifier|.
+        1. Let _operation_ be the abstract operation associated with _opText_ and Type(_lnum_) in the following table:
+          <figure>
+            <!-- emu-format ignore -->
+            <table class="lightweight-table">
+              <tr><th> _opText_      </th>th> _operation_                </th></tr>
+              <tr><td> `?`             </td><td> StaplRoll                 </td></tr>
+              <tr><td> `⌈`             </td><td> StaplCeiling              </td></tr>
+              <tr><td> `⌊`             </td><td> StaplFloor                </td></tr>
+              <tr><td> `∼`             </td><td> StaplNot                  </td></tr>
+              <tr><td> `∣`             </td><td> StaplMagnitude            </td></tr>
+              <tr><td> `−`             </td><td> StaplNegate               </td></tr>
+              <tr><td> `+`             </td><td> StaplConjugate            </td></tr>
+              <tr><td> `÷`             </td><td> StaplReciprocal           </td></tr>
+              <tr><td> `∈`             </td><td> StaplEnlist               </td></tr>
+              <tr><td> `○`             </td><td> StaplPiTimes              </td></tr>
+              <tr><td> `⍟`             </td><td> StaplNaturalLogarithm     </td></tr>
+              <tr><td> `⌽`             </td><td> StaplReverse              </td></tr>
+              <tr><td> Default         </td><td> StaplUnimplemented        </td></tr>
+            </table>
+          </figure>
+        1. Return _operation_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-to-stapl-diadic-function" type="abstract operation">
+      <h1>
+        ToStaplDiadicFunction (
+          _parseNode_: DiadicFunction
+        ): a Function
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. If _opText_ is not a MonadicFunctionIdentifier
+          1. Return ?ToCustomStaplFunction(_parseNode_);
+        1. Let _opText_ be the source text matched by |MonadicFunctionIdentifier|.
+        1. Let _operation_ be the abstract operation associated with _opText_ and Type(_lnum_) in the following table:
+          <figure>
+            <!-- emu-format ignore -->
+            <table class="lightweight-table">
+              <tr><th> _opText_      </th><th> _operation_         </th></tr>
+              <tr><td> `+`             </td><td> StaplAdd            </td></tr>
+              <tr><td> `×`             </td><td> StaplMult           </td></tr>
+              <tr><td> `÷`             </td><td> StaplDiv            </td></tr>
+              <tr><td> `⋆`             </td><td> StaplPower          </td></tr>
+              <tr><td> `∈`             </td><td> StaplMembership     </td></tr>
+              <tr><td> `⊣`             </td><td> StaplLeft           </td></tr>
+              <tr><td> `⊢`             </td><td> StaplRight          </td></tr>
+              <tr><td> Default         </td><td> StaplUnimplemented        </td></tr>
+            </table>
+          </figure>
+        1. Return _operation_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-roll" type="sdo">
+      <h1>
+        StaplRoll ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to create an Array whose elements are generated from the provided _list_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumeric(? GetValue(_lhs_)).
+          1. Let _fn_ be GetMethod(%Math%, "random").
+          1. let _newValue_ be ? Call(_fn_, undefined, _oldValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-ceiling" type="sdo">
+      <h1>
+        StaplCeiling ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to round up all elements in the provided _list_</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. Let _fn_ be GetMethod(%Math%, "ceil").
+          1. let _newValue_ be ? Call(_fn_, undefined, _oldValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-floor" type="sdo">
+      <h1>
+        StaplFloor ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to round down all elements in the provided _list_</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. Let _fn_ be GetMethod(%Math%, "floor").
+          1. let _newValue_ be ? Call(_fn_, undefined, _oldValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-not" type="sdo">
+      <h1>
+        StaplNot ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to invert binary numbers in _list_</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. if _oldValue_ is +0𝔽, then
+            1. Let _newValue_ be 1.
+          1. if _oldValue_ is 1, then
+            1. Let _newValue_ be +0𝔽.
+          1. else
+            1. Throw a *RangeError* exception.
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-magnitude" type="sdo">
+      <h1>
+        StaplMagnitude ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to get the absolute value for each element in the provided _list_</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. Let _fn_ be GetMethod(%Math%, "abs").
+          1. let _newValue_ be ? Call(_fn_, undefined, _oldValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-negate" type="sdo">
+      <h1>
+        StaplNegate ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to negate the values in the provided _list_</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. let _newValue_ be Number::unaryMinus(_oldValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-conjugate" type="sdo">
+      <h1>
+        StaplConjugate ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to group values in _list_ into an array</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _oldValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-reciprocal" type="sdo">
+      <h1>
+        StaplReciprocal ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to divide 1 by each element _list_, and store as an array</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. let _newValue_ be Number::divide(1, _oldValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _oldValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-enlist" type="sdo">
+      <h1>
+        StaplEnlist ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to flatten elements in a _list_, up to a depth of 10</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be be the length of _list_.
+        1. Perform ? FlattenIntoArray(_array_, _list_, _n_, 0, 10).
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-pi-times" type="sdo">
+      <h1>
+        StaplPiTimes ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Used to multiply list elements by pi.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. let _pi_ be an implementation defined π, which is approximately 3.1415926535897932.
+          1. let _newValue_ be Number::multiply(_pi_, _oldValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _oldValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-natural-logarithm" type="sdo">
+      <h1>
+        StaplNaturalLogarithm ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Apply the natural logarithm to elements of a list.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. For each element _e_ of _list_, do
+          1. Let _oldValue_ be ? ToNumber(? GetValue(_lhs_)).
+          1. Let _fn_ be GetMethod(%Math%, "log").
+          1. let _newValue_ be ? Call(_fn_, undefined, _oldValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-reverse" type="sdo">
+      <h1>
+        StaplReverse ( _list_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Reverse the elements of a list.</dd>
+      </dl>
+      <emu-alg>
+        1. If Type(value) is String, then
+          1. Let splitter be ? GetMethod("", @@split).
+          1. Let _array_ be ? Call(splitter, "", « O, undefined »).
+        1. Else,
+          1. let _array_ be ? CreateArrayFromList ( _list_ )
+        1. Let thisValue be GetThisValue(_array_).
+        1. Let method be ? GetMethod(_array_, "reverse").
+        1. Return ? Call(_method_, _thisValue_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-stapl-diadic-function" type="abstract operation">
+      <h1>
+        StaplDiadicFunction (
+          _fn_: An ECMAScript Function or Abstract Operation,
+          _rightList_: An EcmaScript Language Value,
+          _leftList_: An EcmaScript Language Value
+        ): An Array
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to create an Array whose elements are generated from the provided _list_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _leftLength_ be the length of _leftList_.
+        1. Let _rightLength_ be the length of _rightList_.
+        1. Let _index_ be 0.
+        1. If _rightLength_ is equal to _leftLength_, then
+          1. Repeat, while _index_ &lt; _len_
+            1. Let _lhs_ be ? ToNumber(_leftList_[_index_]).
+            1. Let _rhs_ be ? ToNumber(_rightList_[_index_]).
+            1. let _newValue_ be _fn_(_lhs_, _rhs_).
+            1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+            1. Set _index_ to _index_ + 1.
+          1. Return _array_.
+        1. If _rightLength is equal to 1, then
+          1. Let _rhs_ be ? ToNumber(_rightList_[0]).
+          1. Repeat, while _index_ &lt; _len_
+            1. Let _lhs_ be ? ToNumber(_leftList_[_index_]).
+            1. let _newValue_ be _fn_(_lhs_, _rhs_).
+            1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _newValue_).
+            1. Set _index_ to _index_ + 1.
+          1. Return _array_.
+        1. Else,
+          1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-stapl-add" type="sdo">
+      <h1>
+        StaplAdd ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to add the elements in two provided lists.</dd>
+      </dl>
+      <emu-alg>
+        1. Return ? StaplDiadicFunction(Number::add, _rightList_, _leftList_);
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-mult" type="sdo">
+      <h1>
+        StaplMult ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to multiply the elements in two provided lists.</dd>
+      </dl>
+      <emu-alg>
+        1. Return ? StaplDiadicFunction(Number::multiply, _rightList_, _leftList_);
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-div" type="sdo">
+      <h1>
+        StaplDiv ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to divide the elements in two provided lists.</dd>
+      </dl>
+      <emu-alg>
+        1. Return ? StaplDiadicFunction(Number::divide, _rightList_, _leftList_);
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-power" type="sdo">
+      <h1>
+        StaplPower ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to exponentiate the elements in two provided lists.</dd>
+      </dl>
+      <emu-alg>
+        1. Return ? StaplDiadicFunction(Number::exponentiate, _rightList_, _leftList_);
+      </emu-alg>
+    </emu-clause>
+    <emu-clause id="sec-stapl-modulus" type="sdo">
+      <h1>
+        StaplModulus ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to get the modulo between the elements in two provided lists.</dd>
+      </dl>
+      <emu-alg>
+        1. Return ? StaplDiadicFunction(modulo, _rightList_, _leftList_);
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-stapl-membership" type="sdo">
+      <h1>
+        StaplMembership ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to check for the membership of elements in the right within the left.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _array_ be ! ArrayCreate(0).
+        1. Let _n_ be 0.
+        1. For each element _e_ of _RightList_, do
+          1. Let _fn_ be ? GetMethod(_leftList_, "includes").
+          1. Let _newValue_ be ? Call(_fn_, _leftList_, _e_).
+          1. Let _result_ be ? ToNumber(_newValue_).
+          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_n_)), _result_).
+          1. Set _n_ to _n_ + 1.
+        1. Return _array_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-stapl-left" type="sdo">
+      <h1>
+        StaplLeft ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Returns the left list when provided two lists.</dd>
+      </dl>
+      <emu-alg>
+        1. Return _leftList_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-stapl-right" type="sdo">
+      <h1>
+        StaplRight ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Returns the right list when provided two lists.</dd>
+      </dl>
+      <emu-alg>
+        1. Return _rightList_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-stapl-lt" type="sdo">
+      <h1>
+        StaplUnimplmented ( _rightList_, _leftList_ )
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>I ran out of time, so this just throws. I have no idea how to do this either</dd>
+      </dl>
+      <emu-alg>
+        1. Throw *TypeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-note>
+      <p>Yes, this is just a very elaborate April Fool's joke.</p>
+    </emu-note>
+
   </emu-clause>
 
   <emu-clause id="sec-comma-operator">
