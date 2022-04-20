@@ -34642,7 +34642,7 @@ THH:mm:ss.sss
         <emu-grammar>Pattern :: Disjunction</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if _NcapturingParens_ &ge; 2<sup>32</sup> - 1.
+            It is a Syntax Error if CountLeftCapturingParensWithin(|Pattern|) &ge; 2<sup>32</sup> - 1.
           </li>
           <li>
             It is a Syntax Error if |Pattern| contains multiple |GroupSpecifier|s whose enclosed |RegExpIdentifierName|s have the same CapturingGroupName.
@@ -34663,7 +34663,7 @@ THH:mm:ss.sss
         <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the CapturingGroupNumber of |DecimalEscape| is larger than _NcapturingParens_ (<emu-xref href="#sec-notation"></emu-xref>).
+            It is a Syntax Error if the CapturingGroupNumber of |DecimalEscape| is larger than CountLeftCapturingParensWithin(the |Pattern| containing |AtomEscape|).
           </li>
         </ul>
         <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
@@ -34723,6 +34723,45 @@ THH:mm:ss.sss
             It is a Syntax Error if the List of Unicode code points that is SourceText of |LoneUnicodePropertyNameOrValue| is not identical to a List of Unicode code points that is a Unicode general category or general category alias listed in the &ldquo;Property value and aliases&rdquo; column of <emu-xref href="#table-unicode-general-category-values"></emu-xref>, nor a binary property or binary property alias listed in the &ldquo;Property name and aliases&rdquo; column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
           </li>
         </ul>
+      </emu-clause>
+
+      <emu-clause id="sec-countleftcapturingparenswithin" type="abstract operation">
+        <h1>
+          Static Semantics: CountLeftCapturingParensWithin (
+            _node_: a Parse Node,
+          ): a non-negative integer
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the number of left-capturing parentheses in _node_. A <dfn variants="left-capturing parentheses">left-capturing parenthesis</dfn> is any `(` pattern character that is matched by the `(` terminal of the <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> production.</dd>
+        </dl>
+        <emu-note>
+          <p>This section is amended in <emu-xref href="#sec-countleftcapturingparens-annexb"></emu-xref>.</p>
+        </emu-note>
+        <emu-alg>
+          1. Assert: _node_ is an instance of a production in <emu-xref href="#sec-patterns">the RegExp Pattern grammar</emu-xref>.
+          1. Return the number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes contained within _node_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-countleftcapturingparensbefore" type="abstract operation">
+        <h1>
+          Static Semantics: CountLeftCapturingParensBefore (
+            _node_: a Parse Node,
+          ): a non-negative integer
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the number of left-capturing parentheses within the enclosing pattern that occur to the left of _node_.</dd>
+        </dl>
+        <emu-note>
+          <p>This section is amended in <emu-xref href="#sec-countleftcapturingparens-annexb"></emu-xref>.</p>
+        </emu-note>
+        <emu-alg>
+          1. Assert: _node_ is an instance of a production in <emu-xref href="#sec-patterns">the RegExp Pattern grammar</emu-xref>.
+          1. Let _pattern_ be the |Pattern| containing _node_.
+          1. Return the number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes contained within _pattern_ that either occur before _node_ or contain _node_.
+        </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-patterns-static-semantics-capturing-group-number" type="sdo">
@@ -35064,7 +35103,7 @@ THH:mm:ss.sss
             _InputLength_ is the number of characters in _Input_.
           </li>
           <li>
-            _NcapturingParens_ is the total number of left-capturing parentheses (i.e. the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes) in the pattern. A left-capturing parenthesis is any `(` pattern character that is matched by the `(` terminal of the <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> production.
+            _NcapturingParens_ is CountLeftCapturingParensWithin(the pattern).
           </li>
           <li>
             _DotAll_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"s"* and otherwise is *false*.
@@ -35216,8 +35255,8 @@ THH:mm:ss.sss
           1. Let _m_ be CompileAtom of |Atom| with argument _direction_.
           1. Let _q_ be CompileQuantifier of |Quantifier|.
           1. Assert: _q_.[[Min]] &le; _q_.[[Max]].
-          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Term|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Term|.
-          1. Let _parenCount_ be the number of left-capturing parentheses in |Atom|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes enclosed by |Atom|.
+          1. Let _parenIndex_ be CountLeftCapturingParensBefore(|Term|).
+          1. Let _parenCount_ be CountLeftCapturingParensWithin(|Atom|).
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_, _q_, _parenIndex_, and _parenCount_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35517,7 +35556,7 @@ THH:mm:ss.sss
         <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar>
         <emu-alg>
           1. Let _m_ be CompileSubpattern of |Disjunction| with argument _direction_.
-          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of this |Atom|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing this |Atom|.
+          1. Let _parenIndex_ be CountLeftCapturingParensBefore(|Atom|).
           1. Return a new Matcher with parameters (_x_, _c_) that captures _direction_, _m_, and _parenIndex_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35569,7 +35608,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Search the enclosing |Pattern| for an instance of a |GroupSpecifier| containing a |RegExpIdentifierName| which has a CapturingGroupName equal to the CapturingGroupName of the |RegExpIdentifierName| contained in |GroupName|.
           1. Assert: A unique such |GroupSpecifier| is found.
-          1. Let _parenIndex_ be the number of left-capturing parentheses in the entire regular expression that occur to the left of the located |GroupSpecifier|. This is the total number of <emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> Parse Nodes prior to or enclosing the located |GroupSpecifier|, including its immediately enclosing |Atom|.
+          1. Let _parenIndex_ be CountLeftCapturingParensBefore(the located |GroupSpecifier|).
           1. Return BackreferenceMatcher(_parenIndex_, _direction_).
         </emu-alg>
 
@@ -46952,7 +46991,7 @@ THH:mm:ss.sss
 
         AtomEscape[UnicodeMode, N] ::
           [+UnicodeMode] DecimalEscape
-          [~UnicodeMode] DecimalEscape [> but only if the CapturingGroupNumber of |DecimalEscape| is &le; _NcapturingParens_]
+          [~UnicodeMode] DecimalEscape [> but only if the CapturingGroupNumber of |DecimalEscape| is &le; CountLeftCapturingParensWithin(the |Pattern| containing |DecimalEscape|)]
           CharacterClassEscape[?UnicodeMode]
           CharacterEscape[?UnicodeMode, ?N]
           [+N] `k` GroupName[?UnicodeMode]
@@ -47025,6 +47064,11 @@ THH:mm:ss.sss
         </ul>
       </emu-annex>
 
+      <emu-annex id="sec-countleftcapturingparens-annexb">
+        <h1>Static Semantics: CountLeftCapturingParensWithin and CountLeftCapturingParensBefore</h1>
+        <p>In the definitions of CountLeftCapturingParensWithin and CountLeftCapturingParensBefore, references to &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; are to be interpreted as meaning &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; or &ldquo;<emu-grammar>ExtendedAtom :: `(` Disjunction `)`</emu-grammar> &rdquo;.</p>
+      </emu-annex>
+
       <emu-annex id="sec-patterns-static-semantics-is-character-class-annexb">
         <h1>Static Semantics: IsCharacterClass</h1>
         <p>The semantics of <emu-xref href="#sec-patterns-static-semantics-is-character-class"></emu-xref> is extended as follows:</p>
@@ -47060,7 +47104,6 @@ THH:mm:ss.sss
       <emu-annex id="sec-compilesubpattern-annexb" oldids="sec-regular-expression-patterns-semantics">
         <h1>Runtime Semantics: CompileSubpattern</h1>
         <p>The semantics of CompileSubpattern is extended as follows:</p>
-        <p>Within the rule for <emu-grammar>Term :: Atom Quantifier</emu-grammar>, references to &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; are to be interpreted as meaning &ldquo;<emu-grammar>Atom :: `(` GroupSpecifier Disjunction `)`</emu-grammar> &rdquo; or &ldquo;<emu-grammar>ExtendedAtom :: `(` Disjunction `)`</emu-grammar> &rdquo;.</p>
 
         <p>The rule for <emu-grammar>Term :: QuantifiableAssertion Quantifier</emu-grammar> is the same as for <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
         <p>The rule for <emu-grammar>Term :: ExtendedAtom Quantifier</emu-grammar> is the same as for <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
