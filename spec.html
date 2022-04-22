@@ -19076,8 +19076,7 @@
               1. If _argList_ has no elements, return *undefined*.
               1. Let _evalArg_ be the first element of _argList_.
               1. If the source text matched by this |CallExpression| is strict mode code, let _strictCaller_ be *true*. Otherwise let _strictCaller_ be *false*.
-              1. Let _evalRealm_ be the current Realm Record.
-              1. [id="step-callexpression-evaluation-direct-eval"] Return ? PerformEval(_evalArg_, _evalRealm_, _strictCaller_, *true*).
+              1. [id="step-callexpression-evaluation-direct-eval"] Return ? PerformEval(_evalArg_, _strictCaller_, *true*).
           1. Let _thisCall_ be this |CallExpression|.
           1. Let _tailCall_ be IsInTailPosition(_thisCall_).
           1. Return ? EvaluateCall(_func_, _ref_, _arguments_, _tailCall_).
@@ -28635,17 +28634,13 @@
       <h1>eval ( _x_ )</h1>
       <p>The `eval` function is the <dfn>%eval%</dfn> intrinsic object. When the `eval` function is called with one argument _x_, the following steps are taken:</p>
       <emu-alg>
-        1. Assert: The execution context stack has at least two elements.
-        1. Let _callerContext_ be the second to top element of the execution context stack.
-        1. Let _callerRealm_ be _callerContext_'s Realm.
-        1. Return ? PerformEval(_x_, _callerRealm_, *false*, *false*).
+        1. Return ? PerformEval(_x_, *false*, *false*).
       </emu-alg>
 
       <emu-clause id="sec-performeval" type="abstract operation" oldids="sec-performeval-rules-outside-functions,sec-performeval-rules-outside-methods,sec-performeval-rules-outside-constructors">
         <h1>
           PerformEval (
             _x_: unknown,
-            _callerRealm_: unknown,
             _strictCaller_: unknown,
             _direct_: unknown,
           ): either a normal completion containing an ECMAScript language value or a throw completion
@@ -28656,7 +28651,8 @@
           1. Assert: If _direct_ is *false*, then _strictCaller_ is also *false*.
           1. If Type(_x_) is not String, return _x_.
           1. Let _evalRealm_ be the current Realm Record.
-          1. Perform ? HostEnsureCanCompileStrings(_callerRealm_, _evalRealm_).
+          1. NOTE: In the case of a direct eval, _evalRealm_ is the realm of both the caller of `eval` and of the `eval` function itself.
+          1. Perform ? HostEnsureCanCompileStrings(_evalRealm_).
           1. Let _inFunction_ be *false*.
           1. Let _inMethod_ be *false*.
           1. Let _inDerivedConstructor_ be *false*.
@@ -28718,7 +28714,6 @@
       <emu-clause id="sec-hostensurecancompilestrings" type="host-defined abstract operation">
         <h1>
           HostEnsureCanCompileStrings (
-            _callerRealm_: a Realm Record,
             _calleeRealm_: a Realm Record,
           ): either a normal completion containing ~unused~ or a throw completion
         </h1>
@@ -29936,11 +29931,8 @@
             <dd>_constructor_ is the constructor function that is performing this action. _newTarget_ is the constructor that `new` was initially applied to. _args_ is the argument values that were passed to _constructor_.</dd>
           </dl>
           <emu-alg>
-            1. Assert: The execution context stack has at least two elements.
-            1. Let _callerContext_ be the second to top element of the execution context stack.
-            1. Let _callerRealm_ be _callerContext_'s Realm.
-            1. Let _calleeRealm_ be the current Realm Record.
-            1. Perform ? HostEnsureCanCompileStrings(_callerRealm_, _calleeRealm_).
+            1. Let _currentRealm_ be the current Realm Record.
+            1. Perform ? HostEnsureCanCompileStrings(_currentRealm_).
             1. If _newTarget_ is *undefined*, set _newTarget_ to _constructor_.
             1. If _kind_ is ~normal~, then
               1. Let _prefix_ be *"function"*.
