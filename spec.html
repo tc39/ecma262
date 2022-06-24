@@ -35083,43 +35083,16 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-notation">
         <h1>Notation</h1>
-        <p>The descriptions below use the following aliases:</p>
+        <p>The descriptions below use the following internal data structures:</p>
         <ul>
           <li>
-            _Input_ is a List whose elements are the characters of the String being matched by the regular expression pattern. Each character is either a code unit or a code point, depending upon the kind of pattern involved. The notation _Input_[_n_] means the _n_<sup>th</sup> character of _Input_, where _n_ can range between 0 (inclusive) and _InputLength_ (exclusive).
-          </li>
-          <li>
-            _InputLength_ is the number of characters in _Input_.
-          </li>
-          <li>
-            _NcapturingParens_ is CountLeftCapturingParensWithin(the pattern).
-          </li>
-          <li>
-            _DotAll_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"s"* and otherwise is *false*.
-          </li>
-          <li>
-            _IgnoreCase_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"i"* and otherwise is *false*.
-          </li>
-          <li>
-            _Multiline_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"m"* and otherwise is *false*.
-          </li>
-          <li>
-            _Unicode_ is *true* if the RegExp object's [[OriginalFlags]] internal slot contains *"u"* and otherwise is *false*.
-          </li>
-          <li oldids="sec-runtime-semantics-wordcharacters-abstract-operation">
-            _WordCharacters_ is the mathematical set that is the union of all sixty-three characters in *"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_"* (letters, numbers, and U+005F (LOW LINE) in the Unicode Basic Latin block) and all characters _c_ for which _c_ is not in that set but Canonicalize(_c_) is. _WordCharacters_ cannot contain more than sixty-three characters unless _Unicode_ and _IgnoreCase_ are both *true*.
-          </li>
-        </ul>
-        <p>Furthermore, the descriptions below use the following internal data structures:</p>
-        <ul>
-          <li>
-            A <em>CharSet</em> is a mathematical set of characters. When the _Unicode_ flag is *true*, &ldquo;all characters&rdquo; means the CharSet containing all code point values; otherwise &ldquo;all characters&rdquo; means the CharSet containing all code unit values.
+            A <em>CharSet</em> is a mathematical set of characters. In the context of a Unicode pattern, &ldquo;all characters&rdquo; means the CharSet containing all code point values; otherwise &ldquo;all characters&rdquo; means the CharSet containing all code unit values.
           </li>
           <li>
             A <dfn variants="Ranges">Range</dfn> is an ordered pair (_startIndex_, _endIndex_) that represents the range of characters included in a capture, where _startIndex_ is an integer representing the start index (inclusive) of the range within _Input_, and _endIndex_ is an integer representing the end index (exclusive) of the range within _Input_. For any Range, these indices must satisfy the invariant that _startIndex_ &le; _endIndex_.
           </li>
           <li>
-            A <em>State</em> is an ordered pair (_endIndex_, _captures_) where _endIndex_ is an integer and _captures_ is a List of _NcapturingParens_ values. States are used to represent partial match states in the regular expression matching algorithms. The _endIndex_ is one plus the index of the last input character matched so far by the pattern, while _captures_ holds the results of capturing parentheses. The _n_<sup>th</sup> element of _captures_ is either a Range representing the range of characters captured by the _n_<sup>th</sup> set of capturing parentheses, or *undefined* if the _n_<sup>th</sup> set of capturing parentheses hasn't been reached yet. Due to backtracking, many States may be in use at any time during the matching process.
+            A <em>State</em> is an ordered triple (_input_, _endIndex_, _captures_) where _input_ is a List of characters representing the String being matched, _endIndex_ is an integer, and _captures_ is a List of values, one for each left-capturing parenthesis in the pattern. States are used to represent partial match states in the regular expression matching algorithms. The _endIndex_ is one plus the index of the last input character matched so far by the pattern, while _captures_ holds the results of capturing parentheses. The _n_<sup>th</sup> element of _captures_ is either a Range representing the range of characters captured by the _n_<sup>th</sup> set of capturing parentheses, or *undefined* if the _n_<sup>th</sup> set of capturing parentheses hasn't been reached yet. Due to backtracking, many States may be in use at any time during the matching process.
           </li>
           <li>
             A <em>MatchResult</em> is either a State or the special token ~failure~ that indicates that the match failed.
@@ -35128,28 +35101,70 @@ THH:mm:ss.sss
             A <em>Continuation</em> is an Abstract Closure that takes one State argument and returns a MatchResult result. The Continuation attempts to match the remaining portion (specified by the closure's captured values) of the pattern against _Input_, starting at the intermediate state given by its State argument. If the match succeeds, the Continuation returns the final State that it reached; if the match fails, the Continuation returns ~failure~.
           </li>
           <li>
-            A <em>Matcher</em> is an Abstract Closure that takes two arguments&mdash;a State and a Continuation&mdash;and returns a MatchResult result. A Matcher attempts to match a middle subpattern (specified by the closure's captured values) of the pattern against _Input_, starting at the intermediate state given by its State argument. The Continuation argument should be a closure that matches the rest of the pattern. After matching the subpattern of a pattern to obtain a new State, the Matcher then calls Continuation on that new State to test if the rest of the pattern can match as well. If it can, the Matcher returns the State returned by Continuation; if not, the Matcher may try different choices at its choice points, repeatedly calling Continuation until it either succeeds or all possibilities have been exhausted.
+            A <em>Matcher</em> is an Abstract Closure that takes two arguments&mdash;a State and a Continuation&mdash;and returns a MatchResult result. A Matcher attempts to match a middle subpattern (specified by the closure's captured values) of the pattern against the State's _input_, starting at the intermediate state given by its State argument. The Continuation argument should be a closure that matches the rest of the pattern. After matching the subpattern of a pattern to obtain a new State, the Matcher then calls Continuation on that new State to test if the rest of the pattern can match as well. If it can, the Matcher returns the State returned by Continuation; if not, the Matcher may try different choices at its choice points, repeatedly calling Continuation until it either succeeds or all possibilities have been exhausted.
           </li>
         </ul>
+
+        <emu-clause id="sec-regexp-records">
+          <h1>RegExp Records</h1>
+          <p>A <dfn variants="RegExp Records">RegExp Record</dfn> is a Record value used to store information about a RegExp that is needed during compilation and possibly during matching.</p>
+          <p>It has the following fields:</p>
+          <emu-table id="table-regexp-record-fields" caption="RegExp Record Fields">
+            <table>
+              <tr>
+                <th>Field Name</th>
+                <th>Value</th>
+                <th>Meaning</th>
+              </tr>
+              <tr>
+                <td>[[IgnoreCase]]</td>
+                <td>a Boolean</td>
+                <td>indicates whether *"i"* appears in the RegExp's flags</td>
+              </tr>
+              <tr>
+                <td>[[Multiline]]</td>
+                <td>a Boolean</td>
+                <td>indicates whether *"m"* appears in the RegExp's flags</td>
+              </tr>
+              <tr>
+                <td>[[DotAll]]</td>
+                <td>a Boolean</td>
+                <td>indicates whether *"s"* appears in the RegExp's flags</td>
+              </tr>
+              <tr>
+                <td>[[Unicode]]</td>
+                <td>a Boolean</td>
+                <td>indicates whether *"u"* appears in the RegExp's flags</td>
+              </tr>
+              <tr>
+                <td>[[CapturingGroupsCount]]</td>
+                <td>a non-negative integer</td>
+                <td>the number of left-capturing parentheses in the RegExp's pattern</td>
+              </tr>
+            </table>
+          </emu-table>
+        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-compilepattern" type="sdo" oldids="sec-pattern">
-        <h1>Runtime Semantics: CompilePattern ( ): an Abstract Closure that takes a List of characters and a non-negative integer and returns a MatchResult</h1>
+        <h1>
+          Runtime Semantics: CompilePattern (
+            _rer_: a RegExp Record,
+          ): an Abstract Closure that takes a List of characters and a non-negative integer and returns a MatchResult
+        </h1>
         <dl class="header">
         </dl>
         <emu-grammar>Pattern :: Disjunction</emu-grammar>
         <emu-alg>
-          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~forward~.
-          1. Return a new Abstract Closure with parameters (_inputChars_, _index_) that captures _m_ and performs the following steps when called:
-            1. Assert: _inputChars_ is a List of characters.
-            1. Assert: _index_ is a non-negative integer which is &le; the number of characters in _inputChars_.
-            1. Let _Input_ be _inputChars_. This alias will be used throughout the algorithms in <emu-xref href="#sec-pattern-semantics"></emu-xref>.
-            1. Let _InputLength_ be the number of characters contained in _Input_. This alias will be used throughout the algorithms in <emu-xref href="#sec-pattern-semantics"></emu-xref>.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and ~forward~.
+          1. Return a new Abstract Closure with parameters (_Input_, _index_) that captures _rer_ and _m_ and performs the following steps when called:
+            1. Assert: _Input_ is a List of characters.
+            1. Assert: _index_ is a non-negative integer which is &le; the number of elements in _Input_.
             1. Let _c_ be a new Continuation with parameters (_y_) that captures nothing and performs the following steps when called:
               1. Assert: _y_ is a State.
               1. Return _y_.
-            1. Let _cap_ be a List of _NcapturingParens_ *undefined* values, indexed 1 through _NcapturingParens_.
-            1. Let _x_ be the State (_index_, _cap_).
+            1. Let _cap_ be a List of _rer_.[[CapturingGroupsCount]] *undefined* values, indexed 1 through _rer_.[[CapturingGroupsCount]].
+            1. Let _x_ be the State (_Input_, _index_, _cap_).
             1. Return _m_(_x_, _c_).
         </emu-alg>
         <emu-note>
@@ -35160,6 +35175,7 @@ THH:mm:ss.sss
       <emu-clause id="sec-compilesubpattern" type="sdo" oldids="sec-disjunction,sec-alternative,sec-term">
         <h1>
           Runtime Semantics: CompileSubpattern (
+            _rer_: a RegExp Record,
             _direction_: ~forward~ or ~backward~,
           ): a Matcher
         </h1>
@@ -35172,8 +35188,8 @@ THH:mm:ss.sss
         <!-- Disjunction -->
         <emu-grammar>Disjunction :: Alternative `|` Disjunction</emu-grammar>
         <emu-alg>
-          1. Let _m1_ be CompileSubpattern of |Alternative| with argument _direction_.
-          1. Let _m2_ be CompileSubpattern of |Disjunction| with argument _direction_.
+          1. Let _m1_ be CompileSubpattern of |Alternative| with arguments _rer_ and _direction_.
+          1. Let _m2_ be CompileSubpattern of |Disjunction| with arguments _rer_ and _direction_.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35203,8 +35219,8 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Alternative :: Alternative Term</emu-grammar>
         <emu-alg>
-          1. Let _m1_ be CompileSubpattern of |Alternative| with argument _direction_.
-          1. Let _m2_ be CompileSubpattern of |Term| with argument _direction_.
+          1. Let _m1_ be CompileSubpattern of |Alternative| with arguments _rer_ and _direction_.
+          1. Let _m2_ be CompileSubpattern of |Term| with arguments _rer_ and _direction_.
           1. If _direction_ is ~forward~, then
             1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
               1. Assert: _x_ is a State.
@@ -35230,18 +35246,18 @@ THH:mm:ss.sss
         <!-- Term -->
         <emu-grammar>Term :: Assertion</emu-grammar>
         <emu-alg>
-          1. Return CompileAssertion of |Assertion|.
+          1. Return CompileAssertion of |Assertion| with argument _rer_.
         </emu-alg>
         <emu-note>
           <p>The resulting Matcher is independent of _direction_.</p>
         </emu-note>
         <emu-grammar>Term :: Atom</emu-grammar>
         <emu-alg>
-          1. Return CompileAtom of |Atom| with argument _direction_.
+          1. Return CompileAtom of |Atom| with arguments _rer_ and _direction_.
         </emu-alg>
         <emu-grammar>Term :: Atom Quantifier</emu-grammar>
         <emu-alg>
-          1. Let _m_ be CompileAtom of |Atom| with argument _direction_.
+          1. Let _m_ be CompileAtom of |Atom| with arguments _rer_ and _direction_.
           1. Let _q_ be CompileQuantifier of |Quantifier|.
           1. Assert: _q_.[[Min]] &le; _q_.[[Max]].
           1. Let _parenIndex_ be CountLeftCapturingParensBefore(|Term|).
@@ -35277,8 +35293,9 @@ THH:mm:ss.sss
               1. Return RepeatMatcher(_m_, _min2_, _max2_, _greedy_, _y_, _c_, _parenIndex_, _parenCount_).
             1. Let _cap_ be a copy of _x_'s _captures_ List.
             1. [id="step-repeatmatcher-clear-captures"] For each integer _k_ such that _parenIndex_ &lt; _k_ and _k_ &le; _parenIndex_ + _parenCount_, set _cap_[_k_] to *undefined*.
+            1. Let _Input_ be _x_'s _input_.
             1. Let _e_ be _x_'s _endIndex_.
-            1. Let _xr_ be the State (_e_, _cap_).
+            1. Let _xr_ be the State (_Input_, _e_, _cap_).
             1. If _min_ &ne; 0, return _m_(_xr_, _d_).
             1. If _greedy_ is *false*, then
               1. Let _z_ be _c_(_x_).
@@ -35332,7 +35349,11 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-compileassertion" type="sdo" oldids="sec-assertion">
-        <h1>Runtime Semantics: CompileAssertion ( ): a Matcher</h1>
+        <h1>
+          Runtime Semantics: CompileAssertion (
+            _rer_: a RegExp Record,
+          ): a Matcher
+        </h1>
         <dl class="header">
         </dl>
         <emu-note>
@@ -35340,52 +35361,57 @@ THH:mm:ss.sss
         </emu-note>
         <emu-grammar>Assertion :: `^`</emu-grammar>
         <emu-alg>
-          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
+            1. Let _Input_ be _x_'s _input_.
             1. Let _e_ be _x_'s _endIndex_.
-            1. If _e_ = 0, or if _Multiline_ is *true* and the character _Input_[_e_ - 1] is one of |LineTerminator|, then
+            1. If _e_ = 0, or if _rer_.[[Multiline]] is *true* and the character _Input_[_e_ - 1] is one of |LineTerminator|, then
               1. Return _c_(_x_).
             1. Return ~failure~.
         </emu-alg>
         <emu-note>
-          <p>Even when the `y` flag is used with a pattern, `^` always matches only at the beginning of _Input_, or (if _Multiline_ is *true*) at the beginning of a line.</p>
+          <p>Even when the `y` flag is used with a pattern, `^` always matches only at the beginning of _Input_, or (if _rer_.[[Multiline]] is *true*) at the beginning of a line.</p>
         </emu-note>
         <emu-grammar>Assertion :: `$`</emu-grammar>
         <emu-alg>
-          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
+            1. Let _Input_ be _x_'s _input_.
             1. Let _e_ be _x_'s _endIndex_.
-            1. If _e_ = _InputLength_, or if _Multiline_ is *true* and the character _Input_[_e_] is one of |LineTerminator|, then
+            1. Let _InputLength_ be the number of elements in _Input_.
+            1. If _e_ = _InputLength_, or if _rer_.[[Multiline]] is *true* and the character _Input_[_e_] is one of |LineTerminator|, then
               1. Return _c_(_x_).
             1. Return ~failure~.
         </emu-alg>
         <emu-grammar>Assertion :: `\` `b`</emu-grammar>
         <emu-alg>
-          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
+            1. Let _Input_ be _x_'s _input_.
             1. Let _e_ be _x_'s _endIndex_.
-            1. Let _a_ be IsWordChar(_e_ - 1).
-            1. Let _b_ be IsWordChar(_e_).
+            1. Let _a_ be IsWordChar(_rer_, _Input_, _e_ - 1).
+            1. Let _b_ be IsWordChar(_rer_, _Input_, _e_).
             1. If _a_ is *true* and _b_ is *false*, or if _a_ is *false* and _b_ is *true*, return _c_(_x_).
             1. Return ~failure~.
         </emu-alg>
         <emu-grammar>Assertion :: `\` `B`</emu-grammar>
         <emu-alg>
-          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+          1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
+            1. Let _Input_ be _x_'s _input_.
             1. Let _e_ be _x_'s _endIndex_.
-            1. Let _a_ be IsWordChar(_e_ - 1).
-            1. Let _b_ be IsWordChar(_e_).
+            1. Let _a_ be IsWordChar(_rer_, _Input_, _e_ - 1).
+            1. Let _b_ be IsWordChar(_rer_, _Input_, _e_).
             1. If _a_ is *true* and _b_ is *true*, or if _a_ is *false* and _b_ is *false*, return _c_(_x_).
             1. Return ~failure~.
         </emu-alg>
         <emu-grammar>Assertion :: `(` `?` `=` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~forward~.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and ~forward~.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35396,13 +35422,14 @@ THH:mm:ss.sss
             1. If _r_ is ~failure~, return ~failure~.
             1. Let _y_ be _r_'s State.
             1. Let _cap_ be _y_'s _captures_ List.
+            1. Let _Input_ be _x_'s _input_.
             1. Let _xe_ be _x_'s _endIndex_.
-            1. Let _z_ be the State (_xe_, _cap_).
+            1. Let _z_ be the State (_Input_, _xe_, _cap_).
             1. Return _c_(_z_).
         </emu-alg>
         <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~forward~.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and ~forward~.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35415,7 +35442,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Assertion :: `(` `?` `&lt;=` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~backward~.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and ~backward~.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35426,13 +35453,14 @@ THH:mm:ss.sss
             1. If _r_ is ~failure~, return ~failure~.
             1. Let _y_ be _r_'s State.
             1. Let _cap_ be _y_'s _captures_ List.
+            1. Let _Input_ be _x_'s _input_.
             1. Let _xe_ be _x_'s _endIndex_.
-            1. Let _z_ be the State (_xe_, _cap_).
+            1. Let _z_ be the State (_Input_, _xe_, _cap_).
             1. Return _c_(_z_).
         </emu-alg>
         <emu-grammar>Assertion :: `(` `?` `&lt;!` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Let _m_ be CompileSubpattern of |Disjunction| with argument ~backward~.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and ~backward~.
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_ and performs the following steps when called:
             1. Assert: _x_ is a State.
             1. Assert: _c_ is a Continuation.
@@ -35447,15 +35475,18 @@ THH:mm:ss.sss
         <emu-clause id="sec-runtime-semantics-iswordchar-abstract-operation" type="abstract operation">
           <h1>
             IsWordChar (
+              _rer_: a RegExp Record,
+              _Input_: a List of characters,
               _e_: an integer,
             ): a Boolean
           </h1>
           <dl class="header">
           </dl>
           <emu-alg>
+            1. Let _InputLength_ be the number of elements in _Input_.
             1. If _e_ = -1 or _e_ is _InputLength_, return *false*.
             1. Let _c_ be the character _Input_[_e_].
-            1. If _c_ is in _WordCharacters_, return *true*.
+            1. If _c_ is in WordCharacters(_rer_), return *true*.
             1. Return *false*.
           </emu-alg>
         </emu-clause>
@@ -35514,6 +35545,7 @@ THH:mm:ss.sss
       <emu-clause id="sec-compileatom" type="sdo" oldids="sec-atom,sec-atomescape,sec-characterescape,sec-decimalescape">
         <h1>
           Runtime Semantics: CompileAtom (
+            _rer_: a RegExp Record,
             _direction_: ~forward~ or ~backward~,
           ): a Matcher
         </h1>
@@ -35528,23 +35560,23 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _ch_ be the character matched by |PatternCharacter|.
           1. Let _A_ be a one-element CharSet containing the character _ch_.
-          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+          1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
         </emu-alg>
         <emu-grammar>Atom :: `.`</emu-grammar>
         <emu-alg>
           1. Let _A_ be the CharSet of all characters.
-          1. If _DotAll_ is not *true*, then
+          1. If _rer_.[[DotAll]] is not *true*, then
             1. Remove from _A_ all characters corresponding to a code point on the right-hand side of the |LineTerminator| production.
-          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+          1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
         </emu-alg>
         <emu-grammar>Atom :: CharacterClass</emu-grammar>
         <emu-alg>
-          1. Let _cc_ be CompileCharacterClass of |CharacterClass|.
-          1. Return CharacterSetMatcher(_cc_.[[CharSet]], _cc_.[[Invert]], _direction_).
+          1. Let _cc_ be CompileCharacterClass of |CharacterClass| with argument _rer_.
+          1. Return CharacterSetMatcher(_rer_, _cc_.[[CharSet]], _cc_.[[Invert]], _direction_).
         </emu-alg>
         <emu-grammar>Atom :: `(` GroupSpecifier? Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Let _m_ be CompileSubpattern of |Disjunction| with argument _direction_.
+          1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and _direction_.
           1. Let _parenIndex_ be CountLeftCapturingParensBefore(|Atom|).
           1. Return a new Matcher with parameters (_x_, _c_) that captures _direction_, _m_, and _parenIndex_ and performs the following steps when called:
             1. Assert: _x_ is a State.
@@ -35552,6 +35584,7 @@ THH:mm:ss.sss
             1. Let _d_ be a new Continuation with parameters (_y_) that captures _x_, _c_, _direction_, and _parenIndex_ and performs the following steps when called:
               1. Assert: _y_ is a State.
               1. Let _cap_ be a copy of _y_'s _captures_ List.
+              1. Let _Input_ be _x_'s _input_.
               1. Let _xe_ be _x_'s _endIndex_.
               1. Let _ye_ be _y_'s _endIndex_.
               1. If _direction_ is ~forward~, then
@@ -35562,21 +35595,21 @@ THH:mm:ss.sss
                 1. Assert: _ye_ &le; _xe_.
                 1. Let _r_ be the Range (_ye_, _xe_).
               1. Set _cap_[_parenIndex_ + 1] to _r_.
-              1. Let _z_ be the State (_ye_, _cap_).
+              1. Let _z_ be the State (_Input_, _ye_, _cap_).
               1. Return _c_(_z_).
             1. Return _m_(_x_, _d_).
         </emu-alg>
         <emu-grammar>Atom :: `(` `?` `:` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Return CompileSubpattern of |Disjunction| with argument _direction_.
+          1. Return CompileSubpattern of |Disjunction| with arguments _rer_ and _direction_.
         </emu-alg>
 
         <!-- AtomEscape -->
         <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar>
         <emu-alg>
           1. Let _n_ be the CapturingGroupNumber of |DecimalEscape|.
-          1. Assert: _n_ &le; _NcapturingParens_.
-          1. Return BackreferenceMatcher(_n_, _direction_).
+          1. Assert: _n_ &le; _rer_.[[CapturingGroupsCount]].
+          1. Return BackreferenceMatcher(_rer_, _n_, _direction_).
         </emu-alg>
         <emu-note>
           <p>An escape sequence of the form `\\` followed by a non-zero decimal number _n_ matches the result of the _n_<sup>th</sup> set of capturing parentheses (<emu-xref href="#sec-notation"></emu-xref>). It is an error if the regular expression has fewer than _n_ capturing parentheses. If the regular expression has _n_ or more capturing parentheses but the _n_<sup>th</sup> one is *undefined* because it has not captured anything, then the backreference always succeeds.</p>
@@ -35586,12 +35619,12 @@ THH:mm:ss.sss
           1. Let _cv_ be the CharacterValue of |CharacterEscape|.
           1. Let _ch_ be the character whose character value is _cv_.
           1. Let _A_ be a one-element CharSet containing the character _ch_.
-          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+          1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
         </emu-alg>
         <emu-grammar>AtomEscape :: CharacterClassEscape</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |CharacterClassEscape|.
-          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+          1. Let _A_ be CompileToCharSet of |CharacterClassEscape| with argument _rer_.
+          1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
         </emu-alg>
         <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar>
         <emu-alg>
@@ -35599,12 +35632,13 @@ THH:mm:ss.sss
           1. Assert: _matchingGroupSpecifiers_ contains a single |GroupSpecifier|.
           1. Let _groupSpecifier_ be the sole element of _matchingGroupSpecifiers_.
           1. Let _parenIndex_ be CountLeftCapturingParensBefore(_groupSpecifier_).
-          1. Return BackreferenceMatcher(_parenIndex_, _direction_).
+          1. Return BackreferenceMatcher(_rer_, _parenIndex_, _direction_).
         </emu-alg>
 
         <emu-clause id="sec-runtime-semantics-charactersetmatcher-abstract-operation" type="abstract operation">
           <h1>
             CharacterSetMatcher (
+              _rer_: a RegExp Record,
               _A_: a CharSet,
               _invert_: a Boolean,
               _direction_: ~forward~ or ~backward~,
@@ -35613,21 +35647,23 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Return a new Matcher with parameters (_x_, _c_) that captures _A_, _invert_, and _direction_ and performs the following steps when called:
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_, _A_, _invert_, and _direction_ and performs the following steps when called:
               1. Assert: _x_ is a State.
               1. Assert: _c_ is a Continuation.
+              1. Let _Input_ be _x_'s _input_.
               1. Let _e_ be _x_'s _endIndex_.
               1. If _direction_ is ~forward~, let _f_ be _e_ + 1.
               1. Else, let _f_ be _e_ - 1.
+              1. Let _InputLength_ be the number of elements in _Input_.
               1. If _f_ &lt; 0 or _f_ &gt; _InputLength_, return ~failure~.
               1. Let _index_ be min(_e_, _f_).
               1. Let _ch_ be the character _Input_[_index_].
-              1. Let _cc_ be Canonicalize(_ch_).
-              1. If there exists a member _a_ of _A_ such that Canonicalize(_a_) is _cc_, let _found_ be *true*. Otherwise, let _found_ be *false*.
+              1. Let _cc_ be Canonicalize(_rer_, _ch_).
+              1. If there exists a member _a_ of _A_ such that Canonicalize(_rer_, _a_) is _cc_, let _found_ be *true*. Otherwise, let _found_ be *false*.
               1. If _invert_ is *false* and _found_ is *false*, return ~failure~.
               1. If _invert_ is *true* and _found_ is *true*, return ~failure~.
               1. Let _cap_ be _x_'s _captures_ List.
-              1. Let _y_ be the State (_f_, _cap_).
+              1. Let _y_ be the State (_Input_, _f_, _cap_).
               1. Return _c_(_y_).
           </emu-alg>
         </emu-clause>
@@ -35635,6 +35671,7 @@ THH:mm:ss.sss
         <emu-clause id="sec-backreference-matcher" type="abstract operation">
           <h1>
             BackreferenceMatcher (
+              _rer_: a RegExp Record,
               _n_: a positive integer,
               _direction_: ~forward~ or ~backward~,
             ): a Matcher
@@ -35643,9 +35680,10 @@ THH:mm:ss.sss
           </dl>
           <emu-alg>
             1. Assert: _n_ &ge; 1.
-            1. Return a new Matcher with parameters (_x_, _c_) that captures _n_ and _direction_ and performs the following steps when called:
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_, _n_, and _direction_ and performs the following steps when called:
               1. Assert: _x_ is a State.
               1. Assert: _c_ is a Continuation.
+              1. Let _Input_ be _x_'s _input_.
               1. Let _cap_ be _x_'s _captures_ List.
               1. Let _r_ be _cap_[_n_].
               1. If _r_ is *undefined*, return _c_(_x_).
@@ -35655,10 +35693,11 @@ THH:mm:ss.sss
               1. Let _len_ be _re_ - _rs_.
               1. If _direction_ is ~forward~, let _f_ be _e_ + _len_.
               1. Else, let _f_ be _e_ - _len_.
+              1. Let _InputLength_ be the number of elements in _Input_.
               1. If _f_ &lt; 0 or _f_ &gt; _InputLength_, return ~failure~.
               1. Let _g_ be min(_e_, _f_).
-              1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_Input_[_rs_ + _i_]) is not the same character value as Canonicalize(_Input_[_g_ + _i_]), return ~failure~.
-              1. Let _y_ be the State (_f_, _cap_).
+              1. If there exists an integer _i_ between 0 (inclusive) and _len_ (exclusive) such that Canonicalize(_rer_, _Input_[_rs_ + _i_]) is not the same character value as Canonicalize(_rer_, _Input_[_g_ + _i_]), return ~failure~.
+              1. Let _y_ be the State (_Input_, _f_, _cap_).
               1. Return _c_(_y_).
           </emu-alg>
         </emu-clause>
@@ -35666,16 +35705,17 @@ THH:mm:ss.sss
         <emu-clause id="sec-runtime-semantics-canonicalize-ch" type="abstract operation">
           <h1>
             Canonicalize (
+              _rer_: a RegExp Record,
               _ch_: a character,
             ): a character
           </h1>
           <dl class="header">
           </dl>
           <emu-alg>
-            1. If _Unicode_ is *true* and _IgnoreCase_ is *true*, then
+            1. If _rer_.[[Unicode]] is *true* and _rer_.[[IgnoreCase]] is *true*, then
               1. If the file <a href="https://unicode.org/Public/UCD/latest/ucd/CaseFolding.txt"><code>CaseFolding.txt</code></a> of the Unicode Character Database provides a simple or common case folding mapping for _ch_, return the result of applying that mapping to _ch_.
               1. Return _ch_.
-            1. If _IgnoreCase_ is *false*, return _ch_.
+            1. If _rer_.[[IgnoreCase]] is *false*, return _ch_.
             1. Assert: _ch_ is a UTF-16 code unit.
             1. Let _cp_ be the code point whose numeric value is that of _ch_.
             1. Let _u_ be the result of toUppercase(&laquo; _cp_ &raquo;), according to the Unicode Default Case Conversion algorithm.
@@ -35708,29 +35748,37 @@ THH:mm:ss.sss
             <pre><code class="javascript">["baaabaac", "ba", undefined, "abaac"]</code></pre>
           </emu-note>
           <emu-note>
-            <p>In case-insignificant matches when _Unicode_ is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode Standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `&szlig;` (U+00DF) to `SS`. It may however map a code point outside the Basic Latin range to a character within, for example, `&#x17f;` (U+017F) to `s`. Such characters are not mapped if _Unicode_ is *false*. This prevents Unicode code points such as U+017F and U+212A from matching regular expressions such as `/[a-z]/i`, but they will match `/[a-z]/ui`.</p>
+            <p>In case-insignificant matches when _rer_.[[Unicode]] is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode Standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `&szlig;` (U+00DF) to `SS`. It may however map a code point outside the Basic Latin range to a character within, for example, `&#x17f;` (U+017F) to `s`. Such characters are not mapped if _rer_.[[Unicode]] is *false*. This prevents Unicode code points such as U+017F and U+212A from matching regular expressions such as `/[a-z]/i`, but they will match `/[a-z]/ui`.</p>
           </emu-note>
         </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-compilecharacterclass" type="sdo" oldids="sec-characterclass">
-        <h1>Runtime Semantics: CompileCharacterClass ( ): a Record with fields [[CharSet]] (a CharSet) and [[Invert]] (a Boolean)</h1>
+        <h1>
+          Runtime Semantics: CompileCharacterClass (
+            _rer_: a RegExp Record,
+          ): a Record with fields [[CharSet]] (a CharSet) and [[Invert]] (a Boolean)
+        </h1>
         <dl class="header">
         </dl>
         <emu-grammar>CharacterClass :: `[` ClassRanges `]`</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |ClassRanges|.
+          1. Let _A_ be CompileToCharSet of |ClassRanges| with argument _rer_.
           1. Return the Record { [[CharSet]]: _A_, [[Invert]]: *false* }.
         </emu-alg>
         <emu-grammar>CharacterClass :: `[` `^` ClassRanges `]`</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |ClassRanges|.
+          1. Let _A_ be CompileToCharSet of |ClassRanges| with argument _rer_.
           1. Return the Record { [[CharSet]]: _A_, [[Invert]]: *true* }.
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-compiletocharset" type="sdo" oldids="sec-classranges,sec-nonemptyclassranges,sec-nonemptyclassrangesnodash,sec-classatom,sec-classatomnodash,sec-classescape,sec-characterclassescape">
-        <h1>Runtime Semantics: CompileToCharSet ( ): a CharSet</h1>
+        <h1>
+          Runtime Semantics: CompileToCharSet (
+            _rer_: a RegExp Record,
+          ): a CharSet
+        </h1>
         <dl class="header">
         </dl>
         <emu-note>
@@ -35746,15 +35794,15 @@ THH:mm:ss.sss
         <!-- NonemptyClassRanges -->
         <emu-grammar>NonemptyClassRanges :: ClassAtom NonemptyClassRangesNoDash</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |ClassAtom|.
-          1. Let _B_ be CompileToCharSet of |NonemptyClassRangesNoDash|.
+          1. Let _A_ be CompileToCharSet of |ClassAtom| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of |NonemptyClassRangesNoDash| with argument _rer_.
           1. Return the union of CharSets _A_ and _B_.
         </emu-alg>
         <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of the first |ClassAtom|.
-          1. Let _B_ be CompileToCharSet of the second |ClassAtom|.
-          1. Let _C_ be CompileToCharSet of |ClassRanges|.
+          1. Let _A_ be CompileToCharSet of the first |ClassAtom| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of the second |ClassAtom| with argument _rer_.
+          1. Let _C_ be CompileToCharSet of |ClassRanges| with argument _rer_.
           1. Let _D_ be CharacterRange(_A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
@@ -35762,15 +35810,15 @@ THH:mm:ss.sss
         <!-- NonemptyClassRangesNoDash -->
         <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash NonemptyClassRangesNoDash</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |ClassAtomNoDash|.
-          1. Let _B_ be CompileToCharSet of |NonemptyClassRangesNoDash|.
+          1. Let _A_ be CompileToCharSet of |ClassAtomNoDash| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of |NonemptyClassRangesNoDash| with argument _rer_.
           1. Return the union of CharSets _A_ and _B_.
         </emu-alg>
         <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |ClassAtomNoDash|.
-          1. Let _B_ be CompileToCharSet of |ClassAtom|.
-          1. Let _C_ be CompileToCharSet of |ClassRanges|.
+          1. Let _A_ be CompileToCharSet of |ClassAtomNoDash| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of |ClassAtom| with argument _rer_.
+          1. Let _C_ be CompileToCharSet of |ClassRanges| with argument _rer_.
           1. Let _D_ be CharacterRange(_A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
@@ -35831,7 +35879,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `w`</emu-grammar>
         <emu-alg>
-          1. Return _WordCharacters_.
+          1. Return WordCharacters(_rer_).
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `W`</emu-grammar>
         <emu-alg>
@@ -35839,11 +35887,11 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `p{` UnicodePropertyValueExpression `}`</emu-grammar>
         <emu-alg>
-          1. Return the CharSet containing all Unicode code points included in CompileToCharSet of |UnicodePropertyValueExpression|.
+          1. Return the CharSet containing all Unicode code points included in CompileToCharSet of |UnicodePropertyValueExpression| with argument _rer_.
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `P{` UnicodePropertyValueExpression `}`</emu-grammar>
         <emu-alg>
-          1. Return the CharSet containing all Unicode code points not included in CompileToCharSet of |UnicodePropertyValueExpression|.
+          1. Return the CharSet containing all Unicode code points not included in CompileToCharSet of |UnicodePropertyValueExpression| with argument _rer_.
         </emu-alg>
         <emu-grammar>UnicodePropertyValueExpression :: UnicodePropertyName `=` UnicodePropertyValue</emu-grammar>
         <emu-alg>
@@ -35992,7 +36040,7 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Let _obj_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%RegExp.prototype%"*, &laquo; [[RegExpMatcher]], [[OriginalSource]], [[OriginalFlags]] &raquo;).
+            1. Let _obj_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%RegExp.prototype%"*, &laquo; [[OriginalSource]], [[OriginalFlags]], [[RegExpRecord]], [[RegExpMatcher]] &raquo;).
             1. Perform ! DefinePropertyOrThrow(_obj_, *"lastIndex"*, PropertyDescriptor { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
             1. Return _obj_.
           </emu-alg>
@@ -36014,6 +36062,9 @@ THH:mm:ss.sss
             1. If _flags_ is *undefined*, let _F_ be the empty String.
             1. Else, let _F_ be ? ToString(_flags_).
             1. If _F_ contains any code unit other than *"d"*, *"g"*, *"i"*, *"m"*, *"s"*, *"u"*, or *"y"* or if it contains the same code unit more than once, throw a *SyntaxError* exception.
+            1. If _F_ contains *"i"*, let _i_ be *true*; else let _i_ be *false*.
+            1. If _F_ contains *"m"*, let _m_ be *true*; else let _m_ be *false*.
+            1. If _F_ contains *"s"*, let _s_ be *true*; else let _s_ be *false*.
             1. If _F_ contains *"u"*, let _u_ be *true*; else let _u_ be *false*.
             1. If _u_ is *true*, then
               1. Let _patternText_ be StringToCodePoints(_P_).
@@ -36024,8 +36075,10 @@ THH:mm:ss.sss
             1. Assert: _parseResult_ is a |Pattern| Parse Node.
             1. Set _obj_.[[OriginalSource]] to _P_.
             1. Set _obj_.[[OriginalFlags]] to _F_.
-            1. NOTE: The definitions of _DotAll_, _IgnoreCase_, _Multiline_, and _Unicode_ in <emu-xref href="#sec-notation"></emu-xref> refer to this value of _obj_.[[OriginalFlags]].
-            1. Set _obj_.[[RegExpMatcher]] to CompilePattern of _parseResult_.
+            1. Let _capturingGroupsCount_ be CountLeftCapturingParensWithin(_parseResult_).
+            1. Let _rer_ be the RegExp Record { [[IgnoreCase]]: _i_, [[Multiline]]: _m_, [[DotAll]]: _s_, [[Unicode]]: _u_, [[CapturingGroupsCount]]: _capturingGroupsCount_ }.
+            1. Set _obj_.[[RegExpRecord]] to _rer_.
+            1. Set _obj_.[[RegExpMatcher]] to CompilePattern of _parseResult_ with argument _rer_.
             1. Perform ? Set(_obj_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).
             1. Return _obj_.
           </emu-alg>
@@ -36048,6 +36101,25 @@ THH:mm:ss.sss
               1. If _parseResult_ is a Parse Node and _parseResult_ contains a |GroupName|, then
                 1. Set _parseResult_ to ParseText(_patternText_, |Pattern[~UnicodeMode, +N]|).
             1. Return _parseResult_.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-wordcharacters" type="abstract operation" oldids="sec-runtime-semantics-wordcharacters-abstract-operation">
+          <h1>
+            WordCharacters (
+              _rer_: a RegExp Record,
+            ): a CharSet
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>Returns a CharSet containing the characters considered "word characters" for the purposes of `\\b`, `\\B`, `\\w`, and `\\W`</dd>
+          </dl>
+          <emu-alg>
+            1. Let _basicWordChars_ be the CharSet containing all sixty-three characters in *"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_"*.
+            1. NOTE: This is the letters, numbers, and U+005F (LOW LINE) in the Unicode Basic Latin block.
+            1. Let _extraWordChars_ be the CharSet containing all characters _c_ such that _c_ is not in _basicWordChars_ but Canonicalize(_rer_, _c_) is in _basicWordChars_.
+            1. Assert: _extraWordChars_ is empty unless _rer_.[[Unicode]] and _rer_.[[IgnoreCase]] are both *true*.
+            1. Return the union of _basicWordChars_ and _extraWordChars_.
           </emu-alg>
         </emu-clause>
 
@@ -36204,7 +36276,8 @@ THH:mm:ss.sss
             1. If _fullUnicode_ is *true*, set _e_ to GetStringIndex(_S_, _e_).
             1. If _global_ is *true* or _sticky_ is *true*, then
               1. Perform ? Set(_R_, *"lastIndex"*, 𝔽(_e_), *true*).
-            1. Let _n_ be the number of elements in _r_'s _captures_ List. (This is the same value as <emu-xref href="#sec-notation"></emu-xref>'s _NcapturingParens_.)
+            1. Let _n_ be the number of elements in _r_'s _captures_ List.
+            1. Assert: _n_ = _R_.[[RegExpRecord]].[[CapturingGroupsCount]].
             1. Assert: _n_ &lt; 2<sup>32</sup> - 1.
             1. Let _A_ be ! ArrayCreate(_n_ + 1).
             1. Assert: The mathematical value of _A_'s *"length"* property is _n_ + 1.
@@ -36763,7 +36836,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-properties-of-regexp-instances">
       <h1>Properties of RegExp Instances</h1>
-      <p>RegExp instances are ordinary objects that inherit properties from the RegExp prototype object. RegExp instances have internal slots [[RegExpMatcher]], [[OriginalSource]], and [[OriginalFlags]]. The value of the [[RegExpMatcher]] internal slot is an Abstract Closure representation of the |Pattern| of the RegExp object.</p>
+      <p>RegExp instances are ordinary objects that inherit properties from the RegExp prototype object. RegExp instances have internal slots [[OriginalSource]], [[OriginalFlags]], [[RegExpRecord]], and [[RegExpMatcher]]. The value of the [[RegExpMatcher]] internal slot is an Abstract Closure representation of the |Pattern| of the RegExp object.</p>
       <emu-note>
         <p>Prior to ECMAScript 2015, RegExp instances were specified as having the own data properties *"source"*, *"global"*, *"ignoreCase"*, and *"multiline"*. Those properties are now specified as accessor properties of `RegExp.prototype`.</p>
       </emu-note>
@@ -47151,13 +47224,13 @@ THH:mm:ss.sss
         <emu-grammar>ExtendedAtom :: `\` [lookahead == `c`]</emu-grammar>
         <emu-alg>
           1. Let _A_ be the CharSet containing the single character `\\` U+005C (REVERSE SOLIDUS).
-          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+          1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
         </emu-alg>
         <emu-grammar>ExtendedAtom :: ExtendedPatternCharacter</emu-grammar>
         <emu-alg>
           1. Let _ch_ be the character represented by |ExtendedPatternCharacter|.
           1. Let _A_ be a one-element CharSet containing the character _ch_.
-          1. Return CharacterSetMatcher(_A_, *false*, _direction_).
+          1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
         </emu-alg>
       </emu-annex>
 
@@ -47168,18 +47241,18 @@ THH:mm:ss.sss
         <p>The following two rules replace the corresponding rules of CompileToCharSet.</p>
         <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of the first |ClassAtom|.
-          1. Let _B_ be CompileToCharSet of the second |ClassAtom|.
-          1. Let _C_ be CompileToCharSet of |ClassRanges|.
-          1. Let _D_ be CharacterRangeOrUnion(_A_, _B_).
+          1. Let _A_ be CompileToCharSet of the first |ClassAtom| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of the second |ClassAtom| with argument _rer_.
+          1. Let _C_ be CompileToCharSet of |ClassRanges| with argument _rer_.
+          1. Let _D_ be CharacterRangeOrUnion(_rer_, _A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
         <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |ClassAtomNoDash|.
-          1. Let _B_ be CompileToCharSet of |ClassAtom|.
-          1. Let _C_ be CompileToCharSet of |ClassRanges|.
-          1. Let _D_ be CharacterRangeOrUnion(_A_, _B_).
+          1. Let _A_ be CompileToCharSet of |ClassAtomNoDash| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of |ClassAtom| with argument _rer_.
+          1. Let _C_ be CompileToCharSet of |ClassRanges| with argument _rer_.
+          1. Let _D_ be CharacterRangeOrUnion(_rer_, _A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
 
@@ -47200,6 +47273,7 @@ THH:mm:ss.sss
         <emu-annex id="sec-runtime-semantics-characterrangeorunion-abstract-operation" type="abstract operation">
           <h1>
             CharacterRangeOrUnion (
+              _rer_: a RegExp Record,
               _A_: a CharSet,
               _B_: a CharSet,
             ): a CharSet
@@ -47207,7 +47281,7 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. If _Unicode_ is *false*, then
+            1. If _rer_.[[Unicode]] is *false*, then
               1. If _A_ does not contain exactly one character or _B_ does not contain exactly one character, then
                 1. Let _C_ be the CharSet containing the single character `-` U+002D (HYPHEN-MINUS).
                 1. Return the union of CharSets _A_, _B_ and _C_.
