@@ -10,7 +10,7 @@ cp LICENSE.md biblio/
 cd biblio
 
 COMMIT_COUNT=$(git rev-list --count HEAD)
-npm version --no-git-tag-version "2.0.${COMMIT_COUNT}"
+npm version --no-git-tag-version "2.1.${COMMIT_COUNT}"
 
 SHORT_COMMIT=$(git rev-parse --short HEAD)
 LONG_COMMIT=$(git rev-parse --verify HEAD)
