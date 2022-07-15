@@ -30115,24 +30115,49 @@
           1. Assert: Type(_func_) is Object.
           1. If _func_ has a [[SourceText]] internal slot and _func_.[[SourceText]] is a sequence of Unicode code points and HostHasSourceTextAvailable(_func_) is *true*, then
             1. Return CodePointsToString(_func_.[[SourceText]]).
-          1. Let _sourceText_ be an implementation-defined sequence of Unicode code points that represents _func_ using the syntax of |NativeFunction|. If _func_ is a <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref>, the portion of _sourceText_ corresponding to |NativeFunctionName| must be StringToCodePoints(_func_.[[InitialName]]).
+          1. Let _sourceText_ be an implementation-defined sequence of Unicode code points that represents _func_ using the syntax of |NativeFunction|. If _func_ is a <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref>, NativeFunctionName of ParseText(_sourceText_, |NativeFunction|) must be _func_.[[InitialName]].
           1. Return CodePointsToString(_sourceText_).
         </emu-alg>
         <emu-note>
           <p>Every <emu-xref href="#sec-built-in-function-objects">built-in function object</emu-xref> has an [[InitialName]] internal slot with String value equal to the initial value of its *"name"* property, which for some functions is explicitly specified with contents that match the syntax of |ComputedPropertyName| rather than |LiteralPropertyName|. See <emu-xref href="#sec-ecmascript-standard-built-in-objects"></emu-xref>.</p>
         </emu-note>
+
         <emu-grammar type="definition">
           NativeFunction :
             `function` NativeFunctionName `(` FormalParameters[~Yield, ~Await] `)` `{` `[` `native` `code` `]` `}`
 
           NativeFunctionName :
             [empty]
-            NativeFunctionAccessor? PropertyName[~Yield, ~Await]
+            NativeFunctionAccessor? NativeFunctionBaseName
+            `[` StringLiteral `]`
 
           NativeFunctionAccessor :
             `get`
             `set`
+
+          NativeFunctionBaseName :
+            PropertyName[~Yield, ~Await] but not `[` StringLiteral `]`
         </emu-grammar>
+
+        <emu-clause id="sec-nativefunctionname" type="sdo">
+          <h1>Runtime Semantics: NativeFunctionName ( ): a String</h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>It returns the name of a function object represented by synthetic source text.</dd>
+          </dl>
+          <emu-grammar>NativeFunction : `function` NativeFunctionName `(` FormalParameters[~Yield, ~Await] `)` `{` `[` `native` `code` `]` `}`</emu-grammar>
+          <emu-alg>
+            1. If |NativeFunctionName| is <emu-grammar>NativeFunctionName : [empty]</emu-grammar> , then
+              1. Return *""*.
+            1. If |NativeFunctionName| is <emu-grammar>NativeFunctionName : NativeFunctionAccessor? NativeFunctionBaseName</emu-grammar> , then
+              1. Let _sourceText_ be the source text matched by |NativeFunctionName|.
+              1. Return CodePointsToString(_sourceText_).
+            1. Assert: |NativeFunctionName| is <emu-grammar>NativeFunctionName : `[` StringLiteral `]`</emu-grammar> .
+            1. Let _nameNode_ be the |StringLiteral| of |NativeFunctionName|.
+            1. Let _name_ be the result of evaluating _nameNode_.
+            1. Return _name_.
+          </emu-alg>
+        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-function.prototype-@@hasinstance">
