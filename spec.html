@@ -35915,6 +35915,24 @@ THH:mm:ss.sss
           </emu-alg>
         </emu-clause>
 
+        <emu-clause id="sec-wordcharacters" type="abstract operation" oldids="sec-runtime-semantics-wordcharacters-abstract-operation">
+          <h1>
+            WordCharacters (
+              _rer_: a RegExp Record,
+            ): a CharSet
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>Returns a CharSet containing the characters considered "word characters" for the purposes of `\\b`, `\\B`, `\\w`, and `\\W`</dd>
+          </dl>
+          <emu-alg>
+            1. Let _basicWordChars_ be the CharSet containing every character in the ASCII word characters.
+            1. Let _extraWordChars_ be the CharSet containing all characters _c_ such that _c_ is not in _basicWordChars_ but Canonicalize(_rer_, _c_) is in _basicWordChars_.
+            1. Assert: _extraWordChars_ is empty unless _rer_.[[Unicode]] and _rer_.[[IgnoreCase]] are both *true*.
+            1. Return the union of _basicWordChars_ and _extraWordChars_.
+          </emu-alg>
+        </emu-clause>
+
         <emu-clause id="sec-runtime-semantics-unicodematchproperty-p" type="abstract operation">
           <h1>
             UnicodeMatchProperty (
@@ -35968,6 +35986,98 @@ THH:mm:ss.sss
       </emu-clause>
     </emu-clause>
 
+    <emu-clause id="sec-abstract-operations-for-regexp-creation" oldids="sec-abstract-operations-for-the-regexp-constructor">
+      <h1>Abstract Operations for RegExp Creation</h1>
+
+      <emu-clause id="sec-regexpcreate" type="abstract operation">
+        <h1>
+          RegExpCreate (
+            _P_: an ECMAScript language value,
+            _F_: a String or *undefined*,
+          ): either a normal completion containing an Object or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Let _obj_ be ! RegExpAlloc(%RegExp%).
+          1. Return ? RegExpInitialize(_obj_, _P_, _F_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-regexpalloc" type="abstract operation">
+        <h1>
+          RegExpAlloc (
+            _newTarget_: a constructor,
+          ): either a normal completion containing an Object or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Let _obj_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%RegExp.prototype%"*, &laquo; [[OriginalSource]], [[OriginalFlags]], [[RegExpRecord]], [[RegExpMatcher]] &raquo;).
+          1. Perform ! DefinePropertyOrThrow(_obj_, *"lastIndex"*, PropertyDescriptor { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
+          1. Return _obj_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-regexpinitialize" type="abstract operation">
+        <h1>
+          RegExpInitialize (
+            _obj_: an Object,
+            _pattern_: an ECMAScript language value,
+            _flags_: an ECMAScript language value,
+          ): either a normal completion containing an Object or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If _pattern_ is *undefined*, let _P_ be the empty String.
+          1. Else, let _P_ be ? ToString(_pattern_).
+          1. If _flags_ is *undefined*, let _F_ be the empty String.
+          1. Else, let _F_ be ? ToString(_flags_).
+          1. If _F_ contains any code unit other than *"d"*, *"g"*, *"i"*, *"m"*, *"s"*, *"u"*, or *"y"* or if it contains the same code unit more than once, throw a *SyntaxError* exception.
+          1. If _F_ contains *"i"*, let _i_ be *true*; else let _i_ be *false*.
+          1. If _F_ contains *"m"*, let _m_ be *true*; else let _m_ be *false*.
+          1. If _F_ contains *"s"*, let _s_ be *true*; else let _s_ be *false*.
+          1. If _F_ contains *"u"*, let _u_ be *true*; else let _u_ be *false*.
+          1. If _u_ is *true*, then
+            1. Let _patternText_ be StringToCodePoints(_P_).
+          1. Else,
+            1. Let _patternText_ be the result of interpreting each of _P_'s 16-bit elements as a Unicode BMP code point. UTF-16 decoding is not applied to the elements.
+          1. Let _parseResult_ be ParsePattern(_patternText_, _u_).
+          1. If _parseResult_ is a non-empty List of *SyntaxError* objects, throw a *SyntaxError* exception.
+          1. Assert: _parseResult_ is a |Pattern| Parse Node.
+          1. Set _obj_.[[OriginalSource]] to _P_.
+          1. Set _obj_.[[OriginalFlags]] to _F_.
+          1. Let _capturingGroupsCount_ be CountLeftCapturingParensWithin(_parseResult_).
+          1. Let _rer_ be the RegExp Record { [[IgnoreCase]]: _i_, [[Multiline]]: _m_, [[DotAll]]: _s_, [[Unicode]]: _u_, [[CapturingGroupsCount]]: _capturingGroupsCount_ }.
+          1. Set _obj_.[[RegExpRecord]] to _rer_.
+          1. Set _obj_.[[RegExpMatcher]] to CompilePattern of _parseResult_ with argument _rer_.
+          1. Perform ? Set(_obj_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).
+          1. Return _obj_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-parsepattern" type="abstract operation">
+        <h1>
+          Static Semantics: ParsePattern (
+            _patternText_: a sequence of Unicode code points,
+            _u_: a Boolean,
+          ): a Parse Node or a non-empty List of *SyntaxError* objects
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If _u_ is *true*, then
+            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, +N]|).
+          1. Else,
+            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[~UnicodeMode, ~N]|).
+            1. If _parseResult_ is a Parse Node and _parseResult_ contains a |GroupName|, then
+              1. Set _parseResult_ to ParseText(_patternText_, |Pattern[~UnicodeMode, +N]|).
+          1. Return _parseResult_.
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
     <emu-clause id="sec-regexp-constructor">
       <h1>The RegExp Constructor</h1>
       <p>The RegExp constructor:</p>
@@ -36007,132 +36117,6 @@ THH:mm:ss.sss
         <emu-note>
           <p>If pattern is supplied using a |StringLiteral|, the usual escape sequence substitutions are performed before the String is processed by this function. If pattern must contain an escape sequence to be recognized by this function, any U+005C (REVERSE SOLIDUS) code points must be escaped within the |StringLiteral| to prevent them being removed when the contents of the |StringLiteral| are formed.</p>
         </emu-note>
-      </emu-clause>
-
-      <emu-clause id="sec-abstract-operations-for-the-regexp-constructor">
-        <h1>Abstract Operations for the RegExp Constructor</h1>
-
-        <emu-clause id="sec-regexpalloc" type="abstract operation">
-          <h1>
-            RegExpAlloc (
-              _newTarget_: a constructor,
-            ): either a normal completion containing an Object or a throw completion
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Let _obj_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%RegExp.prototype%"*, &laquo; [[OriginalSource]], [[OriginalFlags]], [[RegExpRecord]], [[RegExpMatcher]] &raquo;).
-            1. Perform ! DefinePropertyOrThrow(_obj_, *"lastIndex"*, PropertyDescriptor { [[Writable]]: *true*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
-            1. Return _obj_.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-regexpinitialize" type="abstract operation">
-          <h1>
-            RegExpInitialize (
-              _obj_: an Object,
-              _pattern_: an ECMAScript language value,
-              _flags_: an ECMAScript language value,
-            ): either a normal completion containing an Object or a throw completion
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. If _pattern_ is *undefined*, let _P_ be the empty String.
-            1. Else, let _P_ be ? ToString(_pattern_).
-            1. If _flags_ is *undefined*, let _F_ be the empty String.
-            1. Else, let _F_ be ? ToString(_flags_).
-            1. If _F_ contains any code unit other than *"d"*, *"g"*, *"i"*, *"m"*, *"s"*, *"u"*, or *"y"* or if it contains the same code unit more than once, throw a *SyntaxError* exception.
-            1. If _F_ contains *"i"*, let _i_ be *true*; else let _i_ be *false*.
-            1. If _F_ contains *"m"*, let _m_ be *true*; else let _m_ be *false*.
-            1. If _F_ contains *"s"*, let _s_ be *true*; else let _s_ be *false*.
-            1. If _F_ contains *"u"*, let _u_ be *true*; else let _u_ be *false*.
-            1. If _u_ is *true*, then
-              1. Let _patternText_ be StringToCodePoints(_P_).
-            1. Else,
-              1. Let _patternText_ be the result of interpreting each of _P_'s 16-bit elements as a Unicode BMP code point. UTF-16 decoding is not applied to the elements.
-            1. Let _parseResult_ be ParsePattern(_patternText_, _u_).
-            1. If _parseResult_ is a non-empty List of *SyntaxError* objects, throw a *SyntaxError* exception.
-            1. Assert: _parseResult_ is a |Pattern| Parse Node.
-            1. Set _obj_.[[OriginalSource]] to _P_.
-            1. Set _obj_.[[OriginalFlags]] to _F_.
-            1. Let _capturingGroupsCount_ be CountLeftCapturingParensWithin(_parseResult_).
-            1. Let _rer_ be the RegExp Record { [[IgnoreCase]]: _i_, [[Multiline]]: _m_, [[DotAll]]: _s_, [[Unicode]]: _u_, [[CapturingGroupsCount]]: _capturingGroupsCount_ }.
-            1. Set _obj_.[[RegExpRecord]] to _rer_.
-            1. Set _obj_.[[RegExpMatcher]] to CompilePattern of _parseResult_ with argument _rer_.
-            1. Perform ? Set(_obj_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).
-            1. Return _obj_.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-parsepattern" type="abstract operation">
-          <h1>
-            Static Semantics: ParsePattern (
-              _patternText_: a sequence of Unicode code points,
-              _u_: a Boolean,
-            ): a Parse Node or a non-empty List of *SyntaxError* objects
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. If _u_ is *true*, then
-              1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, +N]|).
-            1. Else,
-              1. Let _parseResult_ be ParseText(_patternText_, |Pattern[~UnicodeMode, ~N]|).
-              1. If _parseResult_ is a Parse Node and _parseResult_ contains a |GroupName|, then
-                1. Set _parseResult_ to ParseText(_patternText_, |Pattern[~UnicodeMode, +N]|).
-            1. Return _parseResult_.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-wordcharacters" type="abstract operation" oldids="sec-runtime-semantics-wordcharacters-abstract-operation">
-          <h1>
-            WordCharacters (
-              _rer_: a RegExp Record,
-            ): a CharSet
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>Returns a CharSet containing the characters considered "word characters" for the purposes of `\\b`, `\\B`, `\\w`, and `\\W`</dd>
-          </dl>
-          <emu-alg>
-            1. Let _basicWordChars_ be the CharSet containing every character in the ASCII word characters.
-            1. Let _extraWordChars_ be the CharSet containing all characters _c_ such that _c_ is not in _basicWordChars_ but Canonicalize(_rer_, _c_) is in _basicWordChars_.
-            1. Assert: _extraWordChars_ is empty unless _rer_.[[Unicode]] and _rer_.[[IgnoreCase]] are both *true*.
-            1. Return the union of _basicWordChars_ and _extraWordChars_.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-regexpcreate" type="abstract operation">
-          <h1>
-            RegExpCreate (
-              _P_: an ECMAScript language value,
-              _F_: a String or *undefined*,
-            ): either a normal completion containing an Object or a throw completion
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Let _obj_ be ! RegExpAlloc(%RegExp%).
-            1. Return ? RegExpInitialize(_obj_, _P_, _F_).
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-escaperegexppattern" type="abstract operation">
-          <h1>
-            EscapeRegExpPattern (
-              _P_: a String,
-              _F_: a String,
-            ): a String
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Let _S_ be a String in the form of a |Pattern[~UnicodeMode]| (|Pattern[+UnicodeMode]| if _F_ contains *"u"*) equivalent to _P_ interpreted as UTF-16 encoded Unicode code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>), in which certain code points are escaped as described below. _S_ may or may not be identical to _P_; however, the Abstract Closure that would result from evaluating _S_ as a |Pattern[~UnicodeMode]| (|Pattern[+UnicodeMode]| if _F_ contains *"u"*) must behave identically to the Abstract Closure given by the constructed object's [[RegExpMatcher]] internal slot. Multiple calls to this abstract operation using the same values for _P_ and _F_ must produce identical results.
-            1. The code points `/` or any |LineTerminator| occurring in the pattern shall be escaped in _S_ as necessary to ensure that the string-concatenation of *"/"*, _S_, *"/"*, and _F_ can be parsed (in an appropriate lexical context) as a |RegularExpressionLiteral| that behaves identically to the constructed regular expression. For example, if _P_ is *"/"*, then _S_ could be *"\\/"* or *"\\u002F"*, among other possibilities, but not *"/"*, because `///` followed by _F_ would be parsed as a |SingleLineComment| rather than a |RegularExpressionLiteral|. If _P_ is the empty String, this specification can be met by letting _S_ be *"(?:)"*.
-            1. Return _S_.
-          </emu-alg>
-        </emu-clause>
       </emu-clause>
     </emu-clause>
 
@@ -36702,6 +36686,22 @@ THH:mm:ss.sss
           1. Let _flags_ be _R_.[[OriginalFlags]].
           1. Return EscapeRegExpPattern(_src_, _flags_).
         </emu-alg>
+
+        <emu-clause id="sec-escaperegexppattern" type="abstract operation">
+          <h1>
+            EscapeRegExpPattern (
+              _P_: a String,
+              _F_: a String,
+            ): a String
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Let _S_ be a String in the form of a |Pattern[~UnicodeMode]| (|Pattern[+UnicodeMode]| if _F_ contains *"u"*) equivalent to _P_ interpreted as UTF-16 encoded Unicode code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>), in which certain code points are escaped as described below. _S_ may or may not be identical to _P_; however, the Abstract Closure that would result from evaluating _S_ as a |Pattern[~UnicodeMode]| (|Pattern[+UnicodeMode]| if _F_ contains *"u"*) must behave identically to the Abstract Closure given by the constructed object's [[RegExpMatcher]] internal slot. Multiple calls to this abstract operation using the same values for _P_ and _F_ must produce identical results.
+            1. The code points `/` or any |LineTerminator| occurring in the pattern shall be escaped in _S_ as necessary to ensure that the string-concatenation of *"/"*, _S_, *"/"*, and _F_ can be parsed (in an appropriate lexical context) as a |RegularExpressionLiteral| that behaves identically to the constructed regular expression. For example, if _P_ is *"/"*, then _S_ could be *"\\/"* or *"\\u002F"*, among other possibilities, but not *"/"*, because `///` followed by _F_ would be parsed as a |SingleLineComment| rather than a |RegularExpressionLiteral|. If _P_ is the empty String, this specification can be met by letting _S_ be *"(?:)"*.
+            1. Return _S_.
+          </emu-alg>
+        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-regexp.prototype-@@split">
