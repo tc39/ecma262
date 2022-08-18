@@ -2184,42 +2184,55 @@
           <h1>
             Number::toString (
               _x_: a Number,
+              _radix_: an integer in the inclusive interval from 2 to 36,
             ): a String
           </h1>
           <dl class="header">
             <dt>description</dt>
-            <dd>It converts _x_ to String format.</dd>
+            <dd>It represents _x_ as a String using a positional numeral system with radix _radix_. The digits used in the representation of a number using radix _r_ are taken from the first _r_ code units of *"0123456789abcdefghijklmnopqrstuvwxyz"* in order. The representation of numbers with magnitude greater than or equal to *1*<sub>𝔽</sub> never includes leading zeroes.</dd>
           </dl>
           <emu-alg>
             1. If _x_ is *NaN*, return the String *"NaN"*.
             1. If _x_ is *+0*<sub>𝔽</sub> or *-0*<sub>𝔽</sub>, return the String *"0"*.
-            1. If _x_ &lt; *-0*<sub>𝔽</sub>, return the string-concatenation of *"-"* and Number::toString(-_x_).
+            1. If _x_ &lt; *-0*<sub>𝔽</sub>, return the string-concatenation of *"-"* and Number::toString(-_x_, _radix_).
             1. If _x_ is *+&infin;*<sub>𝔽</sub>, return the String *"Infinity"*.
-            1. [id="step-number-tostring-intermediate-values"] Otherwise, let _n_, _k_, and _s_ be integers such that _k_ &ge; 1, 10<sup>_k_ - 1</sup> &le; _s_ &lt; 10<sup>_k_</sup>, 𝔽(_s_ &times; 10<sup>_n_ - _k_</sup>) is _x_, and _k_ is as small as possible. Note that _k_ is the number of digits in the decimal representation of _s_, that _s_ is not divisible by 10, and that the least significant digit of _s_ is not necessarily uniquely determined by these criteria.
-            1. If _k_ &le; _n_ &le; 21, return the string-concatenation of:
-              * the code units of the _k_ digits of the decimal representation of _s_ (in order, with no leading zeroes)
-              * _n_ - _k_ occurrences of the code unit 0x0030 (DIGIT ZERO)
-            1. If 0 &lt; _n_ &le; 21, return the string-concatenation of:
-              * the code units of the most significant _n_ digits of the decimal representation of _s_
-              * the code unit 0x002E (FULL STOP)
-              * the code units of the remaining _k_ - _n_ digits of the decimal representation of _s_
-            1. If -6 &lt; _n_ &le; 0, return the string-concatenation of:
-              * the code unit 0x0030 (DIGIT ZERO)
-              * the code unit 0x002E (FULL STOP)
-              * -_n_ occurrences of the code unit 0x0030 (DIGIT ZERO)
-              * the code units of the _k_ digits of the decimal representation of _s_
-            1. Otherwise, if _k_ = 1, return the string-concatenation of:
-              * the code unit of the single digit of _s_
-              * the code unit 0x0065 (LATIN SMALL LETTER E)
-              * the code unit 0x002B (PLUS SIGN) or the code unit 0x002D (HYPHEN-MINUS) according to whether _n_ - 1 is positive or negative
-              * the code units of the decimal representation of the integer abs(_n_ - 1) (with no leading zeroes)
+            1. [id="step-number-tostring-intermediate-values"] Let _n_, _k_, and _s_ be integers such that _k_ &ge; 1, _radix_<sup>_k_ - 1</sup> &le; _s_ &lt; _radix_<sup>_k_</sup>, 𝔽(_s_ &times; _radix_<sup>_n_ - _k_</sup>) is _x_, and _k_ is as small as possible. Note that _k_ is the number of digits in the representation of _s_ using radix _radix_, that _s_ is not divisible by _radix_, and that the least significant digit of _s_ is not necessarily uniquely determined by these criteria.
+            1. If _radix_ &ne; 10 or _n_ is in the inclusive interval from -5 to 21, then
+              1. If _n_ &ge; _k_, then
+                1. Return the string-concatenation of:
+                  * the code units of the _k_ digits of the representation of _s_ using radix _radix_
+                  * _n_ - _k_ occurrences of the code unit 0x0030 (DIGIT ZERO)
+              1. Else if _n_ &gt; 0, then
+                1. Return the string-concatenation of:
+                  * the code units of the most significant _n_ digits of the representation of _s_ using radix _radix_
+                  * the code unit 0x002E (FULL STOP)
+                  * the code units of the remaining _k_ - _n_ digits of the representation of _s_ using radix _radix_
+              1. Else,
+                1. Assert: _n_ &le; 0.
+                1. Return the string-concatenation of:
+                  * the code unit 0x0030 (DIGIT ZERO)
+                  * the code unit 0x002E (FULL STOP)
+                  * -_n_ occurrences of the code unit 0x0030 (DIGIT ZERO)
+                  * the code units of the _k_ digits of the representation of _s_ using radix _radix_
+            1. NOTE: In this case, the input will be represented using scientific E notation, such as `1.2e+3`.
+            1. Assert: _radix_ is 10.
+            1. If _n_ &lt; 0, then
+              1. Let _exponentSign_ be the code unit 0x002D (HYPHEN-MINUS).
+            1. Else,
+              1. Let _exponentSign_ be the code unit 0x002B (PLUS SIGN).
+            1. If _k_ is 1, then
+              1. Return the string-concatenation of:
+                * the code unit of the single digit of _s_
+                * the code unit 0x0065 (LATIN SMALL LETTER E)
+                * _exponentSign_
+                * the code units of the decimal representation of abs(_n_ - 1)
             1. Return the string-concatenation of:
-              * the code units of the most significant digit of the decimal representation of _s_
+              * the code unit of the most significant digit of the decimal representation of _s_
               * the code unit 0x002E (FULL STOP)
               * the code units of the remaining _k_ - 1 digits of the decimal representation of _s_
               * the code unit 0x0065 (LATIN SMALL LETTER E)
-              * the code unit 0x002B (PLUS SIGN) or the code unit 0x002D (HYPHEN-MINUS) according to whether _n_ - 1 is positive or negative
-              * the code units of the decimal representation of the integer abs(_n_ - 1) (with no leading zeroes)
+              * _exponentSign_
+              * the code units of the decimal representation of abs(_n_ - 1)
           </emu-alg>
           <emu-note>
             <p>The following observations may be useful as guidelines for implementations, but are not part of the normative requirements of this Standard:</p>
@@ -2235,7 +2248,7 @@
           <emu-note>
             <p>For implementations that provide more accurate conversions than required by the rules above, it is recommended that the following alternative version of step <emu-xref href="#step-number-tostring-intermediate-values"></emu-xref> be used as a guideline:</p>
             <emu-alg replaces-step="step-number-tostring-intermediate-values">
-              1. Otherwise, let _n_, _k_, and _s_ be integers such that _k_ &ge; 1, 10<sup>_k_ - 1</sup> &le; _s_ &lt; 10<sup>_k_</sup>, 𝔽(_s_ &times; 10<sup>_n_ - _k_</sup>) is _x_, and _k_ is as small as possible. If there are multiple possibilities for _s_, choose the value of _s_ for which _s_ &times; 10<sup>_n_ - _k_</sup> is closest in value to ℝ(_x_). If there are two such possible values of _s_, choose the one that is even. Note that _k_ is the number of digits in the decimal representation of _s_ and that _s_ is not divisible by 10.
+              1. Let _n_, _k_, and _s_ be integers such that _k_ &ge; 1, _radix_<sup>_k_ - 1</sup> &le; _s_ &lt; _radix_<sup>_k_</sup>, 𝔽(_s_ &times; _radix_<sup>_n_ - _k_</sup>) is _x_, and _k_ is as small as possible. If there are multiple possibilities for _s_, choose the value of _s_ for which _s_ &times; _radix_<sup>_n_ - _k_</sup> is closest in value to ℝ(_x_). If there are two such possible values of _s_, choose the one that is even. Note that _k_ is the number of digits in the representation of _s_ using radix _radix_ and that _s_ is not divisible by _radix_.
             </emu-alg>
           </emu-note>
           <emu-note>
@@ -5580,7 +5593,7 @@
               Number
             </td>
             <td>
-              Return Number::toString(_argument_).
+              Return Number::toString(_argument_, 10).
             </td>
           </tr>
           <tr>
@@ -31108,7 +31121,7 @@
           1. Let _x_ be ? thisNumberValue(*this* value).
           1. Let _f_ be ? ToIntegerOrInfinity(_fractionDigits_).
           1. Assert: If _fractionDigits_ is *undefined*, then _f_ is 0.
-          1. If _x_ is not finite, return Number::toString(_x_).
+          1. If _x_ is not finite, return Number::toString(_x_, 10).
           1. If _f_ &lt; 0 or _f_ &gt; 100, throw a *RangeError* exception.
           1. Set _x_ to ℝ(_x_).
           1. Let _s_ be the empty String.
@@ -31161,7 +31174,7 @@
           1. Assert: If _fractionDigits_ is *undefined*, then _f_ is 0.
           1. If _f_ is not finite, throw a *RangeError* exception.
           1. If _f_ &lt; 0 or _f_ &gt; 100, throw a *RangeError* exception.
-          1. If _x_ is not finite, return Number::toString(_x_).
+          1. If _x_ is not finite, return Number::toString(_x_, 10).
           1. Set _x_ to ℝ(_x_).
           1. Let _s_ be the empty String.
           1. If _x_ &lt; 0, then
@@ -31207,7 +31220,7 @@
           1. Let _x_ be ? thisNumberValue(*this* value).
           1. If _precision_ is *undefined*, return ! ToString(_x_).
           1. Let _p_ be ? ToIntegerOrInfinity(_precision_).
-          1. If _x_ is not finite, return Number::toString(_x_).
+          1. If _x_ is not finite, return Number::toString(_x_, 10).
           1. If _p_ &lt; 1 or _p_ &gt; 100, throw a *RangeError* exception.
           1. Set _x_ to ℝ(_x_).
           1. Let _s_ be the empty String.
@@ -31253,9 +31266,8 @@
           1. Let _x_ be ? thisNumberValue(*this* value).
           1. If _radix_ is *undefined*, let _radixMV_ be 10.
           1. Else, let _radixMV_ be ? ToIntegerOrInfinity(_radix_).
-          1. If _radixMV_ &lt; 2 or _radixMV_ &gt; 36, throw a *RangeError* exception.
-          1. If _radixMV_ = 10, return ! ToString(_x_).
-          1. Return the String representation of this Number value using the radix specified by _radixMV_. Letters `a`-`z` are used for digits with values 10 through 35. The precise algorithm is implementation-defined, however the algorithm should be a generalization of that specified in <emu-xref href="#sec-numeric-types-number-tostring"></emu-xref>.
+          1. If _radixMV_ is not in the inclusive interval from 2 to 36, throw a *RangeError* exception.
+          1. Return Number::toString(_x_, _radixMV_).
         </emu-alg>
         <p>This method is not generic; it throws a *TypeError* exception if its *this* value is not a Number or a Number object. Therefore, it cannot be transferred to other kinds of objects for use as a method.</p>
         <p>The *"length"* property of this method is *1*<sub>𝔽</sub>.</p>
