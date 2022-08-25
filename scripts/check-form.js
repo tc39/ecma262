@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+const { execSync } = require('child_process');
+
 // web URL: `https://docs.google.com/spreadsheets/d/${sheetID}/edit`
 const sheetID = '1if5bU0aV5MJ27GGKnRzyAozeKP-ILXYl5r3dzvkGFmg';
 
@@ -25,6 +27,8 @@ if (!slug || !branch) {
 if (typeof all !== 'undefined' && all !== '--all') {
 	throw '`all` arg, if provided, must be `--all`'
 }
+
+const sha = String(execSync(`git rev-parse --short ${branch}`)).trim();
 
 const request = async (url, method = 'GET', postData) => {
 	// adapted from https://medium.com/@gevorggalstyan/how-to-promisify-node-js-http-https-requests-76a5a58ed90c
@@ -70,11 +74,18 @@ const request = async (url, method = 'GET', postData) => {
 
 const initial = '11db17a21add028b8d12930a8b047af1df2d3194'; // git rev-list --max-parents=0 HEAD
 
-const branchURL = `https://api.github.com/repos/${slug}/compare/${all ? initial : 'HEAD'}...${branch}?anon=1`;
+const perPage = 100;
 
-const authors = request(branchURL).then((json) => JSON.parse(json)).then(data => {
-	return [...new Set(data.commits.flatMap(x => x?.author?.login || []))];
-}).then((authors) => {
+async function getAllCommits(page = 1) {
+	const commitsURL = `https://api.github.com/repos/${slug}/commits?anon=1&per_page=${perPage}&page=${page}&sha=${sha}`;
+	const commits = await request(commitsURL).then((json) => JSON.parse(json));
+	return [...new Set([].concat(
+		commits.flatMap(x => x?.author?.login || []),
+		commits.length < perPage ? [] : await getAllCommits(page + 1),
+	))];
+}
+
+const authors = getAllCommits().then((authors) => {
 	console.log(`Found ${authors.length} authors: ${authors.join(',')}\n`);
 	return authors;
 });
@@ -94,12 +105,19 @@ function getMembers(teamID, page = 1) {
 	});
 }
 
+const aliases = new Map([
+	['bmeck', 'bfarias-godaddy'],
+	['PeterJensen', 'P-Jensen'],
+]);
+
 function handler(kind) {
 	return (data) => {
 		const names = new Set(data.map(x => x.login));
-		if (names.has('bmeck')) {
-			names.add('bfarias-godaddy'); // alternate github account
-		}
+		aliases.forEach((alias, main) => {
+			if (names.has(main)) {
+				names.add(alias);
+			}
+		});
 		console.log(`Found ${names.size} ${kind}: ${[...names].join(',')}\n`);
 		return names;
 	}
@@ -128,10 +146,82 @@ const usernames = request(sheetData).then((json) => JSON.parse(json)).then(data 
 	return usernames;
 });
 
+const exceptions = new Set([
+	'leebyron', // former FB delegate
+	'marjaholtta', // Google employee
+	'rossberg',
+	'arv',
+	'sideshowbarker', // Mozilla employee
+	'jswalden',
+	'GeorgNeis',
+	'natashenka', // Google employee
+	'IgorMinar', // former Google employee
+]);
+
+// TODO: remove these as they sign the form
+const legacy = new Set([
+	'pacokwon',
+	'tomayac',
+	'himsngh',
+	'angleKH',
+	'ivan-pan',
+	'szuend',
+	'chrikrah',
+	'daemon1024',
+	'viktmv',
+	'bathos',
+	'johnnyrainbow',
+	'Kriyszig',
+	'Tomy8s',
+	'targos',
+	'ahungry',
+	'divmain',
+	'RReverser',
+	'charmander',
+	'him2him2',
+	'jungshik',
+	'dilijev',
+	'tmerr',
+	'v-stein',
+	'nathan',
+	'guimier',
+	'aweary',
+	'timoxley',
+	'thefourtheye',
+	'kdex',
+	'wwwillchen',
+	'jmm',
+	'alrra',
+	'prayagverma',
+	'UltCombo',
+	'ReadmeCritic',
+	'DavidBruant',
+	'dslomov',
+	'DmitrySoshnikov',
+	'jsreeram',
+]);
+
 Promise.all([usernames, authors, delegates, emeriti]).then(([usernames, authors, delegates, emeriti]) => {
-	const missing = authors.filter(a => !usernames.has(a) && !delegates.has(a) && !emeriti.has(a));
+	let legacyCount = legacy.size;
+	const missing = authors.filter(a => {
+		const signed = usernames.has(a)
+			|| delegates.has(a)
+			|| emeriti.has(a)
+			|| exceptions.has(a);
+		if (legacy.has(a)) {
+			if (signed) {
+				legacyCount -= 1;
+				console.warn(`TODO: remove ${a} from legacy list`);
+			}
+			return false;
+		}
+		return !signed;
+	});
+	if (legacyCount > 0) {
+		console.info(`Legacy missing: ${legacyCount}`);
+	}
 	if (missing.length > 0) {
-		throw `Missing authors: ${missing}`;
+		throw `Missing ${missing.length} authors: ${missing}`;
 	} else {
 		console.log('All authors have signed the form, or are delegates or emeriti!');
 	}
