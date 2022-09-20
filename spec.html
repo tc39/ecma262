@@ -1089,6 +1089,11 @@
       </emu-note>
       <p>In this specification, the phrase "the <dfn id="string-concatenation">string-concatenation</dfn> of _A_, _B_, ..." (where each argument is a String value, a code unit, or a sequence of code units) denotes the String value whose sequence of code units is the concatenation of the code units (in order) of each of the arguments (in order).</p>
       <p>The phrase "the <dfn id="substring">substring</dfn> of _S_ from _inclusiveStart_ to _exclusiveEnd_" (where _S_ is a String value or a sequence of code units and _inclusiveStart_ and _exclusiveEnd_ are integers) denotes the String value consisting of the consecutive code units of _S_ beginning at index _inclusiveStart_ and ending immediately before index _exclusiveEnd_ (which is the empty String when _inclusiveStart_ = _exclusiveEnd_). If the "to" suffix is omitted, the length of _S_ is used as the value of _exclusiveEnd_.</p>
+      <p>
+        The phrase "<dfn id="ASCII-word-characters">ASCII word characters</dfn>" denotes the following String value, which consists solely of every letter and number in the Unicode Basic Latin block along with U+005F (LOW LINE):<br>
+        *"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_"*.<br>
+        For historical reasons, it has significance to various algorithms.
+      </p>
 
       <emu-clause id="sec-stringindexof" type="abstract operation">
         <h1>
@@ -28929,51 +28934,14 @@
           <em>Scheme</em> `:` <em>First</em> `/` <em>Second</em> `;` <em>Third</em> `?` <em>Fourth</em>
         </div>
         <p>where the italicized names represent components and &ldquo;`:`&rdquo;, &ldquo;`/`&rdquo;, &ldquo;`;`&rdquo; and &ldquo;`?`&rdquo; are reserved for use as separators. The `encodeURI` and `decodeURI` functions are intended to work with complete URIs; they assume that any reserved code units in the URI are intended to have special meaning and so are not encoded. The `encodeURIComponent` and `decodeURIComponent` functions are intended to work with the individual component parts of a URI; they assume that any reserved code units represent text and so must be encoded so that they are not interpreted as reserved code units when the component is part of a complete URI.</p>
-        <p>The following lexical grammar specifies the form of encoded URIs.</p>
-        <h2>Syntax</h2>
-        <emu-grammar type="definition">
-          uri :::
-            uriCharacters?
-
-          uriCharacters :::
-            uriCharacter uriCharacters?
-
-          uriCharacter :::
-            uriReserved
-            uriUnescaped
-            uriEscaped
-
-          // emu-format ignore
-          uriReserved ::: one of
-            `;` `/` `?` `:` `@` `&amp;` `=` `+` `$` `,`
-
-          uriUnescaped :::
-            uriAlpha
-            DecimalDigit
-            uriMark
-
-          uriEscaped :::
-            `%` HexDigit HexDigit
-
-          // emu-format ignore
-          uriAlpha ::: one of
-            `a` `b` `c` `d` `e` `f` `g` `h` `i` `j` `k` `l` `m` `n` `o` `p` `q` `r` `s` `t` `u` `v` `w` `x` `y` `z`
-            `A` `B` `C` `D` `E` `F` `G` `H` `I` `J` `K` `L` `M` `N` `O` `P` `Q` `R` `S` `T` `U` `V` `W` `X` `Y` `Z`
-
-          uriMark ::: one of
-            `-` `_` `.` `!` `~` `*` `'` `(` `)`
-        </emu-grammar>
-        <emu-note>
-          <p>The above syntax is based upon RFC 2396 and does not reflect changes introduced by the more recent RFC 3986.</p>
-        </emu-note>
         <h2>Runtime Semantics</h2>
-        <p>When a code unit to be included in a URI is not listed above or is not intended to have the special meaning sometimes given to the reserved code units, that code unit must be encoded. The code unit is transformed into its UTF-8 encoding, with <emu-xref href="#surrogate-pair">surrogate pairs</emu-xref> first converted from UTF-16 to the corresponding code point value. (Note that for code units in the range [0, 127] this results in a single octet with the same value.) The resulting sequence of octets is then transformed into a String with each octet represented by an escape sequence of the form *"%xx"*.</p>
+        <p>When a code unit to be included in a URI must be encoded, it is transformed into its UTF-8 encoding, with <emu-xref href="#surrogate-pair">surrogate pairs</emu-xref> first converted from UTF-16 to the corresponding code point value (note that for code units in the range [0, 127] this results in a single octet with the same value) and the resulting sequence of octets is then transformed into a String with each octet represented by an escape sequence of the form *"%xx"*.</p>
 
         <emu-clause id="sec-encode" type="abstract operation">
           <h1>
             Encode (
               _string_: a String,
-              _unescapedSet_: a String,
+              _extraUnescaped_: a String,
             ): either a normal completion containing a String or a throw completion
           </h1>
           <dl class="header">
@@ -28983,6 +28951,8 @@
           <emu-alg>
             1. Let _strLen_ be the length of _string_.
             1. Let _R_ be the empty String.
+            1. Let _alwaysUnescaped_ be the string-concatenation of ASCII word characters and *"-.!~\*'()"*.
+            1. Let _unescapedSet_ be the string-concatenation of _alwaysUnescaped_ and _extraUnescaped_.
             1. Let _k_ be 0.
             1. Repeat,
               1. If _k_ = _strLen_, return _R_.
@@ -29070,7 +29040,7 @@
         <p>It performs the following steps when called:</p>
         <emu-alg>
           1. Let _uriString_ be ? ToString(_encodedURI_).
-          1. Let _reservedURISet_ be a String containing one instance of each code unit valid in |uriReserved| plus *"#"*.
+          1. Let _reservedURISet_ be *";/?:@&=+$,#"*.
           1. Return ? Decode(_uriString_, _reservedURISet_).
         </emu-alg>
         <emu-note>
@@ -29097,8 +29067,8 @@
         <p>It performs the following steps when called:</p>
         <emu-alg>
           1. Let _uriString_ be ? ToString(_uri_).
-          1. Let _unescapedURISet_ be a String containing one instance of each code unit valid in |uriReserved| and |uriUnescaped| plus *"#"*.
-          1. Return ? Encode(_uriString_, _unescapedURISet_).
+          1. Let _extraUnescaped_ be *";/?:@&=+$,#"*.
+          1. Return ? Encode(_uriString_, _extraUnescaped_).
         </emu-alg>
         <emu-note>
           <p>The code point `#` is not encoded to an escape sequence even though it is not a reserved or unescaped URI code point.</p>
@@ -29112,8 +29082,8 @@
         <p>It performs the following steps when called:</p>
         <emu-alg>
           1. Let _componentString_ be ? ToString(_uriComponent_).
-          1. Let _unescapedURIComponentSet_ be a String containing one instance of each code unit valid in |uriUnescaped|.
-          1. Return ? Encode(_componentString_, _unescapedURIComponentSet_).
+          1. Let _extraUnescaped_ be the empty String.
+          1. Return ? Encode(_componentString_, _extraUnescaped_).
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -36138,8 +36108,7 @@ THH:mm:ss.sss
             <dd>Returns a CharSet containing the characters considered "word characters" for the purposes of `\\b`, `\\B`, `\\w`, and `\\W`</dd>
           </dl>
           <emu-alg>
-            1. Let _basicWordChars_ be the CharSet containing all sixty-three characters in *"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_"*.
-            1. NOTE: This is the letters, numbers, and U+005F (LOW LINE) in the Unicode Basic Latin block.
+            1. Let _basicWordChars_ be the CharSet containing every character in ASCII word characters.
             1. Let _extraWordChars_ be the CharSet containing all characters _c_ such that _c_ is not in _basicWordChars_ but Canonicalize(_rer_, _c_) is in _basicWordChars_.
             1. Assert: _extraWordChars_ is empty unless _rer_.[[Unicode]] and _rer_.[[IgnoreCase]] are both *true*.
             1. Return the union of _basicWordChars_ and _extraWordChars_.
@@ -47493,10 +47462,11 @@ THH:mm:ss.sss
           1. Set _string_ to ? ToString(_string_).
           1. Let _length_ be the length of _string_.
           1. Let _R_ be the empty String.
+          1. Let _unescapedSet_ be the string-concatenation of ASCII word characters and *"@\*+-./"*.
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _length_,
             1. Let _char_ be the code unit (represented as a 16-bit unsigned integer) at index _k_ within _string_.
-            1. If _char_ is one of the code units in *"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@\*_+-./"*, then
+            1. If _char_ is in _unescapedSet_, then
               1. Let _S_ be the String value containing the single code unit _char_.
             1. Else if _char_ &ge; 256, then
               1. Let _n_ be the numeric value of _char_.
