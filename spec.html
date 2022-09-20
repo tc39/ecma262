@@ -28922,20 +28922,16 @@
 
     <emu-clause id="sec-uri-handling-functions">
       <h1>URI Handling Functions</h1>
-      <p>Uniform Resource Identifiers, or URIs, are Strings that identify resources (e.g. web pages or files) and transport protocols by which to access them (e.g. HTTP or FTP) on the Internet. The ECMAScript language itself does not provide any support for using URIs except for functions that encode and decode URIs as described in <emu-xref href="#sec-decodeuri-encodeduri"></emu-xref>, <emu-xref href="#sec-decodeuricomponent-encodeduricomponent"></emu-xref>, <emu-xref href="#sec-encodeuri-uri"></emu-xref> and <emu-xref href="#sec-encodeuricomponent-uricomponent"></emu-xref></p>
+      <p>Uniform Resource Identifiers, or URIs, are Strings that identify resources (e.g. web pages or files) and transport protocols by which to access them (e.g. HTTP or FTP) on the Internet. The ECMAScript language itself does not provide any support for using URIs except for functions that encode and decode URIs as described in this section. `encodeURI` and `decodeURI` are intended to work with complete URIs; they assume that any reserved characters are intended to have special meaning (e.g., as delimiters) and so are not encoded. `encodeURIComponent` and `decodeURIComponent` are intended to work with the individual components of a URI; they assume that any reserved characters represent text and must be encoded to avoid special meaning when the component is part of a complete URI.</p>
+      <emu-note>
+        <p>The set of reserved characters is based upon RFC 2396 and does not reflect changes introduced by the more recent RFC 3986.</p>
+      </emu-note>
       <emu-note>
         <p>Many implementations of ECMAScript provide additional functions and methods that manipulate web pages; these functions are beyond the scope of this standard.</p>
       </emu-note>
 
       <emu-clause id="sec-uri-syntax-and-semantics">
         <h1>URI Syntax and Semantics</h1>
-        <p>A URI is composed of a sequence of components separated by component separators. The general form is:</p>
-        <div class="rhs">
-          <em>Scheme</em> `:` <em>First</em> `/` <em>Second</em> `;` <em>Third</em> `?` <em>Fourth</em>
-        </div>
-        <p>where the italicized names represent components and &ldquo;`:`&rdquo;, &ldquo;`/`&rdquo;, &ldquo;`;`&rdquo; and &ldquo;`?`&rdquo; are reserved for use as separators. The `encodeURI` and `decodeURI` functions are intended to work with complete URIs; they assume that any reserved code units in the URI are intended to have special meaning and so are not encoded. The `encodeURIComponent` and `decodeURIComponent` functions are intended to work with the individual component parts of a URI; they assume that any reserved code units represent text and so must be encoded so that they are not interpreted as reserved code units when the component is part of a complete URI.</p>
-        <h2>Runtime Semantics</h2>
-        <p>When a code unit to be included in a URI must be encoded, it is transformed into its UTF-8 encoding, with <emu-xref href="#surrogate-pair">surrogate pairs</emu-xref> first converted from UTF-16 to the corresponding code point value (note that for code units in the range [0, 127] this results in a single octet with the same value) and the resulting sequence of octets is then transformed into a String with each octet represented by an escape sequence of the form *"%xx"*.</p>
 
         <emu-clause id="sec-encode" type="abstract operation">
           <h1>
@@ -28946,7 +28942,7 @@
           </h1>
           <dl class="header">
             <dt>description</dt>
-            <dd>It performs URI encoding and escaping.</dd>
+            <dd>It performs URI encoding and escaping, interpreting _string_ as a sequence of UTF-16 encoded code points as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>. If a character is identified as unreserved in RFC 2396 or appears in _extraUnescaped_, it is not escaped.</dd>
           </dl>
           <emu-alg>
             1. Let _strLen_ be the length of _string_.
@@ -28971,18 +28967,21 @@
                     * *"%"*
                     * the String representation of _octet_, formatted as a two-digit uppercase hexadecimal number, padded to the left with a zero if necessary
           </emu-alg>
+          <emu-note>
+            <p>Because percent-encoding is used to represent individual octets, a single code point may be expressed as multiple consecutive escape sequences (one for each of its 8-bit UTF-8 code units).</p>
+          </emu-note>
         </emu-clause>
 
         <emu-clause id="sec-decode" type="abstract operation">
           <h1>
             Decode (
               _string_: a String,
-              _reservedSet_: a String,
+              _preserveEscapeSet_: a String,
             ): either a normal completion containing a String or a throw completion
           </h1>
           <dl class="header">
             <dt>description</dt>
-            <dd>It performs URI unescaping and decoding.</dd>
+            <dd>It performs URI unescaping and decoding, preserving any escape sequences that correspond to Basic Latin characters in _preserveEscapeSet_.</dd>
           </dl>
           <emu-alg>
             1. Let _strLen_ be the length of _string_.
@@ -29002,7 +29001,7 @@
                 1. Let _n_ be the number of leading 1 bits in _B_.
                 1. If _n_ = 0, then
                   1. Let _C_ be the code unit whose value is _B_.
-                  1. If _C_ is not in _reservedSet_, then
+                  1. If _C_ is not in _preserveEscapeSet_, then
                     1. Let _S_ be the String value containing only the code unit _C_.
                   1. Else,
                     1. Let _S_ be the substring of _string_ from _start_ to _k_ + 1.
@@ -29027,42 +29026,38 @@
               1. Set _k_ to _k_ + 1.
           </emu-alg>
           <emu-note>
-            <p>This syntax of Uniform Resource Identifiers is based upon RFC 2396 and does not reflect the more recent RFC 3986 which replaces RFC 2396. A formal description and implementation of UTF-8 is given in RFC 3629.</p>
-            <p>RFC 3629 prohibits the decoding of invalid UTF-8 octet sequences. For example, the invalid sequence C0 80 must not decode into the code unit 0x0000. Implementations of the Decode algorithm are required to throw a *URIError* when encountering such invalid sequences.</p>
+            <p>RFC 3629 prohibits the decoding of invalid UTF-8 octet sequences. For example, the invalid sequence 0xC0 0x80 must not decode into the code unit 0x0000. Implementations of the Decode algorithm are required to throw a *URIError* when encountering such invalid sequences.</p>
           </emu-note>
         </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-decodeuri-encodeduri">
         <h1>decodeURI ( _encodedURI_ )</h1>
-        <p>This function computes a new version of a URI in which each escape sequence and UTF-8 encoding of the sort that might be introduced by the `encodeURI` function is replaced with the UTF-16 encoding of the code points that it represents. Escape sequences that could not have been introduced by `encodeURI` are not replaced.</p>
+        <p>This function computes a new version of a URI in which each escape sequence and UTF-8 encoding of the sort that might be introduced by the `encodeURI` function is replaced with the UTF-16 encoding of the code point that it represents. Escape sequences that could not have been introduced by `encodeURI` are not replaced.</p>
         <p>It is the <dfn>%decodeURI%</dfn> intrinsic object.</p>
         <p>It performs the following steps when called:</p>
         <emu-alg>
           1. Let _uriString_ be ? ToString(_encodedURI_).
-          1. Let _reservedURISet_ be *";/?:@&=+$,#"*.
-          1. Return ? Decode(_uriString_, _reservedURISet_).
+          1. Let _preserveEscapeSet_ be *";/?:@&=+$,#"*.
+          1. Return ? Decode(_uriString_, _preserveEscapeSet_).
         </emu-alg>
-        <emu-note>
-          <p>The code point `#` is not decoded from escape sequences even though it is not a reserved URI code point.</p>
-        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-decodeuricomponent-encodeduricomponent">
         <h1>decodeURIComponent ( _encodedURIComponent_ )</h1>
-        <p>This function computes a new version of a URI in which each escape sequence and UTF-8 encoding of the sort that might be introduced by the `encodeURIComponent` function is replaced with the UTF-16 encoding of the code points that it represents.</p>
+        <p>This function computes a new version of a URI in which each escape sequence and UTF-8 encoding of the sort that might be introduced by the `encodeURIComponent` function is replaced with the UTF-16 encoding of the code point that it represents.</p>
         <p>It is the <dfn>%decodeURIComponent%</dfn> intrinsic object.</p>
         <p>It performs the following steps when called:</p>
         <emu-alg>
           1. Let _componentString_ be ? ToString(_encodedURIComponent_).
-          1. Let _reservedURIComponentSet_ be the empty String.
-          1. Return ? Decode(_componentString_, _reservedURIComponentSet_).
+          1. Let _preserveEscapeSet_ be the empty String.
+          1. Return ? Decode(_componentString_, _preserveEscapeSet_).
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-encodeuri-uri">
         <h1>encodeURI ( _uri_ )</h1>
-        <p>This function computes a new version of a UTF-16 encoded (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>) URI in which each instance of certain code points is replaced by one, two, three, or four escape sequences representing the UTF-8 encoding of the code points.</p>
+        <p>This function computes a new version of a UTF-16 encoded (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>) URI in which each instance of certain code points is replaced by one, two, three, or four escape sequences representing the UTF-8 encoding of the code point.</p>
         <p>It is the <dfn>%encodeURI%</dfn> intrinsic object.</p>
         <p>It performs the following steps when called:</p>
         <emu-alg>
@@ -29070,9 +29065,6 @@
           1. Let _extraUnescaped_ be *";/?:@&=+$,#"*.
           1. Return ? Encode(_uriString_, _extraUnescaped_).
         </emu-alg>
-        <emu-note>
-          <p>The code point `#` is not encoded to an escape sequence even though it is not a reserved or unescaped URI code point.</p>
-        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-encodeuricomponent-uricomponent">
