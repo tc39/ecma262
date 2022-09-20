@@ -28920,7 +28920,7 @@
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-uri-handling-functions">
+    <emu-clause id="sec-uri-handling-functions" oldids="sec-uri-syntax-and-semantics">
       <h1>URI Handling Functions</h1>
       <p>Uniform Resource Identifiers, or URIs, are Strings that identify resources (e.g. web pages or files) and transport protocols by which to access them (e.g. HTTP or FTP) on the Internet. The ECMAScript language itself does not provide any support for using URIs except for functions that encode and decode URIs as described in this section. `encodeURI` and `decodeURI` are intended to work with complete URIs; they assume that any reserved characters are intended to have special meaning (e.g., as delimiters) and so are not encoded. `encodeURIComponent` and `decodeURIComponent` are intended to work with the individual components of a URI; they assume that any reserved characters represent text and must be encoded to avoid special meaning when the component is part of a complete URI.</p>
       <emu-note>
@@ -28929,107 +28929,6 @@
       <emu-note>
         <p>Many implementations of ECMAScript provide additional functions and methods that manipulate web pages; these functions are beyond the scope of this standard.</p>
       </emu-note>
-
-      <emu-clause id="sec-uri-syntax-and-semantics">
-        <h1>URI Syntax and Semantics</h1>
-
-        <emu-clause id="sec-encode" type="abstract operation">
-          <h1>
-            Encode (
-              _string_: a String,
-              _extraUnescaped_: a String,
-            ): either a normal completion containing a String or a throw completion
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>It performs URI encoding and escaping, interpreting _string_ as a sequence of UTF-16 encoded code points as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>. If a character is identified as unreserved in RFC 2396 or appears in _extraUnescaped_, it is not escaped.</dd>
-          </dl>
-          <emu-alg>
-            1. Let _strLen_ be the length of _string_.
-            1. Let _R_ be the empty String.
-            1. Let _alwaysUnescaped_ be the string-concatenation of ASCII word characters and *"-.!~\*'()"*.
-            1. Let _unescapedSet_ be the string-concatenation of _alwaysUnescaped_ and _extraUnescaped_.
-            1. Let _k_ be 0.
-            1. Repeat,
-              1. If _k_ = _strLen_, return _R_.
-              1. Let _C_ be the code unit at index _k_ within _string_.
-              1. If _C_ is in _unescapedSet_, then
-                1. Set _k_ to _k_ + 1.
-                1. Set _R_ to the string-concatenation of _R_ and _C_.
-              1. Else,
-                1. Let _cp_ be CodePointAt(_string_, _k_).
-                1. If _cp_.[[IsUnpairedSurrogate]] is *true*, throw a *URIError* exception.
-                1. Set _k_ to _k_ + _cp_.[[CodeUnitCount]].
-                1. Let _Octets_ be the List of octets resulting by applying the UTF-8 transformation to _cp_.[[CodePoint]].
-                1. For each element _octet_ of _Octets_, do
-                  1. Set _R_ to the string-concatenation of:
-                    * _R_
-                    * *"%"*
-                    * the String representation of _octet_, formatted as a two-digit uppercase hexadecimal number, padded to the left with a zero if necessary
-          </emu-alg>
-          <emu-note>
-            <p>Because percent-encoding is used to represent individual octets, a single code point may be expressed as multiple consecutive escape sequences (one for each of its 8-bit UTF-8 code units).</p>
-          </emu-note>
-        </emu-clause>
-
-        <emu-clause id="sec-decode" type="abstract operation">
-          <h1>
-            Decode (
-              _string_: a String,
-              _preserveEscapeSet_: a String,
-            ): either a normal completion containing a String or a throw completion
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>It performs URI unescaping and decoding, preserving any escape sequences that correspond to Basic Latin characters in _preserveEscapeSet_.</dd>
-          </dl>
-          <emu-alg>
-            1. Let _strLen_ be the length of _string_.
-            1. Let _R_ be the empty String.
-            1. Let _k_ be 0.
-            1. Repeat,
-              1. If _k_ = _strLen_, return _R_.
-              1. Let _C_ be the code unit at index _k_ within _string_.
-              1. If _C_ is not the code unit 0x0025 (PERCENT SIGN), then
-                1. Let _S_ be the String value containing only the code unit _C_.
-              1. Else,
-                1. Let _start_ be _k_.
-                1. If _k_ + 2 &ge; _strLen_, throw a *URIError* exception.
-                1. If the code units at index (_k_ + 1) and (_k_ + 2) within _string_ do not represent hexadecimal digits, throw a *URIError* exception.
-                1. Let _B_ be the 8-bit value represented by the two hexadecimal digits at index (_k_ + 1) and (_k_ + 2).
-                1. Set _k_ to _k_ + 2.
-                1. Let _n_ be the number of leading 1 bits in _B_.
-                1. If _n_ = 0, then
-                  1. Let _C_ be the code unit whose value is _B_.
-                  1. If _C_ is not in _preserveEscapeSet_, then
-                    1. Let _S_ be the String value containing only the code unit _C_.
-                  1. Else,
-                    1. Let _S_ be the substring of _string_ from _start_ to _k_ + 1.
-                1. Else,
-                  1. If _n_ = 1 or _n_ &gt; 4, throw a *URIError* exception.
-                  1. If _k_ + (3 &times; (_n_ - 1)) &ge; _strLen_, throw a *URIError* exception.
-                  1. Let _Octets_ be &laquo; _B_ &raquo;.
-                  1. Let _j_ be 1.
-                  1. Repeat, while _j_ &lt; _n_,
-                    1. Set _k_ to _k_ + 1.
-                    1. If the code unit at index _k_ within _string_ is not the code unit 0x0025 (PERCENT SIGN), throw a *URIError* exception.
-                    1. If the code units at index (_k_ + 1) and (_k_ + 2) within _string_ do not represent hexadecimal digits, throw a *URIError* exception.
-                    1. Let _B_ be the 8-bit value represented by the two hexadecimal digits at index (_k_ + 1) and (_k_ + 2).
-                    1. Set _k_ to _k_ + 2.
-                    1. Append _B_ to _Octets_.
-                    1. Set _j_ to _j_ + 1.
-                  1. Assert: The length of _Octets_ is _n_.
-                  1. If _Octets_ does not contain a valid UTF-8 encoding of a Unicode code point, throw a *URIError* exception.
-                  1. Let _V_ be the code point obtained by applying the UTF-8 transformation to _Octets_, that is, from a List of octets into a 21-bit value.
-                  1. Let _S_ be UTF16EncodeCodePoint(_V_).
-              1. Set _R_ to the string-concatenation of _R_ and _S_.
-              1. Set _k_ to _k_ + 1.
-          </emu-alg>
-          <emu-note>
-            <p>RFC 3629 prohibits the decoding of invalid UTF-8 octet sequences. For example, the invalid sequence 0xC0 0x80 must not decode into the code unit 0x0000. Implementations of the Decode algorithm are required to throw a *URIError* when encountering such invalid sequences.</p>
-          </emu-note>
-        </emu-clause>
-      </emu-clause>
 
       <emu-clause id="sec-decodeuri-encodeduri">
         <h1>decodeURI ( _encodedURI_ )</h1>
@@ -29077,6 +28976,103 @@
           1. Let _extraUnescaped_ be the empty String.
           1. Return ? Encode(_componentString_, _extraUnescaped_).
         </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-encode" type="abstract operation">
+        <h1>
+          Encode (
+            _string_: a String,
+            _extraUnescaped_: a String,
+          ): either a normal completion containing a String or a throw completion
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It performs URI encoding and escaping, interpreting _string_ as a sequence of UTF-16 encoded code points as described in <emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>. If a character is identified as unreserved in RFC 2396 or appears in _extraUnescaped_, it is not escaped.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _strLen_ be the length of _string_.
+          1. Let _R_ be the empty String.
+          1. Let _alwaysUnescaped_ be the string-concatenation of ASCII word characters and *"-.!~\*'()"*.
+          1. Let _unescapedSet_ be the string-concatenation of _alwaysUnescaped_ and _extraUnescaped_.
+          1. Let _k_ be 0.
+          1. Repeat,
+            1. If _k_ = _strLen_, return _R_.
+            1. Let _C_ be the code unit at index _k_ within _string_.
+            1. If _C_ is in _unescapedSet_, then
+              1. Set _k_ to _k_ + 1.
+              1. Set _R_ to the string-concatenation of _R_ and _C_.
+            1. Else,
+              1. Let _cp_ be CodePointAt(_string_, _k_).
+              1. If _cp_.[[IsUnpairedSurrogate]] is *true*, throw a *URIError* exception.
+              1. Set _k_ to _k_ + _cp_.[[CodeUnitCount]].
+              1. Let _Octets_ be the List of octets resulting by applying the UTF-8 transformation to _cp_.[[CodePoint]].
+              1. For each element _octet_ of _Octets_, do
+                1. Set _R_ to the string-concatenation of:
+                  * _R_
+                  * *"%"*
+                  * the String representation of _octet_, formatted as a two-digit uppercase hexadecimal number, padded to the left with a zero if necessary
+        </emu-alg>
+        <emu-note>
+          <p>Because percent-encoding is used to represent individual octets, a single code point may be expressed as multiple consecutive escape sequences (one for each of its 8-bit UTF-8 code units).</p>
+        </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-decode" type="abstract operation">
+        <h1>
+          Decode (
+            _string_: a String,
+            _preserveEscapeSet_: a String,
+          ): either a normal completion containing a String or a throw completion
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It performs URI unescaping and decoding, preserving any escape sequences that correspond to Basic Latin characters in _preserveEscapeSet_.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _strLen_ be the length of _string_.
+          1. Let _R_ be the empty String.
+          1. Let _k_ be 0.
+          1. Repeat,
+            1. If _k_ = _strLen_, return _R_.
+            1. Let _C_ be the code unit at index _k_ within _string_.
+            1. If _C_ is not the code unit 0x0025 (PERCENT SIGN), then
+              1. Let _S_ be the String value containing only the code unit _C_.
+            1. Else,
+              1. Let _start_ be _k_.
+              1. If _k_ + 2 &ge; _strLen_, throw a *URIError* exception.
+              1. If the code units at index (_k_ + 1) and (_k_ + 2) within _string_ do not represent hexadecimal digits, throw a *URIError* exception.
+              1. Let _B_ be the 8-bit value represented by the two hexadecimal digits at index (_k_ + 1) and (_k_ + 2).
+              1. Set _k_ to _k_ + 2.
+              1. Let _n_ be the number of leading 1 bits in _B_.
+              1. If _n_ = 0, then
+                1. Let _C_ be the code unit whose value is _B_.
+                1. If _C_ is not in _preserveEscapeSet_, then
+                  1. Let _S_ be the String value containing only the code unit _C_.
+                1. Else,
+                  1. Let _S_ be the substring of _string_ from _start_ to _k_ + 1.
+              1. Else,
+                1. If _n_ = 1 or _n_ &gt; 4, throw a *URIError* exception.
+                1. If _k_ + (3 &times; (_n_ - 1)) &ge; _strLen_, throw a *URIError* exception.
+                1. Let _Octets_ be &laquo; _B_ &raquo;.
+                1. Let _j_ be 1.
+                1. Repeat, while _j_ &lt; _n_,
+                  1. Set _k_ to _k_ + 1.
+                  1. If the code unit at index _k_ within _string_ is not the code unit 0x0025 (PERCENT SIGN), throw a *URIError* exception.
+                  1. If the code units at index (_k_ + 1) and (_k_ + 2) within _string_ do not represent hexadecimal digits, throw a *URIError* exception.
+                  1. Let _B_ be the 8-bit value represented by the two hexadecimal digits at index (_k_ + 1) and (_k_ + 2).
+                  1. Set _k_ to _k_ + 2.
+                  1. Append _B_ to _Octets_.
+                  1. Set _j_ to _j_ + 1.
+                1. Assert: The length of _Octets_ is _n_.
+                1. If _Octets_ does not contain a valid UTF-8 encoding of a Unicode code point, throw a *URIError* exception.
+                1. Let _V_ be the code point obtained by applying the UTF-8 transformation to _Octets_, that is, from a List of octets into a 21-bit value.
+                1. Let _S_ be UTF16EncodeCodePoint(_V_).
+            1. Set _R_ to the string-concatenation of _R_ and _S_.
+            1. Set _k_ to _k_ + 1.
+        </emu-alg>
+        <emu-note>
+          <p>RFC 3629 prohibits the decoding of invalid UTF-8 octet sequences. For example, the invalid sequence 0xC0 0x80 must not decode into the code unit 0x0000. Implementations of the Decode algorithm are required to throw a *URIError* when encountering such invalid sequences.</p>
+        </emu-note>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -47023,18 +47019,6 @@ THH:mm:ss.sss
     <p>All grammar symbols not explicitly defined by the |StringNumericLiteral| grammar have the definitions used in the <emu-xref href="#sec-literals-numeric-literals">Lexical Grammar for numeric literals</emu-xref>.</p>
     <emu-prodref name="StringIntegerLiteral"></emu-prodref>
     <emu-prodref name="StrIntegerLiteral"></emu-prodref>
-  </emu-annex>
-
-  <emu-annex id="sec-universal-resource-identifier-character-classes">
-    <h1>Universal Resource Identifier Character Classes</h1>
-    <emu-prodref name="uri"></emu-prodref>
-    <emu-prodref name="uriCharacters"></emu-prodref>
-    <emu-prodref name="uriCharacter"></emu-prodref>
-    <emu-prodref name="uriReserved"></emu-prodref>
-    <emu-prodref name="uriUnescaped"></emu-prodref>
-    <emu-prodref name="uriEscaped"></emu-prodref>
-    <emu-prodref name="uriAlpha"></emu-prodref>
-    <emu-prodref name="uriMark"></emu-prodref>
   </emu-annex>
 
   <emu-annex id="sec-regular-expressions">
