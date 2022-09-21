@@ -161,7 +161,6 @@ const exceptions = new Set([
 // TODO: remove these as they sign the form
 const legacy = new Set([
 	'pacokwon',
-	'tomayac',
 	'himsngh',
 	'angleKH',
 	'ivan-pan',
@@ -180,7 +179,6 @@ const legacy = new Set([
 	'charmander',
 	'him2him2',
 	'jungshik',
-	'dilijev',
 	'tmerr',
 	'v-stein',
 	'nathan',
@@ -199,6 +197,7 @@ const legacy = new Set([
 	'dslomov',
 	'DmitrySoshnikov',
 	'jsreeram',
+	'antony-jeong',
 ]);
 
 Promise.all([usernames, authors, delegates, emeriti]).then(([usernames, authors, delegates, emeriti]) => {
