@@ -5517,8 +5517,8 @@
       </dl>
       <emu-alg>
         1. Let _len_ be ? ToIntegerOrInfinity(_argument_).
-        1. If _len_ ≤ 0, return *+0*<sub>𝔽</sub>.
-        1. Return 𝔽(min(_len_, 2<sup>53</sup> - 1)).
+        1. Let _actualLen_ be the result of clamping _len_ between 0 and 2<sup>53</sup> - 1.
+        1. Return 𝔽(_len_).
       </emu-alg>
     </emu-clause>
 
@@ -29991,13 +29991,11 @@
           1. If _targetHasLength_ is *true*, then
             1. Let _targetLen_ be ? Get(_Target_, *"length"*).
             1. If _targetLen_ is a Number, then
-              1. If _targetLen_ is *+∞*<sub>𝔽</sub>, set _L_ to +∞.
-              1. Else if _targetLen_ is *-∞*<sub>𝔽</sub>, set _L_ to 0.
-              1. Else,
-                1. Let _targetLenAsInt_ be ! ToIntegerOrInfinity(_targetLen_).
-                1. Assert: _targetLenAsInt_ is finite.
+              1. Set _L_ to ! ToIntegerOrInfinity(_targetLen_).
+              1. If _L_ is -∞, set _L_ to 0.
+              1. Else if _L_ is not +∞, then
                 1. Let _argCount_ be the number of elements in _args_.
-                1. Set _L_ to max(_targetLenAsInt_ - _argCount_, 0).
+                1. Set _L_ to max(_L_ - _argCount_, 0).
           1. Perform SetFunctionLength(_F_, _L_).
           1. Let _targetName_ be ? Get(_Target_, *"name"*).
           1. If _targetName_ is not a String, set _targetName_ to the empty String.
@@ -33844,8 +33842,8 @@ THH:mm:ss.sss
           1. If _isRegExp_ is *true*, throw a *TypeError* exception.
           1. Let _searchStr_ be ? ToString(_searchString_).
           1. Let _len_ be the length of _S_.
-          1. If _endPosition_ is *undefined*, let _pos_ be _len_; else let _pos_ be ? ToIntegerOrInfinity(_endPosition_).
-          1. Let _end_ be the result of clamping _pos_ between 0 and _len_.
+          1. If _endPosition_ is *undefined*, let _end_ be _len_.
+          1. Else, let _end_ be the result of clamping ? ToIntegerOrInfinity(_endPosition_) between 0 and _len_.
           1. Let _searchLength_ be the length of _searchStr_.
           1. If _searchLength_ = 0, return *true*.
           1. Let _start_ be _end_ - _searchLength_.
@@ -33874,10 +33872,9 @@ THH:mm:ss.sss
           1. Let _isRegExp_ be ? IsRegExp(_searchString_).
           1. If _isRegExp_ is *true*, throw a *TypeError* exception.
           1. Let _searchStr_ be ? ToString(_searchString_).
-          1. Let _pos_ be ? ToIntegerOrInfinity(_position_).
-          1. Assert: If _position_ is *undefined*, then _pos_ is 0.
           1. Let _len_ be the length of _S_.
-          1. Let _start_ be the result of clamping _pos_ between 0 and _len_.
+          1. Let _start_ be the result of clamping ? ToIntegerOrInfinity(_position_) between 0 and _len_.
+          1. Assert: If _position_ is *undefined*, then _start_ is 0.
           1. Let _index_ be StringIndexOf(_S_, _searchStr_, _start_).
           1. If _index_ ≠ -1, return *true*.
           1. Return *false*.
@@ -33903,10 +33900,9 @@ THH:mm:ss.sss
           1. Let _O_ be ? RequireObjectCoercible(*this* value).
           1. Let _S_ be ? ToString(_O_).
           1. Let _searchStr_ be ? ToString(_searchString_).
-          1. Let _pos_ be ? ToIntegerOrInfinity(_position_).
-          1. Assert: If _position_ is *undefined*, then _pos_ is 0.
           1. Let _len_ be the length of _S_.
-          1. Let _start_ be the result of clamping _pos_ between 0 and _len_.
+          1. Let _start_ be the result of clamping ? ToIntegerOrInfinity(_position_) between 0 and _len_.
+          1. Assert: If _position_ is *undefined*, then _start_ is 0.
           1. Return 𝔽(StringIndexOf(_S_, _searchStr_, _start_)).
         </emu-alg>
         <emu-note>
@@ -33923,15 +33919,15 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _O_ be ? RequireObjectCoercible(*this* value).
           1. Let _S_ be ? ToString(_O_).
+          1. Let _len_ be the length of _S_.
           1. Let _searchStr_ be ? ToString(_searchString_).
+          1. Let _searchLen_ be the length of _searchStr_.
           1. Let _numPos_ be ? ToNumber(_position_).
           1. Assert: If _position_ is *undefined*, then _numPos_ is *NaN*.
-          1. If _numPos_ is *NaN*, let _pos_ be +∞; otherwise, let _pos_ be ! ToIntegerOrInfinity(_numPos_).
-          1. Let _len_ be the length of _S_.
-          1. Let _searchLen_ be the length of _searchStr_.
-          1. Let _start_ be the result of clamping _pos_ between 0 and _len_ - _searchLen_.
+          1. If _numPos_ is *NaN*, let _start_ be _len_.
+          1. Else, let _start_ be the result of clamping ! ToIntegerOrInfinity(_numPos_) between 0 and _len_.
           1. If _searchStr_ is the empty String, return 𝔽(_start_).
-          1. For each integer _i_ such that 0 ≤ _i_ ≤ _start_, in descending order, do
+          1. For each integer _i_ such that 0 ≤ _i_ ≤ min(_start_, _len_ - _searchLen_), in descending order, do
             1. Let _candidate_ be the substring of _S_ from _i_ to _i_ + _searchLen_.
             1. If _candidate_ is _searchStr_, return 𝔽(_i_).
           1. Return *-1*<sub>𝔽</sub>.
@@ -34380,8 +34376,8 @@ THH:mm:ss.sss
           1. If _isRegExp_ is *true*, throw a *TypeError* exception.
           1. Let _searchStr_ be ? ToString(_searchString_).
           1. Let _len_ be the length of _S_.
-          1. If _position_ is *undefined*, let _pos_ be 0; else let _pos_ be ? ToIntegerOrInfinity(_position_).
-          1. Let _start_ be the result of clamping _pos_ between 0 and _len_.
+          1. Let _start_ be the result of clamping ? ToIntegerOrInfinity(_position_) between 0 and _len_.
+          1. Assert: If _position_ is *undefined*, then _start_ is 0.
           1. Let _searchLength_ be the length of _searchStr_.
           1. If _searchLength_ = 0, return *true*.
           1. Let _end_ be _start_ + _searchLength_.
@@ -34411,10 +34407,10 @@ THH:mm:ss.sss
           1. Let _O_ be ? RequireObjectCoercible(*this* value).
           1. Let _S_ be ? ToString(_O_).
           1. Let _len_ be the length of _S_.
-          1. Let _intStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _end_ is *undefined*, let _intEnd_ be _len_; else let _intEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. Let _finalStart_ be the result of clamping _intStart_ between 0 and _len_.
-          1. Let _finalEnd_ be the result of clamping _intEnd_ between 0 and _len_.
+          1. Let _finalStart_ be the result of clamping ? ToIntegerOrInfinity(_start_) between 0 and _len_.
+          1. Assert: If _start_ is *undefined*, then _finalStart_ is 0.
+          1. If _end_ is *undefined*, let _finalEnd_ be _len_.
+          1. Else, let _finalEnd_ be the result of clamping ? ToIntegerOrInfinity(_end_) between 0 and _len_.
           1. Let _from_ be min(_finalStart_, _finalEnd_).
           1. Let _to_ be max(_finalStart_, _finalEnd_).
           1. Return the substring of _S_ from _from_ to _to_.
@@ -47789,8 +47785,8 @@ THH:mm:ss.sss
           1. If _intStart_ = -∞, set _intStart_ to 0.
           1. Else if _intStart_ &lt; 0, set _intStart_ to max(_size_ + _intStart_, 0).
           1. Else, set _intStart_ to min(_intStart_, _size_).
-          1. If _length_ is *undefined*, let _intLength_ be _size_; otherwise let _intLength_ be ? ToIntegerOrInfinity(_length_).
-          1. Set _intLength_ to the result of clamping _intLength_ between 0 and _size_.
+          1. If _length_ is *undefined*, let _intLength_ be _size_.
+          1. Else, let _intLength_ be the result of clamping ? ToIntegerOrInfinity(_length_) between 0 and _size_.
           1. Let _intEnd_ be min(_intStart_ + _intLength_, _size_).
           1. Return the substring of _S_ from _intStart_ to _intEnd_.
         </emu-alg>
