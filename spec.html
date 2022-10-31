@@ -23117,12 +23117,9 @@
           It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the LexicallyDeclaredNames of |Block|.
         </li>
         <li>
-          It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the VarDeclaredNames of |Block|.
+          It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the VarDeclaredNames of |Block|<span normative-optional>, unless |CatchParameter| is <emu-grammar>CatchParameter : BindingIdentifier</emu-grammar> and the host is a web browser or otherwise supports <emu-xref href="#sec-variablestatements-in-catch-blocks" title></emu-xref></span>.
         </li>
       </ul>
-      <emu-note>
-        <p>An alternative static semantics for this production is given in <emu-xref href="#sec-variablestatements-in-catch-blocks"></emu-xref>.</p>
-      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-runtime-semantics-catchclauseevaluation" type="sdo">
@@ -29823,8 +29820,10 @@
                 1. NOTE: The environment of with statements cannot contain any lexical declaration so it doesn't need to be checked for var/let hoisting conflicts.
                 1. For each element _name_ of _varNames_, do
                   1. If ! _thisEnv_.HasBinding(_name_) is *true*, then
-                    1. [id="step-evaldeclarationinstantiation-throw-duplicate-binding"] Throw a *SyntaxError* exception.
-                    1. NOTE: Annex <emu-xref href="#sec-variablestatements-in-catch-blocks"></emu-xref> defines alternate semantics for the above step.
+                    1. [id="step-evaldeclarationinstantiation-throw-duplicate-binding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-variablestatements-in-catch-blocks" title></emu-xref>, then
+                      1. If _thisEnv_ is not the Environment Record for a |Catch| clause, throw a *SyntaxError* exception.
+                    1. Else,
+                      1. Throw a *SyntaxError* exception.
                   1. NOTE: A direct eval will not hoist var declaration over a like-named lexical declaration.
               1. Set _thisEnv_ to _thisEnv_.[[OuterEnv]].
           1. Let _privateIdentifiers_ be a new empty List.
@@ -29868,7 +29867,10 @@
                 1. Repeat, while _thisEnv_ is not _varEnv_,
                   1. If _thisEnv_ is not an Object Environment Record, then
                     1. If ! _thisEnv_.HasBinding(_F_) is *true*, then
-                      1. [id="step-evaldeclarationinstantiation-web-compat-bindingexists"] Let _bindingExists_ be *true*.
+                      1. [id="step-evaldeclarationinstantiation-web-compat-bindingexists", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-variablestatements-in-catch-blocks" title></emu-xref>, then
+                        1. If _thisEnv_ is not the Environment Record for a |Catch| clause, let _bindingExists_ be *true*.
+                      1. Else,
+                        1. Let _bindingExists_ be *true*.
                   1. Set _thisEnv_ to _thisEnv_.[[OuterEnv]].
                 1. If _bindingExists_ is *false* and _varEnv_ is a Global Environment Record, then
                   1. If HasLexicalDeclaration(_varEnv_, _F_) is *false*, then
@@ -29926,9 +29928,6 @@
                 1. Perform ! _varEnv_.InitializeBinding(_vn_, *undefined*).
           1. Return ~unused~.
         </emu-alg>
-        <emu-note>
-          <p>An alternative version of this algorithm is described in <emu-xref href="#sec-variablestatements-in-catch-blocks"></emu-xref>.</p>
-        </emu-note>
       </emu-clause>
     </emu-clause>
 
@@ -52658,31 +52657,11 @@ THH:mm:ss.sss
 
     <emu-annex id="sec-variablestatements-in-catch-blocks">
       <h1>VariableStatements in Catch Blocks</h1>
-      <p>The content of subclause <emu-xref href="#sec-try-statement-static-semantics-early-errors"></emu-xref> is replaced with the following:</p>
-      <emu-grammar>Catch : `catch` `(` CatchParameter `)` Block</emu-grammar>
-      <ul>
-        <li>
-          It is a Syntax Error if the BoundNames of |CatchParameter| contains any duplicate elements.
-        </li>
-        <li>
-          It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the LexicallyDeclaredNames of |Block|.
-        </li>
-        <li>
-          It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the VarDeclaredNames of |Block| unless |CatchParameter| is <emu-grammar>CatchParameter : BindingIdentifier</emu-grammar>.
-        </li>
-      </ul>
+      <p>In this feature, the |Block| of a |Catch| clause may contain `var` declarations that bind a name that is also bound by the |CatchParameter|. This is accomplished by modifying an early error rule for <emu-grammar>Catch : `catch` `(` CatchParameter `)` Block</emu-grammar> in <emu-xref href="#sec-try-statement-static-semantics-early-errors"></emu-xref>.</p>
       <emu-note>
-        <p>The |Block| of a |Catch| clause may contain `var` declarations that bind a name that is also bound by the |CatchParameter|. At runtime, such bindings are instantiated in the VariableDeclarationEnvironment. They do not shadow the same-named bindings introduced by the |CatchParameter| and hence the |Initializer| for such `var` declarations will assign to the corresponding catch parameter rather than the `var` binding.</p>
+        <p>At runtime, such bindings are instantiated in the VariableDeclarationEnvironment. They do not shadow the same-named bindings introduced by the |CatchParameter| and hence the |Initializer| for such `var` declarations will assign to the corresponding catch parameter rather than the `var` binding.</p>
       </emu-note>
-      <p>This modified behaviour also applies to `var` and `function` declarations introduced by direct eval calls contained within the |Block| of a |Catch| clause. This change is accomplished by modifying the algorithm of <emu-xref href="#sec-evaldeclarationinstantiation"></emu-xref> as follows:</p>
-      <p>Step <emu-xref href="#step-evaldeclarationinstantiation-throw-duplicate-binding"></emu-xref> is replaced by:</p>
-      <emu-alg replaces-step="step-evaldeclarationinstantiation-throw-duplicate-binding">
-        1. If _thisEnv_ is not the Environment Record for a |Catch| clause, throw a *SyntaxError* exception.
-      </emu-alg>
-      <p>Step <emu-xref href="#step-evaldeclarationinstantiation-web-compat-bindingexists"></emu-xref> is replaced by:</p>
-      <emu-alg replaces-step="step-evaldeclarationinstantiation-web-compat-bindingexists">
-        1. If _thisEnv_ is not the Environment Record for a |Catch| clause, let _bindingExists_ be *true*.
-      </emu-alg>
+      <p>This modified behaviour also applies to `var` and `function` declarations introduced by direct eval calls contained within the |Block| of a |Catch| clause. This change is accomplished by modifying steps <emu-xref href="#step-evaldeclarationinstantiation-throw-duplicate-binding"></emu-xref> and <emu-xref href="#step-evaldeclarationinstantiation-web-compat-bindingexists"></emu-xref> in EvalDeclarationInstantiation.</p>
     </emu-annex>
 
     <emu-annex id="sec-initializers-in-forin-statement-heads">
