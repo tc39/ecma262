@@ -3,7 +3,7 @@
 set -euxo pipefail
 
 
-$(npm bin)/ecmarkup --verbose spec.html --write-biblio biblio/biblio.json /dev/null
+npx ecmarkup --verbose spec.html --write-biblio biblio/biblio.json /dev/null
 
 cp LICENSE.md biblio/
 
