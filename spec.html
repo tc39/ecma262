@@ -11521,8 +11521,7 @@
             a List of Record { [[Site]]: Parse Node, [[Array]]: Object }
           </td>
           <td>
-            <p>Template objects are canonicalized separately for each realm using its Realm Record's [[TemplateMap]]. Each [[Site]] value is a Parse Node that is a |TemplateLiteral|. The associated [[Array]] value is the corresponding template object that is passed to a tag function.</p>
-            <emu-note>Once a Parse Node becomes unreachable, the corresponding [[Array]] is also unreachable, and it would be unobservable if an implementation removed the pair from the [[TemplateMap]] list.</emu-note>
+            <p>Template objects are canonicalized separately for each realm using its Realm Record's [[TemplateMap]]. Each [[Site]] value is a Parse Node that is a |TemplateLiteral|, or ~empty~ if it has been cleared because it is no longer live. The associated [[Array]] value is the corresponding template object that is passed to a tag function, or ~empty~ when [[Site]] is ~empty~.</p>
           </td>
         </tr>
         <tr>
@@ -12196,7 +12195,7 @@
     <emu-clause id="sec-liveness">
       <h1>Liveness</h1>
 
-      <p>For some set of objects _S_, a <dfn>hypothetical WeakRef-oblivious</dfn> execution with respect to _S_ is an execution whereby the abstract operation WeakRefDeref of a WeakRef whose referent is an element of _S_ always returns *undefined*.</p>
+      <p>For some set of objects and Parse Nodes _S_, a <dfn>hypothetical WeakRef-oblivious</dfn> execution with respect to _S_ is an execution whereby the abstract operation WeakRefDeref of a WeakRef whose referent is an element of _S_ always returns *undefined*.</p>
 
       <emu-note>
         WeakRef-obliviousness, together with liveness, capture two notions. One, that a WeakRef itself does not keep an object alive. Two, that cycles in liveness does not imply that an object is live. To be concrete, if determining _obj_'s liveness depends on determining the liveness of another WeakRef referent, _obj2_, _obj2_'s liveness cannot assume _obj_'s liveness, which would be circular reasoning.
@@ -12208,7 +12207,7 @@
         Colloquially, we say that an individual object is live if every set of objects containing it is live.
       </emu-note>
 
-      <p>At any point during evaluation, a set of objects _S_ is considered <dfn>live</dfn> if either of the following conditions is met:</p>
+      <p>At any point during evaluation, a set of objects and Parse Nodes _S_ is considered <dfn>live</dfn> if any of the following conditions is met:</p>
 
       <ul>
         <li>
@@ -12216,6 +12215,9 @@
         </li>
         <li>
           There exists a valid future hypothetical WeakRef-oblivious execution with respect to _S_ that observes the Object value of any object in _S_.
+        </li>
+        <li>
+          There exists a valid future hypothetical WeakRef-oblivious execution with respect to _S_ that observes the identity of any Parse Node in _S_.
         </li>
       </ul>
       <emu-note>
@@ -12227,6 +12229,9 @@
         <p>This is the case for keys in a WeakMap, members of a WeakSet, as well as the [[WeakRefTarget]] and [[UnregisterToken]] fields of a FinalizationRegistry Cell record.</p>
 
         <p>The above definition implies that, if a key in a WeakMap is not live, then its corresponding value is not necessarily live either.</p>
+      </emu-note>
+      <emu-note>
+        GetTemplateObject observes the identity of Parse Nodes. While Parse Nodes are not ECMAScript language values, their liveness determines when template objects may be removed from a Realm's [[TemplateMap]]. Conservatively, a Parse Node in a [[Site]] internal slot in a Realm's [[TemplateMap]] is live until Evaluation of that Parse Node does not occur in any valid future execution.
       </emu-note>
       <emu-note>
         Liveness is the lower bound for guaranteeing which WeakRefs engines must not empty. Liveness as defined here is undecidable. In practice, engines use conservative approximations such as reachability. There is expected to be significant implementation leeway.
@@ -12250,6 +12255,11 @@
             1. Set _r_.[[Value]] to ~empty~.
           1. For each WeakSet _set_ such that _set_.[[WeakSetData]] contains _obj_, do
             1. Replace the element of _set_.[[WeakSetData]] whose value is _obj_ with an element whose value is ~empty~.
+        1. Let _realm_ be the current Realm Record.
+        1. For each element _templateEntry_ of _realm_.[[TemplateMap]], do
+          1. If _templateEntry_.[[Site]] is not live, then
+            1. Set _templateEntry_.[[Site]] to ~empty~.
+            1. Set _templateEntry_.[[Array]] to ~empty~.
       </emu-alg>
 
       <emu-note>
@@ -18500,7 +18510,7 @@
         <emu-alg>
           1. Let _realm_ be the current Realm Record.
           1. Let _templateRegistry_ be _realm_.[[TemplateMap]].
-          1. For each element _e_ of _templateRegistry_, do
+          1. For each element _e_ of _templateRegistry_ such that _e_.[[Site]] is not ~empty~, do
             1. If _e_.[[Site]] is the same Parse Node as _templateLiteral_, then
               1. Return _e_.[[Array]].
           1. Let _rawStrings_ be TemplateStrings of _templateLiteral_ with argument *true*.
