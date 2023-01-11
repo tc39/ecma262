@@ -13617,7 +13617,7 @@
     <p>The behaviour specified for each built-in function via algorithm steps or other means is the specification of the function body behaviour for both [[Call]] and [[Construct]] invocations of the function. However, [[Construct]] invocation is not supported by all built-in functions. For each built-in function, when invoked with [[Call]], the [[Call]] _thisArgument_ provides the *this* value, the [[Call]] _argumentsList_ provides the named parameters, and the NewTarget value is *undefined*. When invoked with [[Construct]], the *this* value is uninitialized, the [[Construct]] _argumentsList_ provides the named parameters, and the [[Construct]] _newTarget_ parameter provides the NewTarget value. If the built-in function is implemented as an ECMAScript function object then this specified behaviour must be implemented by the ECMAScript code that is the body of the function. Built-in functions that are ECMAScript function objects must be strict functions. If a built-in constructor has any [[Call]] behaviour other than throwing a *TypeError* exception, an ECMAScript implementation of the function must be done in a manner that does not cause the function's [[IsClassConstructor]] internal slot to have the value *true*.</p>
     <p>Built-in function objects that are not identified as constructors do not implement the [[Construct]] internal method unless otherwise specified in the description of a particular function. When a built-in constructor is called as part of a `new` expression the _argumentsList_ parameter of the invoked [[Construct]] internal method provides the values for the built-in constructor's named parameters.</p>
     <p>Built-in functions that are not constructors do not have a *"prototype"* property unless otherwise specified in the description of a particular function.</p>
-    <p>If a built-in function object is not implemented as an ECMAScript function it must provide [[Call]] and [[Construct]] internal methods that conform to the following definitions:</p>
+    <p>Unless otherwise specified, a built-in function object must provide [[Call]] and [[Construct]] internal methods that conform to the following definitions:</p>
 
     <emu-clause id="sec-built-in-function-objects-call-thisargument-argumentslist" type="internal method">
       <h1>
@@ -13689,7 +13689,10 @@
         1. If _prototype_ is not present, set _prototype_ to _realm_.[[Intrinsics]].[[%Function.prototype%]].
         1. Let _internalSlotsList_ be a List containing the names of all the internal slots that <emu-xref href="#sec-built-in-function-objects"></emu-xref> requires for the built-in function object that is about to be created.
         1. Append to _internalSlotsList_ the elements of _additionalInternalSlotsList_.
-        1. Let _func_ be a new built-in function object that, when called, performs the action described by _behaviour_ using the provided arguments as the values of the corresponding parameters specified by _behaviour_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
+        1. If _behaviour_ is described as async, then
+          1. Let _func_ be a new built-in async function object that, when called, performs the action described by _behaviour_ using the provided arguments as the values of the corresponding parameters specified by _behaviour_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
+        1. Else,
+          1. Let _func_ be a new built-in function object that, when called, performs the action described by _behaviour_ using the provided arguments as the values of the corresponding parameters specified by _behaviour_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
         1. Set _func_.[[Prototype]] to _prototype_.
         1. Set _func_.[[Extensible]] to *true*.
         1. Set _func_.[[Realm]] to _realm_.
@@ -13702,6 +13705,57 @@
         1. Return _func_.
       </emu-alg>
       <p>Each built-in function defined in this specification is created by calling the CreateBuiltinFunction abstract operation.</p>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-built-in-async-function-objects">
+    <h1>Built-in Async Function Objects</h1>
+    <p><dfn variants="built-in async function object,built-in async function objects">Built-in async function objects</dfn> are built-in function objects that provide [[Call]] and [[Construct]] internal methods that conform to the following definitions:</p>
+
+    <emu-clause id="sec-built-in-async-function-objects-call" type="internal method">
+      <h1>
+        [[Call]] (
+          _thisArgument_: an ECMAScript language value,
+          _argumentsList_: a List of ECMAScript language values,
+        ): a normal completion containing a Promise
+      </h1>
+      <dl class="header">
+        <dt>for</dt>
+        <dd>a built-in async function object _F_</dd>
+      </dl>
+      <emu-alg>
+        1. Let _callerContext_ be the running execution context.
+        1. If _callerContext_ is not already suspended, suspend _callerContext_.
+        1. Let _calleeContext_ be a new execution context.
+        1. Set the Function of _calleeContext_ to _F_.
+        1. Let _calleeRealm_ be _F_.[[Realm]].
+        1. Set the Realm of _calleeContext_ to _calleeRealm_.
+        1. Set the ScriptOrModule of _calleeContext_ to *null*.
+        1. Perform any necessary implementation-defined initialization of _calleeContext_.
+        1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
+        1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+        1. Let _resultsClosure_ be a new Abstract Closure with no parameters that captures _F_, _thisArgument_, and _argumentsList_ and performs the following steps when called:
+          1. Return the Completion Record that is the result of evaluating _F_ in a manner that conforms to the specification of _F_. _thisArgument_ is the *this* value, _argumentsList_ provides the named parameters, and the NewTarget value is *undefined*.
+        1. Perform AsyncFunctionStart(_promiseCapability_, _resultsClosure_).
+        1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+        1. Return _promiseCapability_.[[Promise]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-built-in-async-function-objects-construct" type="internal method">
+      <h1>
+        [[Construct]] (
+          _argumentsList_: a List of ECMAScript language values,
+          _newTarget_: a constructor,
+        ): either a normal completion containing an Object or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>for</dt>
+        <dd>a built-in async function object _F_</dd>
+      </dl>
+      <emu-alg>
+        1. Throw a *TypeError* exception.
+      </emu-alg>
     </emu-clause>
   </emu-clause>
 
@@ -45945,7 +45999,7 @@ THH:mm:ss.sss
         <h1>
           AsyncFunctionStart (
             _promiseCapability_: a PromiseCapability Record,
-            _asyncFunctionBody_: a |FunctionBody| Parse Node or an |ExpressionBody| Parse Node,
+            _asyncFunctionBody_: a |FunctionBody| Parse Node, an |ExpressionBody| Parse Node, or an Abstract Closure with no parameters,
           ): ~unused~
         </h1>
         <dl class="header">
@@ -45963,7 +46017,7 @@ THH:mm:ss.sss
         <h1>
           AsyncBlockStart (
             _promiseCapability_: a PromiseCapability Record,
-            _asyncBody_: a Parse Node,
+            _asyncBody_: a Parse Node or an Abstract Closure with no parameters,
             _asyncContext_: an execution context,
           ): ~unused~
         </h1>
@@ -45973,7 +46027,13 @@ THH:mm:ss.sss
           1. Assert: _promiseCapability_ is a PromiseCapability Record.
           1. Let _runningContext_ be the running execution context.
           1. [fence-effects="user-code"] Set the code evaluation state of _asyncContext_ such that when evaluation is resumed for that execution context the following steps will be performed:
-            1. Let _result_ be Completion(Evaluation of _asyncBody_).
+            1. If _asyncBody_ is a Parse Node, then
+              1. Let _result_ be Completion(Evaluation of _asyncBody_).
+            1. Else,
+              1. Assert: _asyncBody_ is an Abstract Closure with no parameters.
+              1. Let _result_ be Completion(_asyncBody_()).
+              1. If _result_ is a normal completion, then
+                1. Set _result_ to Completion Record { [[Type]]: ~return~, [[Value]]: _result_.[[Value]], [[Target]]: ~empty~ }.
             1. Assert: If we return here, the async function either threw an exception or performed an implicit or explicit return; all awaiting is done.
             1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
             1. If _result_.[[Type]] is ~normal~, then
