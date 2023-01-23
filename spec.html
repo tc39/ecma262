@@ -7246,7 +7246,7 @@
       <dl class="header">
       </dl>
       <emu-alg>
-        1. If _method_ is not present then,
+        1. If _method_ is not present, then
           1. If _V_ is *null* or *undefined*, return NormalCompletion(~empty~).
           1. If Type(_V_) is not Object, throw a *TypeError* exception.
           1. Let _resource_ be ? CreateDisposableResource(_V_, _hint_).
@@ -7328,19 +7328,19 @@
       <dl class="header"></dl>
       <emu-alg>
         1. If _disposable_ is not *undefined*, then
-          1. For each _resource_ of _disposable_.[[DisposableResourceStack]], in reverse list order, do
+          1. For each element _resource_ of _disposable_.[[DisposableResourceStack]], in reverse list order, do
             1. Let _result_ be Dispose(_resource_.[[ResourceValue]], _resource_.[[Hint]], _resource_.[[DisposeMethod]]).
             1. If _result_.[[Type]] is ~throw~, then
               1. If _completion_.[[Type]] is ~throw~, then
                 1. Set _result_ to _result_.[[Value]].
                 1. Let _suppressed_ be _completion_.[[Value]].
                 1. Let _error_ be a newly created *SuppressedError* object.
-                1. Perform ! CreateNonEnumerableDataPropertyOrThrow(_error_, *"error"*, _result_).
-                1. Perform ! CreateNonEnumerableDataPropertyOrThrow(_error_, *"suppressed"*, _suppressed_).
+                1. Perform CreateNonEnumerableDataPropertyOrThrow(_error_, *"error"*, _result_).
+                1. Perform CreateNonEnumerableDataPropertyOrThrow(_error_, *"suppressed"*, _suppressed_).
                 1. Set _completion_ to ThrowCompletion(_error_).
               1. Else,
-                1. Set _completion_ to _result_.
-        1. Return _completion_.
+                1. Set _completion_ to Completion(_result_).
+        1. Return Completion(_completion_).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -21514,12 +21514,12 @@
         <h1>Runtime Semantics: Evaluation</h1>
         <emu-grammar>LexicalDeclaration : LetOrConst BindingList `;`</emu-grammar>
         <emu-alg>
-          1. Perform ? BindingEvaluation of |BindingList| with parameter ~normal~.
+          1. Perform ? BindingEvaluation of |BindingList| with argument ~normal~.
           1. Return ~empty~.
         </emu-alg>
         <emu-grammar>UsingDeclaration : `using` BindingList `;`</emu-grammar>
         <emu-alg>
-          1. Perform ? BindingEvaluation of |BindingList| with parameter ~sync-dispose~.
+          1. Perform ? BindingEvaluation of |BindingList| with argument ~sync-dispose~.
           1. Return ~empty~.
         </emu-alg>
       </emu-clause>
@@ -21534,8 +21534,8 @@
         </dl>
         <emu-grammar>BindingList : BindingList `,` LexicalBinding</emu-grammar>
         <emu-alg>
-          1. Perform ? BindingEvaluation of |BindingList| with parameter _hint_.
-          1. Return ? BindingEvaluation of |LexicalBinding| with parameter _hint_.
+          1. Perform ? BindingEvaluation of |BindingList| with argument _hint_.
+          1. Return ? BindingEvaluation of |LexicalBinding| with argument _hint_.
         </emu-alg>
         <emu-grammar>LexicalBinding : BindingIdentifier</emu-grammar>
         <emu-alg>
@@ -22085,7 +22085,7 @@
           1. Set the running execution context's LexicalEnvironment to _loopEnv_.
           1. Let _forDcl_ be Completion(Evaluation of |LexicalDeclaration|).
           1. If _forDcl_ is an abrupt completion, then
-            1. Set _forDcl_ to Completion(DisposeResources(_loopEnv_, _forDecl_)).
+            1. Set _forDcl_ to Completion(DisposeResources(_loopEnv_, _forDcl_)).
             1. Set the running execution context's LexicalEnvironment to _oldEnv_.
             1. Return ? _forDcl_.
           1. If _isConst_ is *false*, let _perIterationLets_ be _boundNames_; otherwise let _perIterationLets_ be a new empty List.
@@ -26033,7 +26033,7 @@
       <emu-alg>
         1. Let _has_ be HasUnterminatedUsingDeclaration of |CaseClauses|.
         1. If _has_ is *true*, return *true*.
-        1. Return HasUnterminatedUsingDeclaration of |CaseClause| with argument _call_.
+        1. Return HasUnterminatedUsingDeclaration of |CaseClause|.
       </emu-alg>
 
       <emu-grammar>
@@ -26046,7 +26046,6 @@
       <emu-alg>
         1. If |StatementList| is present, return HasUnterminatedUsingDeclaration of |StatementList|.
       </emu-alg>
-    </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-preparefortailcall" type="abstract operation">
@@ -31503,8 +31502,8 @@
               1. Let _msg_ be ? ToString(_message_).
               1. Perform CreateNonEnumerableDataPropertyOrThrow(_O_, *"message"*, _msg_).
             1. Perform ? InstallErrorCause(_O_, _options_).
-            1. Perform ! CreateNonEnumerableDataPropertyOrThrow(_O_, *"error"*, _error_).
-            1. Perform ! CreateNonEnumerableDataPropertyOrThrow(_O_, *"suppressed"*, _suppressed_).
+            1. Perform CreateNonEnumerableDataPropertyOrThrow(_O_, *"error"*, _error_).
+            1. Perform CreateNonEnumerableDataPropertyOrThrow(_O_, *"suppressed"*, _suppressed_).
             1. Return _O_.
           </emu-alg>
         </emu-clause>
@@ -46607,7 +46606,6 @@ THH:mm:ss.sss
           </table>
         </emu-table>
       </emu-clause>
-
     </emu-clause>
   </emu-clause>
 
@@ -46674,19 +46672,19 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-disposablestack.prototype.dispose">
-        <h1>DisposableStack.prototype.dispose ()</h1>
+        <h1>DisposableStack.prototype.dispose ( )</h1>
         <p>When the `dispose` method is called, the following steps are taken:</p>
         <emu-alg>
           1. Let _disposableStack_ be the *this* value.
           1. Perform ? RequireInternalSlot(_disposableStack_, [[DisposableState]]).
           1. If _disposableStack_.[[DisposableState]] is ~disposed~, return *undefined*.
           1. Set _disposableStack_.[[DisposableState]] to ~disposed~.
-          1. Return DisposeResources(_disposableStack_, NormalCompletion(*undefined*)).
+          1. Return ? DisposeResources(_disposableStack_, NormalCompletion(*undefined*)).
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-disposablestack.prototype.use">
-        <h1>DisposableStack.prototype.use( _value_ )</h1>
+        <h1>DisposableStack.prototype.use ( _value_ )</h1>
         <p>When the `use` function is called with one argument, the following steps are taken:</p>
         <emu-alg>
           1. Let _disposableStack_ be the *this* value.
@@ -46704,7 +46702,7 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-disposablestack.prototype.adopt">
-        <h1>DisposableStack.prototype.adopt( _value_, _onDispose_ )</h1>
+        <h1>DisposableStack.prototype.adopt ( _value_, _onDispose_ )</h1>
         <p>When the `adopt` function is called with two arguments, the following steps are taken:</p>
         <emu-alg>
           1. Let _disposableStack_ be the *this* value.
@@ -46725,13 +46723,13 @@ THH:mm:ss.sss
           <emu-alg>
             1. Let _F_ be the active function object.
             1. Assert: IsCallable(_F_.[[OnDisposeCallback]]) is *true*.
-            1. Return Call(_F_.[[OnDisposeCallback]], *undefined*, &laquo; _F_.[[Argument]] &raquo;).
+            1. Return ? Call(_F_.[[OnDisposeCallback]], *undefined*, &laquo; _F_.[[Argument]] &raquo;).
           </emu-alg>
         </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-disposablestack.prototype.defer">
-        <h1>DisposableStack.prototype.defer( _onDispose_ )</h1>
+        <h1>DisposableStack.prototype.defer ( _onDispose_ )</h1>
         <p>When the `defer` function is called with one argument, the following steps are taken:</p>
         <emu-alg>
           1. Let _disposableStack_ be the *this* value.
@@ -46744,7 +46742,7 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-disposablestack.prototype.move">
-        <h1>DisposableStack.prototype.move()</h1>
+        <h1>DisposableStack.prototype.move ( )</h1>
         <p>When the `move` function is called, the following steps are taken:</p>
         <emu-alg>
           1. Let _disposableStack_ be the *this* value.
@@ -46760,7 +46758,7 @@ THH:mm:ss.sss
       </emu-clause>
 
       <emu-clause id="sec-disposablestack.prototype-@@dispose">
-        <h1>DisposableStack.prototype [ @@dispose ] ()</h1>
+        <h1>DisposableStack.prototype [ @@dispose ] ( )</h1>
         <p>The initial value of the @@dispose property is %DisposableStack.prototype.dispose%, defined in <emu-xref href="#sec-disposablestack.prototype.dispose"></emu-xref>.</p>
       </emu-clause>
 
