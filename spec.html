@@ -4503,10 +4503,9 @@
           1. Let _db_ be a new Shared Data Block value consisting of _size_ bytes. If it is impossible to create such a Shared Data Block, throw a *RangeError* exception.
           1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
           1. Let _eventsRecord_ be the Agent Events Record of _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-          1. Let _eventList_ be _eventsRecord_.[[EventList]].
           1. Let _zero_ be « 0 ».
           1. For each index _i_ of _db_, do
-            1. Append WriteSharedMemory { [[Order]]: ~Init~, [[NoTear]]: *true*, [[Block]]: _db_, [[ByteIndex]]: _i_, [[ElementSize]]: 1, [[Payload]]: _zero_ } to _eventList_.
+            1. Append WriteSharedMemory { [[Order]]: ~Init~, [[NoTear]]: *true*, [[Block]]: _db_, [[ByteIndex]]: _i_, [[ElementSize]]: 1, [[Payload]]: _zero_ } to _eventsRecord_.[[EventList]].
           1. Return _db_.
         </emu-alg>
       </emu-clause>
@@ -4533,14 +4532,13 @@
             1. If _fromBlock_ is a Shared Data Block, then
               1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
               1. Let _eventsRecord_ be the Agent Events Record of _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-              1. Let _eventList_ be _eventsRecord_.[[EventList]].
               1. Let _bytes_ be a List whose sole element is a nondeterministically chosen byte value.
               1. NOTE: In implementations, _bytes_ is the result of a non-atomic read instruction on the underlying hardware. The nondeterminism is a semantic prescription of the memory model to describe observable behaviour of hardware with weak consistency.
               1. Let _readEvent_ be ReadSharedMemory { [[Order]]: ~Unordered~, [[NoTear]]: *true*, [[Block]]: _fromBlock_, [[ByteIndex]]: _fromIndex_, [[ElementSize]]: 1 }.
-              1. Append _readEvent_ to _eventList_.
+              1. Append _readEvent_ to _eventsRecord_.[[EventList]].
               1. Append Chosen Value Record { [[Event]]: _readEvent_, [[ChosenValue]]: _bytes_ } to _execution_.[[ChosenValues]].
               1. If _toBlock_ is a Shared Data Block, then
-                1. Append WriteSharedMemory { [[Order]]: ~Unordered~, [[NoTear]]: *true*, [[Block]]: _toBlock_, [[ByteIndex]]: _toIndex_, [[ElementSize]]: 1, [[Payload]]: _bytes_ } to _eventList_.
+                1. Append WriteSharedMemory { [[Order]]: ~Unordered~, [[NoTear]]: *true*, [[Block]]: _toBlock_, [[ByteIndex]]: _toIndex_, [[ElementSize]]: 1, [[Payload]]: _bytes_ } to _eventsRecord_.[[EventList]].
               1. Else,
                 1. Set _toBlock_[_toIndex_] to _bytes_[0].
             1. Else,
@@ -10853,9 +10851,8 @@
             1. Let _existingProp_ be ? HasOwnProperty(_globalObject_, _N_).
             1. If _existingProp_ is *true*, then
               1. Let _status_ be ? <emu-meta effects="user-code">_ObjRec_.DeleteBinding</emu-meta>(_N_).
-              1. If _status_ is *true*, then
-                1. Let _varNames_ be _envRec_.[[VarNames]].
-                1. If _varNames_ contains _N_, remove _N_ from _varNames_.
+              1. If _status_ is *true* and _envRec_.[[VarNames]] contains _N_, then
+                1. Remove _N_ from _envRec_.[[VarNames]].
               1. Return _status_.
             1. Return *true*.
           </emu-alg>
@@ -11044,9 +11041,8 @@
             1. If _hasProperty_ is *false* and _extensible_ is *true*, then
               1. Perform ? <emu-meta effects="user-code">_ObjRec_.CreateMutableBinding</emu-meta>(_N_, _D_).
               1. Perform ? <emu-meta effects="user-code">_ObjRec_.InitializeBinding</emu-meta>(_N_, *undefined*).
-            1. Let _varDeclaredNames_ be _envRec_.[[VarNames]].
-            1. If _varDeclaredNames_ does not contain _N_, then
-              1. Append _N_ to _varDeclaredNames_.
+            1. If _envRec_.[[VarNames]] does not contain _N_, then
+              1. Append _N_ to _envRec_.[[VarNames]].
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -11076,9 +11072,8 @@
               1. Let _desc_ be the PropertyDescriptor { [[Value]]: _V_ }.
             1. Perform ? DefinePropertyOrThrow(_globalObject_, _N_, _desc_).
             1. [id="step-createglobalfunctionbinding-set"] Perform ? Set(_globalObject_, _N_, _V_, *false*).
-            1. Let _varDeclaredNames_ be _envRec_.[[VarNames]].
-            1. If _varDeclaredNames_ does not contain _N_, then
-              1. Append _N_ to _varDeclaredNames_.
+            1. If _envRec_.[[VarNames]] does not contain _N_, then
+              1. Append _N_ to _envRec_.[[VarNames]].
             1. Return ~unused~.
           </emu-alg>
           <emu-note>
@@ -18501,7 +18496,7 @@
           1. Perform ! SetIntegrityLevel(_rawObj_, ~frozen~).
           1. Perform ! DefinePropertyOrThrow(_template_, *"raw"*, PropertyDescriptor { [[Value]]: _rawObj_, [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }).
           1. Perform ! SetIntegrityLevel(_template_, ~frozen~).
-          1. Append the Record { [[Site]]: _templateLiteral_, [[Array]]: _template_ } to _templateRegistry_.
+          1. Append the Record { [[Site]]: _templateLiteral_, [[Array]]: _template_ } to _realm_.[[TemplateMap]].
           1. Return _template_.
         </emu-alg>
         <emu-note>
@@ -22063,22 +22058,20 @@
               1. Assert: _O_ is an Object.
               1. Assert: _O_ has all of the internal slots of a For-In Iterator Instance (<emu-xref href="#sec-properties-of-for-in-iterator-instances"></emu-xref>).
               1. Let _object_ be _O_.[[Object]].
-              1. Let _visited_ be _O_.[[VisitedKeys]].
-              1. Let _remaining_ be _O_.[[RemainingKeys]].
               1. Repeat,
                 1. If _O_.[[ObjectWasVisited]] is *false*, then
                   1. Let _keys_ be ? <emu-meta effects="user-code">_object_.[[OwnPropertyKeys]]()</emu-meta>.
                   1. For each element _key_ of _keys_, do
                     1. If _key_ is a String, then
-                      1. Append _key_ to _remaining_.
+                      1. Append _key_ to _O_.[[RemainingKeys]].
                   1. Set _O_.[[ObjectWasVisited]] to *true*.
-                1. Repeat, while _remaining_ is not empty,
-                  1. Let _r_ be the first element of _remaining_.
-                  1. Remove the first element from _remaining_.
-                  1. If there does not exist an element _v_ of _visited_ such that SameValue(_r_, _v_) is *true*, then
+                1. Repeat, while _O_.[[RemainingKeys]] is not empty,
+                  1. Let _r_ be the first element of _O_.[[RemainingKeys]].
+                  1. Remove the first element from _O_.[[RemainingKeys]].
+                  1. If there does not exist an element _v_ of _O_.[[VisitedKeys]] such that SameValue(_r_, _v_) is *true*, then
                     1. Let _desc_ be ? <emu-meta effects="user-code">_object_.[[GetOwnProperty]]</emu-meta>(_r_).
                     1. If _desc_ is not *undefined*, then
-                      1. Append _r_ to _visited_.
+                      1. Append _r_ to _O_.[[VisitedKeys]].
                       1. If _desc_.[[Enumerable]] is *true*, return CreateIterResultObject(_r_, *false*).
                 1. Set _object_ to ? <emu-meta effects="user-code">_object_.[[GetPrototypeOf]]()</emu-meta>.
                 1. Set _O_.[[Object]] to _object_.
@@ -40315,7 +40308,7 @@ THH:mm:ss.sss
               1. Return _M_.
           1. If _key_ is *-0*<sub>𝔽</sub>, set _key_ to *+0*<sub>𝔽</sub>.
           1. Let _p_ be the Record { [[Key]]: _key_, [[Value]]: _value_ }.
-          1. Append _p_ to _entries_.
+          1. Append _p_ to _M_.[[MapData]].
           1. Return _M_.
         </emu-alg>
       </emu-clause>
@@ -40509,7 +40502,7 @@ THH:mm:ss.sss
             1. If _e_ is not ~empty~ and SameValueZero(_e_, _value_) is *true*, then
               1. Return _S_.
           1. If _value_ is *-0*<sub>𝔽</sub>, set _value_ to *+0*<sub>𝔽</sub>.
-          1. Append _value_ to _entries_.
+          1. Append _value_ to _S_.[[SetData]].
           1. Return _S_.
         </emu-alg>
       </emu-clause>
@@ -40850,7 +40843,7 @@ THH:mm:ss.sss
               1. Set _p_.[[Value]] to _value_.
               1. Return _M_.
           1. Let _p_ be the Record { [[Key]]: _key_, [[Value]]: _value_ }.
-          1. Append _p_ to _entries_.
+          1. Append _p_ to _M_.[[WeakMapData]].
           1. Return _M_.
         </emu-alg>
       </emu-clause>
@@ -40945,7 +40938,7 @@ THH:mm:ss.sss
           1. For each element _e_ of _entries_, do
             1. If _e_ is not ~empty~ and SameValue(_e_, _value_) is *true*, then
               1. Return _S_.
-          1. Append _value_ to _entries_.
+          1. Append _value_ to _S_.[[WeakSetData]].
           1. Return _S_.
         </emu-alg>
       </emu-clause>
@@ -41221,12 +41214,11 @@ THH:mm:ss.sss
           1. If IsSharedArrayBuffer(_arrayBuffer_) is *true*, then
             1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
             1. Let _eventsRecord_ be the Agent Events Record of _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-            1. Let _eventList_ be _eventsRecord_.[[EventList]].
             1. If _isTypedArray_ is *true* and IsNoTearConfiguration(_type_, _order_) is *true*, let _noTear_ be *true*; otherwise let _noTear_ be *false*.
             1. Let _rawValue_ be a List of length _elementSize_ whose elements are nondeterministically chosen byte values.
             1. NOTE: In implementations, _rawValue_ is the result of a non-atomic or atomic read instruction on the underlying hardware. The nondeterminism is a semantic prescription of the memory model to describe observable behaviour of hardware with weak consistency.
             1. Let _readEvent_ be ReadSharedMemory { [[Order]]: _order_, [[NoTear]]: _noTear_, [[Block]]: _block_, [[ByteIndex]]: _byteIndex_, [[ElementSize]]: _elementSize_ }.
-            1. Append _readEvent_ to _eventList_.
+            1. Append _readEvent_ to _eventsRecord_.[[EventList]].
             1. Append Chosen Value Record { [[Event]]: _readEvent_, [[ChosenValue]]: _rawValue_ } to _execution_.[[ChosenValues]].
           1. Else, let _rawValue_ be a List whose elements are bytes from _block_ at indices in the interval from _byteIndex_ (inclusive) to _byteIndex_ + _elementSize_ (exclusive).
           1. Assert: The number of elements in _rawValue_ is _elementSize_.
@@ -41288,9 +41280,8 @@ THH:mm:ss.sss
           1. If IsSharedArrayBuffer(_arrayBuffer_) is *true*, then
             1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
             1. Let _eventsRecord_ be the Agent Events Record of _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-            1. Let _eventList_ be _eventsRecord_.[[EventList]].
             1. If _isTypedArray_ is *true* and IsNoTearConfiguration(_type_, _order_) is *true*, let _noTear_ be *true*; otherwise let _noTear_ be *false*.
-            1. Append WriteSharedMemory { [[Order]]: _order_, [[NoTear]]: _noTear_, [[Block]]: _block_, [[ByteIndex]]: _byteIndex_, [[ElementSize]]: _elementSize_, [[Payload]]: _rawBytes_ } to _eventList_.
+            1. Append WriteSharedMemory { [[Order]]: _order_, [[NoTear]]: _noTear_, [[Block]]: _block_, [[ByteIndex]]: _byteIndex_, [[ElementSize]]: _elementSize_, [[Payload]]: _rawBytes_ } to _eventsRecord_.[[EventList]].
           1. Else, store the individual bytes of _rawBytes_ into _block_, starting at _block_[_byteIndex_].
           1. Return ~unused~.
         </emu-alg>
@@ -41320,11 +41311,10 @@ THH:mm:ss.sss
           1. If IsSharedArrayBuffer(_arrayBuffer_) is *true*, then
             1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
             1. Let _eventsRecord_ be the Agent Events Record of _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-            1. Let _eventList_ be _eventsRecord_.[[EventList]].
             1. Let _rawBytesRead_ be a List of length _elementSize_ whose elements are nondeterministically chosen byte values.
             1. NOTE: In implementations, _rawBytesRead_ is the result of a load-link, of a load-exclusive, or of an operand of a read-modify-write instruction on the underlying hardware. The nondeterminism is a semantic prescription of the memory model to describe observable behaviour of hardware with weak consistency.
             1. Let _rmwEvent_ be ReadModifyWriteSharedMemory { [[Order]]: ~SeqCst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _byteIndex_, [[ElementSize]]: _elementSize_, [[Payload]]: _rawBytes_, [[ModifyOp]]: _op_ }.
-            1. Append _rmwEvent_ to _eventList_.
+            1. Append _rmwEvent_ to _eventsRecord_.[[EventList]].
             1. Append Chosen Value Record { [[Event]]: _rmwEvent_, [[ChosenValue]]: _rawBytesRead_ } to _execution_.[[ChosenValues]].
           1. Else,
             1. Let _rawBytesRead_ be a List of length _elementSize_ whose elements are the sequence of _elementSize_ bytes starting with _block_[_byteIndex_].
@@ -42125,9 +42115,8 @@ THH:mm:ss.sss
             1. NOTE: A _WL_ whose critical section has been entered at least once has a Synchronize event set by LeaveCriticalSection.
             1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
             1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-            1. Let _entererEventList_ be _eventsRecord_.[[EventList]].
             1. Let _enterEvent_ be a new Synchronize event.
-            1. Append _enterEvent_ to _entererEventList_.
+            1. Append _enterEvent_ to _eventsRecord_.[[EventList]].
             1. Let _leaveEvent_ be the Synchronize event in _WL_.
             1. Append (_leaveEvent_, _enterEvent_) to _eventsRecord_.[[AgentSynchronizesWith]].
           1. Return ~unused~.
@@ -42147,9 +42136,8 @@ THH:mm:ss.sss
           1. Assert: The surrounding agent is in the critical section for _WL_.
           1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
           1. Let _eventsRecord_ be the Agent Events Record in _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-          1. Let _leaverEventList_ be _eventsRecord_.[[EventList]].
           1. Let _leaveEvent_ be a new Synchronize event.
-          1. Append _leaveEvent_ to _leaverEventList_.
+          1. Append _leaveEvent_ to _eventsRecord_.[[EventList]].
           1. Set the Synchronize event in _WL_ to _leaveEvent_.
           1. Leave the critical section for _WL_.
           1. Return ~unused~.
@@ -42384,7 +42372,6 @@ THH:mm:ss.sss
         1. If IsSharedArrayBuffer(_buffer_) is *true*, then
           1. Let _execution_ be the [[CandidateExecution]] field of the surrounding agent's Agent Record.
           1. Let _eventsRecord_ be the Agent Events Record of _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
-          1. Let _eventList_ be _eventsRecord_.[[EventList]].
           1. Let _rawBytesRead_ be a List of length _elementSize_ whose elements are nondeterministically chosen byte values.
           1. NOTE: In implementations, _rawBytesRead_ is the result of a load-link, of a load-exclusive, or of an operand of a read-modify-write instruction on the underlying hardware. The nondeterminism is a semantic prescription of the memory model to describe observable behaviour of hardware with weak consistency.
           1. NOTE: The comparison of the expected value and the read value is performed outside of the read-modify-write modification function to avoid needlessly strong synchronization when the expected value is not equal to the read value.
@@ -42394,7 +42381,7 @@ THH:mm:ss.sss
             1. Let _event_ be ReadModifyWriteSharedMemory { [[Order]]: ~SeqCst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _indexedPosition_, [[ElementSize]]: _elementSize_, [[Payload]]: _replacementBytes_, [[ModifyOp]]: _second_ }.
           1. Else,
             1. Let _event_ be ReadSharedMemory { [[Order]]: ~SeqCst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _indexedPosition_, [[ElementSize]]: _elementSize_ }.
-          1. Append _event_ to _eventList_.
+          1. Append _event_ to _eventsRecord_.[[EventList]].
           1. Append Chosen Value Record { [[Event]]: _event_, [[ChosenValue]]: _rawBytesRead_ } to _execution_.[[ChosenValues]].
         1. Else,
           1. Let _rawBytesRead_ be a List of length _elementSize_ whose elements are the sequence of _elementSize_ bytes starting with _block_[_indexedPosition_].
@@ -45655,10 +45642,9 @@ THH:mm:ss.sss
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _queue_ be _generator_.[[AsyncGeneratorQueue]].
-          1. Assert: _queue_ is not empty.
-          1. Let _next_ be the first element of _queue_.
-          1. Remove the first element from _queue_.
+          1. Assert: _generator_.[[AsyncGeneratorQueue]] is not empty.
+          1. Let _next_ be the first element of _generator_.[[AsyncGeneratorQueue]].
+          1. Remove the first element from _generator_.[[AsyncGeneratorQueue]].
           1. Let _promiseCapability_ be _next_.[[Capability]].
           1. Let _value_ be _completion_.[[Value]].
           1. If _completion_.[[Type]] is ~throw~, then
