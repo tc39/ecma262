@@ -35633,6 +35633,19 @@ THH:mm:ss.sss
             1. Let _z_ be the MatchState (_Input_, _xe_, _cap_).
             1. Return _c_(_z_).
         </emu-alg>
+        <emu-note>
+          <p>The form `(?=` |Disjunction| `)` specifies a zero-width positive lookahead. In order for it to succeed, the pattern inside |Disjunction| must match at the current position, but the current position is not advanced before matching the sequel. If |Disjunction| can match at the current position in several ways, only the first one is tried. Unlike other regular expression operators, there is no backtracking into a `(?=` form (this unusual behaviour is inherited from Perl). This only matters when the |Disjunction| contains capturing parentheses and the sequel of the pattern contains backreferences to those captures.</p>
+          <p>For example,</p>
+          <pre><code class="javascript">/(?=(a+))/.exec("baaabac")</code></pre>
+          <p>matches the empty String immediately after the first `b` and therefore returns the array:</p>
+          <pre><code class="javascript">["", "aaa"]</code></pre>
+          <p>To illustrate the lack of backtracking into the lookahead, consider:</p>
+          <pre><code class="javascript">/(?=(a+))a*b\1/.exec("baaabac")</code></pre>
+          <p>This expression returns</p>
+          <pre><code class="javascript">["aba", "a"]</code></pre>
+          <p>and not:</p>
+          <pre><code class="javascript">["aaaba", "a"]</code></pre>
+        </emu-note>
         <emu-grammar>Assertion :: `(` `?` `!` Disjunction `)`</emu-grammar>
         <emu-alg>
           1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and ~forward~.
@@ -35646,6 +35659,12 @@ THH:mm:ss.sss
             1. If _r_ is not ~failure~, return ~failure~.
             1. Return _c_(_x_).
         </emu-alg>
+        <emu-note>
+          <p>The form `(?!` |Disjunction| `)` specifies a zero-width negative lookahead. In order for it to succeed, the pattern inside |Disjunction| must fail to match at the current position. The current position is not advanced before matching the sequel. |Disjunction| can contain capturing parentheses, but backreferences to them only make sense from within |Disjunction| itself. Backreferences to these capturing parentheses from elsewhere in the pattern always return *undefined* because the negative lookahead must fail for the pattern to succeed. For example,</p>
+          <pre><code class="javascript">/(.*?)a(?!(a+)b\2c)\2(.*)/.exec("baaabaac")</code></pre>
+          <p>looks for an `a` not immediately followed by some positive number n of `a`'s, a `b`, another n `a`'s (specified by the first `\\2`) and a `c`. The second `\\2` is outside the negative lookahead, so it matches against *undefined* and therefore always succeeds. The whole expression returns the array:</p>
+          <pre><code class="javascript">["baaabaac", "ba", undefined, "abaac"]</code></pre>
+        </emu-note>
         <emu-grammar>Assertion :: `(` `?` `&lt;=` Disjunction `)`</emu-grammar>
         <emu-alg>
           1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and ~backward~.
@@ -35805,6 +35824,9 @@ THH:mm:ss.sss
               1. Return _c_(_z_).
             1. Return _m_(_x_, _d_).
         </emu-alg>
+        <emu-note>
+          <p>Parentheses of the form `(` |Disjunction| `)` serve both to group the components of the |Disjunction| pattern together and to save the result of the match. The result can be used either in a backreference (`\\` followed by a non-zero decimal number), referenced in a replace String, or returned as part of an array from the regular expression matching Abstract Closure. To inhibit the capturing behaviour of parentheses, use the form `(?:` |Disjunction| `)` instead.</p>
+        </emu-note>
         <emu-grammar>Atom :: `(` `?` `:` Disjunction `)`</emu-grammar>
         <emu-alg>
           1. Return CompileSubpattern of |Disjunction| with arguments _rer_ and _direction_.
@@ -35931,28 +35953,6 @@ THH:mm:ss.sss
             1. If the numeric value of _ch_ ≥ 128 and the numeric value of _cu_ &lt; 128, return _ch_.
             1. Return _cu_.
           </emu-alg>
-          <emu-note>
-            <p>Parentheses of the form `(` |Disjunction| `)` serve both to group the components of the |Disjunction| pattern together and to save the result of the match. The result can be used either in a backreference (`\\` followed by a non-zero decimal number), referenced in a replace String, or returned as part of an array from the regular expression matching Abstract Closure. To inhibit the capturing behaviour of parentheses, use the form `(?:` |Disjunction| `)` instead.</p>
-          </emu-note>
-          <emu-note>
-            <p>The form `(?=` |Disjunction| `)` specifies a zero-width positive lookahead. In order for it to succeed, the pattern inside |Disjunction| must match at the current position, but the current position is not advanced before matching the sequel. If |Disjunction| can match at the current position in several ways, only the first one is tried. Unlike other regular expression operators, there is no backtracking into a `(?=` form (this unusual behaviour is inherited from Perl). This only matters when the |Disjunction| contains capturing parentheses and the sequel of the pattern contains backreferences to those captures.</p>
-            <p>For example,</p>
-            <pre><code class="javascript">/(?=(a+))/.exec("baaabac")</code></pre>
-            <p>matches the empty String immediately after the first `b` and therefore returns the array:</p>
-            <pre><code class="javascript">["", "aaa"]</code></pre>
-            <p>To illustrate the lack of backtracking into the lookahead, consider:</p>
-            <pre><code class="javascript">/(?=(a+))a*b\1/.exec("baaabac")</code></pre>
-            <p>This expression returns</p>
-            <pre><code class="javascript">["aba", "a"]</code></pre>
-            <p>and not:</p>
-            <pre><code class="javascript">["aaaba", "a"]</code></pre>
-          </emu-note>
-          <emu-note>
-            <p>The form `(?!` |Disjunction| `)` specifies a zero-width negative lookahead. In order for it to succeed, the pattern inside |Disjunction| must fail to match at the current position. The current position is not advanced before matching the sequel. |Disjunction| can contain capturing parentheses, but backreferences to them only make sense from within |Disjunction| itself. Backreferences to these capturing parentheses from elsewhere in the pattern always return *undefined* because the negative lookahead must fail for the pattern to succeed. For example,</p>
-            <pre><code class="javascript">/(.*?)a(?!(a+)b\2c)\2(.*)/.exec("baaabaac")</code></pre>
-            <p>looks for an `a` not immediately followed by some positive number n of `a`'s, a `b`, another n `a`'s (specified by the first `\\2`) and a `c`. The second `\\2` is outside the negative lookahead, so it matches against *undefined* and therefore always succeeds. The whole expression returns the array:</p>
-            <pre><code class="javascript">["baaabaac", "ba", undefined, "abaac"]</code></pre>
-          </emu-note>
           <emu-note>
             <p>In case-insignificant matches when _rer_.[[Unicode]] is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode Standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `ß` (U+00DF) to `SS`. It may however map a code point outside the Basic Latin block to a character within, for example, `ſ` (U+017F) to `s`. Such characters are not mapped if _rer_.[[Unicode]] is *false*. This prevents Unicode code points such as U+017F and U+212A from matching regular expressions such as `/[a-z]/i`, but they will match `/[a-z]/ui`.</p>
           </emu-note>
