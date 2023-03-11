@@ -38188,24 +38188,21 @@ THH:mm:ss.sss
           1. Let _obj_ be ? ToObject(*this* value).
           1. [id="step-array-sort-len"] Let _len_ be ? LengthOfArrayLike(_obj_).
           1. Let _SortCompare_ be a new Abstract Closure with parameters (_x_, _y_) that captures _comparefn_ and performs the following steps when called:
-            1. If _x_ and _y_ are both *undefined*, return *+0*<sub>𝔽</sub>.
-            1. If _x_ is *undefined*, return *1*<sub>𝔽</sub>.
-            1. If _y_ is *undefined*, return *-1*<sub>𝔽</sub>.
-            1. If _comparefn_ is not *undefined*, then
-              1. Let _v_ be ? ToNumber(? Call(_comparefn_, *undefined*, « _x_, _y_ »)).
-              1. If _v_ is *NaN*, return *+0*<sub>𝔽</sub>.
-              1. Return _v_.
-            1. [id="step-sortcompare-tostring-x"] Let _xString_ be ? ToString(_x_).
-            1. [id="step-sortcompare-tostring-y"] Let _yString_ be ? ToString(_y_).
-            1. Let _xSmaller_ be ! IsLessThan(_xString_, _yString_, *true*).
-            1. If _xSmaller_ is *true*, return *-1*<sub>𝔽</sub>.
-            1. Let _ySmaller_ be ! IsLessThan(_yString_, _xString_, *true*).
-            1. If _ySmaller_ is *true*, return *1*<sub>𝔽</sub>.
-            1. Return *+0*<sub>𝔽</sub>.
-          1. Return ? SortIndexedProperties(_obj_, _len_, _SortCompare_).
+            1. Return ? CompareArrayElements(_x_, _y_, _comparefn_).
+          1. [id="step-array-sortindexedproperties"] Let _sortedList_ be ? SortIndexedProperties(_obj_, _len_, _SortCompare_, ~skip-holes~).
+          1. Let _itemCount_ be the number of elements in _sortedList_.
+          1. Let _j_ be 0.
+          1. Repeat, while _j_ &lt; _itemCount_,
+            1. Perform ? Set(_obj_, ! ToString(𝔽(_j_)), _sortedList_[_j_], *true*).
+            1. Set _j_ to _j_ + 1.
+          1. NOTE: The call to SortIndexedProperties in step <emu-xref href="#step-array-sortindexedproperties"></emu-xref> uses ~skip-holes~. The remaining indices are deleted to preserve the number of holes that were detected and excluded from the sort.
+          1. Repeat, while _j_ &lt; _len_,
+            1. Perform ? DeletePropertyOrThrow(_obj_, ! ToString(𝔽(_j_))).
+            1. Set _j_ to _j_ + 1.
+          1. Return _obj_.
         </emu-alg>
         <emu-note>
-          <p>Because non-existent property values always compare greater than *undefined* property values, and *undefined* always compares greater than any other value, *undefined* property values always sort to the end of the result, followed by non-existent property values.</p>
+          <p>Because non-existent property values always compare greater than *undefined* property values, and *undefined* always compares greater than any other value (see CompareArrayElements), *undefined* property values always sort to the end of the result, followed by non-existent property values.</p>
         </emu-note>
         <emu-note>
           <p>Method calls performed by the ToString abstract operations in steps <emu-xref href="#step-sortcompare-tostring-x"></emu-xref> and <emu-xref href="#step-sortcompare-tostring-y"></emu-xref> have the potential to cause _SortCompare_ to not behave as a consistent comparator.</p>
@@ -38220,7 +38217,8 @@ THH:mm:ss.sss
               _obj_: an Object,
               _len_: a non-negative integer,
               _SortCompare_: an Abstract Closure with two parameters,
-            ): either a normal completion containing an Object or an abrupt completion
+              _holes_: ~skip-holes~ or ~read-through-holes~,
+            ): either a normal completion containing a List of ECMAScript language values or a throw completion
           </h1>
           <dl class="header">
           </dl>
@@ -38229,21 +38227,17 @@ THH:mm:ss.sss
             1. Let _k_ be 0.
             1. Repeat, while _k_ &lt; _len_,
               1. Let _Pk_ be ! ToString(𝔽(_k_)).
-              1. Let _kPresent_ be ? HasProperty(_obj_, _Pk_).
-              1. If _kPresent_ is *true*, then
+              1. If _holes_ is ~skip-holes~, then
+                1. Let _kRead_ be ? HasProperty(_obj_, _Pk_).
+              1. Else,
+                1. Assert: _holes_ is ~read-through-holes~.
+                1. Let _kRead_ be *true*.
+              1. If _kRead_ is *true*, then
                 1. Let _kValue_ be ? Get(_obj_, _Pk_).
                 1. Append _kValue_ to _items_.
               1. Set _k_ to _k_ + 1.
-            1. Let _itemCount_ be the number of elements in _items_.
             1. [id="step-array-sort"] Sort _items_ using an implementation-defined sequence of <emu-meta effects="user-code">calls to _SortCompare_</emu-meta>. If any such call returns an abrupt completion, stop before performing any further calls to _SortCompare_ and return that Completion Record.
-            1. Let _j_ be 0.
-            1. Repeat, while _j_ &lt; _itemCount_,
-              1. Perform ? Set(_obj_, ! ToString(𝔽(_j_)), _items_[_j_], *true*).
-              1. Set _j_ to _j_ + 1.
-            1. Repeat, while _j_ &lt; _len_,
-              1. Perform ? DeletePropertyOrThrow(_obj_, ! ToString(𝔽(_j_))).
-              1. Set _j_ to _j_ + 1.
-            1. Return _obj_.
+            1. Return _items_.
           </emu-alg>
           <p>The <dfn id="sort-order">sort order</dfn> is the ordering of _items_ after completion of step <emu-xref href="#step-array-sort"></emu-xref> of the algorithm above. The sort order is implementation-defined if _SortCompare_ is not a consistent comparator for the elements of _items_. When SortIndexedProperties is invoked by <emu-xref href="#sec-array.prototype.sort">Array.prototype.sort</emu-xref>, the sort order is also implementation-defined if _comparefn_ is *undefined*, and all applications of ToString, to any specific value passed as an argument to _SortCompare_, do not produce the same result.</p>
           <p>Unless the sort order is specified to be implementation-defined, it must satisfy all of the following conditions:</p>
@@ -38283,6 +38277,34 @@ THH:mm:ss.sss
           <emu-note>
             <p>The above conditions are necessary and sufficient to ensure that _comparator_ divides the set _S_ into equivalence classes and that these equivalence classes are totally ordered.</p>
           </emu-note>
+        </emu-clause>
+
+        <emu-clause id="sec-comparearrayelements" type="abstract operation">
+          <h1>
+            CompareArrayElements (
+              _x_: an ECMAScript language value,
+              _y_: an ECMAScript language value,
+              _comparefn_: a function object or *undefined*,
+            ): either a normal completion containing a Number or an abrupt completion
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. If _x_ and _y_ are both *undefined*, return *+0*<sub>𝔽</sub>.
+            1. If _x_ is *undefined*, return *1*<sub>𝔽</sub>.
+            1. If _y_ is *undefined*, return *-1*<sub>𝔽</sub>.
+            1. If _comparefn_ is not *undefined*, then
+              1. Let _v_ be ? ToNumber(? Call(_comparefn_, *undefined*, « _x_, _y_ »)).
+              1. If _v_ is *NaN*, return *+0*<sub>𝔽</sub>.
+              1. Return _v_.
+            1. [id="step-sortcompare-tostring-x"] Let _xString_ be ? ToString(_x_).
+            1. [id="step-sortcompare-tostring-y"] Let _yString_ be ? ToString(_y_).
+            1. Let _xSmaller_ be ! IsLessThan(_xString_, _yString_, *true*).
+            1. If _xSmaller_ is *true*, return *-1*<sub>𝔽</sub>.
+            1. Let _ySmaller_ be ! IsLessThan(_yString_, _xString_, *true*).
+            1. If _ySmaller_ is *true*, return *1*<sub>𝔽</sub>.
+            1. Return *+0*<sub>𝔽</sub>.
+          </emu-alg>
         </emu-clause>
       </emu-clause>
 
@@ -38390,6 +38412,86 @@ THH:mm:ss.sss
         </emu-note>
       </emu-clause>
 
+      <emu-clause id="sec-array.prototype.toreversed">
+        <h1>Array.prototype.toReversed ( )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be ? ToObject(*this* value).
+          1. Let _len_ be ? LengthOfArrayLike(_O_).
+          1. Let _A_ be ? ArrayCreate(_len_).
+          1. Let _k_ be 0.
+          1. Repeat, while _k_ &lt; _len_,
+            1. Let _from_ be ! ToString(𝔽(_len_ - _k_ - 1)).
+            1. Let _Pk_ be ! ToString(𝔽(_k_)).
+            1. Let _fromValue_ be ? Get(_O_, _from_).
+            1. Perform ! CreateDataPropertyOrThrow(_A_, _Pk_, _fromValue_).
+            1. Set _k_ to _k_ + 1.
+          1. Return _A_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-array.prototype.tosorted">
+        <h1>Array.prototype.toSorted ( _comparefn_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. If _comparefn_ is not *undefined* and IsCallable(_comparefn_) is *false*, throw a *TypeError* exception.
+          1. Let _O_ be ? ToObject(*this* value).
+          1. Let _len_ be ? LengthOfArrayLike(_O_).
+          1. Let _A_ be ? ArrayCreate(_len_).
+          1. Let _SortCompare_ be a new Abstract Closure with parameters (_x_, _y_) that captures _comparefn_ and performs the following steps when called:
+            1. Return ? CompareArrayElements(_x_, _y_, _comparefn_).
+          1. Let _sortedList_ be ? SortIndexedProperties(_O_, _len_, _SortCompare_, ~read-through-holes~).
+          1. Let _j_ be 0.
+          1. Repeat, while _j_ &lt; _len_,
+            1. Perform ! CreateDataPropertyOrThrow(_A_, ! ToString(𝔽(_j_)), _sortedList_[_j_]).
+            1. Set _j_ to _j_ + 1.
+          1. Return _A_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-array.prototype.tospliced">
+        <h1>Array.prototype.toSpliced ( _start_, _skipCount_, ..._items_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be ? ToObject(*this* value).
+          1. Let _len_ be ? LengthOfArrayLike(_O_).
+          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
+          1. If _relativeStart_ is -∞, let _actualStart_ be 0.
+          1. Else if _relativeStart_ &lt; 0, let _actualStart_ be max(_len_ + _relativeStart_, 0).
+          1. Else, let _actualStart_ be min(_relativeStart_, _len_).
+          1. Let _insertCount_ be the number of elements in _items_.
+          1. If _start_ is not present, then
+            1. Let _actualSkipCount_ be 0.
+          1. Else if _skipCount_ is not present, then
+            1. Let _actualSkipCount_ be _len_ - _actualStart_.
+          1. Else,
+            1. Let _sc_ be ? ToIntegerOrInfinity(_skipCount_).
+            1. Let _actualSkipCount_ be the result of clamping _sc_ between 0 and _len_ - _actualStart_.
+          1. Let _newLen_ be _len_ + _insertCount_ - _actualSkipCount_.
+          1. If _newLen_ > 2<sup>53</sup> - 1, throw a *TypeError* exception.
+          1. Let _A_ be ? ArrayCreate(_newLen_).
+          1. Let _i_ be 0.
+          1. Let _r_ be _actualStart_ + _actualSkipCount_.
+          1. Repeat, while _i_ &lt; _actualStart_,
+            1. Let _Pi_ be ! ToString(𝔽(_i_)).
+            1. Let _iValue_ be ? Get(_O_, _Pi_).
+            1. Perform ! CreateDataPropertyOrThrow(_A_, _Pi_, _iValue_).
+            1. Set _i_ to _i_ + 1.
+          1. For each element _E_ of _items_, do
+            1. Let _Pi_ be ! ToString(𝔽(_i_)).
+            1. Perform ! CreateDataPropertyOrThrow(_A_, _Pi_, _E_).
+            1. Set _i_ to _i_ + 1.
+          1. Repeat, while _i_ &lt; _newLen_,
+            1. Let _Pi_ be ! ToString(𝔽(_i_)).
+            1. Let _from_ be ! ToString(𝔽(_r_)).
+            1. Let _fromValue_ be ? Get(_O_, _from_).
+            1. Perform ! CreateDataPropertyOrThrow(_A_, _Pi_, _fromValue_).
+            1. Set _i_ to _i_ + 1.
+            1. Set _r_ to _r_ + 1.
+          1. Return _A_.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-array.prototype.tostring">
         <h1>Array.prototype.toString ( )</h1>
         <p>This method performs the following steps when called:</p>
@@ -38448,6 +38550,28 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-array.prototype.with">
+        <h1>Array.prototype.with ( _index_, _value_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be ? ToObject(*this* value).
+          1. Let _len_ be ? LengthOfArrayLike(_O_).
+          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
+          1. If _relativeIndex_ ≥ 0, let _actualIndex_ be _relativeIndex_.
+          1. Else, let _actualIndex_ be _len_ + _relativeIndex_.
+          1. If _actualIndex_ ≥ _len_ or _actualIndex_ &lt; 0, throw a *RangeError* exception.
+          1. Let _A_ be ? ArrayCreate(_len_).
+          1. Let _k_ be 0.
+          1. Repeat, while _k_ &lt; _len_,
+            1. Let _Pk_ be ! ToString(𝔽(_k_)).
+            1. If _k_ is _actualIndex_, let _fromValue_ be _value_.
+            1. Else, let _fromValue_ be ? Get(_O_, _Pk_).
+            1. Perform ! CreateDataPropertyOrThrow(_A_, _Pk_, _fromValue_).
+            1. Set _k_ to _k_ + 1.
+          1. Return _A_.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-array.prototype-@@iterator">
         <h1>Array.prototype [ @@iterator ] ( )</h1>
         <p>The initial value of the @@iterator property is %Array.prototype.values%, defined in <emu-xref href="#sec-array.prototype.values"></emu-xref>.</p>
@@ -38470,12 +38594,16 @@ THH:mm:ss.sss
           1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"flatMap"*, *true*).
           1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"includes"*, *true*).
           1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"keys"*, *true*).
+          1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"toReversed"*, *true*).
+          1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"toSorted"*, *true*).
+          1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"toSpliced"*, *true*).
           1. Perform ! CreateDataPropertyOrThrow(_unscopableList_, *"values"*, *true*).
           1. Return _unscopableList_.
         </emu-alg>
         <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
         <emu-note>
           <p>The own property names of this object are property names that were not included as standard properties of `Array.prototype` prior to the ECMAScript 2015 specification. These names are ignored for `with` statement binding purposes in order to preserve the behaviour of existing code that might use one of these names as a binding in an outer scope that is shadowed by a `with` statement whose binding object is an Array.</p>
+          <p>The reason that *"with"* is not included in the _unscopableList_ is because it is already a <emu-xref href="#sec-keywords-and-reserved-words">reserved word</emu-xref>.</p>
         </emu-note>
       </emu-clause>
     </emu-clause>
@@ -39591,23 +39719,16 @@ THH:mm:ss.sss
           1. Let _len_ be _obj_.[[ArrayLength]].
           1. NOTE: The following closure performs a numeric comparison rather than the string comparison used in <emu-xref href="#sec-array.prototype.sort"></emu-xref>.
           1. Let _SortCompare_ be a new Abstract Closure with parameters (_x_, _y_) that captures _comparefn_ and performs the following steps when called:
-            1. Assert: _x_ is a Number and _y_ is a Number, or _x_ is a BigInt and _y_ is a BigInt.
-            1. If _comparefn_ is not *undefined*, then
-              1. Let _v_ be ? ToNumber(? Call(_comparefn_, *undefined*, « _x_, _y_ »)).
-              1. If _v_ is *NaN*, return *+0*<sub>𝔽</sub>.
-              1. Return _v_.
-            1. If _x_ and _y_ are both *NaN*, return *+0*<sub>𝔽</sub>.
-            1. If _x_ is *NaN*, return *1*<sub>𝔽</sub>.
-            1. If _y_ is *NaN*, return *-1*<sub>𝔽</sub>.
-            1. If _x_ &lt; _y_, return *-1*<sub>𝔽</sub>.
-            1. If _x_ > _y_, return *1*<sub>𝔽</sub>.
-            1. If _x_ is *-0*<sub>𝔽</sub> and _y_ is *+0*<sub>𝔽</sub>, return *-1*<sub>𝔽</sub>.
-            1. If _x_ is *+0*<sub>𝔽</sub> and _y_ is *-0*<sub>𝔽</sub>, return *1*<sub>𝔽</sub>.
-            1. Return *+0*<sub>𝔽</sub>.
-          1. Return ? SortIndexedProperties(_obj_, _len_, _SortCompare_).
+            1. Return ? CompareTypedArrayElements(_x_, _y_, _comparefn_).
+          1. Let _sortedList_ be ? SortIndexedProperties(_obj_, _len_, _SortCompare_, ~read-through-holes~).
+          1. Let _j_ be 0.
+          1. Repeat, while _j_ &lt; _len_,
+            1. Perform ! Set(_obj_, ! ToString(𝔽(_j_)), _sortedList_[_j_], *true*).
+            1. Set _j_ to _j_ + 1.
+          1. Return _obj_.
         </emu-alg>
         <emu-note>
-          <p>Because *NaN* always compares greater than any other value, *NaN* property values always sort to the end of the result when _comparefn_ is not provided.</p>
+          <p>Because *NaN* always compares greater than any other value (see CompareTypedArrayElements), *NaN* property values always sort to the end of the result when _comparefn_ is not provided.</p>
         </emu-note>
       </emu-clause>
 
@@ -39648,6 +39769,46 @@ THH:mm:ss.sss
         </emu-note>
       </emu-clause>
 
+      <emu-clause id="sec-%typedarray%.prototype.toreversed">
+        <h1>%TypedArray%.prototype.toReversed ( )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? ValidateTypedArray(_O_).
+          1. Let _length_ be _O_.[[ArrayLength]].
+          1. Let _A_ be ? TypedArrayCreateSameType(_O_, « 𝔽(_length_) »).
+          1. Let _k_ be 0.
+          1. Repeat, while _k_ &lt; _length_,
+            1. Let _from_ be ! ToString(𝔽(_length_ - _k_ - 1)).
+            1. Let _Pk_ be ! ToString(𝔽(_k_)).
+            1. Let _fromValue_ be ! Get(_O_, _from_).
+            1. Perform ! Set(_A_, _Pk_, _fromValue_, *true*).
+            1. Set _k_ to _k_ + 1.
+          1. Return _A_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-%typedarray%.prototype.tosorted">
+        <h1>%TypedArray%.prototype.toSorted ( _comparefn_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. If _comparefn_ is not *undefined* and IsCallable(_comparefn_) is *false*, throw a *TypeError* exception.
+          1. Let _O_ be the *this* value.
+          1. Perform ? ValidateTypedArray(_O_).
+          1. Let _len_ be _O_.[[ArrayLength]].
+          1. Let _A_ be ? TypedArrayCreateSameType(_O_, « 𝔽(_len_) »).
+          1. NOTE: The following closure performs a numeric comparison rather than the string comparison used in <emu-xref href="#sec-array.prototype.tosorted"></emu-xref>.
+          1. Let _SortCompare_ be a new Abstract Closure with parameters (_x_, _y_) that captures _comparefn_ and performs the following steps when called:
+            1. Return ? CompareTypedArrayElements(_x_, _y_, _comparefn_).
+          1. Let _sortedList_ be ? SortIndexedProperties(_O_, _len_, _SortCompare_, ~read-through-holes~).
+          1. Let _j_ be 0.
+          1. Repeat, while _j_ &lt; _len_,
+            1. Perform ! Set(_A_, ! ToString(𝔽(_j_)), _sortedList_[_j_], *true*).
+            1. Set _j_ to _j_ + 1.
+          1. Return _A_.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-%typedarray%.prototype.tostring">
         <h1>%TypedArray%.prototype.toString ( )</h1>
         <p>The initial value of the *"toString"* property is %Array.prototype.toString%, defined in <emu-xref href="#sec-array.prototype.tostring"></emu-xref>.</p>
@@ -39660,6 +39821,31 @@ THH:mm:ss.sss
           1. Let _O_ be the *this* value.
           1. Perform ? ValidateTypedArray(_O_).
           1. Return CreateArrayIterator(_O_, ~value~).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-%typedarray%.prototype.with">
+        <h1>%TypedArray%.prototype.with ( _index_, _value_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? ValidateTypedArray(_O_).
+          1. Let _len_ be _O_.[[ArrayLength]].
+          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
+          1. If _relativeIndex_ ≥ 0, let _actualIndex_ be _relativeIndex_.
+          1. Else, let _actualIndex_ be _len_ + _relativeIndex_.
+          1. If _O_.[[ContentType]] is ~BigInt~, let _numericValue_ be ? ToBigInt(_value_).
+          1. Else, let _numericValue_ be ? ToNumber(_value_).
+          1. If IsValidIntegerIndex(_O_, 𝔽(_actualIndex_)) is *false*, throw a *RangeError* exception.
+          1. Let _A_ be ? TypedArrayCreateSameType(_O_, « 𝔽(_len_) »).
+          1. Let _k_ be 0.
+          1. Repeat, while _k_ &lt; _len_,
+            1. Let _Pk_ be ! ToString(𝔽(_k_)).
+            1. If _k_ is _actualIndex_, let _fromValue_ be _numericValue_.
+            1. Else, let _fromValue_ be ! Get(_O_, _Pk_).
+            1. Perform ! Set(_A_, _Pk_, _fromValue_, *true*).
+            1. Set _k_ to _k_ + 1.
+          1. Return _A_.
         </emu-alg>
       </emu-clause>
 
@@ -39728,6 +39914,26 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-typedarray-create-same-type" type="abstract operation">
+        <h1>
+          TypedArrayCreateSameType (
+            _exemplar_: a TypedArray,
+            _argumentList_: a List of ECMAScript language values,
+          ): either a normal completion containing a TypedArray or a throw completion
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It is used to specify the creation of a new TypedArray using a constructor function that is derived from _exemplar_. Unlike TypedArraySpeciesCreate, which can construct custom TypedArray subclasses through the use of @@species, this operation always uses one of the built-in TypedArray constructors.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _constructor_ be the intrinsic object associated with the constructor name _exemplar_.[[TypedArrayName]] in <emu-xref href="#table-the-typedarray-constructors"></emu-xref>.
+          1. Let _result_ be ? TypedArrayCreate(_constructor_, _argumentList_).
+          1. Assert: _result_ has [[TypedArrayName]] and [[ContentType]] internal slots.
+          1. Assert: _result_.[[ContentType]] is _exemplar_.[[ContentType]].
+          1. Return _result_.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-validatetypedarray" type="abstract operation">
         <h1>
           ValidateTypedArray (
@@ -39769,6 +39975,36 @@ THH:mm:ss.sss
         <emu-alg>
           1. Return the Element Type value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for _O_.[[TypedArrayName]].
         </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-comparetypedarrayelements" type="abstract operation">
+        <h1>
+          CompareTypedArrayElements (
+            _x_: a Number or a BigInt,
+            _y_: a Number or a BigInt,
+            _comparefn_: a function object or *undefined*,
+          ): either a normal completion containing a Number or an abrupt completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Assert: _x_ is a Number and _y_ is a Number, or _x_ is a BigInt and _y_ is a BigInt.
+          1. If _comparefn_ is not *undefined*, then
+            1. Let _v_ be ? ToNumber(? Call(_comparefn_, *undefined*, « _x_, _y_ »)).
+            1. If _v_ is *NaN*, return *+0*<sub>𝔽</sub>.
+            1. Return _v_.
+          1. If _x_ and _y_ are both *NaN*, return *+0*<sub>𝔽</sub>.
+          1. If _x_ is *NaN*, return *1*<sub>𝔽</sub>.
+          1. If _y_ is *NaN*, return *-1*<sub>𝔽</sub>.
+          1. If _x_ &lt; _y_, return *-1*<sub>𝔽</sub>.
+          1. If _x_ > _y_, return *1*<sub>𝔽</sub>.
+          1. If _x_ is *-0*<sub>𝔽</sub> and _y_ is *+0*<sub>𝔽</sub>, return *-1*<sub>𝔽</sub>.
+          1. If _x_ is *+0*<sub>𝔽</sub> and _y_ is *-0*<sub>𝔽</sub>, return *1*<sub>𝔽</sub>.
+          1. Return *+0*<sub>𝔽</sub>.
+        </emu-alg>
+        <emu-note>
+          This performs a numeric comparison rather than the string comparison used in <emu-xref href="#sec-comparearrayelements"></emu-xref>.
+        </emu-note>
       </emu-clause>
     </emu-clause>
 
