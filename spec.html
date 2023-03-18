@@ -12012,8 +12012,8 @@
         </tr>
         <tr>
           <td>[[KeptAlive]]</td>
-          <td>a List of Objects</td>
-          <td>Initially a new empty List, representing the list of objects to be kept alive until the end of the current Job</td>
+          <td>a List of either Objects or Symbols</td>
+          <td>Initially a new empty List, representing the list of objects and/or symbols to be kept alive until the end of the current Job</td>
         </tr>
       </table>
     </emu-table>
@@ -12128,22 +12128,22 @@
   </emu-clause>
 
   <emu-clause id="sec-weakref-processing-model">
-    <h1>Processing Model of WeakRef and FinalizationRegistry Objects</h1>
+    <h1>Processing Model of WeakRef and FinalizationRegistry Targets</h1>
 
     <emu-clause id="sec-weakref-invariants">
       <h1>Objectives</h1>
 
-      <p>This specification does not make any guarantees that any object will be garbage collected. Objects which are not live may be released after long periods of time, or never at all. For this reason, this specification uses the term "may" when describing behaviour triggered by garbage collection.</p>
+      <p>This specification does not make any guarantees that any object or symbol will be garbage collected. Objects or symbols which are not live may be released after long periods of time, or never at all. For this reason, this specification uses the term "may" when describing behaviour triggered by garbage collection.</p>
 
       <p>The semantics of WeakRefs and FinalizationRegistrys is based on two operations which happen at particular points in time:</p>
 
       <ul>
         <li>
-          When `WeakRef.prototype.deref` is called, the referent (if *undefined* is not returned) is kept alive so that subsequent, synchronous accesses also return the object. This list is reset when synchronous work is done using the ClearKeptObjects abstract operation.
+          When `WeakRef.prototype.deref` is called, the referent (if *undefined* is not returned) is kept alive so that subsequent, synchronous accesses also return the same value. This list is reset when synchronous work is done using the ClearKeptObjects abstract operation.
         </li>
 
         <li>
-          When an object which is registered with a FinalizationRegistry becomes unreachable, a call of the FinalizationRegistry's cleanup callback may eventually be made, after synchronous ECMAScript execution completes. The FinalizationRegistry cleanup is performed with the CleanupFinalizationRegistry abstract operation.
+          When an object or symbol which is registered with a FinalizationRegistry becomes unreachable, a call of the FinalizationRegistry's cleanup callback may eventually be made, after synchronous ECMAScript execution completes. The FinalizationRegistry cleanup is performed with the CleanupFinalizationRegistry abstract operation.
         </li>
       </ul>
 
@@ -12155,33 +12155,33 @@
     <emu-clause id="sec-liveness">
       <h1>Liveness</h1>
 
-      <p>For some set of objects _S_, a <dfn>hypothetical WeakRef-oblivious</dfn> execution with respect to _S_ is an execution whereby the abstract operation WeakRefDeref of a WeakRef whose referent is an element of _S_ always returns *undefined*.</p>
+      <p>For some set of objects and/or symbols _S_ a <dfn>hypothetical WeakRef-oblivious</dfn> execution with respect to _S_ is an execution whereby the abstract operation WeakRefDeref of a WeakRef whose referent is an element of _S_ always returns *undefined*.</p>
 
       <emu-note>
-        WeakRef-obliviousness, together with liveness, capture two notions. One, that a WeakRef itself does not keep an object alive. Two, that cycles in liveness does not imply that an object is live. To be concrete, if determining _obj_'s liveness depends on determining the liveness of another WeakRef referent, _obj2_, _obj2_'s liveness cannot assume _obj_'s liveness, which would be circular reasoning.
+        WeakRef-obliviousness, together with liveness, capture two notions. One, that a WeakRef itself does not keep its referent alive. Two, that cycles in liveness does not imply that a value is live. To be concrete, if determining _v_'s liveness depends on determining the liveness of a WeakRef referent, _r_, _r_'s liveness cannot assume _v_'s liveness, which would be circular reasoning.
       </emu-note>
       <emu-note>
-        WeakRef-obliviousness is defined on sets of objects instead of individual objects to account for cycles. If it were defined on individual objects, then an object in a cycle will be considered live even though its Object value is only observed via WeakRefs of other objects in the cycle.
+        WeakRef-obliviousness is defined on sets of objects or symbols instead of individual values to account for cycles. If it were defined on individual values, then a WeakRef referent in a cycle will be considered live even though its identity is only observed via other WeakRef referents in the cycle.
       </emu-note>
       <emu-note>
-        Colloquially, we say that an individual object is live if every set of objects containing it is live.
+        Colloquially, we say that an individual object or symbol is live if every set containing it is live.
       </emu-note>
 
-      <p>At any point during evaluation, a set of objects _S_ is considered <dfn>live</dfn> if either of the following conditions is met:</p>
+      <p>At any point during evaluation, a set of objects and/or symbols _S_ is considered <dfn>live</dfn> if either of the following conditions is met:</p>
 
       <ul>
         <li>
           Any element in _S_ is included in any agent's [[KeptAlive]] List.
         </li>
         <li>
-          There exists a valid future hypothetical WeakRef-oblivious execution with respect to _S_ that observes the Object value of any object in _S_.
+          There exists a valid future hypothetical WeakRef-oblivious execution with respect to _S_ that observes the identity of any value in _S_.
         </li>
       </ul>
       <emu-note>
-        The second condition above intends to capture the intuition that an object is live if its identity is observable via non-WeakRef means. An object's identity may be observed by observing a strict equality comparison between objects or observing the object being used as key in a Map.
+        The second condition above intends to capture the intuition that a value is live if its identity is observable via non-WeakRef means. A value's identity may be observed by observing a strict equality comparison or observing the value being used as key in a Map.
       </emu-note>
       <emu-note>
-        <p>Presence of an object in a field, an internal slot, or a property does not imply that the object is live. For example if the object in question is never passed back to the program, then it cannot be observed.</p>
+        <p>Presence of an object or a symbol in a field, an internal slot, or a property does not imply that the value is live. For example if the value in question is never passed back to the program, then it cannot be observed.</p>
 
         <p>This is the case for keys in a WeakMap, members of a WeakSet, as well as the [[WeakRefTarget]] and [[UnregisterToken]] fields of a FinalizationRegistry Cell record.</p>
 
@@ -12195,20 +12195,20 @@
     <emu-clause id="sec-weakref-execution">
       <h1>Execution</h1>
 
-      <p>At any time, if a set of objects _S_ is not live, an ECMAScript implementation may perform the following steps atomically:</p>
+      <p>At any time, if a set of objects and/or symbols _S_ is not live, an ECMAScript implementation may perform the following steps atomically:</p>
 
       <emu-alg>
-        1. For each element _obj_ of _S_, do
-          1. For each WeakRef _ref_ such that _ref_.[[WeakRefTarget]] is _obj_, do
+        1. For each element _value_ of _S_, do
+          1. For each WeakRef _ref_ such that _ref_.[[WeakRefTarget]] is _value_, do
             1. Set _ref_.[[WeakRefTarget]] to ~empty~.
-          1. For each FinalizationRegistry _fg_ such that _fg_.[[Cells]] contains a Record _cell_ such that _cell_.[[WeakRefTarget]] is _obj_, do
+          1. For each FinalizationRegistry _fg_ such that _fg_.[[Cells]] contains a Record _cell_ such that _cell_.[[WeakRefTarget]] is _value_, do
             1. Set _cell_.[[WeakRefTarget]] to ~empty~.
             1. Optionally, perform HostEnqueueFinalizationRegistryCleanupJob(_fg_).
-          1. For each WeakMap _map_ such that _map_.[[WeakMapData]] contains a Record _r_ such that _r_.[[Key]] is _obj_, do
+          1. For each WeakMap _map_ such that _map_.[[WeakMapData]] contains a Record _r_ such that _r_.[[Key]] is _value_, do
             1. Set _r_.[[Key]] to ~empty~.
             1. Set _r_.[[Value]] to ~empty~.
-          1. For each WeakSet _set_ such that _set_.[[WeakSetData]] contains _obj_, do
-            1. Replace the element of _set_.[[WeakSetData]] whose value is _obj_ with an element whose value is ~empty~.
+          1. For each WeakSet _set_ such that _set_.[[WeakSetData]] contains _value_, do
+            1. Replace the element of _set_.[[WeakSetData]] whose value is _value_ with an element whose value is ~empty~.
       </emu-alg>
 
       <emu-note>
@@ -12221,8 +12221,8 @@
         <p>Because calling HostEnqueueFinalizationRegistryCleanupJob is optional, registered objects in a FinalizationRegistry do not necessarily hold that FinalizationRegistry live. Implementations may omit FinalizationRegistry callbacks for any reason, e.g., if the FinalizationRegistry itself becomes dead, or if the application is shutting down.</p>
       </emu-note>
       <emu-note>
-        <p>Implementations are not obligated to empty WeakRefs for maximal sets of non-live objects.</p>
-        <p>If an implementation chooses a non-live set _S_ in which to empty WeakRefs, this definition requires that it empties WeakRefs for all objects in _S_ simultaneously. In other words, it is not conformant for an implementation to empty a WeakRef pointing to an object _obj_ without emptying out other WeakRefs that, if not emptied, could result in an execution that observes the Object value of _obj_.</p>
+        <p>Implementations are not obligated to empty WeakRefs for maximal sets of non-live objects or symbols.</p>
+        <p>If an implementation chooses a non-live set _S_ in which to empty WeakRefs, this definition requires that it empties WeakRefs for all values in _S_ simultaneously. In other words, it is not conformant for an implementation to empty a WeakRef pointing to a value _v_ without emptying out other WeakRefs that, if not emptied, could result in an execution that observes the value of _v_.</p>
       </emu-note>
     </emu-clause>
 
@@ -12264,18 +12264,18 @@
   <emu-clause id="sec-addtokeptobjects" type="abstract operation">
     <h1>
       AddToKeptObjects (
-        _object_: an Object,
+        _value_: an Object or a Symbol,
       ): ~unused~
     </h1>
     <dl class="header">
     </dl>
     <emu-alg>
       1. Let _agentRecord_ be the surrounding agent's Agent Record.
-      1. Append _object_ to _agentRecord_.[[KeptAlive]].
+      1. Append _value_ to _agentRecord_.[[KeptAlive]].
       1. Return ~unused~.
     </emu-alg>
     <emu-note>
-      When the abstract operation AddToKeptObjects is called with a target object reference, it adds the target to a list that will point strongly at the target until ClearKeptObjects is called.
+      When the abstract operation AddToKeptObjects is called with a target object or symbol, it adds the target to a list that will point strongly at the target until ClearKeptObjects is called.
     </emu-note>
   </emu-clause>
 
@@ -12296,6 +12296,26 @@
         1. Perform ? HostCallJobCallback(_callback_, *undefined*, « _cell_.[[HeldValue]] »).
       1. Return ~unused~.
     </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-canbeheldweakly" type="abstract operation">
+    <h1>
+      CanBeHeldWeakly (
+        _v_: an ECMAScript language value,
+      ): a Boolean
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It returns *true* if and only if _v_ is suitable for use as a weak reference. Only values that are suitable for use as a weak reference may be a key of a WeakMap, an element of a WeakSet, the target of a WeakRef, or one of the targets of a FinalizationRegistry.</dd>
+    </dl>
+    <emu-alg>
+      1. If _v_ is an Object, return *true*.
+      1. If _v_ is a Symbol and KeyForSymbol(_v_) is *undefined*, return *true*.
+      1. Return *false*.
+    </emu-alg>
+    <emu-note>
+      <p>A language value without <emu-xref href="#sec-identity">language identity</emu-xref> can be manifested without prior reference and is unsuitable for use as a weak reference. A Symbol value produced by <emu-xref href="#sec-symbol.for">Symbol.for</emu-xref>, unlike other Symbol values, does not have language identity and is unsuitable for use as a weak reference. <emu-xref href="#sec-well-known-symbols">Well-known symbols</emu-xref> are likely to never be collected, but are nonetheless treated as suitable for use as a weak reference because they are limited in number and therefore manageable by a variety of implementation approaches. However, any value associated to a well-known symbol in a live WeakMap is unlikely to be collected and could “leak” memory resources in implementations.</p>
+    </emu-note>
   </emu-clause>
 </emu-clause>
 
@@ -30263,7 +30283,7 @@
           1. Append the Record { [[Key]]: _stringKey_, [[Symbol]]: _newSymbol_ } to the GlobalSymbolRegistry List.
           1. Return _newSymbol_.
         </emu-alg>
-        <p>The GlobalSymbolRegistry is a List that is globally available. It is shared by all realms. Prior to the evaluation of any ECMAScript code, it is initialized as a new empty List. Elements of the GlobalSymbolRegistry are Records with the structure defined in <emu-xref href="#table-globalsymbolregistry-record-fields"></emu-xref>.</p>
+        <p>The GlobalSymbolRegistry is an append-only List that is globally available. It is shared by all realms. Prior to the evaluation of any ECMAScript code, it is initialized as a new empty List. Elements of the GlobalSymbolRegistry are Records with the structure defined in <emu-xref href="#table-globalsymbolregistry-record-fields"></emu-xref>.</p>
         <emu-table id="table-globalsymbolregistry-record-fields" caption="GlobalSymbolRegistry Record Fields" oldids="table-44">
           <table>
             <tr>
@@ -30326,10 +30346,7 @@
         <p>This function performs the following steps when called:</p>
         <emu-alg>
           1. If _sym_ is not a Symbol, throw a *TypeError* exception.
-          1. For each element _e_ of the GlobalSymbolRegistry List (see <emu-xref href="#sec-symbol.for"></emu-xref>), do
-            1. If SameValue(_e_.[[Symbol]], _sym_) is *true*, return _e_.[[Key]].
-          1. Assert: GlobalSymbolRegistry does not currently contain an entry for _sym_.
-          1. Return *undefined*.
+          1. Return KeyForSymbol(_sym_).
         </emu-alg>
       </emu-clause>
 
@@ -30485,6 +30502,28 @@
     <emu-clause id="sec-properties-of-symbol-instances">
       <h1>Properties of Symbol Instances</h1>
       <p>Symbol instances are ordinary objects that inherit properties from the Symbol prototype object. Symbol instances have a [[SymbolData]] internal slot. The [[SymbolData]] internal slot is the Symbol value represented by this Symbol object.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-abstract-operations-for-symbols">
+      <h1>Abstract Operations for Symbols</h1>
+
+      <emu-clause id="sec-keyforsymbol" type="abstract operation">
+        <h1>
+          KeyForSymbol (
+            _sym_: a Symbol,
+          ): a String or *undefined*
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>If _sym_ is in the GlobalSymbolRegistry (see <emu-xref href="#sec-symbol.for"></emu-xref>) the String used to register _sym_ will be returned.</dd>
+        </dl>
+        <emu-alg>
+          1. For each element _e_ of the GlobalSymbolRegistry List, do
+            1. If SameValue(_e_.[[Symbol]], _sym_) is *true*, return _e_.[[Key]].
+          1. Assert: GlobalSymbolRegistry does not currently contain an entry for _sym_.
+          1. Return *undefined*.
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
   </emu-clause>
 
@@ -40910,11 +40949,11 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-weakmap-objects">
     <h1>WeakMap Objects</h1>
-    <p>WeakMaps are collections of key/value pairs where the keys are objects and values may be arbitrary ECMAScript language values. A WeakMap may be queried to see if it contains a key/value pair with a specific key, but no mechanism is provided for enumerating the objects it holds as keys. In certain conditions, objects which are not live are removed as WeakMap keys, as described in <emu-xref href="#sec-weakref-execution"></emu-xref>.</p>
+    <p>WeakMaps are collections of key/value pairs where the keys are objects and/or symbols and values may be arbitrary ECMAScript language values. A WeakMap may be queried to see if it contains a key/value pair with a specific key, but no mechanism is provided for enumerating the values it holds as keys. In certain conditions, values which are not live are removed as WeakMap keys, as described in <emu-xref href="#sec-weakref-execution"></emu-xref>.</p>
     <p>An implementation may impose an arbitrarily determined latency between the time a key/value pair of a WeakMap becomes inaccessible and the time when the key/value pair is removed from the WeakMap. If this latency was observable to ECMAScript program, it would be a source of indeterminacy that could impact program execution. For that reason, an ECMAScript implementation must not provide any means to observe a key of a WeakMap that does not require the observer to present the observed key.</p>
     <p>WeakMaps must be implemented using either hash tables or other mechanisms that, on average, provide access times that are sublinear on the number of key/value pairs in the collection. The data structure used in this specification is only intended to describe the required observable semantics of WeakMaps. It is not intended to be a viable implementation model.</p>
     <emu-note>
-      <p>WeakMap and WeakSets are intended to provide mechanisms for dynamically associating state with an object in a manner that does not “leak” memory resources if, in the absence of the WeakMap or WeakSet, the object otherwise became inaccessible and subject to resource reclamation by the implementation's garbage collection mechanisms. This characteristic can be achieved by using an inverted per-object mapping of weak map instances to keys. Alternatively each weak map may internally store its key to value mappings but this approach requires coordination between the WeakMap or WeakSet implementation and the garbage collector. The following references describe mechanism that may be useful to implementations of WeakMap and WeakSets:</p>
+      <p>WeakMap and WeakSet are intended to provide mechanisms for dynamically associating state with an object or symbol in a manner that does not “leak” memory resources if, in the absence of the WeakMap or WeakSet instance, the object or symbol otherwise became inaccessible and subject to resource reclamation by the implementation's garbage collection mechanisms. This characteristic can be achieved by using an inverted per-object/symbol mapping of WeakMap or WeakSet instances to keys. Alternatively, each WeakMap or WeakSet instance may internally store its key and value data, but this approach requires coordination between the WeakMap or WeakSet implementation and the garbage collector. The following references describe mechanism that may be useful to implementations of WeakMap and WeakSet:</p>
       <p>Barry Hayes. 1997. Ephemerons: a new finalization mechanism. In <i>Proceedings of the 12th ACM SIGPLAN conference on Object-oriented programming, systems, languages, and applications (OOPSLA '97)</i>, A. Michael Berman (Ed.). ACM, New York, NY, USA, 176-183, <a href="http://doi.acm.org/10.1145/263698.263733">http://doi.acm.org/10.1145/263698.263733</a>.</p>
       <p>Alexandra Barros, Roberto Ierusalimschy, Eliminating Cycles in Weak Tables. Journal of Universal Computer Science - J.UCS, vol. 14, no. 21, pp. 3481-3497, 2008, <a href="http://www.jucs.org/jucs_14_21/eliminating_cycles_in_weak">http://www.jucs.org/jucs_14_21/eliminating_cycles_in_weak</a></p>
     </emu-note>
@@ -40984,7 +41023,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _M_ be the *this* value.
           1. Perform ? RequireInternalSlot(_M_, [[WeakMapData]]).
-          1. If _key_ is not an Object, return *false*.
+          1. If CanBeHeldWeakly(_key_) is *false*, return *false*.
           1. For each Record { [[Key]], [[Value]] } _p_ of _M_.[[WeakMapData]], do
             1. If _p_.[[Key]] is not ~empty~ and SameValue(_p_.[[Key]], _key_) is *true*, then
               1. Set _p_.[[Key]] to ~empty~.
@@ -41003,7 +41042,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _M_ be the *this* value.
           1. Perform ? RequireInternalSlot(_M_, [[WeakMapData]]).
-          1. If _key_ is not an Object, return *undefined*.
+          1. If CanBeHeldWeakly(_key_) is *false*, return *undefined*.
           1. For each Record { [[Key]], [[Value]] } _p_ of _M_.[[WeakMapData]], do
             1. If _p_.[[Key]] is not ~empty~ and SameValue(_p_.[[Key]], _key_) is *true*, return _p_.[[Value]].
           1. Return *undefined*.
@@ -41016,7 +41055,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _M_ be the *this* value.
           1. Perform ? RequireInternalSlot(_M_, [[WeakMapData]]).
-          1. If _key_ is not an Object, return *false*.
+          1. If CanBeHeldWeakly(_key_) is *false*, return *false*.
           1. For each Record { [[Key]], [[Value]] } _p_ of _M_.[[WeakMapData]], do
             1. If _p_.[[Key]] is not ~empty~ and SameValue(_p_.[[Key]], _key_) is *true*, return *true*.
           1. Return *false*.
@@ -41029,7 +41068,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _M_ be the *this* value.
           1. Perform ? RequireInternalSlot(_M_, [[WeakMapData]]).
-          1. If _key_ is not an Object, throw a *TypeError* exception.
+          1. If CanBeHeldWeakly(_key_) is *false*, throw a *TypeError* exception.
           1. For each Record { [[Key]], [[Value]] } _p_ of _M_.[[WeakMapData]], do
             1. If _p_.[[Key]] is not ~empty~ and SameValue(_p_.[[Key]], _key_) is *true*, then
               1. Set _p_.[[Value]] to _value_.
@@ -41055,8 +41094,8 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-weakset-objects">
     <h1>WeakSet Objects</h1>
-    <p>WeakSets are collections of objects. A distinct object may only occur once as an element of a WeakSet's collection. A WeakSet may be queried to see if it contains a specific object, but no mechanism is provided for enumerating the objects it holds. In certain conditions, objects which are not live are removed as WeakSet elements, as described in <emu-xref href="#sec-weakref-execution"></emu-xref>.</p>
-    <p>An implementation may impose an arbitrarily determined latency between the time an object contained in a WeakSet becomes inaccessible and the time when the object is removed from the WeakSet. If this latency was observable to ECMAScript program, it would be a source of indeterminacy that could impact program execution. For that reason, an ECMAScript implementation must not provide any means to determine if a WeakSet contains a particular object that does not require the observer to present the observed object.</p>
+    <p>WeakSets are collections of objects and/or symbols. A distinct object or symbol may only occur once as an element of a WeakSet's collection. A WeakSet may be queried to see if it contains a specific value, but no mechanism is provided for enumerating the values it holds. In certain conditions, values which are not live are removed as WeakSet elements, as described in <emu-xref href="#sec-weakref-execution"></emu-xref>.</p>
+    <p>An implementation may impose an arbitrarily determined latency between the time a value contained in a WeakSet becomes inaccessible and the time when the value is removed from the WeakSet. If this latency was observable to ECMAScript program, it would be a source of indeterminacy that could impact program execution. For that reason, an ECMAScript implementation must not provide any means to determine if a WeakSet contains a particular value that does not require the observer to present the observed value.</p>
     <p>WeakSets must be implemented using either hash tables or other mechanisms that, on average, provide access times that are sublinear on the number of elements in the collection. The data structure used in this specification is only intended to describe the required observable semantics of WeakSets. It is not intended to be a viable implementation model.</p>
     <emu-note>
       <p>See the NOTE in <emu-xref href="#sec-weakmap-objects"></emu-xref>.</p>
@@ -41125,7 +41164,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _S_ be the *this* value.
           1. Perform ? RequireInternalSlot(_S_, [[WeakSetData]]).
-          1. If _value_ is not an Object, throw a *TypeError* exception.
+          1. If CanBeHeldWeakly(_value_) is *false*, throw a *TypeError* exception.
           1. For each element _e_ of _S_.[[WeakSetData]], do
             1. If _e_ is not ~empty~ and SameValue(_e_, _value_) is *true*, then
               1. Return _S_.
@@ -41145,7 +41184,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _S_ be the *this* value.
           1. Perform ? RequireInternalSlot(_S_, [[WeakSetData]]).
-          1. If _value_ is not an Object, return *false*.
+          1. If CanBeHeldWeakly(_value_) is *false*, return *false*.
           1. For each element _e_ of _S_.[[WeakSetData]], do
             1. If _e_ is not ~empty~ and SameValue(_e_, _value_) is *true*, then
               1. Replace the element of _S_.[[WeakSetData]] whose value is _e_ with an element whose value is ~empty~.
@@ -41163,7 +41202,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _S_ be the *this* value.
           1. Perform ? RequireInternalSlot(_S_, [[WeakSetData]]).
-          1. If _value_ is not an Object, return *false*.
+          1. If CanBeHeldWeakly(_value_) is *false*, return *false*.
           1. For each element _e_ of _S_.[[WeakSetData]], do
             1. If _e_ is not ~empty~ and SameValue(_e_, _value_) is *true*, return *true*.
           1. Return *false*.
@@ -43243,7 +43282,7 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-weak-ref-objects">
     <h1>WeakRef Objects</h1>
-    <p>A WeakRef is an object that is used to refer to a target object without preserving it from garbage collection. WeakRefs can be dereferenced to allow access to the target object, if the target object hasn't been reclaimed by garbage collection.</p>
+    <p>A WeakRef is an object that is used to refer to a target object or symbol without preserving it from garbage collection. WeakRefs can be dereferenced to allow access to the target value, if the target hasn't been reclaimed by garbage collection.</p>
 
     <emu-clause id="sec-weak-ref-constructor">
       <h1>The WeakRef Constructor</h1>
@@ -43269,7 +43308,7 @@ THH:mm:ss.sss
         <p>This function performs the following steps when called:</p>
         <emu-alg>
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
-          1. If _target_ is not an Object, throw a *TypeError* exception.
+          1. If CanBeHeldWeakly(_target_) is *false*, throw a *TypeError* exception.
           1. Let _weakRef_ be ? OrdinaryCreateFromConstructor(NewTarget, *"%WeakRef.prototype%"*, « [[WeakRefTarget]] »).
           1. Perform AddToKeptObjects(_target_).
           1. Set _weakRef_.[[WeakRefTarget]] to _target_.
@@ -43325,7 +43364,7 @@ THH:mm:ss.sss
         </emu-alg>
 
         <emu-note>
-          <p>If the WeakRef returns a _target_ Object that is not *undefined*, then this _target_ object should not be garbage collected until the current execution of ECMAScript code has completed. The AddToKeptObjects operation makes sure read consistency is maintained.</p>
+          <p>If the WeakRef returns a _target_ value that is not *undefined*, then this _target_ value should not be garbage collected until the current execution of ECMAScript code has completed. The AddToKeptObjects operation makes sure read consistency is maintained.</p>
 
           <pre><code class="javascript">
             let target = { foo() {} };
@@ -43381,7 +43420,7 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-finalization-registry-objects">
     <h1>FinalizationRegistry Objects</h1>
-    <p>A FinalizationRegistry is an object that manages registration and unregistration of cleanup operations that are performed when target objects are garbage collected.</p>
+    <p>A FinalizationRegistry is an object that manages registration and unregistration of cleanup operations that are performed when target objects and symbols are garbage collected.</p>
 
     <emu-clause id="sec-finalization-registry-constructor">
       <h1>The FinalizationRegistry Constructor</h1>
@@ -43460,9 +43499,9 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _finalizationRegistry_ be the *this* value.
           1. Perform ? RequireInternalSlot(_finalizationRegistry_, [[Cells]]).
-          1. If _target_ is not an Object, throw a *TypeError* exception.
+          1. If CanBeHeldWeakly(_target_) is *false*, throw a *TypeError* exception.
           1. If SameValue(_target_, _heldValue_) is *true*, throw a *TypeError* exception.
-          1. If _unregisterToken_ is not an Object, then
+          1. If CanBeHeldWeakly(_unregisterToken_) is *false*, then
             1. If _unregisterToken_ is not *undefined*, throw a *TypeError* exception.
             1. Set _unregisterToken_ to ~empty~.
           1. Let _cell_ be the Record { [[WeakRefTarget]]: _target_, [[HeldValue]]: _heldValue_, [[UnregisterToken]]: _unregisterToken_ }.
@@ -43481,7 +43520,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _finalizationRegistry_ be the *this* value.
           1. Perform ? RequireInternalSlot(_finalizationRegistry_, [[Cells]]).
-          1. If _unregisterToken_ is not an Object, throw a *TypeError* exception.
+          1. If CanBeHeldWeakly(_unregisterToken_) is *false*, throw a *TypeError* exception.
           1. Let _removed_ be *false*.
           1. For each Record { [[WeakRefTarget]], [[HeldValue]], [[UnregisterToken]] } _cell_ of _finalizationRegistry_.[[Cells]], do
             1. If _cell_.[[UnregisterToken]] is not ~empty~ and SameValue(_cell_.[[UnregisterToken]], _unregisterToken_) is *true*, then
