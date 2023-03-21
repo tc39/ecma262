@@ -28958,8 +28958,7 @@
           1. Let _alwaysUnescaped_ be the string-concatenation of the ASCII word characters and *"-.!~\*'()"*.
           1. Let _unescapedSet_ be the string-concatenation of _alwaysUnescaped_ and _extraUnescaped_.
           1. Let _k_ be 0.
-          1. Repeat,
-            1. If _k_ = _strLen_, return _R_.
+          1. Repeat, while _k_ &lt; _strLen_,
             1. Let _C_ be the code unit at index _k_ within _string_.
             1. If _unescapedSet_ contains _C_, then
               1. Set _k_ to _k_ + 1.
@@ -28972,6 +28971,7 @@
               1. For each element _octet_ of _Octets_, do
                 1. Let _hex_ be the String representation of _octet_, formatted as an uppercase hexadecimal number.
                 1. Set _R_ to the string-concatenation of _R_, *"%"*, and ! StringPad(_hex_, *2*<sub>𝔽</sub>, *"0"*, ~start~).
+          1. Return _R_.
         </emu-alg>
         <emu-note>
           <p>Because percent-encoding is used to represent individual octets, a single code point may be expressed as multiple consecutive escape sequences (one for each of its 8-bit UTF-8 code units).</p>
@@ -28993,16 +28993,17 @@
           1. Let _strLen_ be the length of _string_.
           1. Let _R_ be the empty String.
           1. Let _k_ be 0.
-          1. Repeat,
-            1. If _k_ = _strLen_, return _R_.
+          1. Repeat, while _k_ &lt; _strLen_,
             1. Let _C_ be the code unit at index _k_ within _string_.
             1. If _C_ is not the code unit 0x0025 (PERCENT SIGN), then
               1. Let _S_ be the String value containing only the code unit _C_.
             1. Else,
               1. Let _start_ be _k_.
               1. If _k_ + 2 ≥ _strLen_, throw a *URIError* exception.
-              1. If the code units at index (_k_ + 1) and (_k_ + 2) within _string_ do not represent hexadecimal digits, throw a *URIError* exception.
-              1. Let _B_ be the 8-bit value represented by the two hexadecimal digits at index (_k_ + 1) and (_k_ + 2).
+              1. Let _hexDigits_ be the substring of _string_ from _k_ + 1 to _k_ + 3.
+              1. Let _parseResult_ be ParseText(StringToCodePoints(_hexDigits_), |HexDigits[~Sep]|).
+              1. If _parseResult_ is not a Parse Node, throw a *URIError* exception.
+              1. Let _B_ be the unsigned 8-bit value corresponding with the MV of _parseResult_.
               1. Set _k_ to _k_ + 2.
               1. Let _n_ be the number of leading 1 bits in _B_.
               1. If _n_ = 0, then
@@ -29019,10 +29020,12 @@
                 1. Repeat, while _j_ &lt; _n_,
                   1. Set _k_ to _k_ + 1.
                   1. If the code unit at index _k_ within _string_ is not the code unit 0x0025 (PERCENT SIGN), throw a *URIError* exception.
-                  1. If the code units at index (_k_ + 1) and (_k_ + 2) within _string_ do not represent hexadecimal digits, throw a *URIError* exception.
-                  1. Let _B_ be the 8-bit value represented by the two hexadecimal digits at index (_k_ + 1) and (_k_ + 2).
-                  1. Set _k_ to _k_ + 2.
+                  1. Let _hexDigits_ be the substring of _string_ from _k_ + 1 to _k_ + 3.
+                  1. Let _parseResult_ be ParseText(StringToCodePoints(_hexDigits_), |HexDigits[~Sep]|).
+                  1. If _parseResult_ is not a Parse Node, throw a *URIError* exception.
+                  1. Let _B_ be the unsigned 8-bit value corresponding with the MV of _parseResult_.
                   1. Append _B_ to _Octets_.
+                  1. Set _k_ to _k_ + 2.
                   1. Set _j_ to _j_ + 1.
                 1. Assert: The length of _Octets_ is _n_.
                 1. If _Octets_ does not contain a valid UTF-8 encoding of a Unicode code point, throw a *URIError* exception.
@@ -29030,6 +29033,7 @@
                 1. Let _S_ be UTF16EncodeCodePoint(_V_).
             1. Set _R_ to the string-concatenation of _R_ and _S_.
             1. Set _k_ to _k_ + 1.
+          1. Return _R_.
         </emu-alg>
         <emu-note>
           <p>RFC 3629 prohibits the decoding of invalid UTF-8 octet sequences. For example, the invalid sequence 0xC0 0x80 must not decode into the code unit 0x0000. Implementations of the Decode algorithm are required to throw a *URIError* when encountering such invalid sequences.</p>
@@ -47951,16 +47955,16 @@ THH:mm:ss.sss
         <p>It performs the following steps when called:</p>
         <emu-alg>
           1. Set _string_ to ? ToString(_string_).
-          1. Let _length_ be the length of _string_.
+          1. Let _strLen_ be the length of _string_.
           1. Let _R_ be the empty String.
           1. Let _unescapedSet_ be the string-concatenation of the ASCII word characters and *"@\*+-./"*.
           1. Let _k_ be 0.
-          1. Repeat, while _k_ &lt; _length_,
-            1. Let _char_ be the code unit at index _k_ within _string_.
-            1. If _unescapedSet_ contains _char_, then
-              1. Let _S_ be the String value containing the single code unit _char_.
+          1. Repeat, while _k_ &lt; _strLen_,
+            1. Let _C_ be the code unit at index _k_ within _string_.
+            1. If _unescapedSet_ contains _C_, then
+              1. Let _S_ be _C_.
             1. Else,
-              1. Let _n_ be the numeric value of _char_.
+              1. Let _n_ be the numeric value of _C_.
               1. If _n_ &lt; 256, then
                 1. Let _hex_ be the String representation of _n_, formatted as an uppercase hexadecimal number.
                 1. Let _S_ be the string-concatenation of *"%"* and ! StringPad(_hex_, *2*<sub>𝔽</sub>, *"0"*, ~start~).
@@ -47983,26 +47987,26 @@ THH:mm:ss.sss
         <p>It performs the following steps when called:</p>
         <emu-alg>
           1. Set _string_ to ? ToString(_string_).
-          1. Let _length_ be the length of _string_.
+          1. Let _strLen_ be the length of _string_.
           1. Let _R_ be the empty String.
           1. Let _k_ be 0.
-          1. Repeat, while _k_ &lt; _length_,
-            1. Let _char_ be the code unit at index _k_ within _string_.
-            1. If _char_ is the code unit 0x0025 (PERCENT SIGN), then
+          1. Repeat, while _k_ &lt; _strLen_,
+            1. Let _C_ be the code unit at index _k_ within _string_.
+            1. If _C_ is the code unit 0x0025 (PERCENT SIGN), then
               1. Let _hexDigits_ be the empty String.
               1. Let _optionalAdvance_ be 0.
-              1. If _k_ + 5 &lt; _length_ and the code unit at index _k_ + 1 within _string_ is the code unit 0x0075 (LATIN SMALL LETTER U), then
+              1. If _k_ + 5 &lt; _strLen_ and the code unit at index _k_ + 1 within _string_ is the code unit 0x0075 (LATIN SMALL LETTER U), then
                 1. Set _hexDigits_ to the substring of _string_ from _k_ + 2 to _k_ + 6.
                 1. Set _optionalAdvance_ to 5.
-              1. Else if _k_ + 2 &lt; _length_, then
+              1. Else if _k_ + 2 &lt; _strLen_, then
                 1. Set _hexDigits_ to the substring of _string_ from _k_ + 1 to _k_ + 3.
                 1. Set _optionalAdvance_ to 2.
               1. Let _parseResult_ be ParseText(StringToCodePoints(_hexDigits_), |HexDigits[~Sep]|).
               1. If _parseResult_ is a Parse Node, then
                 1. Let _n_ be the MV of _parseResult_.
-                1. Set _char_ to the code unit whose numeric value is ℝ(_n_).
+                1. Set _C_ to the code unit whose numeric value is ℝ(_n_).
                 1. Set _k_ to _k_ + _optionalAdvance_.
-            1. Set _R_ to the string-concatenation of _R_ and _char_.
+            1. Set _R_ to the string-concatenation of _R_ and _C_.
             1. Set _k_ to _k_ + 1.
           1. Return _R_.
         </emu-alg>
