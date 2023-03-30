@@ -6797,31 +6797,43 @@
       </emu-table>
     </emu-clause>
 
+    <emu-clause id="sec-getiteratorfrommethod" type="abstract operation">
+      <h1>
+        GetIteratorFromMethod (
+          _obj_: an ECMAScript language value,
+          _method_: a function object,
+        ): either a normal completion containing an Iterator Record or a throw completion
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. Let _iterator_ be ? Call(_method_, _obj_).
+        1. If _iterator_ is not an Object, throw a *TypeError* exception.
+        1. Let _nextMethod_ be ? GetV(_iterator_, *"next"*).
+        1. Let _iteratorRecord_ be the Iterator Record { [[Iterator]]: _iterator_, [[NextMethod]]: _nextMethod_, [[Done]]: *false* }.
+        1. Return _iteratorRecord_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-getiterator" type="abstract operation">
       <h1>
         GetIterator (
           _obj_: an ECMAScript language value,
           optional _hint_: ~sync~ or ~async~,
-          optional _method_: a function object,
         ): either a normal completion containing an Iterator Record or a throw completion
       </h1>
       <dl class="header">
       </dl>
       <emu-alg>
         1. If _hint_ is not present, set _hint_ to ~sync~.
-        1. If _method_ is not present, then
-          1. If _hint_ is ~async~, then
-            1. Set _method_ to ? GetMethod(_obj_, @@asyncIterator).
-            1. If _method_ is *undefined*, then
-              1. Let _syncMethod_ be ? GetMethod(_obj_, @@iterator).
-              1. Let _syncIteratorRecord_ be ? GetIterator(_obj_, ~sync~, _syncMethod_).
-              1. Return CreateAsyncFromSyncIterator(_syncIteratorRecord_).
-          1. Otherwise, set _method_ to ? GetMethod(_obj_, @@iterator).
-        1. Let _iterator_ be ? Call(_method_, _obj_).
-        1. If _iterator_ is not an Object, throw a *TypeError* exception.
-        1. Let _nextMethod_ be ? GetV(_iterator_, *"next"*).
-        1. Let _iteratorRecord_ be the Iterator Record { [[Iterator]]: _iterator_, [[NextMethod]]: _nextMethod_, [[Done]]: *false* }.
-        1. Return _iteratorRecord_.
+        1. If _hint_ is ~async~, then
+          1. Let _method_ be ? GetMethod(_obj_, @@asyncIterator).
+          1. If _method_ is *undefined*, then
+            1. Let _syncMethod_ be ? GetMethod(_obj_, @@iterator).
+            1. Let _syncIteratorRecord_ be ? GetIteratorFromMethod(_obj_, _syncMethod_).
+            1. Return CreateAsyncFromSyncIterator(_syncIteratorRecord_).
+        1. Otherwise, let _method_ be ? GetMethod(_obj_, @@iterator).
+        1. Return ? GetIteratorFromMethod(_obj_, _method_).
       </emu-alg>
     </emu-clause>
 
@@ -7008,7 +7020,7 @@
       </dl>
       <emu-alg>
         1. If _method_ is present, then
-          1. Let _iteratorRecord_ be ? GetIterator(_items_, ~sync~, _method_).
+          1. Let _iteratorRecord_ be ? GetIteratorFromMethod(_items_, _method_).
         1. Else,
           1. Let _iteratorRecord_ be ? GetIterator(_items_, ~sync~).
         1. Let _values_ be a new empty List.
@@ -37258,7 +37270,7 @@ THH:mm:ss.sss
               1. Let _A_ be ? Construct(_C_).
             1. Else,
               1. Let _A_ be ! ArrayCreate(0).
-            1. Let _iteratorRecord_ be ? GetIterator(_items_, ~sync~, _usingIterator_).
+            1. Let _iteratorRecord_ be ? GetIteratorFromMethod(_items_, _usingIterator_).
             1. Let _k_ be 0.
             1. Repeat,
               1. If _k_ ≥ 2<sup>53</sup> - 1, then
