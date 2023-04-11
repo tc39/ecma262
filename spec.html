@@ -9430,9 +9430,11 @@
         ): either a normal completion containing ~unused~ or an abrupt completion
       </h1>
       <dl class="header">
+        <dt>description</dt>
+        <dd>It uses values from _iteratorRecord_ to initialize bindings in _environment_ corresponding with the structure of its parse node.</dd>
       </dl>
       <emu-note>
-        <p>When *undefined* is passed for _environment_ it indicates that a PutValue operation should be used to assign the initialization value. This is the case for formal parameter lists of non-strict functions. In that case the formal parameter bindings are preinitialized in order to deal with the possibility of multiple parameters with the same name.</p>
+        <p>When *undefined* is passed for _environment_ it indicates that a PutValue operation should be used to assign the initialization value. This is the case for formal parameter lists of non-strict functions that contain duplicate parameter names. In that case the parameter bindings are preinitialized before invoking this operation.</p>
       </emu-note>
       <emu-grammar>ArrayBindingPattern : `[` `]`</emu-grammar>
       <emu-alg>
@@ -13182,7 +13184,7 @@
               1. Let _thisValue_ be ! ToObject(_thisArgument_).
               1. NOTE: ToObject produces wrapper objects using _calleeRealm_.
           1. Assert: _localEnv_ is a Function Environment Record.
-          1. Assert: The next step never returns an abrupt completion because _localEnv_.[[ThisBindingStatus]] is not ~initialized~.
+          1. Assert: _localEnv_.[[ThisBindingStatus]] is ~uninitialized~.
           1. Perform ! _localEnv_.BindThisValue(_thisValue_).
           1. Return ~unused~.
         </emu-alg>
@@ -13563,70 +13565,61 @@
         1. Else if _hasParameterExpressions_ is *false*, then
           1. If _functionNames_ contains *"arguments"* or _lexicalNames_ contains *"arguments"*, then
             1. Set _argumentsObjectNeeded_ to *false*.
-        1. If _strict_ is *true* or _hasParameterExpressions_ is *false*, then
-          1. NOTE: Only a single Environment Record is needed for the parameters, since calls to `eval` in strict mode code cannot create new bindings which are visible outside of the `eval`.
-          1. Let _env_ be the LexicalEnvironment of _calleeContext_.
-        1. Else,
-          1. NOTE: A separate Environment Record is needed to ensure that bindings created by direct eval calls in the formal parameter list are outside the environment where parameters are declared.
+        1. If _strict_ is *false* and _hasParameterExpressions_ is *true*, then
+          1. NOTE: Direct eval calls in the formal parameter list of a non-strict function can create bindings which are visible outside of the `eval`, so a separate Environment Record is needed to ensure that such bindings do not affect the environment where parameters are declared.
           1. Let _calleeEnv_ be the LexicalEnvironment of _calleeContext_.
-          1. Let _env_ be NewDeclarativeEnvironment(_calleeEnv_).
           1. Assert: The VariableEnvironment of _calleeContext_ is _calleeEnv_.
-          1. Set the LexicalEnvironment of _calleeContext_ to _env_.
+          1. Set the LexicalEnvironment of _calleeContext_ to NewDeclarativeEnvironment(_calleeEnv_).
+        1. Let _env_ be the LexicalEnvironment of _calleeContext_.
         1. For each String _paramName_ of _parameterNames_, do
           1. Let _alreadyDeclared_ be ! _env_.HasBinding(_paramName_).
           1. NOTE: Early errors ensure that duplicate parameter names can only occur in non-strict functions that do not have parameter default values or rest parameters.
           1. If _alreadyDeclared_ is *false*, then
             1. Perform ! _env_.CreateMutableBinding(_paramName_, *false*).
             1. If _hasDuplicates_ is *true*, then
+              1. NOTE: The binding for each unique parameter name is initialized here so that step <emu-xref href="#step-functiondeclarationinstantiation-initialize-duplicate-parameter-bindings"></emu-xref> can invoke IteratorBindingInitialization without an Environment Record (to accommodate the duplicate names).
               1. Perform ! _env_.InitializeBinding(_paramName_, *undefined*).
         1. If _argumentsObjectNeeded_ is *true*, then
-          1. If _strict_ is *true* or _simpleParameterList_ is *false*, then
-            1. Let _ao_ be CreateUnmappedArgumentsObject(_argumentsList_).
-          1. Else,
-            1. NOTE: A mapped argument object is only provided for non-strict functions that don't have a rest parameter, any parameter default value initializers, or any destructured parameters.
+          1. NOTE: A mapped argument object is only provided for non-strict functions with <emu-xref href="#sec-static-semantics-issimpleparameterlist">simple parameter lists</emu-xref> (which don't contain any parameter initializers, destructured parameters, or rest parameters).
+          1. If _strict_ is *false* and _simpleParameterList_ is *true*, then
             1. Let _ao_ be CreateMappedArgumentsObject(_func_, _formals_, _argumentsList_, _env_).
+          1. Else,
+            1. Let _ao_ be CreateUnmappedArgumentsObject(_argumentsList_).
           1. If _strict_ is *true*, then
             1. Perform ! _env_.CreateImmutableBinding(*"arguments"*, *false*).
-            1. NOTE: In strict mode code early errors prevent attempting to assign to this binding, so its mutability is not observable.
+            1. NOTE: In strict mode code, the immutability of this binding is not observable because early errors prevent attempting to assign to it.
           1. Else,
             1. Perform ! _env_.CreateMutableBinding(*"arguments"*, *false*).
           1. Perform ! _env_.InitializeBinding(*"arguments"*, _ao_).
           1. Let _parameterBindings_ be the list-concatenation of _parameterNames_ and « *"arguments"* ».
         1. Else,
           1. Let _parameterBindings_ be _parameterNames_.
-        1. Let _iteratorRecord_ be CreateListIteratorRecord(_argumentsList_).
+        1. Let _argumentsIterator_ be CreateListIteratorRecord(_argumentsList_).
         1. If _hasDuplicates_ is *true*, then
-          1. Perform ? IteratorBindingInitialization of _formals_ with arguments _iteratorRecord_ and *undefined*.
+          1. [id="step-functiondeclarationinstantiation-initialize-duplicate-parameter-bindings"] Perform ? IteratorBindingInitialization of _formals_ with arguments _argumentsIterator_ and *undefined*.
         1. Else,
-          1. Perform ? IteratorBindingInitialization of _formals_ with arguments _iteratorRecord_ and _env_.
-        1. If _hasParameterExpressions_ is *false*, then
-          1. NOTE: Only a single Environment Record is needed for the parameters and top-level vars.
-          1. Let _instantiatedVarNames_ be a copy of the List _parameterBindings_.
-          1. For each element _n_ of _varNames_, do
-            1. If _instantiatedVarNames_ does not contain _n_, then
-              1. Append _n_ to _instantiatedVarNames_.
-              1. Perform ! _env_.CreateMutableBinding(_n_, *false*).
-              1. Perform ! _env_.InitializeBinding(_n_, *undefined*).
-          1. Let _varEnv_ be _env_.
-        1. Else,
-          1. NOTE: A separate Environment Record is needed to ensure that closures created by expressions in the formal parameter list do not have visibility of declarations in the function body.
+          1. Perform ? IteratorBindingInitialization of _formals_ with arguments _argumentsIterator_ and _env_.
+        1. NOTE: If the formal parameter list contains any expressions, a separate Environment Record for the function body is needed to ensure that declarations in the function body are not visible to closures created by those expressions.
+        1. If _hasParameterExpressions_ is *true*, then
           1. Let _varEnv_ be NewDeclarativeEnvironment(_env_).
           1. Set the VariableEnvironment of _calleeContext_ to _varEnv_.
           1. Let _instantiatedVarNames_ be a new empty List.
-          1. For each element _n_ of _varNames_, do
-            1. If _instantiatedVarNames_ does not contain _n_, then
-              1. Append _n_ to _instantiatedVarNames_.
-              1. Perform ! _varEnv_.CreateMutableBinding(_n_, *false*).
-              1. If _parameterBindings_ does not contain _n_, or if _functionNames_ contains _n_, let _initialValue_ be *undefined*.
-              1. Else,
-                1. Let _initialValue_ be ! _env_.GetBindingValue(_n_, *false*).
-              1. Perform ! _varEnv_.InitializeBinding(_n_, _initialValue_).
-              1. NOTE: A var with the same name as a formal parameter initially has the same value as the corresponding initialized parameter.
+        1. Else,
+          1. Let _varEnv_ be _env_.
+          1. Let _instantiatedVarNames_ be a copy of the List _parameterBindings_.
+        1. For each element _n_ of _varNames_, do
+          1. If _instantiatedVarNames_ does not contain _n_, then
+            1. Append _n_ to _instantiatedVarNames_.
+            1. Perform ! _varEnv_.CreateMutableBinding(_n_, *false*).
+            1. NOTE: When there are expressions in the parameter list, it is possible to observe a difference between a variable in the parameter list and a variable in the body with the same name. The variable in the body initially has the same value as the corresponding initialized parameter.
+            1. If _parameterBindings_ contains _n_ and _functionNames_ does not contain _n_, then
+              1. Let _initialValue_ be ! _env_.GetBindingValue(_n_, *false*).
+            1. Else,
+              1. Let _initialValue_ be *undefined*.
+            1. Perform ! _varEnv_.InitializeBinding(_n_, _initialValue_).
         1. [id="step-functiondeclarationinstantiation-web-compat-insertion-point"] NOTE: Annex <emu-xref href="#sec-web-compat-functiondeclarationinstantiation"></emu-xref> adds additional steps at this point.
-        1. If _strict_ is *false*, then
-          1. Let _lexEnv_ be NewDeclarativeEnvironment(_varEnv_).
-          1. NOTE: Non-strict functions use a separate Environment Record for top-level lexical declarations so that a direct eval can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions because a strict direct eval always places all declarations into a new Environment Record.
-        1. Else, let _lexEnv_ be _varEnv_.
+        1. NOTE: Non-strict functions use a separate Environment Record for top-level lexical declarations so that a direct eval can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions, in which direct eval declarations never add bindings to the outer environment.
+        1. If _strict_ is *false*, let _lexEnv_ be NewDeclarativeEnvironment(_varEnv_). Otherwise, let _lexEnv_ be _varEnv_.
         1. Set the LexicalEnvironment of _calleeContext_ to _lexEnv_.
         1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
         1. For each element _d_ of _lexDeclarations_, do
