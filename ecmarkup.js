@@ -1330,7 +1330,12 @@ function addStepNumberText(
     const marker = document.createElement('span');
     marker.textContent = `${i < cache.length ? cache[i] : getTextForIndex(i)}. `;
     marker.setAttribute('aria-hidden', 'true');
-    li.prepend(marker);
+    const attributesContainer = li.querySelector('.attributes-tag');
+    if (attributesContainer == null) {
+      li.prepend(marker);
+    } else {
+      attributesContainer.insertAdjacentElement('afterend', marker);
+    }
     for (const sublist of li.querySelectorAll(':scope > ol')) {
       addStepNumberText(sublist, depth + 1, special);
     }
