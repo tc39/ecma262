@@ -18428,13 +18428,14 @@
         </dl>
         <emu-alg>
           1. Let _flags_ be FlagText of _literal_.
-          1. If _flags_ contains any code points other than `d`, `g`, `i`, `m`, `s`, `u`, or `y`, or if _flags_ contains any code point more than once, return *false*.
+          1. If _flags_ contains any code points other than `d`, `g`, `i`, `m`, `s`, `u`, `v`, or `y`, or if _flags_ contains any code point more than once, return *false*.
           1. If _flags_ contains `u`, let _u_ be *true*; else let _u_ be *false*.
+          1. If _flags_ contains `v`, let _v_ be *true*; else let _v_ be *false*.
           1. Let _patternText_ be BodyText of _literal_.
-          1. If _u_ is *false*, then
+          1. If _u_ is *false* and _v_ is *false*, then
             1. Let _stringValue_ be CodePointsToString(_patternText_).
             1. Set _patternText_ to the sequence of code points resulting from interpreting each of the 16-bit elements of _stringValue_ as a Unicode BMP code point. UTF-16 decoding is not applied to the elements.
-          1. Let _parseResult_ be ParsePattern(_patternText_, _u_).
+          1. Let _parseResult_ be ParsePattern(_patternText_, _u_, _v_).
           1. If _parseResult_ is a Parse Node, return *true*; else return *false*.
         </emu-alg>
       </emu-clause>
@@ -34932,31 +34933,31 @@ THH:mm:ss.sss
       <p>The RegExp constructor applies the following grammar to the input pattern String. An error occurs if the grammar cannot interpret the String as an expansion of |Pattern|.</p>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
-        Pattern[UnicodeMode, N] ::
-          Disjunction[?UnicodeMode, ?N]
+        Pattern[UnicodeMode, UnicodeSetsMode, N] ::
+          Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N]
 
-        Disjunction[UnicodeMode, N] ::
-          Alternative[?UnicodeMode, ?N]
-          Alternative[?UnicodeMode, ?N] `|` Disjunction[?UnicodeMode, ?N]
+        Disjunction[UnicodeMode, UnicodeSetsMode, N] ::
+          Alternative[?UnicodeMode, ?UnicodeSetsMode, ?N]
+          Alternative[?UnicodeMode, ?UnicodeSetsMode, ?N] `|` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N]
 
-        Alternative[UnicodeMode, N] ::
+        Alternative[UnicodeMode, UnicodeSetsMode, N] ::
           [empty]
-          Alternative[?UnicodeMode, ?N] Term[?UnicodeMode, ?N]
+          Alternative[?UnicodeMode, ?UnicodeSetsMode, ?N] Term[?UnicodeMode, ?UnicodeSetsMode, ?N]
 
-        Term[UnicodeMode, N] ::
-          Assertion[?UnicodeMode, ?N]
-          Atom[?UnicodeMode, ?N]
-          Atom[?UnicodeMode, ?N] Quantifier
+        Term[UnicodeMode, UnicodeSetsMode, N] ::
+          Assertion[?UnicodeMode, ?UnicodeSetsMode, ?N]
+          Atom[?UnicodeMode, ?UnicodeSetsMode, ?N]
+          Atom[?UnicodeMode, ?UnicodeSetsMode, ?N] Quantifier
 
-        Assertion[UnicodeMode, N] ::
+        Assertion[UnicodeMode, UnicodeSetsMode, N] ::
           `^`
           `$`
           `\b`
           `\B`
-          `(?=` Disjunction[?UnicodeMode, ?N] `)`
-          `(?!` Disjunction[?UnicodeMode, ?N] `)`
-          `(?&lt;=` Disjunction[?UnicodeMode, ?N] `)`
-          `(?&lt;!` Disjunction[?UnicodeMode, ?N] `)`
+          `(?=` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N] `)`
+          `(?!` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N] `)`
+          `(?&lt;=` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N] `)`
+          `(?&lt;!` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N] `)`
 
         Quantifier ::
           QuantifierPrefix
@@ -34970,13 +34971,13 @@ THH:mm:ss.sss
           `{` DecimalDigits[~Sep] `,}`
           `{` DecimalDigits[~Sep] `,` DecimalDigits[~Sep] `}`
 
-        Atom[UnicodeMode, N] ::
+        Atom[UnicodeMode, UnicodeSetsMode, N] ::
           PatternCharacter
           `.`
           `\` AtomEscape[?UnicodeMode, ?N]
-          CharacterClass[?UnicodeMode]
-          `(` GroupSpecifier[?UnicodeMode]? Disjunction[?UnicodeMode, ?N] `)`
-          `(?:` Disjunction[?UnicodeMode, ?N] `)`
+          CharacterClass[?UnicodeMode, ?UnicodeSetsMode]
+          `(` GroupSpecifier[?UnicodeMode]? Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N] `)`
+          `(?:` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N] `)`
 
         SyntaxCharacter :: one of
           `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `]` `{` `}` `|`
@@ -35091,23 +35092,24 @@ THH:mm:ss.sss
           AsciiLetter
           `_`
 
-        CharacterClass[UnicodeMode] ::
-          `[` [lookahead != `^`] ClassRanges[?UnicodeMode] `]`
-          `[^` ClassRanges[?UnicodeMode] `]`
+        CharacterClass[UnicodeMode, UnicodeSetsMode] ::
+          `[` [lookahead != `^`] ClassContents[?UnicodeMode, ?UnicodeSetsMode] `]`
+          `[^` ClassContents[?UnicodeMode, ?UnicodeSetsMode] `]`
 
-        ClassRanges[UnicodeMode] ::
+        ClassContents[UnicodeMode, UnicodeSetsMode] ::
           [empty]
-          NonemptyClassRanges[?UnicodeMode]
+          [~UnicodeSetsMode] NonemptyClassRanges[?UnicodeMode]
+          [+UnicodeSetsMode] ClassSetExpression
 
         NonemptyClassRanges[UnicodeMode] ::
           ClassAtom[?UnicodeMode]
           ClassAtom[?UnicodeMode] NonemptyClassRangesNoDash[?UnicodeMode]
-          ClassAtom[?UnicodeMode] `-` ClassAtom[?UnicodeMode] ClassRanges[?UnicodeMode]
+          ClassAtom[?UnicodeMode] `-` ClassAtom[?UnicodeMode] ClassContents[?UnicodeMode, ~UnicodeSetsMode]
 
         NonemptyClassRangesNoDash[UnicodeMode] ::
           ClassAtom[?UnicodeMode]
           ClassAtomNoDash[?UnicodeMode] NonemptyClassRangesNoDash[?UnicodeMode]
-          ClassAtomNoDash[?UnicodeMode] `-` ClassAtom[?UnicodeMode] ClassRanges[?UnicodeMode]
+          ClassAtomNoDash[?UnicodeMode] `-` ClassAtom[?UnicodeMode] ClassContents[?UnicodeMode, ~UnicodeSetsMode]
 
         ClassAtom[UnicodeMode] ::
           `-`
@@ -35122,8 +35124,80 @@ THH:mm:ss.sss
           [+UnicodeMode] `-`
           CharacterClassEscape[?UnicodeMode]
           CharacterEscape[?UnicodeMode]
-      </emu-grammar>
 
+        ClassSetExpression ::
+          ClassUnion
+          ClassIntersection
+          ClassSubtraction
+
+        ClassUnion ::
+          ClassSetRange ClassUnion?
+          ClassSetOperand ClassUnion?
+
+        ClassIntersection ::
+          ClassSetOperand `&amp;&amp;` [lookahead != `&amp;`] ClassSetOperand
+          ClassIntersection `&amp;&amp;` [lookahead != `&amp;`] ClassSetOperand
+
+        ClassSubtraction ::
+          ClassSetOperand `--` ClassSetOperand
+          ClassSubtraction `--` ClassSetOperand
+
+        ClassSetRange ::
+          ClassSetCharacter `-` ClassSetCharacter
+
+        ClassSetOperand ::
+          NestedClass
+          ClassStringDisjunction
+          ClassSetCharacter
+
+        NestedClass ::
+          `[` [lookahead != `^`] ClassContents[+UnicodeMode, +UnicodeSetsMode] `]`
+          `[^` ClassContents[+UnicodeMode, +UnicodeSetsMode] `]`
+          `\` CharacterClassEscape[+UnicodeMode]
+      </emu-grammar>
+      <emu-note>
+        <p>The first two lines here are equivalent to CharacterClass.</p>
+      </emu-note>
+      <emu-grammar type="definition">
+        ClassStringDisjunction ::
+          `\q{` ClassStringDisjunctionContents `}`
+
+        ClassStringDisjunctionContents ::
+          ClassString
+          ClassString `|` ClassStringDisjunctionContents
+
+        ClassString ::
+          [empty]
+          NonEmptyClassString
+
+        NonEmptyClassString ::
+          ClassSetCharacter NonEmptyClassString?
+
+        ClassSetCharacter ::
+          [lookahead &notin; ClassSetReservedDoublePunctuator] SourceCharacter but not ClassSetSyntaxCharacter
+          `\` CharacterEscape[+UnicodeMode]
+          `\` ClassSetReservedPunctuator
+          `\b`
+
+        ClassSetReservedDoublePunctuator :: one of
+          `&amp;&amp;` `!!` `##`
+          `$$` `%%` `**`
+          `++` `,,` `..`
+          `::` `;;` `&lt;&lt;`
+          `==` `&gt;&gt;` `??`
+          `@@` `^^` `&grave;&grave;`
+          `~~`
+      </emu-grammar>
+      <emu-grammar type="definition">
+        ClassSetSyntaxCharacter :: one of
+          `(` `)` `[` `]` `{` `}` `/` `-` `\` `|`
+      </emu-grammar>
+      <emu-grammar type="definition">
+        ClassSetReservedPunctuator :: one of
+          `&amp;` `-` `!` `#` `%` `,`
+          `:` `;` `&lt;` `=` `&gt;` `@`
+          `&grave;` `~`
+      </emu-grammar>
       <emu-note>
         <p>A number of productions in this section are given alternative definitions in section <emu-xref href="#sec-regular-expressions-patterns"></emu-xref>.</p>
       </emu-note>
@@ -35160,7 +35234,7 @@ THH:mm:ss.sss
             It is a Syntax Error if the CapturingGroupNumber of |DecimalEscape| is strictly greater than CountLeftCapturingParensWithin(the |Pattern| containing |AtomEscape|).
           </li>
         </ul>
-        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
+        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassContents</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *true* or IsCharacterClass of the second |ClassAtom| is *true*.
@@ -35169,7 +35243,7 @@ THH:mm:ss.sss
             It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *false*, IsCharacterClass of the second |ClassAtom| is *false*, and the CharacterValue of the first |ClassAtom| is strictly greater than the CharacterValue of the second |ClassAtom|.
           </li>
         </ul>
-        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
+        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassContents</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *true* or IsCharacterClass of |ClassAtom| is *true*.
@@ -35214,7 +35288,34 @@ THH:mm:ss.sss
         <emu-grammar>UnicodePropertyValueExpression :: LoneUnicodePropertyNameOrValue</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the source text matched by |LoneUnicodePropertyNameOrValue| is not a Unicode property value or property value alias for the General_Category (gc) property listed in <a href="https://unicode.org/Public/UCD/latest/ucd/PropertyValueAliases.txt"><code>PropertyValueAliases.txt</code></a>, nor a binary property or binary property alias listed in the “Property name and aliases” column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
+            It is a Syntax Error if the source text matched by |LoneUnicodePropertyNameOrValue| is not a Unicode property value or property value alias for the General_Category (gc) property listed in <a href="https://unicode.org/Public/UCD/latest/ucd/PropertyValueAliases.txt"><code>PropertyValueAliases.txt</code></a>, nor a binary property or binary property alias listed in the “Property name and aliases” column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>, nor a binary property of strings listed in the “Property name” column of <emu-xref href="#table-binary-unicode-properties-of-strings"></emu-xref>.
+          </li>
+          <li>
+            It is a Syntax Error if the enclosing |Pattern| does not have a <sub>[UnicodeSetsMode]</sub> parameter and the source text matched by |LoneUnicodePropertyNameOrValue| is a binary property of strings listed in the “Property name” column of <emu-xref href="#table-binary-unicode-properties-of-strings"></emu-xref>.
+          </li>
+        </ul>
+        <emu-grammar>CharacterClassEscape :: `P{` UnicodePropertyValueExpression `}`</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if MayContainStrings of the |UnicodePropertyValueExpression| is *true*.
+          </li>
+        </ul>
+        <emu-grammar>CharacterClass :: `[^` ClassContents `]`</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if MayContainStrings of the |ClassContents| is *true*.
+          </li>
+        </ul>
+        <emu-grammar>NestedClass :: `[^` ClassContents `]`</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if MayContainStrings of the |ClassContents| is *true*.
+          </li>
+        </ul>
+        <emu-grammar>ClassSetRange :: ClassSetCharacter `-` ClassSetCharacter</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the CharacterValue of the first |ClassSetCharacter| is strictly greater than the CharacterValue of the second |ClassSetCharacter|.
           </li>
         </ul>
       </emu-clause>
@@ -35494,6 +35595,106 @@ THH:mm:ss.sss
           1. Let _ch_ be the code point matched by |IdentityEscape|.
           1. Return the numeric value of _ch_.
         </emu-alg>
+        <emu-grammar>ClassSetCharacter :: SourceCharacter but not ClassSetSyntaxCharacter</emu-grammar>
+        <emu-alg>
+          1. Let _ch_ be the code point matched by |SourceCharacter|.
+          1. Return the numeric value of _ch_.
+        </emu-alg>
+        <emu-grammar>ClassSetCharacter :: `\` ClassSetReservedPunctuator</emu-grammar>
+        <emu-alg>
+          1. Let _ch_ be the code point matched by |ClassSetReservedPunctuator|.
+          1. Return the numeric value of _ch_.
+        </emu-alg>
+        <emu-grammar>ClassSetCharacter :: `\b`</emu-grammar>
+        <emu-alg>
+          1. Return the numeric value of U+0008 (BACKSPACE).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-static-semantics-maycontainstrings" type="sdo">
+        <h1>Static Semantics: MayContainStrings ( ): a Boolean</h1>
+        <dl class="header">
+        </dl>
+        <emu-grammar>
+          CharacterClassEscape ::
+            `d`
+            `D`
+            `s`
+            `S`
+            `w`
+            `W`
+            `P{` UnicodePropertyValueExpression `}`
+
+          UnicodePropertyValueExpression ::
+            UnicodePropertyName `=` UnicodePropertyValue
+
+          NestedClass ::
+            `[^` ClassContents `]`
+
+          ClassContents ::
+            [empty]
+            NonemptyClassRanges
+
+          ClassSetOperand ::
+            ClassSetCharacter
+        </emu-grammar>
+        <emu-alg>
+          1. Return *false*.
+        </emu-alg>
+        <emu-grammar>UnicodePropertyValueExpression :: LoneUnicodePropertyNameOrValue</emu-grammar>
+        <emu-alg>
+          1. If the source text matched by |LoneUnicodePropertyNameOrValue| is a binary property of strings listed in the “Property name” column of <emu-xref href="#table-binary-unicode-properties-of-strings"></emu-xref>, return *true*.
+          1. Return *false*.
+        </emu-alg>
+        <emu-grammar>ClassUnion :: ClassSetRange ClassUnion?</emu-grammar>
+        <emu-alg>
+          1. If the |ClassUnion| is present, return MayContainStrings of the |ClassUnion|.
+          1. Return *false*.
+        </emu-alg>
+        <emu-grammar>ClassUnion :: ClassSetOperand ClassUnion?</emu-grammar>
+        <emu-alg>
+          1. If MayContainStrings of the |ClassSetOperand| is *true*, return *true*.
+          1. If |ClassUnion| is present, return MayContainStrings of the |ClassUnion|.
+          1. Return *false*.
+        </emu-alg>
+        <emu-grammar>ClassIntersection :: ClassSetOperand `&amp;&amp;` ClassSetOperand</emu-grammar>
+        <emu-alg>
+          1. If MayContainStrings of the first |ClassSetOperand| is *false*, return *false*.
+          1. If MayContainStrings of the second |ClassSetOperand| is *false*, return *false*.
+          1. Return *true*.
+        </emu-alg>
+        <emu-grammar>ClassIntersection :: ClassIntersection `&amp;&amp;` ClassSetOperand</emu-grammar>
+        <emu-alg>
+          1. If MayContainStrings of the |ClassIntersection| is *false*, return *false*.
+          1. If MayContainStrings of the |ClassSetOperand| is *false*, return *false*.
+          1. Return *true*.
+        </emu-alg>
+        <emu-grammar>ClassSubtraction :: ClassSetOperand `--` ClassSetOperand</emu-grammar>
+        <emu-alg>
+          1. Return MayContainStrings of the first |ClassSetOperand|.
+        </emu-alg>
+        <emu-grammar>ClassSubtraction :: ClassSubtraction `--` ClassSetOperand</emu-grammar>
+        <emu-alg>
+          1. Return MayContainStrings of the |ClassSubtraction|.
+        </emu-alg>
+        <emu-grammar>ClassStringDisjunctionContents :: ClassString `|` ClassStringDisjunctionContents</emu-grammar>
+        <emu-alg>
+          1. If MayContainStrings of the |ClassString| is *true*, return *true*.
+          1. Return MayContainStrings of the |ClassStringDisjunctionContents|.
+        </emu-alg>
+        <emu-grammar>ClassString :: [empty]</emu-grammar>
+        <emu-alg>
+          1. Return *true*.
+        </emu-alg>
+        <emu-grammar>ClassString :: NonEmptyClassString</emu-grammar>
+        <emu-alg>
+          1. Return MayContainStrings of the |NonEmptyClassString|.
+        </emu-alg>
+        <emu-grammar>NonEmptyClassString :: ClassSetCharacter NonEmptyClassString?</emu-grammar>
+        <emu-alg>
+          1. If |NonEmptyClassString| is present, return *true*.
+          1. Return *false*.
+        </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-groupspecifiersthatmatch" type="abstract operation">
@@ -35581,7 +35782,7 @@ THH:mm:ss.sss
     <emu-clause id="sec-pattern-semantics">
       <h1>Pattern Semantics</h1>
       <p>A regular expression pattern is converted into an Abstract Closure using the process described below. An implementation is encouraged to use more efficient algorithms than the ones listed below, as long as the results are the same. The Abstract Closure is used as the value of a RegExp object's [[RegExpMatcher]] internal slot.</p>
-      <p>A |Pattern| is either a BMP pattern or a Unicode pattern depending upon whether or not its associated flags contain a `u`. A BMP pattern matches against a String interpreted as consisting of a sequence of 16-bit values that are Unicode code points in the range of the Basic Multilingual Plane. A Unicode pattern matches against a String interpreted as consisting of Unicode code points encoded using UTF-16. In the context of describing the behaviour of a BMP pattern “character” means a single 16-bit Unicode BMP code point. In the context of describing the behaviour of a Unicode pattern “character” means a UTF-16 encoded code point (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>). In either context, “character value” means the numeric value of the corresponding non-encoded code point.</p>
+      <p>A |Pattern| is a BMP pattern if its associated flags contain neither a `u` nor a `v`. Otherwise, it is a Unicode pattern. A BMP pattern matches against a String interpreted as consisting of a sequence of 16-bit values that are Unicode code points in the range of the Basic Multilingual Plane. A Unicode pattern matches against a String interpreted as consisting of Unicode code points encoded using UTF-16. In the context of describing the behaviour of a BMP pattern “character” means a single 16-bit Unicode BMP code point. In the context of describing the behaviour of a Unicode pattern “character” means a UTF-16 encoded code point (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>). In either context, “character value” means the numeric value of the corresponding non-encoded code point.</p>
       <p>The syntax and semantics of |Pattern| is defined as if the source text for the |Pattern| was a List of |SourceCharacter| values where each |SourceCharacter| corresponds to a Unicode code point. If a BMP pattern contains a non-BMP |SourceCharacter| the entire pattern is encoded using UTF-16 and the individual code units of that encoding are used as the elements of the List.</p>
       <emu-note>
         <p>For example, consider a pattern expressed in source text as the single non-BMP character U+1D11E (MUSICAL SYMBOL G CLEF). Interpreted as a Unicode pattern, it would be a single element (character) List consisting of the single code point U+1D11E. However, interpreted as a BMP pattern, it is first UTF-16 encoded to produce a two element List consisting of the code units 0xD834 and 0xDD1E.</p>
@@ -35594,7 +35795,18 @@ THH:mm:ss.sss
         <p>The descriptions below use the following internal data structures:</p>
         <ul>
           <li>
-            A <dfn id="pattern-charset" variants="CharSets">CharSet</dfn> is a mathematical set of characters. In the context of a Unicode pattern, “all characters” means the CharSet containing all code point values; otherwise “all characters” means the CharSet containing all code unit values.
+            A <dfn>CharSetElement</dfn> is one of the two following entities:
+            <ul>
+              <li>
+                If _rer_.[[UnicodeSets]] is *false*, then a CharSetElement is a character in the sense of the Pattern Semantics above.
+              </li>
+              <li>
+                If _rer_.[[UnicodeSets]] is *true*, then a CharSetElement is a sequence whose elements are characters in the sense of the Pattern Semantics above. This includes the empty sequence, sequences of one character, and sequences of more than one character. For convenience, when working with CharSetElements of this kind, an individual character is treated interchangeably with a sequence of one character.
+              </li>
+            </ul>
+          </li>
+          <li>
+            A <dfn id="pattern-charset" variants="CharSets">CharSet</dfn> is a mathematical set of CharSetElements.
           </li>
           <li>
             A <dfn id="pattern-capturerange" variants="CaptureRanges">CaptureRange</dfn> is an ordered pair (_startIndex_, _endIndex_) that represents the range of characters included in a capture, where _startIndex_ is an integer representing the start index (inclusive) of the range within _Input_, and _endIndex_ is an integer representing the end index (exclusive) of the range within _Input_. For any CaptureRange, these indices must satisfy the invariant that _startIndex_ ≤ _endIndex_.
@@ -35643,6 +35855,11 @@ THH:mm:ss.sss
                 <td>[[Unicode]]</td>
                 <td>a Boolean</td>
                 <td>indicates whether *"u"* appears in the RegExp's flags</td>
+              </tr>
+              <tr>
+                <td>[[UnicodeSets]]</td>
+                <td>a Boolean</td>
+                <td>indicates whether *"v"* appears in the RegExp's flags</td>
               </tr>
               <tr>
                 <td>[[CapturingGroupsCount]]</td>
@@ -35698,12 +35915,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _m1_ be CompileSubpattern of |Alternative| with arguments _rer_ and _direction_.
           1. Let _m2_ be CompileSubpattern of |Disjunction| with arguments _rer_ and _direction_.
-          1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
-            1. Assert: _x_ is a MatchState.
-            1. Assert: _c_ is a MatcherContinuation.
-            1. Let _r_ be _m1_(_x_, _c_).
-            1. If _r_ is not ~failure~, return _r_.
-            1. Return _m2_(_x_, _c_).
+          1. Return MatchTwoAlternatives(_m1_, _m2_).
         </emu-alg>
         <emu-note>
           <p>The `|` regular expression operator separates two alternatives. The pattern first tries to match the left |Alternative| (followed by the sequel of the regular expression); if it fails, it tries to match the right |Disjunction| (followed by the sequel of the regular expression). If the left |Alternative|, the right |Disjunction|, and the sequel all have choice points, all choices in the sequel are tried before moving on to the next choice in the left |Alternative|. If choices in the left |Alternative| are exhausted, the right |Disjunction| is tried instead of the left |Alternative|. Any capturing parentheses inside a portion of the pattern skipped by `|` produce *undefined* values instead of Strings. Thus, for example,</p>
@@ -35720,32 +35932,13 @@ THH:mm:ss.sss
         <!-- Alternative -->
         <emu-grammar>Alternative :: [empty]</emu-grammar>
         <emu-alg>
-          1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
-            1. Assert: _x_ is a MatchState.
-            1. Assert: _c_ is a MatcherContinuation.
-            1. Return _c_(_x_).
+          1. Return EmptyMatcher().
         </emu-alg>
         <emu-grammar>Alternative :: Alternative Term</emu-grammar>
         <emu-alg>
           1. Let _m1_ be CompileSubpattern of |Alternative| with arguments _rer_ and _direction_.
           1. Let _m2_ be CompileSubpattern of |Term| with arguments _rer_ and _direction_.
-          1. If _direction_ is ~forward~, then
-            1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
-              1. Assert: _x_ is a MatchState.
-              1. Assert: _c_ is a MatcherContinuation.
-              1. Let _d_ be a new MatcherContinuation with parameters (_y_) that captures _c_ and _m2_ and performs the following steps when called:
-                1. Assert: _y_ is a MatchState.
-                1. Return _m2_(_y_, _c_).
-              1. Return _m1_(_x_, _d_).
-          1. Else,
-            1. Assert: _direction_ is ~backward~.
-            1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
-              1. Assert: _x_ is a MatchState.
-              1. Assert: _c_ is a MatcherContinuation.
-              1. Let _d_ be a new MatcherContinuation with parameters (_y_) that captures _c_ and _m1_ and performs the following steps when called:
-                1. Assert: _y_ is a MatchState.
-                1. Return _m1_(_y_, _c_).
-              1. Return _m2_(_x_, _d_).
+          1. Return MatchSequence(_m1_, _m2_, _direction_).
         </emu-alg>
         <emu-note>
           <p>Consecutive |Term|s try to simultaneously match consecutive portions of _Input_. When _direction_ is ~forward~, if the left |Alternative|, the right |Term|, and the sequel of the regular expression all have choice points, all choices in the sequel are tried before moving on to the next choice in the right |Term|, and all choices in the right |Term| are tried before moving on to the next choice in the left |Alternative|. When _direction_ is ~backward~, the evaluation order of |Alternative| and |Term| are reversed.</p>
@@ -35853,6 +36046,68 @@ THH:mm:ss.sss
             <p>which returns the array</p>
             <pre><code class="javascript">["b", ""]</code></pre>
           </emu-note>
+        </emu-clause>
+
+        <emu-clause id="sec-emptymatcher" type="abstract operation">
+          <h1>EmptyMatcher ( ): a Matcher</h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Return a new Matcher with parameters (_x_, _c_) that captures nothing and performs the following steps when called:
+              1. Assert: _x_ is a MatchState.
+              1. Assert: _c_ is a MatcherContinuation.
+              1. Return _c_(_x_).
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-matchtwoalternatives" type="abstract operation">
+          <h1>
+            MatchTwoAlternatives (
+              _m1_: a Matcher,
+              _m2_: a Matcher,
+            ): a Matcher
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
+              1. Assert: _x_ is a MatchState.
+              1. Assert: _c_ is a MatcherContinuation.
+              1. Let _r_ be _m1_(_x_, _c_).
+              1. If _r_ is not ~failure~, return _r_.
+              1. Return _m2_(_x_, _c_).
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-matchsequence" type="abstract operation">
+          <h1>
+            MatchSequence (
+              _m1_: a Matcher,
+              _m2_: a Matcher,
+              _direction_: ~forward~ or ~backward~,
+            ): a Matcher
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. If _direction_ is ~forward~, then
+              1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
+                1. Assert: _x_ is a MatchState.
+                1. Assert: _c_ is a MatcherContinuation.
+                1. Let _d_ be a new MatcherContinuation with parameters (_y_) that captures _c_ and _m2_ and performs the following steps when called:
+                  1. Assert: _y_ is a MatchState.
+                  1. Return _m2_(_y_, _c_).
+                1. Return _m1_(_x_, _d_).
+            1. Else,
+              1. Assert: _direction_ is ~backward~.
+              1. Return a new Matcher with parameters (_x_, _c_) that captures _m1_ and _m2_ and performs the following steps when called:
+                1. Assert: _x_ is a MatchState.
+                1. Assert: _c_ is a MatcherContinuation.
+                1. Let _d_ be a new MatcherContinuation with parameters (_y_) that captures _c_ and _m1_ and performs the following steps when called:
+                  1. Assert: _y_ is a MatchState.
+                  1. Return _m1_(_y_, _c_).
+                1. Return _m2_(_x_, _d_).
+          </emu-alg>
         </emu-clause>
       </emu-clause>
 
@@ -36091,7 +36346,7 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>Atom :: `.`</emu-grammar>
         <emu-alg>
-          1. Let _A_ be the CharSet of all characters.
+          1. Let _A_ be AllCharacters(_rer_).
           1. If _rer_.[[DotAll]] is not *true*, then
             1. Remove from _A_ all characters corresponding to a code point on the right-hand side of the |LineTerminator| production.
           1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
@@ -36099,7 +36354,25 @@ THH:mm:ss.sss
         <emu-grammar>Atom :: CharacterClass</emu-grammar>
         <emu-alg>
           1. Let _cc_ be CompileCharacterClass of |CharacterClass| with argument _rer_.
-          1. Return CharacterSetMatcher(_rer_, _cc_.[[CharSet]], _cc_.[[Invert]], _direction_).
+          1. Let _cs_ be _cc_.[[CharSet]].
+          1. If _rer_.[[UnicodeSets]] is *false*, or if every CharSetElement of _cs_ consists of a single character (including if _cs_ is empty), return CharacterSetMatcher(_rer_, _cs_, _cc_.[[Invert]], _direction_).
+          1. Assert: _cc_.[[Invert]] is *false*.
+          1. Let _lm_ be an empty List of Matchers.
+          1. For each CharSetElement _s_ in _cs_ containing more than 1 character, iterating in descending order of length, do
+            1. Let _cs2_ be a one-element CharSet containing the last code point of _s_.
+            1. Let _m2_ be CharacterSetMatcher(_rer_, _cs2_, *false*, _direction_).
+            1. For each code point _c1_ in _s_, iterating backwards from its second-to-last code point, do
+              1. Let _cs1_ be a one-element CharSet containing _c1_.
+              1. Let _m1_ be CharacterSetMatcher(_rer_, _cs1_, *false*, _direction_).
+              1. Set _m2_ to MatchSequence(_m1_, _m2_, _direction_).
+            1. Append _m2_ to _lm_.
+          1. Let _singles_ be the CharSet containing every CharSetElement of _cs_ which consists of a single character.
+          1. Append CharacterSetMatcher(_rer_, _singles_, *false*, _direction_) to _lm_.
+          1. If _cs_ contains the empty sequence of characters, append EmptyMatcher() to _lm_.
+          1. Let _m2_ be the last Matcher in _lm_.
+          1. For each Matcher _m1_ of _lm_, iterating backwards from its second-to-last element, do
+            1. Set _m2_ to MatchTwoAlternatives(_m1_, _m2_).
+          1. Return _m2_.
         </emu-alg>
         <emu-grammar>Atom :: `(` GroupSpecifier? Disjunction `)`</emu-grammar>
         <emu-alg>
@@ -36153,8 +36426,24 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>AtomEscape :: CharacterClassEscape</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |CharacterClassEscape| with argument _rer_.
-          1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
+          1. Let _cs_ be CompileToCharSet of |CharacterClassEscape| with argument _rer_.
+          1. If _rer_.[[UnicodeSets]] is *false*, or if every element of _cs_ consists of a single character (including if _cs_ is empty), return CharacterSetMatcher(_rer_, _cs_, *false*, _direction_).
+          1. Let _lm_ be an empty List of Matchers.
+          1. For each string _s_ in _cs_ whose length is greater than 1, iterating in descending order of string length, do
+            1. Let _cs2_ be a one-element CharSet containing the last code point of _s_.
+            1. Let _m2_ be CharacterSetMatcher(_rer_, _cs2_, *false*, _direction_).
+            1. For each code point _c1_ in _s_, iterating backwards from its second-to-last code point, do
+              1. Let _cs1_ be a one-element CharSet containing _c1_.
+              1. Let _m1_ be CharacterSetMatcher(_rer_, _cs1_, *false*, _direction_).
+              1. Set _m2_ to MatchSequence(_m1_, _m2_, _direction_).
+            1. Append _m2_ to _lm_.
+          1. Let _singles_ be the CharSet containing every element of _cs_ which consists of a single character.
+          1. Append CharacterSetMatcher(_rer_, _singles_, *false*, _direction_) to _lm_.
+          1. If _cs_ contains the empty sequence of characters, append EmptyMatcher() to _lm_.
+          1. Let _m2_ be the last Matcher in _lm_.
+          1. For each Matcher _m1_ of _lm_, iterating backwards from its second-to-last element, do
+            1. Set _m2_ to MatchTwoAlternatives(_m1_, _m2_).
+          1. Return _m2_.
         </emu-alg>
         <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar>
         <emu-alg>
@@ -36177,7 +36466,10 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_, _A_, _invert_, and _direction_ and performs the following steps when called:
+            1. If _rer_.[[UnicodeSets]] is *true*, then
+              1. Assert: _invert_ is *false*.
+              1. Assert: Every element of _A_ consists of a single character.
+            1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_, _invert_, and _direction_ and performs the following steps when called:
               1. Assert: _x_ is a MatchState.
               1. Assert: _c_ is a MatcherContinuation.
               1. Let _Input_ be _x_'s _input_.
@@ -36189,7 +36481,7 @@ THH:mm:ss.sss
               1. Let _index_ be min(_e_, _f_).
               1. Let _ch_ be the character _Input_[_index_].
               1. Let _cc_ be Canonicalize(_rer_, _ch_).
-              1. If there exists a member _a_ of _A_ such that Canonicalize(_rer_, _a_) is _cc_, let _found_ be *true*. Otherwise, let _found_ be *false*.
+              1. If there exists a CharSetElement in _A_ containing exactly one character _a_ such that Canonicalize(_rer_, _a_) is _cc_, let _found_ be *true*. Otherwise, let _found_ be *false*.
               1. If _invert_ is *false* and _found_ is *false*, return ~failure~.
               1. If _invert_ is *true* and _found_ is *true*, return ~failure~.
               1. Let _cap_ be _x_'s _captures_ List.
@@ -36242,7 +36534,7 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. If _rer_.[[Unicode]] is *true* and _rer_.[[IgnoreCase]] is *true*, then
+            1. If HasEitherUnicodeFlag(_rer_) is *true* and _rer_.[[IgnoreCase]] is *true*, then
               1. If the file <a href="https://unicode.org/Public/UCD/latest/ucd/CaseFolding.txt"><code>CaseFolding.txt</code></a> of the Unicode Character Database provides a simple or common case folding mapping for _ch_, return the result of applying that mapping to _ch_.
               1. Return _ch_.
             1. If _rer_.[[IgnoreCase]] is *false*, return _ch_.
@@ -36256,8 +36548,8 @@ THH:mm:ss.sss
             1. Return _cu_.
           </emu-alg>
           <emu-note>
-            <p>In case-insignificant matches when _rer_.[[Unicode]] is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode Standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `ß` (U+00DF LATIN SMALL LETTER SHARP S) to `ss` or `SS`. It may however map code points outside the Basic Latin block to code points within it—for example, `ſ` (U+017F LATIN SMALL LETTER LONG S) case-folds to `s` (U+0073 LATIN SMALL LETTER S) and `K` (U+212A KELVIN SIGN) case-folds to `k` (U+006B LATIN SMALL LETTER K). Strings containing those code points are matched by regular expressions such as `/[a-z]/ui`.</p>
-            <p>In case-insignificant matches when _rer_.[[Unicode]] is *false*, the mapping is based on Unicode Default Case Conversion algorithm toUppercase rather than toCasefold, which results in some subtle differences. For example, `Ω` (U+2126 OHM SIGN) is mapped by toUppercase to itself but by toCasefold to `ω` (U+03C9 GREEK SMALL LETTER OMEGA) along with `Ω` (U+03A9 GREEK CAPITAL LETTER OMEGA), so *"\u2126"* is matched by `/[ω]/ui` and `/[\u03A9]/ui` but not by `/[ω]/i` or `/[\u03A9]/i`. Also, no code point outside the Basic Latin block is mapped to a code point within it, so strings such as *"\u017F ſ"* and *"\u212A K"* are not matched by `/[a-z]/i`.</p>
+            <p>In case-insignificant matches when HasEitherUnicodeFlag(_rer_) is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode Standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `ß` (U+00DF LATIN SMALL LETTER SHARP S) to `ss` or `SS`. It may however map code points outside the Basic Latin block to code points within it—for example, `ſ` (U+017F LATIN SMALL LETTER LONG S) case-folds to `s` (U+0073 LATIN SMALL LETTER S) and `K` (U+212A KELVIN SIGN) case-folds to `k` (U+006B LATIN SMALL LETTER K). Strings containing those code points are matched by regular expressions such as `/[a-z]/ui`.</p>
+            <p>In case-insignificant matches when HasEitherUnicodeFlag(_rer_) is *false*, the mapping is based on Unicode Default Case Conversion algorithm toUppercase rather than toCasefold, which results in some subtle differences. For example, `Ω` (U+2126 OHM SIGN) is mapped by toUppercase to itself but by toCasefold to `ω` (U+03C9 GREEK SMALL LETTER OMEGA) along with `Ω` (U+03A9 GREEK CAPITAL LETTER OMEGA), so *"\u2126"* is matched by `/[ω]/ui` and `/[\u03A9]/ui` but not by `/[ω]/i` or `/[\u03A9]/i`. Also, no code point outside the Basic Latin block is mapped to a code point within it, so strings such as *"\u017F ſ"* and *"\u212A K"* are not matched by `/[a-z]/i`.</p>
           </emu-note>
         </emu-clause>
       </emu-clause>
@@ -36270,14 +36562,16 @@ THH:mm:ss.sss
         </h1>
         <dl class="header">
         </dl>
-        <emu-grammar>CharacterClass :: `[` ClassRanges `]`</emu-grammar>
+        <emu-grammar>CharacterClass :: `[` ClassContents `]`</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |ClassRanges| with argument _rer_.
+          1. Let _A_ be CompileToCharSet of |ClassContents| with argument _rer_.
           1. Return the Record { [[CharSet]]: _A_, [[Invert]]: *false* }.
         </emu-alg>
-        <emu-grammar>CharacterClass :: `[^` ClassRanges `]`</emu-grammar>
+        <emu-grammar>CharacterClass :: `[^` ClassContents `]`</emu-grammar>
         <emu-alg>
-          1. Let _A_ be CompileToCharSet of |ClassRanges| with argument _rer_.
+          1. Let _A_ be CompileToCharSet of |ClassContents| with argument _rer_.
+          1. If _rer_.[[UnicodeSets]] is *true*, then
+            1. Return the Record { [[CharSet]]: CharacterComplement(_rer_, _A_), [[Invert]]: *false* }.
           1. Return the Record { [[CharSet]]: _A_, [[Invert]]: *true* }.
         </emu-alg>
       </emu-clause>
@@ -36294,8 +36588,8 @@ THH:mm:ss.sss
           <p>This section is amended in <emu-xref href="#sec-compiletocharset-annexb"></emu-xref>.</p>
         </emu-note>
 
-        <!-- ClassRanges -->
-        <emu-grammar>ClassRanges :: [empty]</emu-grammar>
+        <!-- ClassContents -->
+        <emu-grammar>ClassContents :: [empty]</emu-grammar>
         <emu-alg>
           1. Return the empty CharSet.
         </emu-alg>
@@ -36307,11 +36601,11 @@ THH:mm:ss.sss
           1. Let _B_ be CompileToCharSet of |NonemptyClassRangesNoDash| with argument _rer_.
           1. Return the union of CharSets _A_ and _B_.
         </emu-alg>
-        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
+        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassContents</emu-grammar>
         <emu-alg>
           1. Let _A_ be CompileToCharSet of the first |ClassAtom| with argument _rer_.
           1. Let _B_ be CompileToCharSet of the second |ClassAtom| with argument _rer_.
-          1. Let _C_ be CompileToCharSet of |ClassRanges| with argument _rer_.
+          1. Let _C_ be CompileToCharSet of |ClassContents| with argument _rer_.
           1. Let _D_ be CharacterRange(_A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
@@ -36323,22 +36617,22 @@ THH:mm:ss.sss
           1. Let _B_ be CompileToCharSet of |NonemptyClassRangesNoDash| with argument _rer_.
           1. Return the union of CharSets _A_ and _B_.
         </emu-alg>
-        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
+        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassContents</emu-grammar>
         <emu-alg>
           1. Let _A_ be CompileToCharSet of |ClassAtomNoDash| with argument _rer_.
           1. Let _B_ be CompileToCharSet of |ClassAtom| with argument _rer_.
-          1. Let _C_ be CompileToCharSet of |ClassRanges| with argument _rer_.
+          1. Let _C_ be CompileToCharSet of |ClassContents| with argument _rer_.
           1. Let _D_ be CharacterRange(_A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
         <emu-note>
-          <p>|ClassRanges| can expand into a single |ClassAtom| and/or ranges of two |ClassAtom| separated by dashes. In the latter case the |ClassRanges| includes all characters between the first |ClassAtom| and the second |ClassAtom|, inclusive; an error occurs if either |ClassAtom| does not represent a single character (for example, if one is \w) or if the first |ClassAtom|'s character value is strictly greater than the second |ClassAtom|'s character value.</p>
+          <p>|ClassContents| can expand into a single |ClassAtom| and/or ranges of two |ClassAtom| separated by dashes. In the latter case the |ClassContents| includes all characters between the first |ClassAtom| and the second |ClassAtom|, inclusive; an error occurs if either |ClassAtom| does not represent a single character (for example, if one is \w) or if the first |ClassAtom|'s character value is strictly greater than the second |ClassAtom|'s character value.</p>
         </emu-note>
         <emu-note>
           <p>Even if the pattern ignores case, the case of the two ends of a range is significant in determining which characters belong to the range. Thus, for example, the pattern `/[E-F]/i` matches only the letters `E`, `F`, `e`, and `f`, while the pattern `/[E-f]/i` matches all uppercase and lowercase letters in the Unicode Basic Latin block as well as the symbols `[`, `\\`, `]`, `^`, `_`, and <code>`</code>.</p>
         </emu-note>
         <emu-note>
-          <p>A `-` character can be treated literally or it can denote a range. It is treated literally if it is the first or last character of |ClassRanges|, the beginning or end limit of a range specification, or immediately follows a range specification.</p>
+          <p>A `-` character can be treated literally or it can denote a range. It is treated literally if it is the first or last character of |ClassContents|, the beginning or end limit of a range specification, or immediately follows a range specification.</p>
         </emu-note>
 
         <!-- ClassAtom -->
@@ -36376,7 +36670,8 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `D`</emu-grammar>
         <emu-alg>
-          1. Return the CharSet containing all characters not in the CharSet returned by <emu-grammar>CharacterClassEscape :: `d`</emu-grammar>.
+          1. Let _S_ be the CharSet returned by <emu-grammar>CharacterClassEscape :: `d`</emu-grammar>.
+          1. Return CharacterComplement(_rer_, _S_).
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `s`</emu-grammar>
         <emu-alg>
@@ -36384,41 +36679,172 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `S`</emu-grammar>
         <emu-alg>
-          1. Return the CharSet containing all characters not in the CharSet returned by <emu-grammar>CharacterClassEscape :: `s`</emu-grammar>.
+          1. Let _S_ be the CharSet returned by <emu-grammar>CharacterClassEscape :: `s`</emu-grammar>.
+          1. Return CharacterComplement(_rer_, _S_).
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `w`</emu-grammar>
         <emu-alg>
-          1. Return WordCharacters(_rer_).
+          1. Return MaybeSimpleCaseFolding(_rer_, WordCharacters(_rer_)).
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `W`</emu-grammar>
         <emu-alg>
-          1. Return the CharSet containing all characters not in the CharSet returned by <emu-grammar>CharacterClassEscape :: `w`</emu-grammar>.
+          1. Let _S_ be the CharSet returned by <emu-grammar>CharacterClassEscape :: `w`</emu-grammar>.
+          1. Return CharacterComplement(_rer_, _S_).
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `p{` UnicodePropertyValueExpression `}`</emu-grammar>
         <emu-alg>
-          1. Return the CharSet containing all Unicode code points included in CompileToCharSet of |UnicodePropertyValueExpression| with argument _rer_.
+          1. Return CompileToCharSet of |UnicodePropertyValueExpression| with argument _rer_.
         </emu-alg>
         <emu-grammar>CharacterClassEscape :: `P{` UnicodePropertyValueExpression `}`</emu-grammar>
         <emu-alg>
-          1. Return the CharSet containing all Unicode code points not included in CompileToCharSet of |UnicodePropertyValueExpression| with argument _rer_.
+          1. Let _S_ be CompileToCharSet of |UnicodePropertyValueExpression| with argument _rer_.
+          1. Assert: _S_ contains only single code points.
+          1. Return CharacterComplement(_rer_, _S_).
         </emu-alg>
         <emu-grammar>UnicodePropertyValueExpression :: UnicodePropertyName `=` UnicodePropertyValue</emu-grammar>
         <emu-alg>
           1. Let _ps_ be the source text matched by |UnicodePropertyName|.
-          1. Let _p_ be UnicodeMatchProperty(_ps_).
+          1. Let _p_ be UnicodeMatchProperty(_rer_, _ps_).
           1. Assert: _p_ is a Unicode property name or property alias listed in the “Property name and aliases” column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref>.
           1. Let _vs_ be the source text matched by |UnicodePropertyValue|.
           1. Let _v_ be UnicodeMatchPropertyValue(_p_, _vs_).
-          1. Return the CharSet containing all Unicode code points whose character database definition includes the property _p_ with value _v_.
+          1. Let _A_ be the CharSet containing all Unicode code points whose character database definition includes the property _p_ with value _v_.
+          1. Return MaybeSimpleCaseFolding(_rer_, _A_).
         </emu-alg>
         <emu-grammar>UnicodePropertyValueExpression :: LoneUnicodePropertyNameOrValue</emu-grammar>
         <emu-alg>
           1. Let _s_ be the source text matched by |LoneUnicodePropertyNameOrValue|.
           1. If UnicodeMatchPropertyValue(`General_Category`, _s_) is a Unicode property value or property value alias for the General_Category (gc) property listed in <a href="https://unicode.org/Public/UCD/latest/ucd/PropertyValueAliases.txt"><code>PropertyValueAliases.txt</code></a>, then
             1. Return the CharSet containing all Unicode code points whose character database definition includes the property “General_Category” with value _s_.
-          1. Let _p_ be UnicodeMatchProperty(_s_).
-          1. Assert: _p_ is a binary Unicode property or binary property alias listed in the “Property name and aliases” column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
-          1. Return the CharSet containing all Unicode code points whose character database definition includes the property _p_ with value “True”.
+          1. Let _p_ be UnicodeMatchProperty(_rer_, _s_).
+          1. Assert: _p_ is a binary Unicode property or binary property alias listed in the “<emu-not-ref>Property name</emu-not-ref> and aliases” column of <emu-xref href="#table-binary-unicode-properties"></emu-xref>, or a binary Unicode property of strings listed in the “<emu-not-ref>Property name</emu-not-ref>” column of <emu-xref href="#table-binary-unicode-properties-of-strings"></emu-xref>.
+          1. Let _A_ be the CharSet containing all CharSetElements whose character database definition includes the property _p_ with value “True”.
+          1. Return MaybeSimpleCaseFolding(_rer_, _A_).
+        </emu-alg>
+
+        <!-- ClassUnion -->
+        <emu-grammar>ClassUnion :: ClassSetRange ClassUnion?</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of |ClassSetRange| with argument _rer_.
+          1. If |ClassUnion| is present, then
+            1. Let _B_ be CompileToCharSet of |ClassUnion| with argument _rer_.
+            1. Return the union of CharSets _A_ and _B_.
+          1. Return _A_.
+        </emu-alg>
+        <emu-grammar>ClassUnion :: ClassSetOperand ClassUnion?</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of |ClassSetOperand| with argument _rer_.
+          1. If |ClassUnion| is present, then
+            1. Let _B_ be CompileToCharSet of |ClassUnion| with argument _rer_.
+            1. Return the union of CharSets _A_ and _B_.
+          1. Return _A_.
+        </emu-alg>
+
+        <!-- ClassIntersection -->
+        <emu-grammar>ClassIntersection :: ClassSetOperand `&amp;&amp;` ClassSetOperand</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of the first |ClassSetOperand| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of the second |ClassSetOperand| with argument _rer_.
+          1. Return the intersection of CharSets _A_ and _B_.
+        </emu-alg>
+        <emu-grammar>ClassIntersection :: ClassIntersection `&amp;&amp;` ClassSetOperand</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of the |ClassIntersection| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of the |ClassSetOperand| with argument _rer_.
+          1. Return the intersection of CharSets _A_ and _B_.
+        </emu-alg>
+
+        <!-- ClassSubtraction -->
+        <emu-grammar>ClassSubtraction :: ClassSetOperand `--` ClassSetOperand</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of the first |ClassSetOperand| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of the second |ClassSetOperand| with argument _rer_.
+          1. Return the CharSet containing the elements of _A_ which are not also elements of _B_.
+        </emu-alg>
+        <emu-grammar>ClassSubtraction :: ClassSubtraction `--` ClassSetOperand</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of the |ClassSubtraction| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of the |ClassSetOperand| with argument _rer_.
+          1. Return the CharSet containing the elements of _A_ which are not also elements of _B_.
+        </emu-alg>
+
+        <!-- ClassSetRange -->
+        <emu-grammar>ClassSetRange :: ClassSetCharacter `-` ClassSetCharacter</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of the first |ClassSetCharacter| with argument _rer_.
+          1. Let _B_ be CompileToCharSet of the second |ClassSetCharacter| with argument _rer_.
+          1. Return MaybeSimpleCaseFolding(_rer_, CharacterRange(_A_, _B_)).
+        </emu-alg>
+        <emu-note>
+          <p>The result will often consist of two or more ranges. When UnicodeSets is *true* and IgnoreCase is *true*, then MaybeSimpleCaseFolding(_rer_, [Ā-č]) will include only the odd-numbered code points of that range.</p>
+        </emu-note>
+
+        <!-- ClassSetOperand -->
+        <emu-grammar>ClassSetOperand :: ClassSetCharacter</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of |ClassSetCharacter| with argument _rer_.
+          1. Return MaybeSimpleCaseFolding(_rer_, _A_).
+        </emu-alg>
+        <emu-grammar>ClassSetOperand :: ClassStringDisjunction</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of |ClassStringDisjunction| with argument _rer_.
+          1. Return MaybeSimpleCaseFolding(_rer_, _A_).
+        </emu-alg>
+        <emu-grammar>ClassSetOperand :: NestedClass</emu-grammar>
+        <emu-alg>
+          1. Return CompileToCharSet of |NestedClass| with argument _rer_.
+        </emu-alg>
+
+        <!-- NestedClass -->
+        <emu-grammar>NestedClass :: `[` ClassContents `]`</emu-grammar>
+        <emu-alg>
+          1. Return CompileToCharSet of |ClassContents| with argument _rer_.
+        </emu-alg>
+        <emu-grammar>NestedClass :: `[^` ClassContents `]`</emu-grammar>
+        <emu-alg>
+          1. Let _A_ be CompileToCharSet of |ClassContents| with argument _rer_.
+          1. Return CharacterComplement(_rer_, _A_).
+        </emu-alg>
+        <emu-grammar>NestedClass :: `\` CharacterClassEscape</emu-grammar>
+        <emu-alg>
+          1. Return CompileToCharSet of |CharacterClassEscape| with argument _rer_.
+        </emu-alg>
+
+        <!-- ClassStringDisjunction -->
+        <emu-grammar>ClassStringDisjunction :: `\q{` ClassStringDisjunctionContents `}`</emu-grammar>
+        <emu-alg>
+          1. Return CompileToCharSet of |ClassStringDisjunctionContents| with argument _rer_.
+        </emu-alg>
+
+        <!-- ClassStringDisjunctionContents -->
+        <emu-grammar>ClassStringDisjunctionContents :: ClassString</emu-grammar>
+        <emu-alg>
+          1. Let _s_ be CompileClassSetString of |ClassString| with argument _rer_.
+          1. Return the CharSet containing the one string _s_.
+        </emu-alg>
+        <emu-grammar>ClassStringDisjunctionContents :: ClassString `|` ClassStringDisjunctionContents</emu-grammar>
+        <emu-alg>
+          1. Let _s_ be CompileClassSetString of |ClassString| with argument _rer_.
+          1. Let _A_ be the CharSet containing the one string _s_.
+          1. Let _B_ be CompileToCharSet of |ClassStringDisjunctionContents| with argument _rer_.
+          1. Return the union of CharSets _A_ and _B_.
+        </emu-alg>
+
+        <!-- ClassSetCharacter -->
+        <emu-grammar>
+          ClassSetCharacter ::
+            SourceCharacter but not ClassSetSyntaxCharacter
+            `\` CharacterEscape
+            `\` ClassSetReservedPunctuator
+        </emu-grammar>
+        <emu-alg>
+          1. Let _cv_ be the CharacterValue of this |ClassSetCharacter|.
+          1. Let _c_ be the character whose character value is _cv_.
+          1. Return the CharSet containing the single character _c_.
+        </emu-alg>
+        <emu-grammar>ClassSetCharacter :: `\b`</emu-grammar>
+        <emu-alg>
+          1. Return the CharSet containing the single character U+0008 (BACKSPACE).
         </emu-alg>
 
         <emu-clause id="sec-runtime-semantics-characterrange-abstract-operation" type="abstract operation">
@@ -36441,6 +36867,21 @@ THH:mm:ss.sss
           </emu-alg>
         </emu-clause>
 
+        <emu-clause id="sec-runtime-semantics-haseitherunicodeflag-abstract-operation" type="abstract operation">
+          <h1>
+            HasEitherUnicodeFlag (
+              _rer_: a RegExp Record,
+            ): a Boolean
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. If _rer_.[[Unicode]] is *true* or _rer_.[[UnicodeSets]] is *true*, then
+              1. Return *true*.
+            1. Return *false*.
+          </emu-alg>
+        </emu-clause>
+
         <emu-clause id="sec-wordcharacters" type="abstract operation" oldids="sec-runtime-semantics-wordcharacters-abstract-operation">
           <h1>
             WordCharacters (
@@ -36454,25 +36895,86 @@ THH:mm:ss.sss
           <emu-alg>
             1. Let _basicWordChars_ be the CharSet containing every character in the ASCII word characters.
             1. Let _extraWordChars_ be the CharSet containing all characters _c_ such that _c_ is not in _basicWordChars_ but Canonicalize(_rer_, _c_) is in _basicWordChars_.
-            1. Assert: _extraWordChars_ is empty unless _rer_.[[Unicode]] is *true* and _rer_.[[IgnoreCase]] is *true*.
+            1. Assert: _extraWordChars_ is empty unless HasEitherUnicodeFlag(_rer_) is *true* and _rer_.[[IgnoreCase]] is *true*.
             1. Return the union of _basicWordChars_ and _extraWordChars_.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-allcharacters" type="abstract operation">
+          <h1>
+            AllCharacters (
+              _rer_: a RegExp Record,
+            ): a CharSet
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>Returns the set of “all characters” according to the regular expression flags.</dd>
+          </dl>
+          <emu-alg>
+            1. If _rer_.[[UnicodeSets]] is *true* and _rer_.[[IgnoreCase]] is *true*, then
+              1. [declared="c"] Return the CharSet containing all Unicode code points _c_ that do not have a <a href="https://www.unicode.org/reports/tr44/#Simple_Case_Folding">Simple Case Folding</a> mapping (that is, scf(_c_)=_c_).
+            1. Else if HasEitherUnicodeFlag(_rer_) is *true*, then
+              1. Return the CharSet containing all code point values.
+            1. Else,
+              1. Return the CharSet containing all code unit values.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-maybesimplecasefolding" type="abstract operation">
+          <h1>
+            MaybeSimpleCaseFolding (
+              _rer_: a RegExp Record,
+              _A_: a CharSet,
+            ): a CharSet
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>If _rer_.[[UnicodeSets]] is *false* or _rer_.[[IgnoreCase]] is *false*, it returns _A_. Otherwise, it uses the <a href="https://www.unicode.org/reports/tr44/#Simple_Case_Folding">Simple Case Folding</a> (<emu-eqn id="eqn-scf" aoid="scf">scf(_cp_)</emu-eqn>) definitions in the file <a href="https://unicode.org/Public/UCD/latest/ucd/CaseFolding.txt"><code>CaseFolding.txt</code></a> of the Unicode Character Database (each of which maps a single code point to another single code point) to map each CharSetElement of _A_ character-by-character into a canonical form and returns the resulting CharSet.</dd>
+          </dl>
+          <emu-alg>
+            1. If _rer_.[[UnicodeSets]] is *false* or _rer_.[[IgnoreCase]] is *false*, return _A_.
+            1. Let _B_ be a new empty CharSet.
+            1. For each CharSetElement _s_ of _A_, do
+              1. Let _t_ be an empty sequence of characters.
+              1. For each single code point _cp_ in _s_, do
+                1. Append scf(_cp_) to _t_.
+              1. Add _t_ to _B_.
+            1. Return _B_.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-charactercomplement" type="abstract operation">
+          <h1>
+            CharacterComplement (
+              _rer_: a RegExp Record,
+              _S_: a CharSet,
+            ): a CharSet
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Let _A_ be AllCharacters(_rer_).
+            1. Return the CharSet containing the elements of _A_ which are not also elements of _S_.
           </emu-alg>
         </emu-clause>
 
         <emu-clause id="sec-runtime-semantics-unicodematchproperty-p" type="abstract operation">
           <h1>
             UnicodeMatchProperty (
+              _rer_: a RegExp Record,
               _p_: ECMAScript source text,
             ): a Unicode property name
           </h1>
           <dl class="header">
           </dl>
           <emu-alg>
+            1. If _rer_.[[UnicodeSets]] is *true* and _p_ is a Unicode <emu-not-ref>property name</emu-not-ref> listed in the “<emu-not-ref>Property name</emu-not-ref>” column of <emu-xref href="#table-binary-unicode-properties-of-strings"></emu-xref>, then
+              1. Return the List of Unicode code points _p_.
             1. Assert: _p_ is a Unicode <emu-not-ref>property name</emu-not-ref> or property alias listed in the “<emu-not-ref>Property name</emu-not-ref> and aliases” column of <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref> or <emu-xref href="#table-binary-unicode-properties"></emu-xref>.
             1. Let _c_ be the canonical <emu-not-ref>property name</emu-not-ref> of _p_ as given in the “Canonical <emu-not-ref>property name</emu-not-ref>” column of the corresponding row.
             1. Return the List of Unicode code points _c_.
           </emu-alg>
-          <p>Implementations must support the Unicode property names and aliases listed in <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref> and <emu-xref href="#table-binary-unicode-properties"></emu-xref>. To ensure interoperability, implementations must not support any other property names or aliases.</p>
+          <p>Implementations must support the Unicode property names and aliases listed in <emu-xref href="#table-nonbinary-unicode-properties"></emu-xref>, <emu-xref href="#table-binary-unicode-properties"></emu-xref>, and <emu-xref href="#table-binary-unicode-properties-of-strings"></emu-xref>. To ensure interoperability, implementations must not support any other property names or aliases.</p>
           <emu-note>
             <p>For example, `Script_Extensions` (property name) and `scx` (property alias) are valid, but `script_extensions` or `Scx` aren't.</p>
           </emu-note>
@@ -36484,6 +36986,7 @@ THH:mm:ss.sss
           </emu-note>
           <emu-import href="table-nonbinary-unicode-properties.html"></emu-import>
           <emu-import href="table-binary-unicode-properties.html"></emu-import>
+          <emu-import href="table-binary-unicode-properties-of-strings.html"></emu-import>
         </emu-clause>
 
         <emu-clause id="sec-runtime-semantics-unicodematchpropertyvalue-p-v" type="abstract operation">
@@ -36509,6 +37012,34 @@ THH:mm:ss.sss
             <p>This algorithm differs from <a href="https://unicode.org/reports/tr44/#Matching_Symbolic">the matching rules for symbolic values listed in UAX44</a>: case, <emu-xref href="#sec-white-space">white space</emu-xref>, U+002D (HYPHEN-MINUS), and U+005F (LOW LINE) are not ignored, and the `Is` prefix is not supported.</p>
           </emu-note>
         </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-compileclasssetstring" type="sdo">
+        <h1>
+          Runtime Semantics: CompileClassSetString (
+            _rer_: a RegExp Record,
+          ): a sequence of characters
+        </h1>
+        <dl class="header">
+        </dl>
+
+        <emu-grammar>ClassString :: [empty]</emu-grammar>
+        <emu-alg>
+          1. Return an empty sequence of characters.
+        </emu-alg>
+        <emu-grammar>ClassString :: NonEmptyClassString</emu-grammar>
+        <emu-alg>
+          1. Return CompileClassSetString of |NonEmptyClassString| with argument _rer_.
+        </emu-alg>
+        <emu-grammar>NonEmptyClassString :: ClassSetCharacter NonEmptyClassString?</emu-grammar>
+        <emu-alg>
+          1. Let _cs_ be CompileToCharSet of |ClassSetCharacter| with argument _rer_.
+          1. Let _s1_ be the sequence of characters that is the single element of _cs_.
+          1. If |NonEmptyClassString| is present, then
+            1. Let _s2_ be CompileClassSetString of |NonEmptyClassString| with argument _rer_.
+            1. Return the concatenation of _s1_ and _s2_.
+          1. Return _s1_.
+        </emu-alg>
       </emu-clause>
     </emu-clause>
 
@@ -36560,22 +37091,23 @@ THH:mm:ss.sss
           1. Else, let _P_ be ? ToString(_pattern_).
           1. If _flags_ is *undefined*, let _F_ be the empty String.
           1. Else, let _F_ be ? ToString(_flags_).
-          1. If _F_ contains any code unit other than *"d"*, *"g"*, *"i"*, *"m"*, *"s"*, *"u"*, or *"y"*, or if _F_ contains any code unit more than once, throw a *SyntaxError* exception.
+          1. If _F_ contains any code unit other than *"d"*, *"g"*, *"i"*, *"m"*, *"s"*, *"u"*, *"v"*, or *"y"*, or if _F_ contains any code unit more than once, throw a *SyntaxError* exception.
           1. If _F_ contains *"i"*, let _i_ be *true*; else let _i_ be *false*.
           1. If _F_ contains *"m"*, let _m_ be *true*; else let _m_ be *false*.
           1. If _F_ contains *"s"*, let _s_ be *true*; else let _s_ be *false*.
           1. If _F_ contains *"u"*, let _u_ be *true*; else let _u_ be *false*.
-          1. If _u_ is *true*, then
+          1. If _F_ contains *"v"*, let _v_ be *true*; else let _v_ be *false*.
+          1. If _u_ is *true* or _v_ is *true*, then
             1. Let _patternText_ be StringToCodePoints(_P_).
           1. Else,
             1. Let _patternText_ be the result of interpreting each of _P_'s 16-bit elements as a Unicode BMP code point. UTF-16 decoding is not applied to the elements.
-          1. Let _parseResult_ be ParsePattern(_patternText_, _u_).
+          1. Let _parseResult_ be ParsePattern(_patternText_, _u_, _v_).
           1. If _parseResult_ is a non-empty List of *SyntaxError* objects, throw a *SyntaxError* exception.
           1. Assert: _parseResult_ is a |Pattern| Parse Node.
           1. Set _obj_.[[OriginalSource]] to _P_.
           1. Set _obj_.[[OriginalFlags]] to _F_.
           1. Let _capturingGroupsCount_ be CountLeftCapturingParensWithin(_parseResult_).
-          1. Let _rer_ be the RegExp Record { [[IgnoreCase]]: _i_, [[Multiline]]: _m_, [[DotAll]]: _s_, [[Unicode]]: _u_, [[CapturingGroupsCount]]: _capturingGroupsCount_ }.
+          1. Let _rer_ be the RegExp Record { [[IgnoreCase]]: _i_, [[Multiline]]: _m_, [[DotAll]]: _s_, [[Unicode]]: _u_, [[UnicodeSets]]: _v_, [[CapturingGroupsCount]]: _capturingGroupsCount_ }.
           1. Set _obj_.[[RegExpRecord]] to _rer_.
           1. Set _obj_.[[RegExpMatcher]] to CompilePattern of _parseResult_ with argument _rer_.
           1. Perform ? Set(_obj_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).
@@ -36588,6 +37120,7 @@ THH:mm:ss.sss
           Static Semantics: ParsePattern (
             _patternText_: a sequence of Unicode code points,
             _u_: a Boolean,
+            _v_: a Boolean,
           ): a Parse Node or a non-empty List of *SyntaxError* objects
         </h1>
         <dl class="header">
@@ -36596,10 +37129,14 @@ THH:mm:ss.sss
           <p>This section is amended in <emu-xref href="#sec-parsepattern-annexb"></emu-xref>.</p>
         </emu-note>
         <emu-alg>
-          1. If _u_ is *true*, then
-            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, +N]|).
+          1. If _v_ is *true* and _u_ is *true*, then
+            1. Let _parseResult_ be a List containing one or more *SyntaxError* objects.
+          1. Else if _v_ is *true*, then
+            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, +UnicodeSetsMode, +N]|).
+          1. Else if _u_ is *true*, then
+            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, ~UnicodeSetsMode, +N]|).
           1. Else,
-            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[~UnicodeMode, +N]|).
+            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[~UnicodeMode, ~UnicodeSetsMode, +N]|).
           1. Return _parseResult_.
         </emu-alg>
       </emu-clause>
@@ -36735,6 +37272,8 @@ THH:mm:ss.sss
           1. If _dotAll_ is *true*, append the code unit 0x0073 (LATIN SMALL LETTER S) to _codeUnits_.
           1. Let _unicode_ be ToBoolean(? Get(_R_, *"unicode"*)).
           1. If _unicode_ is *true*, append the code unit 0x0075 (LATIN SMALL LETTER U) to _codeUnits_.
+          1. Let _unicodeSets_ be ToBoolean(? Get(_R_, *"unicodeSets"*)).
+          1. If _unicodeSets_ is *true*, append the code unit 0x0076 (LATIN SMALL LETTER V) to _codeUnits_.
           1. Let _sticky_ be ToBoolean(? Get(_R_, *"sticky"*)).
           1. If _sticky_ is *true*, append the code unit 0x0079 (LATIN SMALL LETTER Y) to _codeUnits_.
           1. Return the String value whose code units are the elements of the List _codeUnits_. If _codeUnits_ has no elements, the empty String is returned.
@@ -36802,7 +37341,7 @@ THH:mm:ss.sss
           1. If _flags_ does not contain *"g"*, then
             1. Return ? RegExpExec(_rx_, _S_).
           1. Else,
-            1. If _flags_ contains *"u"*, let _fullUnicode_ be *true*. Otherwise, let _fullUnicode_ be *false*.
+            1. If _flags_ contains *"u"* or _flags_ contains *"v"*, let _fullUnicode_ be *true*. Otherwise, let _fullUnicode_ be *false*.
             1. Perform ? Set(_rx_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).
             1. Let _A_ be ! ArrayCreate(0).
             1. Let _n_ be 0.
@@ -36840,7 +37379,7 @@ THH:mm:ss.sss
           1. Perform ? Set(_matcher_, *"lastIndex"*, _lastIndex_, *true*).
           1. If _flags_ contains *"g"*, let _global_ be *true*.
           1. Else, let _global_ be *false*.
-          1. If _flags_ contains *"u"*, let _fullUnicode_ be *true*.
+          1. If _flags_ contains *"u"* or _flags_ contains *"v"*, let _fullUnicode_ be *true*.
           1. Else, let _fullUnicode_ be *false*.
           1. Return CreateRegExpStringIterator(_matcher_, _S_, _global_, _fullUnicode_).
         </emu-alg>
@@ -36871,7 +37410,6 @@ THH:mm:ss.sss
           1. Let _flags_ be ? ToString(? Get(_rx_, *"flags"*)).
           1. If _flags_ contains *"g"*, let _global_ be *true*. Otherwise, let _global_ be *false*.
           1. If _global_ is *true*, then
-            1. If _flags_ contains *"u"*, let _fullUnicode_ be *true*. Otherwise, let _fullUnicode_ be *false*.
             1. Perform ? Set(_rx_, *"lastIndex"*, *+0*<sub>𝔽</sub>, *true*).
           1. Let _results_ be a new empty List.
           1. Let _done_ be *false*.
@@ -36887,6 +37425,7 @@ THH:mm:ss.sss
                 1. Let _matchStr_ be ? ToString(? Get(_result_, *"0"*)).
                 1. If _matchStr_ is the empty String, then
                   1. Let _thisIndex_ be ℝ(? ToLength(? Get(_rx_, *"lastIndex"*))).
+                  1. If _flags_ contains *"u"* or _flags_ contains *"v"*, let _fullUnicode_ be *true*. Otherwise, let _fullUnicode_ be *false*.
                   1. Let _nextIndex_ be AdvanceStringIndex(_S_, _thisIndex_, _fullUnicode_).
                   1. Perform ? Set(_rx_, *"lastIndex"*, 𝔽(_nextIndex_), *true*).
           1. Let _accumulatedResult_ be the empty String.
@@ -36976,7 +37515,13 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Let _S_ be a String in the form of a |Pattern[~UnicodeMode]| (|Pattern[+UnicodeMode]| if _F_ contains *"u"*) equivalent to _P_ interpreted as UTF-16 encoded Unicode code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>), in which certain code points are escaped as described below. _S_ may or may not differ from _P_; however, the Abstract Closure that would result from evaluating _S_ as a |Pattern[~UnicodeMode]| (|Pattern[+UnicodeMode]| if _F_ contains *"u"*) must behave identically to the Abstract Closure given by the constructed object's [[RegExpMatcher]] internal slot. Multiple calls to this abstract operation using the same values for _P_ and _F_ must produce identical results.
+            1. If _F_ contains *"v"*, then
+              1. Let _patternSymbol_ be |Pattern[+UnicodeMode, +UnicodeSetsMode]|.
+            1. Else if _F_ contains *"u"*, then
+              1. Let _patternSymbol_ be |Pattern[+UnicodeMode, ~UnicodeSetsMode]|.
+            1. Else,
+              1. Let _patternSymbol_ be |Pattern[~UnicodeMode, ~UnicodeSetsMode]|.
+            1. Let _S_ be a String in the form of a _patternSymbol_ equivalent to _P_ interpreted as UTF-16 encoded Unicode code points (<emu-xref href="#sec-ecmascript-language-types-string-type"></emu-xref>), in which certain code points are escaped as described below. _S_ may or may not differ from _P_; however, the Abstract Closure that would result from evaluating _S_ as a _patternSymbol_ must behave identically to the Abstract Closure given by the constructed object's [[RegExpMatcher]] internal slot. Multiple calls to this abstract operation using the same values for _P_ and _F_ must produce identical results.
             1. The code points `/` or any |LineTerminator| occurring in the pattern shall be escaped in _S_ as necessary to ensure that the string-concatenation of *"/"*, _S_, *"/"*, and _F_ can be parsed (in an appropriate lexical context) as a |RegularExpressionLiteral| that behaves identically to the constructed regular expression. For example, if _P_ is *"/"*, then _S_ could be *"\\/"* or *"\\u002F"*, among other possibilities, but not *"/"*, because `///` followed by _F_ would be parsed as a |SingleLineComment| rather than a |RegularExpressionLiteral|. If _P_ is the empty String, this specification can be met by letting _S_ be *"(?:)"*.
             1. Return _S_.
           </emu-alg>
@@ -37002,7 +37547,7 @@ THH:mm:ss.sss
           1. Let _S_ be ? ToString(_string_).
           1. Let _C_ be ? SpeciesConstructor(_rx_, %RegExp%).
           1. Let _flags_ be ? ToString(? Get(_rx_, *"flags"*)).
-          1. If _flags_ contains *"u"*, let _unicodeMatching_ be *true*.
+          1. If _flags_ contains *"u"* or _flags_ contains *"v"*, let _unicodeMatching_ be *true*.
           1. Else, let _unicodeMatching_ be *false*.
           1. If _flags_ contains *"y"*, let _newFlags_ be _flags_.
           1. Else, let _newFlags_ be the string-concatenation of _flags_ and *"y"*.
@@ -37101,6 +37646,16 @@ THH:mm:ss.sss
           1. Return ? RegExpHasFlag(_R_, _cu_).
         </emu-alg>
       </emu-clause>
+
+      <emu-clause id="sec-get-regexp.prototype.unicodesets">
+        <h1>get RegExp.prototype.unicodeSets</h1>
+        <p>`RegExp.prototype.unicodeSets` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _R_ be the *this* value.
+          1. Let _cu_ be the code unit 0x0076 (LATIN SMALL LETTER V).
+          1. Return ? RegExpHasFlag(_R_, _cu_).
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-abstract-operations-for-regexp-matching">
@@ -37147,7 +37702,7 @@ THH:mm:ss.sss
           1. If _flags_ contains *"d"*, let _hasIndices_ be *true*; else let _hasIndices_ be *false*.
           1. If _global_ is *false* and _sticky_ is *false*, set _lastIndex_ to 0.
           1. Let _matcher_ be _R_.[[RegExpMatcher]].
-          1. If _flags_ contains *"u"*, let _fullUnicode_ be *true*; else let _fullUnicode_ be *false*.
+          1. If _flags_ contains *"u"* or _flags_ contains *"v"*, let _fullUnicode_ be *true*; else let _fullUnicode_ be *false*.
           1. Let _matchSucceeded_ be *false*.
           1. If _fullUnicode_ is *true*, let _input_ be StringToCodePoints(_S_). Otherwise, let _input_ be a List whose elements are the code units that are the elements of _S_.
           1. NOTE: Each element of _input_ is considered to be a character.
@@ -48059,12 +48614,27 @@ THH:mm:ss.sss
     <emu-prodref name="UnicodePropertyValueCharacter"></emu-prodref>
     <emu-prodref name="UnicodePropertyNameCharacter"></emu-prodref>
     <emu-prodref name="CharacterClass"></emu-prodref>
-    <emu-prodref name="ClassRanges"></emu-prodref>
+    <emu-prodref name="ClassContents"></emu-prodref>
     <emu-prodref name="NonemptyClassRanges"></emu-prodref>
     <emu-prodref name="NonemptyClassRangesNoDash"></emu-prodref>
     <emu-prodref name="ClassAtom"></emu-prodref>
     <emu-prodref name="ClassAtomNoDash"></emu-prodref>
     <emu-prodref name="ClassEscape"></emu-prodref>
+    <emu-prodref name="ClassSetExpression"></emu-prodref>
+    <emu-prodref name="ClassUnion"></emu-prodref>
+    <emu-prodref name="ClassIntersection"></emu-prodref>
+    <emu-prodref name="ClassSubtraction"></emu-prodref>
+    <emu-prodref name="ClassSetRange"></emu-prodref>
+    <emu-prodref name="ClassSetOperand"></emu-prodref>
+    <emu-prodref name="NestedClass"></emu-prodref>
+    <emu-prodref name="ClassStringDisjunction"></emu-prodref>
+    <emu-prodref name="ClassStringDisjunctionContents"></emu-prodref>
+    <emu-prodref name="ClassString"></emu-prodref>
+    <emu-prodref name="NonEmptyClassString"></emu-prodref>
+    <emu-prodref name="ClassSetCharacter"></emu-prodref>
+    <emu-prodref name="ClassSetReservedDoublePunctuator"></emu-prodref>
+    <emu-prodref name="ClassSetSyntaxCharacter"></emu-prodref>
+    <emu-prodref name="ClassSetReservedPunctuator"></emu-prodref>
   </emu-annex>
 </emu-annex>
 
@@ -48138,37 +48708,37 @@ THH:mm:ss.sss
       <p>This alternative pattern grammar and semantics only changes the syntax and semantics of BMP patterns. The following grammar extensions include productions parameterized with the [UnicodeMode] parameter. However, none of these extensions change the syntax of Unicode patterns recognized when parsing with the [UnicodeMode] parameter present on the goal symbol.</p>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
-        Term[UnicodeMode, N] ::
-          [+UnicodeMode] Assertion[+UnicodeMode, ?N]
-          [+UnicodeMode] Atom[+UnicodeMode, ?N] Quantifier
-          [+UnicodeMode] Atom[+UnicodeMode, ?N]
+        Term[UnicodeMode, UnicodeSetsMode, N] ::
+          [+UnicodeMode] Assertion[+UnicodeMode, ?UnicodeSetsMode, ?N]
+          [+UnicodeMode] Atom[+UnicodeMode, ?UnicodeSetsMode, ?N] Quantifier
+          [+UnicodeMode] Atom[+UnicodeMode, ?UnicodeSetsMode, ?N]
           [~UnicodeMode] QuantifiableAssertion[?N] Quantifier
-          [~UnicodeMode] Assertion[~UnicodeMode, ?N]
+          [~UnicodeMode] Assertion[~UnicodeMode, ~UnicodeSetsMode, ?N]
           [~UnicodeMode] ExtendedAtom[?N] Quantifier
           [~UnicodeMode] ExtendedAtom[?N]
 
-        Assertion[UnicodeMode, N] ::
+        Assertion[UnicodeMode, UnicodeSetsMode, N] ::
           `^`
           `$`
           `\b`
           `\B`
-          [+UnicodeMode] `(?=` Disjunction[+UnicodeMode, ?N] `)`
-          [+UnicodeMode] `(?!` Disjunction[+UnicodeMode, ?N] `)`
+          [+UnicodeMode] `(?=` Disjunction[+UnicodeMode, ?UnicodeSetsMode, ?N] `)`
+          [+UnicodeMode] `(?!` Disjunction[+UnicodeMode, ?UnicodeSetsMode, ?N] `)`
           [~UnicodeMode] QuantifiableAssertion[?N]
-          `(?&lt;=` Disjunction[?UnicodeMode, ?N] `)`
-          `(?&lt;!` Disjunction[?UnicodeMode, ?N] `)`
+          `(?&lt;=` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N] `)`
+          `(?&lt;!` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?N] `)`
 
         QuantifiableAssertion[N] ::
-          `(?=` Disjunction[~UnicodeMode, ?N] `)`
-          `(?!` Disjunction[~UnicodeMode, ?N] `)`
+          `(?=` Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?N] `)`
+          `(?!` Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?N] `)`
 
         ExtendedAtom[N] ::
           `.`
           `\` AtomEscape[~UnicodeMode, ?N]
           `\` [lookahead == `c`]
-          CharacterClass[~UnicodeMode]
-          `(` GroupSpecifier[~UnicodeMode]? Disjunction[~UnicodeMode, ?N] `)`
-          `(?:` Disjunction[~UnicodeMode, ?N] `)`
+          CharacterClass[~UnicodeMode, ~UnicodeSetsMode]
+          `(` GroupSpecifier[~UnicodeMode]? Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?N] `)`
+          `(?:` Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?N] `)`
           InvalidBracedQuantifier
           ExtendedPatternCharacter
 
@@ -48235,7 +48805,7 @@ THH:mm:ss.sss
           </li>
         </ul>
         <p>Additionally, the rules for the following productions are modified with the addition of the <ins>highlighted</ins> text:</p>
-        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
+        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassContents</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *true* or IsCharacterClass of the second |ClassAtom| is *true* <ins>and this production has a <sub>[UnicodeMode]</sub> parameter</ins>.
@@ -48244,7 +48814,7 @@ THH:mm:ss.sss
             It is a Syntax Error if IsCharacterClass of the first |ClassAtom| is *false*, IsCharacterClass of the second |ClassAtom| is *false*, and the CharacterValue of the first |ClassAtom| is strictly greater than the CharacterValue of the second |ClassAtom|.
           </li>
         </ul>
-        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
+        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassContents</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if IsCharacterClass of |ClassAtomNoDash| is *true* or IsCharacterClass of |ClassAtom| is *true* <ins>and this production has a <sub>[UnicodeMode]</sub> parameter</ins>.
@@ -48327,19 +48897,19 @@ THH:mm:ss.sss
         <p>The semantics of <emu-xref href="#sec-compiletocharset"></emu-xref> is extended as follows:</p>
 
         <p>The following two rules replace the corresponding rules of CompileToCharSet.</p>
-        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassRanges</emu-grammar>
+        <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassContents</emu-grammar>
         <emu-alg>
           1. Let _A_ be CompileToCharSet of the first |ClassAtom| with argument _rer_.
           1. Let _B_ be CompileToCharSet of the second |ClassAtom| with argument _rer_.
-          1. Let _C_ be CompileToCharSet of |ClassRanges| with argument _rer_.
+          1. Let _C_ be CompileToCharSet of |ClassContents| with argument _rer_.
           1. Let _D_ be CharacterRangeOrUnion(_rer_, _A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
-        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassRanges</emu-grammar>
+        <emu-grammar>NonemptyClassRangesNoDash :: ClassAtomNoDash `-` ClassAtom ClassContents</emu-grammar>
         <emu-alg>
           1. Let _A_ be CompileToCharSet of |ClassAtomNoDash| with argument _rer_.
           1. Let _B_ be CompileToCharSet of |ClassAtom| with argument _rer_.
-          1. Let _C_ be CompileToCharSet of |ClassRanges| with argument _rer_.
+          1. Let _C_ be CompileToCharSet of |ClassContents| with argument _rer_.
           1. Let _D_ be CharacterRangeOrUnion(_rer_, _A_, _B_).
           1. Return the union of _D_ and _C_.
         </emu-alg>
@@ -48369,7 +48939,7 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. If _rer_.[[Unicode]] is *false*, then
+            1. If HasEitherUnicodeFlag(_rer_) is *false*, then
               1. If _A_ does not contain exactly one character or _B_ does not contain exactly one character, then
                 1. Let _C_ be the CharSet containing the single character `-` U+002D (HYPHEN-MINUS).
                 1. Return the union of CharSets _A_, _B_ and _C_.
@@ -48379,16 +48949,20 @@ THH:mm:ss.sss
       </emu-annex>
 
       <emu-annex id="sec-parsepattern-annexb">
-        <h1>Static Semantics: ParsePattern ( _patternText_, _u_ )</h1>
+        <h1>Static Semantics: ParsePattern ( _patternText_, _u_, _v_ )</h1>
         <p>The semantics of <emu-xref href="#sec-parsepattern"></emu-xref> is extended as follows:</p>
-        <p>The abstract operation ParsePattern takes arguments _patternText_ (a sequence of Unicode code points) and _u_ (a Boolean). It performs the following steps when called:</p>
+        <p>The abstract operation ParsePattern takes arguments _patternText_ (a sequence of Unicode code points), _u_ (a Boolean), and _v_ (a Boolean). It performs the following steps when called:</p>
         <emu-alg>
-          1. If _u_ is *true*, then
-            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, +N]|).
+          1. If _v_ is *true* and _u_ is *true*, then
+            1. Let _parseResult_ be a List containing one or more *SyntaxError* objects.
+          1. Else if _v_ is *true*, then
+            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, +UnicodeSetsMode, +N]|).
+          1. Else if _u_ is *true*, then
+            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, ~UnicodeSetsMode, +N]|).
           1. Else,
-            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[~UnicodeMode, ~N]|).
+            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[~UnicodeMode, ~UnicodeSetsMode, ~N]|).
             1. If _parseResult_ is a Parse Node and _parseResult_ contains a |GroupName|, then
-              1. Set _parseResult_ to ParseText(_patternText_, |Pattern[~UnicodeMode, +N]|).
+              1. Set _parseResult_ to ParseText(_patternText_, |Pattern[~UnicodeMode, ~UnicodeSetsMode, +N]|).
           1. Return _parseResult_.
         </emu-alg>
       </emu-annex>
