@@ -11532,10 +11532,10 @@
             [[LoadedModules]]
           </td>
           <td>
-            a List of Records with fields [[Specifier]] (a String), [[Attributes]] (a List of ImportAttribute Records) and [[Module]] (a Module Record)
+            a List of LoadedModuleRequest Records
           </td>
           <td>
-            <p>A map from the specifier strings imported by this realm to the resolved Module Record. The list does not contain two different Records with the same [[Specifier]].</p>
+            <p>A map from the specifier strings imported by this realm to the resolved Module Record. The list does not contain two different Records _r1_ and _r2_ such that ModuleRequestsEqual(_r1_, _r2_) is *true*.</p>
             <emu-note>
               As mentioned in HostLoadImportedModule (<emu-xref href="#note-HostLoadImportedModule-referrer-Realm-Record"></emu-xref>), [[LoadedModules]] in Realm Records is only used when running an `import()` expression in a context where there is no active script or module.
             </emu-note>
@@ -19385,18 +19385,18 @@
       <emu-clause id="sec-evaluate-import-call" type="abstract operation">
         <h1>
           EvaluateImportCall (
-            _specifierExpression_: a ParseNode,
-            optional _optionsExpression_: a ParseNode,
+            _specifierExpression_: a Parse Node,
+            optional _optionsExpression_: a Parse Node,
           ): either a normal completion containing a Promise or a throw completion
         </h1>
         <dl class="header"></dl>
         <emu-alg>
           1. Let _referrer_ be GetActiveScriptOrModule().
           1. If _referrer_ is *null*, set _referrer_ to the current Realm Record.
-          1. Let _specifierRef_ be the result of evaluating _specifierExpression_.
+          1. Let _specifierRef_ be ? Evaluation of _specifierExpression_.
           1. Let _specifier_ be ? GetValue(_specifierRef_).
           1. If _optionsExpression_ is present, then
-            1. Let _optionsRef_ be the result of evaluating _optionsExpression_.
+            1. Let _optionsRef_ be ? Evaluation of _optionsExpression_.
             1. Let _options_ be ? GetValue(_optionsRef_).
           1. Else,
             1. Let _options_ be *undefined*.
@@ -19405,7 +19405,7 @@
           1. IfAbruptRejectPromise(_specifierString_, _promiseCapability_).
           1. Let _attributes_ be a new empty List.
           1. If _options_ is not *undefined*, then
-            1. If Type(_options_) is not Object, then
+            1. If _options_ is not an Object, then
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
               1. Return _promiseCapability_.[[Promise]].
             1. Let _attributesObj_ be Completion(Get(_options_, *"with"*)).
@@ -19414,7 +19414,7 @@
               1. Let _attributesObj_ be Completion(Get(_options_, *"assert"*)).
               1. IfAbruptRejectPromise(_attributesObj_, _promiseCapability_).
             1. If _attributesObj_ is not *undefined*, then
-              1. If Type(_attributesObj_) is not Object, then
+              1. If _attributesObj_ is not an Object, then
                 1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
                 1. Return _promiseCapability_.[[Promise]].
               1. Let _entries_ be Completion(EnumerableOwnProperties(_attributesObj_, ~key+value~)).
@@ -19422,7 +19422,7 @@
               1. For each element _entry_ of _entries_, do
                 1. Let _key_ be ! <emu-meta suppress-effects="user-code">Get(_entry_, *"0"*)</emu-meta>.
                 1. Let _value_ be ! <emu-meta suppress-effects="user-code">Get(_entry_, *"1"*)</emu-meta>.
-                1. If Type(_value_) is not String, then
+                1. If _value_ is not a String, then
                   1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
                   1. Return _promiseCapability_.[[Promise]].
                 1. Append the ImportAttribute Record { [[Key]]: _key_, [[Value]]: _value_ } to _attributes_.
@@ -25752,10 +25752,10 @@
               [[LoadedModules]]
             </td>
             <td>
-              a List of Records with fields [[Specifier]] (a String), [[Attributes]] (a List of ImportAttribute Records) and [[Module]] (a Module Record)
+              a List of LoadedModuleRequest Records
             </td>
             <td>
-              A map from the specifier strings imported by this script to the resolved Module Record. The list does not contain two different Records with the same [[Specifier]].
+              A map from the specifier strings imported by this script to the resolved Module Record. The list does not contain two different Records _r1_ and _r2_ such that ModuleRequestsEqual(_r1_, _r2_) is *true*.
             </td>
           </tr>
           <tr>
@@ -25997,7 +25997,7 @@
       </emu-clause>
 
       <emu-clause id="sec-modulerequest-record">
-        <h1>ModuleRequest and ImportAttribute Records</h1>
+        <h1>ModuleRequest Records</h1>
 
         <p>A <dfn id="modulerequest-record" variants="ModuleRequest Records">ModuleRequest Record</dfn> represents the request to import a module with given import attributes. It consists of the following fields:</p>
         <emu-table id="table-modulerequest-fields" caption="ModuleRequest Record fields">
@@ -26033,6 +26033,34 @@
               </td>
               <td>
                 The import attributes
+              </td>
+            </tr>
+          </table>
+        </emu-table>
+
+        <p>A <dfn id="loadedmodulerequest-record" variants="LoadedModuleRequest Records">LoadedModuleRequest Record</dfn> represents the request to import a module together with the resulting Module Record. It consists of the fields defined in table <emu-xref href="#table-modulerequest-fields"></emu-xref>, alongside with the following additions:</p>
+        <emu-table id="table-loadedmodulerequest-fields" caption="Additional fields of LoadedModuleRequest Records">
+          <table>
+            <tr>
+              <th>
+                Field Name
+              </th>
+              <th>
+                Value Type
+              </th>
+              <th>
+                Meaning
+              </th>
+            </tr>
+            <tr>
+              <td>
+                [[Module]]
+              </td>
+              <td>
+                a Module Record
+              </td>
+              <td>
+                The loaded module corresponding to this module request
               </td>
             </tr>
           </table>
@@ -26076,6 +26104,36 @@
             </tr>
           </table>
         </emu-table>
+
+        <emu-clause id="sec-ModuleRequestsEqual" type="abstract operation">
+          <h1>
+            ModuleRequestsEqual (
+              _left_: a ModuleRequest Record or a LoadedModuleRequest Record,
+              _right_: a ModuleRequest Record or a LoadedModuleRequest Record,
+            ): a Boolean
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd></dd>
+          </dl>
+
+          <emu-alg>
+            1. If _left_.[[Specifier]] is not _right_.[[Specifier]], return *false*.
+            1. Let _leftAttrs_ be _left_.[[Attributes]].
+            1. Let _rightAttrs_ be _right_.[[Attributes]].
+            1. If the number of elements in _leftAttrs_ is not the number of elements in _rightAttrs_, return *false*.
+            1. For each ImportAttribute Record _l_ of _leftAttrs_, do
+              1. Let _found_ be *false*.
+              1. For each ImportAttribute Record _r_ of _rightAttrs_, do
+                1. If _l_.[[Key]] is _r_.[[Key]], then
+                  1. If _l_.[[Value]] is _r_.[[Value]], then
+                    1. Set _found_ to *true*.
+                  1. Else,
+                    1. Return *false*.
+              1. If _found_ is *false*, return *false*.
+            1. Return *true*.
+          </emu-alg>
+        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-static-semantics-modulerequests" oldids="sec-module-semantics-static-semantics-modulerequests,sec-imports-static-semantics-modulerequests,sec-exports-static-semantics-modulerequests" type="sdo">
@@ -26095,7 +26153,7 @@
           1. Let _requests_ be ModuleRequests of |ModuleItemList|.
           1. Let _additionalRequests_ be ModuleRequests of |ModuleItem|.
           1. For each ModuleRequest Record _mr_ of _additionalRequests_, do
-            1. If _requests_ does not contain a ModuleRequest Record _mr2_ such that _mr_.[[Specifier]] is _mr2_.[[Specifier]] and ImportAttributesEqual(_mr_.[[Attributes]], _mr2_.[[Attributes]]) is *true*, then
+            1. If _requests_ does not contain a ModuleRequest Record _mr2_ such that ModuleRequestsEqual(_mr_, _mr2_) is *true*, then
               1. Append _mr_ to _requests_.
           1. Return _requests_.
         </emu-alg>
@@ -26347,10 +26405,10 @@
                 [[LoadedModules]]
               </td>
               <td>
-                a List of Records with fields [[Specifier]] (a String), [[Attributes]] (a List of ImportAttribute Records) and [[Module]] (a Module Record)
+                a List of LoadedModuleRequest Records
               </td>
               <td>
-                A map from the specifier strings used by the module represented by this record to request the importation of a module with the relative import attributes to the resolved Module Record. The list does not contain two different Records with the same ([[Specifier]], [[Attributes]]) pair.
+                A map from the specifier strings used by the module represented by this record to request the importation of a module with the relative import attributes to the resolved Module Record. The list does not contain two different Records _r1_ and _r2_ such that ModuleRequestsEqual(_r1_, _r2_) is *true*.
               </td>
             </tr>
             <tr>
@@ -26569,7 +26627,7 @@
                 1. Let _requestedModulesCount_ be the number of elements in _module_.[[RequestedModules]].
                 1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] + _requestedModulesCount_.
                 1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
-                  1. If _module_.[[LoadedModules]] contains a Record _record_ such that _record_.[[Specifier]] is _request_.[[Specifier]] and ImportAttributesEqual(_record_.[[Attributes]], _request_.[[Attributes]]) is *true*, then
+                  1. If _module_.[[LoadedModules]] contains a LoadedModuleRequest Record _record_ such that ModuleRequestsEqual(_record_, _request_) is *true*, then
                     1. Perform InnerModuleLoading(_state_, _record_.[[Module]]).
                   1. Else,
                     1. Perform HostLoadImportedModule(_module_, _request_, _state_.[[HostDefined]], _state_).
@@ -28079,8 +28137,8 @@
         </dl>
 
         <emu-alg>
-          1. Assert: Exactly one element of _referrer_.[[LoadedModules]] is a Record _record_ such that _record_.[[Specifier]] is _request_.[[Specifier]] and ImportAttributesEqual(_record_.[[Attributes]], _request_.[[Attributes]]) is *true*, since LoadRequestedModules has completed successfully on _referrer_ prior to invoking this abstract operation.
-          1. Let _record_ be the Record in _referrer_.[[LoadedModules]] such that _record_.[[Specifier]] is _request_.[[Specifier]] and ImportAttributesEqual(_record_.[[Attributes]], _request_.[[Attributes]]) is *true*.
+          1. Assert: Exactly one element of _referrer_.[[LoadedModules]] is a LoadedModuleRequest Record _record_ such that ModuleRequestsEqual(_record_, _request_) is *true*, since LoadRequestedModules has completed successfully on _referrer_ prior to invoking this abstract operation.
+          1. Let _record_ be the LoadedModuleRequest Record in _referrer_.[[LoadedModules]] such that ModuleRequestsEqual(_record_, _request_) is *true*.
           1. Return _record_.[[Module]].
         </emu-alg>
       </emu-clause>
@@ -28116,8 +28174,7 @@
             <p>If this operation is called multiple times with two (_referrer_, _moduleRequest_) pairs such that:</p>
             <ul>
               <li>the first _referrer_ is the same as the second _referrer_;</li>
-              <li>the first _moduleRequest_.[[Specifier]] is the same as the second _moduleRequest_.[[Specifier]];</li>
-              <li>ImportAttributesEqual(the first _moduleRequest_.[[Attributes]], the second _moduleRequest_.[[Attributes]]) is *true*;</li>
+              <li>ModuleRequestsEqual(the first _moduleRequest_, the second _moduleRequest_) is *true*;</li>
             </ul>
             <p>and it performs FinishLoadingImportedModule(_referrer_, _moduleRequest_, _payload_, _result_) where _result_ is a normal completion, then it must perform FinishLoadingImportedModule(_referrer_, _moduleRequest_, _payload_, _result_) with the same _result_ each time.</p>
           </li>
@@ -28144,42 +28201,15 @@
         </dl>
         <emu-alg>
           1. If _result_ is a normal completion, then
-            1. If _referrer_.[[LoadedModules]] contains a Record _record_ such that _record_.[[Specifier]] is _moduleRequest_.[[Specifier]] and ImportAttributesEqual(_record_.[[Attributes]], _moduleRequest_.[[Attributes]]) is *true*, then
+            1. If _referrer_.[[LoadedModules]] contains a LoadedModuleRequest Record _record_ such that ModuleRequestsEqual(_record_, _moduleRequest_) is *true*, then
               1. Assert: _record_.[[Module]] is _result_.[[Value]].
             1. Else,
-              1. Append the Record { [[Specifier]]: _moduleRequest_.[[Specifer]], [[Attributes]]: _moduleRequest_.[[Attributes]], [[Module]]: _result_.[[Value]] } to _referrer_.[[LoadedModules]].
+              1. Append the LoadedModuleRequest Record { [[Specifier]]: _moduleRequest_.[[Specifer]], [[Attributes]]: _moduleRequest_.[[Attributes]], [[Module]]: _result_.[[Value]] } to _referrer_.[[LoadedModules]].
           1. If _payload_ is a GraphLoadingState Record, then
             1. Perform ContinueModuleLoading(_payload_, _result_).
           1. Else,
             1. Perform ContinueDynamicImport(_payload_, _result_).
           1. Return ~unused~.
-        </emu-alg>
-      </emu-clause>
-
-      <emu-clause id="sec-ImportAttributesEqual" type="abstract operation">
-        <h1>
-          ImportAttributesEqual (
-            _left_: a List of ImportAttribute Records,
-            _right_: a List of ImportAttribute Records,
-          ): a Boolean
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd></dd>
-        </dl>
-
-        <emu-alg>
-          1. If the number of elements in _left_ is not the same as the number of elements in _right_, return *false*.
-          1. For each ImportAttribute Record _r_ of _left_, do
-            1. Let _found_ be *false*.
-            1. For each ImportAttribute Record _s_ of _right_, do
-              1. If _r_.[[Key]] is _s_.[[Key]], then
-                1. If _r_.[[Value]] is _s_.[[Value]], then
-                  1. Set _found_ to *true*.
-                1. Else,
-                  1. Return *false*.
-            1. If _found_ is *false*, return *false*.
-          1. Return *true*.
         </emu-alg>
       </emu-clause>
 
