@@ -6936,8 +6936,7 @@
       <h1>
         IteratorClose (
           _iteratorRecord_: an Iterator Record,
-          _completion_: a Completion Record,
-        ): a Completion Record
+        ): either a normal completion containing ~unused~ or a throw completion
       </h1>
       <dl class="header">
         <dt>description</dt>
@@ -6945,15 +6944,11 @@
       </dl>
       <emu-alg>
         1. Let _iterator_ be _iteratorRecord_.[[Iterator]].
-        1. Let _innerResult_ be Completion(GetMethod(_iterator_, *"return"*)).
-        1. If _innerResult_.[[Type]] is ~normal~, then
-          1. Let _return_ be _innerResult_.[[Value]].
-          1. If _return_ is *undefined*, return ? _completion_.
-          1. Set _innerResult_ to Completion(Call(_return_, _iterator_)).
-        1. If _completion_.[[Type]] is ~throw~, return ? _completion_.
-        1. If _innerResult_.[[Type]] is ~throw~, return ? _innerResult_.
+        1. Let _return_ be ? GetMethod(_iterator_, *"return"*).
+        1. If _return_ is *undefined*, return ~unused~.
+        1. Let _innerResult_ be ? Call(_return_, _iterator_).
         1. If _innerResult_.[[Value]] is not an Object, throw a *TypeError* exception.
-        1. Return ? _completion_.
+        1. Return ~unused~.
       </emu-alg>
     </emu-clause>
 
@@ -6968,13 +6963,28 @@
         <dd>It is used to notify an iterator that it should perform any actions it would normally perform when it has reached its completed state. Any exceptions which occur during the process are suppressed.</dd>
       </dl>
       <emu-alg>
-        1. Let _iterator_ be _iteratorRecord_.[[Iterator]].
-        1. Let _innerResult_ be Completion(GetMethod(_iterator_, *"return"*)).
-        1. If _innerResult_.[[Type]] is ~normal~, then
-          1. Let _return_ be _innerResult_.[[Value]].
-          1. If _return_ is not *undefined*, then
-            1. Perform Completion(Call(_return_, _iterator_)).
+        1. Perform Completion(IteratorClose(_iteratorRecord_)).
         1. Return ~unused~.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-iteratorcloseforcompletion" type="abstract operation">
+      <h1>
+        IteratorCloseForCompletion (
+          _iteratorRecord_: an Iterator Record,
+          _completion_: a Completion Record
+        ): a Completion Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It is used to notify an iterator that it should perform any actions it would normally perform when it has reached its completed state. It returns either the passed Completion Record or the one which arises from that action.</dd>
+      </dl>
+      <emu-alg>
+        1. If _completion_.[[Type]] is ~throw~, then
+          1. Perform IteratorCloseForThrow(_iteratorRecord_).
+        1. Else,
+          1. Perform ? IteratorClose(_iteratorRecord_).
+        1. Return _completion_.
       </emu-alg>
     </emu-clause>
 
@@ -6987,7 +6997,7 @@
       <p>means the same thing as:</p>
       <emu-alg>
         1. Assert: _value_ is a Completion Record.
-        1. If _value_ is an abrupt completion, return ? IteratorClose(_iteratorRecord_, _value_).
+        1. If _value_ is an abrupt completion, return ? IteratorCloseForCompletion(_iteratorRecord_, _value_).
         1. Else, set _value_ to _value_.[[Value]].
       </emu-alg>
     </emu-clause>
@@ -9411,7 +9421,7 @@
       <emu-alg>
         1. Let _iteratorRecord_ be ? GetIterator(_value_, ~sync~).
         1. Let _result_ be Completion(IteratorBindingInitialization of |ArrayBindingPattern| with arguments _iteratorRecord_ and _environment_).
-        1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _result_).
+        1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorCloseForCompletion(_iteratorRecord_, _result_).
         1. Return ? _result_.
       </emu-alg>
       <emu-grammar>ObjectBindingPattern : `{` `}`</emu-grammar>
@@ -20613,13 +20623,14 @@
         <emu-grammar>ArrayAssignmentPattern : `[` `]`</emu-grammar>
         <emu-alg>
           1. Let _iteratorRecord_ be ? GetIterator(_value_, ~sync~).
-          1. Return ? IteratorClose(_iteratorRecord_, NormalCompletion(~unused~)).
+          1. Perform ? IteratorClose(_iteratorRecord_).
+          1. Return ~unused~.
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` Elision `]`</emu-grammar>
         <emu-alg>
           1. Let _iteratorRecord_ be ? GetIterator(_value_, ~sync~).
           1. Let _result_ be Completion(IteratorDestructuringAssignmentEvaluation of |Elision| with argument _iteratorRecord_).
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _result_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorCloseForCompletion(_iteratorRecord_, _result_).
           1. Return _result_.
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` Elision? AssignmentRestElement `]`</emu-grammar>
@@ -20631,14 +20642,14 @@
               1. Assert: _iteratorRecord_.[[Done]] is *true*.
               1. Return ? _status_.
           1. Let _result_ be Completion(IteratorDestructuringAssignmentEvaluation of |AssignmentRestElement| with argument _iteratorRecord_).
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _result_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorCloseForCompletion(_iteratorRecord_, _result_).
           1. Return _result_.
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` AssignmentElementList `]`</emu-grammar>
         <emu-alg>
           1. Let _iteratorRecord_ be ? GetIterator(_value_, ~sync~).
           1. Let _result_ be Completion(IteratorDestructuringAssignmentEvaluation of |AssignmentElementList| with argument _iteratorRecord_).
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _result_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorCloseForCompletion(_iteratorRecord_, _result_).
           1. Return _result_.
         </emu-alg>
         <emu-grammar>ArrayAssignmentPattern : `[` AssignmentElementList `,` Elision? AssignmentRestElement? `]`</emu-grammar>
@@ -20655,7 +20666,7 @@
               1. Return ? _status_.
           1. If |AssignmentRestElement| is present, then
             1. Set _status_ to Completion(IteratorDestructuringAssignmentEvaluation of |AssignmentRestElement| with argument _iteratorRecord_).
-          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorClose(_iteratorRecord_, _status_).
+          1. If _iteratorRecord_.[[Done]] is *false*, return ? IteratorCloseForCompletion(_iteratorRecord_, _status_).
           1. Return ? _status_.
         </emu-alg>
       </emu-clause>
@@ -22058,7 +22069,7 @@
                 1. Assert: _iterationKind_ is ~iterate~.
                 1. Set _status_ to Completion(UpdateEmpty(_result_, _V_)).
                 1. If _iteratorKind_ is ~async~, return ? AsyncIteratorClose(_iteratorRecord_, _status_).
-                1. Return ? IteratorClose(_iteratorRecord_, _status_).
+                1. Return ? IteratorCloseForCompletion(_iteratorRecord_, _status_).
             1. If _result_.[[Value]] is not ~empty~, set _V_ to _result_.[[Value]].
         </emu-alg>
       </emu-clause>
@@ -23906,7 +23917,7 @@
               1. NOTE: If _iterator_ does not have a `throw` method, this throw is going to terminate the `yield*` loop. But first we need to give _iterator_ a chance to clean up.
               1. Let _closeCompletion_ be NormalCompletion(~unused~).
               1. If _generatorKind_ is ~async~, perform ? AsyncIteratorClose(_iteratorRecord_, _closeCompletion_).
-              1. Else, perform ? IteratorClose(_iteratorRecord_, _closeCompletion_).
+              1. Else, perform ? IteratorClose(_iteratorRecord_).
               1. NOTE: The next step throws a *TypeError* to indicate that there was a `yield*` protocol violation: _iterator_ does not have a `throw` method.
               1. Throw a *TypeError* exception.
           1. Else,
