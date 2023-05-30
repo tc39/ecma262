@@ -5,7 +5,7 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 const { execSync } = require('child_process');
 
-const COMMIT = String(execSync('git rev-parse --verify HEAD'));
+const COMMIT = String(execSync('git rev-parse --verify HEAD')).trim();
 
 const WARNING_HTML = fs.readFileSync(path.join(__dirname, 'snapshot_warning.html'), 'utf8')
   .replace(/{COMMIT}/g, COMMIT);
