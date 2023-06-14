@@ -19411,7 +19411,7 @@
             1. Let _attributesObj_ be Completion(Get(_options_, *"with"*)).
             1. IfAbruptRejectPromise(_attributesObj_, _promiseCapability_).
             1. [id="step-evaluate-import-call-assert-fallback", deprecated, normative-optional] If the host supports the <emu-xref href="#sec-deprecated-assert-keyword-for-import-attributes">deprecated `assert` keyword for import attributes</emu-xref> and _attributesObj_ is *undefined*, then
-              1. Let _attributesObj_ be Completion(Get(_options_, *"assert"*)).
+              1. Set _attributesObj_ to Completion(Get(_options_, *"assert"*)).
               1. IfAbruptRejectPromise(_attributesObj_, _promiseCapability_).
             1. If _attributesObj_ is not *undefined*, then
               1. If _attributesObj_ is not an Object, then
@@ -19422,14 +19422,15 @@
               1. For each element _entry_ of _entries_, do
                 1. Let _key_ be ! Get(_entry_, *"0"*).
                 1. Let _value_ be ! Get(_entry_, *"1"*).
-                1. If _value_ is not a String, then
-                  1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
-                  1. Return _promiseCapability_.[[Promise]].
-                1. Append the ImportAttribute Record { [[Key]]: _key_, [[Value]]: _value_ } to _attributes_.
+                1. If _key_ is a String, then
+                  1. If _value_ is not a String, then
+                    1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
+                    1. Return _promiseCapability_.[[Promise]].
+                  1. Append the ImportAttribute Record { [[Key]]: _key_, [[Value]]: _value_ } to _attributes_.
             1. If AllImportAttributesSupported(_attributes_) is *false*, then
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
               1. Return _promiseCapability_.[[Promise]].
-            1. Sort _attributes_ according to the lexicographic order of their [[Key]] fields, treating the value of each such field as a sequence of UTF-16 code unit values. NOTE: This sorting is observable only in that hosts are prohibited from distinguishing among attributes by the order they occur in.
+            1. Sort _attributes_ according to the lexicographic order of their [[Key]] fields, treating the value of each such field as a sequence of UTF-16 code unit values. NOTE: This sorting is observable only in that hosts are prohibited from changing behaviour based on the order in which attributes are enumerated.
           1. Let _moduleRequest_ be a new ModuleRequest Record { [[Specifier]]: _specifierString_, [[Attributes]]: _attributes_ }.
           1. Perform HostLoadImportedModule(_referrer_, _moduleRequest_, ~empty~, _promiseCapability_).
           1. Return _promiseCapability_.[[Promise]].
@@ -26018,7 +26019,7 @@
                 [[Specifier]]
               </td>
               <td>
-                String
+                a String
               </td>
               <td>
                 The module specifier
@@ -26085,7 +26086,7 @@
                 [[Key]]
               </td>
               <td>
-                String
+                a String
               </td>
               <td>
                 The attribute key
@@ -26096,7 +26097,7 @@
                 [[Value]]
               </td>
               <td>
-                String
+                a String
               </td>
               <td>
                 The attribute value
@@ -26166,7 +26167,7 @@
         </emu-alg>
         <emu-grammar>ImportDeclaration : `import` ImportClause FromClause `;`</emu-grammar>
         <emu-alg>
-          1. Let _specifier_ be SV of |FromClause|.
+          1. Let _specifier_ be the SV of |FromClause|.
           1. Return a List whose sole element is the ModuleRequest Record { [[Specifer]]: _specifier_, [[Attributes]]: « » }.
         </emu-alg>
         <emu-grammar>
@@ -28246,8 +28247,6 @@
             <li>It must return a List of Strings, each indicating a supported attribute.</li>
 
             <li>Each time this operation is called, it must return the same List with the same contents in the same order.</li>
-
-            <li>An implementation of HostGetSupportedImportAttributes must always complete normally (i.e., not return an abrupt completion).</li>
           </ul>
 
           <p>The default implementation of HostGetSupportedImportAttributes is to return a new empty List.</p>
@@ -28385,7 +28384,7 @@
         <emu-grammar>WithClause : `with` `{` WithEntries `,`? `}`</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if WithClauseToAttributes of |WithClause| has two entries _a_ and _b_ such that _a_.[[Key]] is _b_.[[Key]].
+            It is a Syntax Error if WithClauseToAttributes of |WithClause| has two different entries _a_ and _b_ such that _a_.[[Key]] is _b_.[[Key]].
           </li>
           <li>
             It is a Syntax Error if AllImportAttributesSupported(WithClauseToAttributes of |WithClause|) is *false*.
@@ -28528,7 +28527,7 @@
         </emu-grammar>
         <emu-alg>
           1. Let _attributes_ be WithClauseToAttributes of |WithEntries|.
-          1. Sort _attributes_ according to the lexicographic order of their [[Key]] fields, treating the value of each such field as a sequence of UTF-16 code unit values. NOTE: This sorting is observable only in that hosts are prohibited from distinguishing among attributes by the order they occur in.
+          1. Sort _attributes_ according to the lexicographic order of their [[Key]] fields, treating the value of each such field as a sequence of UTF-16 code unit values. NOTE: This sorting is observable only in that hosts are prohibited from changing behaviour based on the order in which attributes are enumerated.
           1. Return _attributes_.
         </emu-alg>
 
@@ -28582,7 +28581,7 @@
           AssertClause : `assert` `{` WithEntries `,`? `}`
         </emu-grammar>
         <ul>
-          <li>It is a Syntax Error if WithClauseToAttributes of |AssertClause| has two entries _a_ and _b_ such that _a_.[[Key]] is _b_.[[Key]].</li>
+          <li>It is a Syntax Error if WithClauseToAttributes of |AssertClause| has two different entries _a_ and _b_ such that _a_.[[Key]] is _b_.[[Key]].</li>
           <li>It is a Syntax Error if AllImportAttributesSupported(WithClauseToAttributes of |AssertClause|) is *false*.</li>
         </ul>
 
@@ -28599,7 +28598,7 @@
         </emu-grammar>
         <emu-alg>
           1. Let _attributes_ be WithClauseToAttributes of |WithEntries|.
-          1. Sort _attributes_ by the code point order of the [[Key]] of each element. NOTE: This sorting is observable only in that hosts are prohibited from distinguishing among attributes by the order they occur in.
+          1. Sort _attributes_ according to the lexicographic order of their [[Key]] fields, treating the value of each such field as a sequence of UTF-16 code unit values. NOTE: This sorting is observable only in that hosts are prohibited from changing behaviour based on the order in which attributes are enumerated.
           1. Return _attributes_.
         </emu-alg>
       </emu-clause>
