@@ -7265,11 +7265,11 @@
         1. Let _head_ be the |AsyncArrowHead| that is covered by |CoverCallExpressionAndAsyncArrowHead|.
         1. Return the BoundNames of _head_.
       </emu-alg>
-      <emu-grammar>ImportDeclaration : `import` ImportClause FromClause `;`</emu-grammar>
+      <emu-grammar>ImportDeclaration : `import` ImportClause FromClause WithClause? `;`</emu-grammar>
       <emu-alg>
         1. Return the BoundNames of |ImportClause|.
       </emu-alg>
-      <emu-grammar>ImportDeclaration : `import` ModuleSpecifier `;`</emu-grammar>
+      <emu-grammar>ImportDeclaration : `import` ModuleSpecifier WithClause? `;`</emu-grammar>
       <emu-alg>
         1. Return a new empty List.
       </emu-alg>
@@ -7301,7 +7301,7 @@
       </emu-alg>
       <emu-grammar>
         ExportDeclaration :
-          `export` ExportFromClause FromClause `;`
+          `export` ExportFromClause FromClause WithClause? `;`
           `export` NamedExports `;`
       </emu-grammar>
       <emu-alg>
@@ -7659,7 +7659,7 @@
       </emu-alg>
       <emu-grammar>
         ExportDeclaration :
-          `export` ExportFromClause FromClause `;`
+          `export` ExportFromClause FromClause WithClause? `;`
           `export` NamedExports `;`
           `export` VariableStatement
       </emu-grammar>
@@ -19389,7 +19389,8 @@
             optional _optionsExpression_: a Parse Node,
           ): either a normal completion containing a Promise or a throw completion
         </h1>
-        <dl class="header"></dl>
+        <dl class="header">
+        </dl>
         <emu-alg>
           1. Let _referrer_ be GetActiveScriptOrModule().
           1. If _referrer_ is *null*, set _referrer_ to the current Realm Record.
@@ -26192,9 +26193,7 @@
           1. Let _specifier_ be the SV of |FromClause|.
           1. Return a List whose sole element is the ModuleRequest Record { [[Specifer]]: _specifier_, [[Attributes]]: « » }.
         </emu-alg>
-        <emu-grammar>
-          ImportDeclaration : `import` ImportClause FromClause WithClause `;`
-        </emu-grammar>
+        <emu-grammar>ImportDeclaration : `import` ImportClause FromClause WithClause `;`</emu-grammar>
         <emu-alg>
           1. Let _specifier_ be the SV of |FromClause|.
           1. Let _attributes_ be WithClauseToAttributes of |WithClause|.
@@ -28342,8 +28341,8 @@
       <h2>Syntax</h2>
       <emu-grammar type="definition">
         ImportDeclaration :
-          `import` ImportClause FromClause WithClause? `;`
-          `import` ModuleSpecifier WithClause? `;`
+          `import` ImportClause FromClause WithClause[~DeprecatedAssert]? `;`
+          `import` ModuleSpecifier WithClause[~DeprecatedAssert]? `;`
 
         ImportClause :
           ImportedDefaultBinding
@@ -28380,9 +28379,13 @@
         ImportedBinding :
           BindingIdentifier[~Yield, +Await]
 
-        WithClause :
-          `with` `{` `}`
-          `with` `{` WithEntries `,`? `}`
+        WithClause[DeprecatedAssert] :
+          AttributesKeyword[?DeprecatedAssert] `{` `}`
+          AttributesKeyword[?DeprecatedAssert] `{` WithEntries `,`? `}`
+
+        AttributesKeyword[DeprecatedAssert] :
+          [+DeprecatedAssert] `with`
+          [~DeprecatedAssert] `with`
 
         WithEntries :
           LiteralPropertyName `:` StringLiteral
@@ -28390,7 +28393,7 @@
       </emu-grammar>
 
       <emu-note>
-        <p>This section is extended by <emu-xref href="#sec-deprecated-assert-keyword-for-import-attributes"></emu-xref>.</p>
+        <p>The section is extended by <emu-xref href="#sec-deprecated-assert-keyword-for-import-attributes"></emu-xref>.</p>
       </emu-note>
 
       <emu-clause id="sec-imports-static-semantics-early-errors">
@@ -28402,16 +28405,12 @@
           </li>
         </ul>
 
-        <emu-grammar>WithClause : `with` `{` WithEntries `,`? `}`</emu-grammar>
+        <emu-grammar>WithClause : AttributesKeyword `{` WithEntries `,`? `}`</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if WithClauseToAttributes of |WithClause| has two different entries _a_ and _b_ such that _a_.[[Key]] is _b_.[[Key]].
           </li>
         </ul>
-
-        <emu-note>
-          <p>This section is extended by <emu-xref href="#sec-deprecated-assert-keyword-for-import-attributes"></emu-xref>.</p>
-        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="sdo">
@@ -28436,16 +28435,12 @@
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>
-          ImportDeclaration :
-            `import` ImportClause FromClause `;`
-            `import` ImportClause FromClause WithClause `;`
-        </emu-grammar>
+        <emu-grammar>ImportDeclaration : `import` ImportClause FromClause WithClause? `;`</emu-grammar>
         <emu-alg>
           1. Let _module_ be the sole element of ModuleRequests of |ImportDeclaration|.
           1. Return ImportEntriesForModule of |ImportClause| with argument _module_.
         </emu-alg>
-        <emu-grammar>ImportDeclaration : `import` ModuleSpecifier `;`</emu-grammar>
+        <emu-grammar>ImportDeclaration : `import` ModuleSpecifier WithClause? `;`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
@@ -28514,14 +28509,14 @@
         </dl>
 
         <emu-grammar>
-          WithClause : `with` `{` `}`
+          WithClause : AttributesKeyword `{` `}`
         </emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
 
         <emu-grammar>
-          WithClause : `with` `{` WithEntries `,`? `}`
+          WithClause : AttributesKeyword `{` WithEntries `,`? `}`
         </emu-grammar>
         <emu-alg>
           1. Let _attributes_ be WithClauseToAttributes of |WithEntries|.
@@ -28543,10 +28538,6 @@
           1. Let _rest_ be WithClauseToAttributes of |WithEntries|.
           1. Return the list-concatenation of « _entry_ » and _rest_.
         </emu-alg>
-
-        <emu-note>
-          <p>This section is extended by <emu-xref href="#sec-deprecated-assert-keyword-for-import-attributes"></emu-xref>.</p>
-        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-deprecated-assert-keyword-for-import-attributes" deprecated normative-optional>
@@ -28556,48 +28547,19 @@
 
         <p>This deprecated feature includes the `assert` fallback for import attributes in import calls (step <emu-xref href="#step-evaluate-import-call-assert-fallback"></emu-xref> of <emu-xref href="#sec-evaluate-import-call"></emu-xref>).</p>
 
-        <p>The following augments the |ImportDeclaration| and |ExportDeclaration| productions in <emu-xref href="#sec-imports"></emu-xref> and <emu-xref href="#sec-exports"></emu-xref>:</p>
+        <p>The following augments the |AttributesKeyword|, |ImportDeclaration| and |ExportDeclaration| productions in <emu-xref href="#sec-imports"></emu-xref> and <emu-xref href="#sec-exports"></emu-xref>:</p>
         <!-- emu-grammar[type=definition] have different margin than other emu-grammar, but we want this to be aligned with the one below. -->
         <emu-grammar style="display:block; margin-left: 5ex">
+          AttributesKeyword[DeprecatedAssert] :
+            [+DeprecatedAssert] `assert`
+
           ImportDeclaration :
-            `import` ImportClause FromClause [no LineTerminator here] AssertClause `;`
-            `import` ModuleSpecifier [no LineTerminator here] AssertClause `;`
+            `import` ImportClause FromClause [no LineTerminator here] WithClause[+DeprecatedAssert] `;`
+            `import` ModuleSpecifier [no LineTerminator here] WithClause[+DeprecatedAssert] `;`
 
           ExportDeclaration :
-            `export` ExportFromClause FromClause [no LineTerminator here] AssertClause `;`
+            `export` ExportFromClause FromClause [no LineTerminator here] WithClause[+DeprecatedAssert] `;`
         </emu-grammar>
-
-        <p>The following additional nonterminal is defined:</p>
-        <emu-grammar type="definition" style="margin-left: 0px">
-          AssertClause :
-            `assert` `{` `}`
-            `assert` `{` WithEntries `,`? `}`
-        </emu-grammar>
-
-        <p>The static semantics of Early Errors in <emu-xref href="#sec-imports-static-semantics-early-errors"></emu-xref> are augmented with the following:</p>
-        <emu-grammar>
-          AssertClause : `assert` `{` WithEntries `,`? `}`
-        </emu-grammar>
-        <ul>
-          <li>It is a Syntax Error if WithClauseToAttributes of |AssertClause| has two different entries _a_ and _b_ such that _a_.[[Key]] is _b_.[[Key]].</li>
-        </ul>
-
-        <p>The static semantics of WithClauseToAttributes in <emu-xref href="#sec-with-clause-to-attributes"></emu-xref> are augmented to include the following:</p>
-        <emu-grammar>
-          AssertClause : `assert` `{` `}`
-        </emu-grammar>
-        <emu-alg>
-          1. Return a new empty List.
-        </emu-alg>
-
-        <emu-grammar>
-          AssertClause : `assert` `{` WithEntries `,`? `}`
-        </emu-grammar>
-        <emu-alg>
-          1. Let _attributes_ be WithClauseToAttributes of |WithEntries|.
-          1. Sort _attributes_ according to the lexicographic order of their [[Key]] fields, treating the value of each such field as a sequence of UTF-16 code unit values. NOTE: This sorting is observable only in that hosts are prohibited from changing behaviour based on the order in which attributes are enumerated.
-          1. Return _attributes_.
-        </emu-alg>
       </emu-clause>
     </emu-clause>
 
@@ -28606,7 +28568,7 @@
       <h2>Syntax</h2>
       <emu-grammar type="definition">
         ExportDeclaration :
-          `export` ExportFromClause FromClause WithClause? `;`
+          `export` ExportFromClause FromClause WithClause[~DeprecatedAssert]? `;`
           `export` NamedExports `;`
           `export` VariableStatement[~Yield, +Await]
           `export` Declaration[~Yield, +Await]
@@ -28674,10 +28636,7 @@
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>
-          ExportDeclaration :
-            `export` ExportFromClause FromClause `;`
-        </emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause WithClause? `;`</emu-grammar>
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
@@ -28747,7 +28706,7 @@
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause WithClause? `;`</emu-grammar>
         <emu-alg>
           1. Return the ExportedNames of |ExportFromClause|.
         </emu-alg>
@@ -28822,9 +28781,9 @@
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause `;`</emu-grammar>
+        <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause WithClause? `;`</emu-grammar>
         <emu-alg>
-          1. Let _module_ be the sole element of ModuleRequests of |FromClause|.
+          1. Let _module_ be the sole element of ModuleRequests of |ExportDeclaration|.
           1. Return ExportEntriesForModule of |ExportFromClause| with argument _module_.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` NamedExports `;`</emu-grammar>
@@ -28955,7 +28914,7 @@
         <h1>Runtime Semantics: Evaluation</h1>
         <emu-grammar>
           ExportDeclaration :
-            `export` ExportFromClause FromClause `;`
+            `export` ExportFromClause FromClause WithClause? `;`
             `export` NamedExports `;`
         </emu-grammar>
         <emu-alg>
@@ -49259,6 +49218,9 @@ THH:mm:ss.sss
     <emu-prodref name="NamedExports"></emu-prodref>
     <emu-prodref name="ExportsList"></emu-prodref>
     <emu-prodref name="ExportSpecifier"></emu-prodref>
+    <emu-prodref name="WithClause"></emu-prodref>
+    <emu-prodref name="AttributesKeyword"></emu-prodref>
+    <emu-prodref name="WithEntries"></emu-prodref>
   </emu-annex>
 
   <emu-annex id="sec-number-conversions">
