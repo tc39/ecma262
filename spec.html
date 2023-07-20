@@ -32072,92 +32072,283 @@
         <p>A Number can exactly represent all integers from -9,007,199,254,740,992 to 9,007,199,254,740,992 (<emu-xref href="#sec-number.min_safe_integer"></emu-xref> and <emu-xref href="#sec-number.max_safe_integer"></emu-xref>). A time value supports a slightly smaller range of -8,640,000,000,000,000 to 8,640,000,000,000,000 milliseconds. This yields a supported time value range of exactly -100,000,000 days to 100,000,000 days relative to midnight at the beginning of 1 January 1970 UTC.</p>
         <p>The exact moment of midnight at the beginning of 1 January 1970 UTC is represented by the time value *+0*<sub>𝔽</sub>.</p>
         <emu-note>
+          <p>In the proleptic Gregorian calendar, leap years are precisely those which are both divisible by 4 and either divisible by 400 or not divisible by 100.</p>
           <p>The 400 year cycle of the proleptic Gregorian calendar contains 97 leap years. This yields an average of 365.2425 days per year, which is 31,556,952,000 milliseconds. Therefore, the maximum range a Number could represent exactly with millisecond precision is approximately -285,426 to 285,426 years relative to 1970. The smaller range supported by a time value as specified in this section is approximately -273,790 to 273,790 years relative to 1970.</p>
         </emu-note>
       </emu-clause>
 
-      <emu-clause id="sec-day-number-and-time-within-day">
-        <h1>Day Number and Time within Day</h1>
-        <p>A given time value _t_ belongs to day number</p>
-        <emu-eqn id="eqn-Day" aoid="Day">Day(_t_) = 𝔽(floor(ℝ(_t_ / msPerDay)))</emu-eqn>
-        <p>where the number of milliseconds per day is</p>
-        <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = *86400000*<sub>𝔽</sub></emu-eqn>
-        <p>The remainder is called the time within the day:</p>
-        <emu-eqn id="eqn-TimeWithinDay" aoid="TimeWithinDay">TimeWithinDay(_t_) = 𝔽(ℝ(_t_) modulo ℝ(msPerDay))</emu-eqn>
+      <emu-clause id="sec-time-related-constants">
+        <h1>Time-related Constants</h1>
+        <p>These constants are referenced by algorithms in the following sections.</p>
+        <emu-eqn id="eqn-HoursPerDay" aoid="HoursPerDay">HoursPerDay = 24</emu-eqn>
+        <emu-eqn id="eqn-MinutesPerHour" aoid="MinutesPerHour">MinutesPerHour = 60</emu-eqn>
+        <emu-eqn id="eqn-SecondsPerMinute" aoid="SecondsPerMinute">SecondsPerMinute = 60</emu-eqn>
+        <emu-eqn id="eqn-msPerSecond" aoid="msPerSecond">msPerSecond = *1000*<sub>𝔽</sub></emu-eqn>
+        <emu-eqn id="eqn-msPerMinute" aoid="msPerMinute">msPerMinute = *60000*<sub>𝔽</sub> = msPerSecond × 𝔽(SecondsPerMinute)</emu-eqn>
+        <emu-eqn id="eqn-msPerHour" aoid="msPerHour">msPerHour = *3600000*<sub>𝔽</sub> = msPerMinute × 𝔽(MinutesPerHour)</emu-eqn>
+        <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = *86400000*<sub>𝔽</sub> = msPerHour × 𝔽(HoursPerDay)</emu-eqn>
       </emu-clause>
 
-      <emu-clause id="sec-year-number">
-        <h1>Year Number</h1>
-        <p>ECMAScript uses a proleptic Gregorian calendar to map a day number to a year number and to determine the month and date within that year. In this calendar, leap years are precisely those which are (divisible by 4) and ((not divisible by 100) or (divisible by 400)). The number of days in year number _y_ is therefore defined by</p>
-        <emu-eqn id="eqn-DaysInYear" aoid="DaysInYear">
-          DaysInYear(_y_)
-            = *365*<sub>𝔽</sub> if (ℝ(_y_) modulo 4) ≠ 0
-            = *366*<sub>𝔽</sub> if (ℝ(_y_) modulo 4) = 0 and (ℝ(_y_) modulo 100) ≠ 0
-            = *365*<sub>𝔽</sub> if (ℝ(_y_) modulo 100) = 0 and (ℝ(_y_) modulo 400) ≠ 0
-            = *366*<sub>𝔽</sub> if (ℝ(_y_) modulo 400) = 0
-        </emu-eqn>
-        <p>All non-leap years have 365 days with the usual number of days per month and leap years have an extra day in February. The day number of the first day of year _y_ is given by:</p>
-        <emu-eqn id="eqn-DaysFromYear" aoid="DayFromYear">DayFromYear(_y_) = 𝔽(365 × (ℝ(_y_) - 1970) + floor((ℝ(_y_) - 1969) / 4) - floor((ℝ(_y_) - 1901) / 100) + floor((ℝ(_y_) - 1601) / 400))</emu-eqn>
-        <p>The time value of the start of a year is:</p>
-        <emu-eqn id="eqn-TimeFromYear" aoid="TimeFromYear">TimeFromYear(_y_) = msPerDay × DayFromYear(_y_)</emu-eqn>
-        <p>A time value determines a year by:</p>
-        <emu-eqn id="eqn-YearFromTime" aoid="YearFromTime">YearFromTime(_t_) = the largest integral Number _y_ (closest to +∞) such that TimeFromYear(_y_) ≤ _t_</emu-eqn>
-        <p>The leap-year function is *1*<sub>𝔽</sub> for a time within a leap year and otherwise is *+0*<sub>𝔽</sub>:</p>
-        <emu-eqn id="eqn-InLeapYear" aoid="InLeapYear">
-          InLeapYear(_t_)
-            = *+0*<sub>𝔽</sub> if DaysInYear(YearFromTime(_t_)) is *365*<sub>𝔽</sub>
-            = *1*<sub>𝔽</sub> if DaysInYear(YearFromTime(_t_)) is *366*<sub>𝔽</sub>
-        </emu-eqn>
+      <emu-clause id="sec-day" type="abstract operation" oldids="eqn-Day,sec-day-number-and-time-within-day">
+        <h1>
+          Day (
+            _t_: a finite time value,
+          ): an integral Number
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the day number of the day in which _t_ falls.</dd>
+        </dl>
+        <emu-alg>
+          1. Return 𝔽(floor(ℝ(_t_ / msPerDay))).
+        </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-month-number">
-        <h1>Month Number</h1>
-        <p>Months are identified by an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *11*<sub>𝔽</sub>. The mapping MonthFromTime(_t_) from a time value _t_ to a month number is defined by:</p>
-        <emu-eqn id="eqn-MonthFromTime" aoid="MonthFromTime">
-          MonthFromTime(_t_)
-            = *+0*<sub>𝔽</sub> if *+0*<sub>𝔽</sub> ≤ DayWithinYear(_t_) &lt; *31*<sub>𝔽</sub>
-            = *1*<sub>𝔽</sub> if *31*<sub>𝔽</sub> ≤ DayWithinYear(_t_) &lt; *59*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *2*<sub>𝔽</sub> if *59*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *90*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *3*<sub>𝔽</sub> if *90*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *120*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *4*<sub>𝔽</sub> if *120*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *151*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *5*<sub>𝔽</sub> if *151*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *181*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *6*<sub>𝔽</sub> if *181*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *212*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *7*<sub>𝔽</sub> if *212*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *243*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *8*<sub>𝔽</sub> if *243*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *273*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *9*<sub>𝔽</sub> if *273*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *304*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *10*<sub>𝔽</sub> if *304*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *334*<sub>𝔽</sub> + InLeapYear(_t_)
-            = *11*<sub>𝔽</sub> if *334*<sub>𝔽</sub> + InLeapYear(_t_) ≤ DayWithinYear(_t_) &lt; *365*<sub>𝔽</sub> + InLeapYear(_t_)
-        </emu-eqn>
-        <p>where</p>
-        <emu-eqn id="eqn-DayWithinYear" aoid="DayWithinYear">DayWithinYear(_t_) = Day(_t_) - DayFromYear(YearFromTime(_t_))</emu-eqn>
-        <p>A month value of *+0*<sub>𝔽</sub> specifies January; *1*<sub>𝔽</sub> specifies February; *2*<sub>𝔽</sub> specifies March; *3*<sub>𝔽</sub> specifies April; *4*<sub>𝔽</sub> specifies May; *5*<sub>𝔽</sub> specifies June; *6*<sub>𝔽</sub> specifies July; *7*<sub>𝔽</sub> specifies August; *8*<sub>𝔽</sub> specifies September; *9*<sub>𝔽</sub> specifies October; *10*<sub>𝔽</sub> specifies November; and *11*<sub>𝔽</sub> specifies December. Note that <emu-eqn>MonthFromTime(*+0*<sub>𝔽</sub>) = *+0*<sub>𝔽</sub></emu-eqn>, corresponding to Thursday, 1 January 1970.</p>
+      <emu-clause id="sec-timewithinday" type="abstract operation" oldids="eqn-TimeWithinDay">
+        <h1>
+          TimeWithinDay (
+            _t_: a finite time value,
+          ): an integral Number in the interval from *+0*<sub>𝔽</sub> (inclusive) to msPerDay (exclusive)
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the number of milliseconds since the start of the day in which _t_ falls.</dd>
+        </dl>
+        <emu-alg>
+          1. Return 𝔽(ℝ(_t_) modulo ℝ(msPerDay)).
+        </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-date-number">
-        <h1>Date Number</h1>
-        <p>A date number is identified by an integral Number in the inclusive interval from *1*<sub>𝔽</sub> to *31*<sub>𝔽</sub>. The mapping DateFromTime(_t_) from a time value _t_ to a date number is defined by:</p>
-        <emu-eqn aoid="DateFromTime">
-          DateFromTime(_t_)
-            = DayWithinYear(_t_) + *1*<sub>𝔽</sub> if MonthFromTime(_t_) is *+0*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *30*<sub>𝔽</sub> if MonthFromTime(_t_) is *1*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *58*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *2*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *89*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *3*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *119*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *4*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *150*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *5*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *180*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *6*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *211*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *7*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *242*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *8*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *272*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *9*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *303*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *10*<sub>𝔽</sub>
-            = DayWithinYear(_t_) - *333*<sub>𝔽</sub> - InLeapYear(_t_) if MonthFromTime(_t_) is *11*<sub>𝔽</sub>
-        </emu-eqn>
+      <emu-clause id="sec-daysinyear" type="abstract operation" oldids="eqn-DaysInYear,sec-year-number">
+        <h1>
+          DaysInYear (
+            _y_: an integral Number,
+          ): *365*<sub>𝔽</sub> or *366*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the number of days in year _y_. Leap years have 366 days; all other years have 365.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _ry_ be ℝ(_y_).
+          1. If (_ry_ modulo 400) = 0, return *366*<sub>𝔽</sub>.
+          1. If (_ry_ modulo 100) = 0, return *365*<sub>𝔽</sub>.
+          1. If (_ry_ modulo 4) = 0, return *366*<sub>𝔽</sub>.
+          1. Return *365*<sub>𝔽</sub>.
+        </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-week-day">
-        <h1>Week Day</h1>
-        <p>The weekday for a particular time value _t_ is defined as</p>
-        <emu-eqn aoid="WeekDay">WeekDay(_t_) = 𝔽(ℝ(Day(_t_) + *4*<sub>𝔽</sub>) modulo 7)</emu-eqn>
-        <p>A weekday value of *+0*<sub>𝔽</sub> specifies Sunday; *1*<sub>𝔽</sub> specifies Monday; *2*<sub>𝔽</sub> specifies Tuesday; *3*<sub>𝔽</sub> specifies Wednesday; *4*<sub>𝔽</sub> specifies Thursday; *5*<sub>𝔽</sub> specifies Friday; and *6*<sub>𝔽</sub> specifies Saturday. Note that <emu-eqn>WeekDay(*+0*<sub>𝔽</sub>) = *4*<sub>𝔽</sub></emu-eqn>, corresponding to Thursday, 1 January 1970.</p>
+      <emu-clause id="sec-dayfromyear" type="abstract operation" oldids="eqn-DaysFromYear">
+        <h1>
+          DayFromYear (
+            _y_: an integral Number,
+          ): an integral Number
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the day number of the first day of year _y_.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _ry_ be ℝ(_y_).
+          1. NOTE: In the following steps, each `_numYearsN_` is the number of years divisible by N that occur between the epoch and the start of year _y_. (The number is negative if _y_ is before the epoch.)
+          1. Let _numYears1_ be (_ry_ - 1970).
+          1. Let _numYears4_ be floor((_ry_ - 1969) / 4).
+          1. Let _numYears100_ be floor((_ry_ - 1901) / 100).
+          1. Let _numYears400_ be floor((_ry_ - 1601) / 400).
+          1. Return 𝔽(365 × _numYears1_ + _numYears4_ - _numYears100_ + _numYears400_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-timefromyear" type="abstract operation" oldids="eqn-TimeFromYear">
+        <h1>
+          TimeFromYear (
+            _y_: an integral Number,
+          ): a time value
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the time value of the start of year _y_.</dd>
+        </dl>
+        <emu-alg>
+          1. Return msPerDay × DayFromYear(_y_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-yearfromtime" type="abstract operation" oldids="eqn-YearFromTime">
+        <h1>
+          YearFromTime (
+            _t_: a finite time value,
+          ): an integral Number
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the year in which _t_ falls.</dd>
+        </dl>
+        <emu-alg>
+          1. [declared="y"] Return the largest integral Number _y_ (closest to +∞) such that TimeFromYear(_y_) ≤ _t_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-daywithinyear" type="abstract operation" oldids="eqn-DayWithinYear">
+        <h1>
+          DayWithinYear (
+            _t_: a finite time value,
+          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *365*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Return Day(_t_) - DayFromYear(YearFromTime(_t_)).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-inleapyear" type="abstract operation" oldids="eqn-InLeapYear">
+        <h1>
+          InLeapYear (
+            _t_: a finite time value,
+          ): *+0*<sub>𝔽</sub> or *1*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns *1*<sub>𝔽</sub> if _t_ is within a leap year and *+0*<sub>𝔽</sub> otherwise.</dd>
+        </dl>
+        <emu-alg>
+          1. If DaysInYear(YearFromTime(_t_)) is *366*<sub>𝔽</sub>, return *1*<sub>𝔽</sub>; else return *+0*<sub>𝔽</sub>.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-monthfromtime" type="abstract operation" oldids="eqn-MonthFromTime,sec-month-number">
+        <h1>
+          MonthFromTime (
+            _t_: a finite time value,
+          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *11*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns a Number identifying the month in which _t_ falls. A month value of *+0*<sub>𝔽</sub> specifies January; *1*<sub>𝔽</sub> specifies February; *2*<sub>𝔽</sub> specifies March; *3*<sub>𝔽</sub> specifies April; *4*<sub>𝔽</sub> specifies May; *5*<sub>𝔽</sub> specifies June; *6*<sub>𝔽</sub> specifies July; *7*<sub>𝔽</sub> specifies August; *8*<sub>𝔽</sub> specifies September; *9*<sub>𝔽</sub> specifies October; *10*<sub>𝔽</sub> specifies November; and *11*<sub>𝔽</sub> specifies December. Note that <emu-eqn>MonthFromTime(*+0*<sub>𝔽</sub>) = *+0*<sub>𝔽</sub></emu-eqn>, corresponding to Thursday, 1 January 1970.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _inLeapYear_ be InLeapYear(_t_).
+          1. Let _dayWithinYear_ be DayWithinYear(_t_).
+          1. If _dayWithinYear_ &lt; *31*<sub>𝔽</sub>, return *+0*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *59*<sub>𝔽</sub> + _inLeapYear_, return *1*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *90*<sub>𝔽</sub> + _inLeapYear_, return *2*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *120*<sub>𝔽</sub> + _inLeapYear_, return *3*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *151*<sub>𝔽</sub> + _inLeapYear_, return *4*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *181*<sub>𝔽</sub> + _inLeapYear_, return *5*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *212*<sub>𝔽</sub> + _inLeapYear_, return *6*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *243*<sub>𝔽</sub> + _inLeapYear_, return *7*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *273*<sub>𝔽</sub> + _inLeapYear_, return *8*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *304*<sub>𝔽</sub> + _inLeapYear_, return *9*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; *334*<sub>𝔽</sub> + _inLeapYear_, return *10*<sub>𝔽</sub>.
+          1. Assert: _dayWithinYear_ &lt; *365*<sub>𝔽</sub> + _inLeapYear_.
+          1. Return *11*<sub>𝔽</sub>.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-datefromtime" type="abstract operation" oldids="sec-date-number">
+        <h1>
+          DateFromTime (
+            _t_: a finite time value,
+          ): an integral Number in the inclusive interval from *1*<sub>𝔽</sub> to *31*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the day of the month in which _t_ falls.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _inLeapYear_ be InLeapYear(_t_).
+          1. Let _dayWithinYear_ be DayWithinYear(_t_).
+          1. Let _month_ be MonthFromTime(_t_).
+          1. If _month_ is *+0*<sub>𝔽</sub>, return _dayWithinYear_ + *1*<sub>𝔽</sub>.
+          1. If _month_ is *1*<sub>𝔽</sub>, return _dayWithinYear_ - *30*<sub>𝔽</sub>.
+          1. If _month_ is *2*<sub>𝔽</sub>, return _dayWithinYear_ - *58*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ is *3*<sub>𝔽</sub>, return _dayWithinYear_ - *89*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ is *4*<sub>𝔽</sub>, return _dayWithinYear_ - *119*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ is *5*<sub>𝔽</sub>, return _dayWithinYear_ - *150*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ is *6*<sub>𝔽</sub>, return _dayWithinYear_ - *180*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ is *7*<sub>𝔽</sub>, return _dayWithinYear_ - *211*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ is *8*<sub>𝔽</sub>, return _dayWithinYear_ - *242*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ is *9*<sub>𝔽</sub>, return _dayWithinYear_ - *272*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ is *10*<sub>𝔽</sub>, return _dayWithinYear_ - *303*<sub>𝔽</sub> - _inLeapYear_.
+          1. Assert: _month_ is *11*<sub>𝔽</sub>.
+          1. Return _dayWithinYear_ - *333*<sub>𝔽</sub> - _inLeapYear_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-weekday" type="abstract operation" oldids="sec-week-day">
+        <h1>
+          WeekDay (
+            _t_: a finite time value,
+          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *6*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns a Number identifying the day of the week in which _t_ falls. A weekday value of *+0*<sub>𝔽</sub> specifies Sunday; *1*<sub>𝔽</sub> specifies Monday; *2*<sub>𝔽</sub> specifies Tuesday; *3*<sub>𝔽</sub> specifies Wednesday; *4*<sub>𝔽</sub> specifies Thursday; *5*<sub>𝔽</sub> specifies Friday; and *6*<sub>𝔽</sub> specifies Saturday. Note that <emu-eqn>WeekDay(*+0*<sub>𝔽</sub>) = *4*<sub>𝔽</sub></emu-eqn>, corresponding to Thursday, 1 January 1970.</dd>
+        </dl>
+        <emu-alg>
+          1. Return 𝔽(ℝ(Day(_t_) + *4*<sub>𝔽</sub>) modulo 7).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-hourfromtime" type="abstract operation" oldids="eqn-HourFromTime,sec-hours-minutes-second-and-milliseconds">
+        <h1>
+          HourFromTime (
+            _t_: a finite time value,
+          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *23*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the hour of the day in which _t_ falls.</dd>
+        </dl>
+        <emu-alg>
+          1. Return 𝔽(floor(ℝ(_t_ / msPerHour)) modulo HoursPerDay).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-minfromtime" type="abstract operation" oldids="eqn-MinFromTime">
+        <h1>
+          MinFromTime (
+            _t_: a finite time value,
+          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *59*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the minute of the hour in which _t_ falls.</dd>
+        </dl>
+        <emu-alg>
+          1. Return 𝔽(floor(ℝ(_t_ / msPerMinute)) modulo MinutesPerHour).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-secfromtime" type="abstract operation" oldids="eqn-SecFromTime">
+        <h1>
+          SecFromTime (
+            _t_: a finite time value,
+          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *59*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the second of the minute in which _t_ falls.</dd>
+        </dl>
+        <emu-alg>
+          1. Return 𝔽(floor(ℝ(_t_ / msPerSecond)) modulo SecondsPerMinute).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-msfromtime" type="abstract operation" oldids="eqn-msFromTime">
+        <h1>
+          msFromTime (
+            _t_: a finite time value,
+          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *999*<sub>𝔽</sub>
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It returns the millisecond of the second in which _t_ falls.</dd>
+        </dl>
+        <emu-alg>
+          1. Return 𝔽(ℝ(_t_) modulo ℝ(msPerSecond)).
+        </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-getutcepochnanoseconds" type="abstract operation">
@@ -32441,22 +32632,6 @@
         <emu-note>
           <p><emu-eqn>UTC(LocalTime(_t_<sub>UTC</sub>))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_<sub>UTC</sub></emu-eqn>. Correspondingly, <emu-eqn>LocalTime(UTC(_t_<sub>local</sub>))</emu-eqn> is not necessarily always equal to <emu-eqn>_t_<sub>local</sub></emu-eqn>.</p>
         </emu-note>
-      </emu-clause>
-
-      <emu-clause id="sec-hours-minutes-second-and-milliseconds">
-        <h1>Hours, Minutes, Second, and Milliseconds</h1>
-        <p>The following abstract operations are useful in decomposing time values:</p>
-        <emu-eqn id="eqn-HourFromTime" aoid="HourFromTime">HourFromTime(_t_) = 𝔽(floor(ℝ(_t_ / msPerHour)) modulo HoursPerDay)</emu-eqn>
-        <emu-eqn id="eqn-MinFromTime" aoid="MinFromTime">MinFromTime(_t_) = 𝔽(floor(ℝ(_t_ / msPerMinute)) modulo MinutesPerHour)</emu-eqn>
-        <emu-eqn id="eqn-SecFromTime" aoid="SecFromTime">SecFromTime(_t_) = 𝔽(floor(ℝ(_t_ / msPerSecond)) modulo SecondsPerMinute)</emu-eqn>
-        <emu-eqn id="eqn-msFromTime" aoid="msFromTime">msFromTime(_t_) = 𝔽(ℝ(_t_) modulo ℝ(msPerSecond))</emu-eqn>
-        <p>where</p>
-        <emu-eqn id="eqn-HoursPerDay" aoid="HoursPerDay">HoursPerDay = 24</emu-eqn>
-        <emu-eqn id="eqn-MinutesPerHour" aoid="MinutesPerHour">MinutesPerHour = 60</emu-eqn>
-        <emu-eqn id="eqn-SecondsPerMinute" aoid="SecondsPerMinute">SecondsPerMinute = 60</emu-eqn>
-        <emu-eqn id="eqn-msPerSecond" aoid="msPerSecond">msPerSecond = *1000*<sub>𝔽</sub></emu-eqn>
-        <emu-eqn id="eqn-msPerMinute" aoid="msPerMinute">msPerMinute = *60000*<sub>𝔽</sub> = msPerSecond × 𝔽(SecondsPerMinute)</emu-eqn>
-        <emu-eqn id="eqn-msPerHour" aoid="msPerHour">msPerHour = *3600000*<sub>𝔽</sub> = msPerMinute × 𝔽(MinutesPerHour)</emu-eqn>
       </emu-clause>
 
       <emu-clause id="sec-maketime" type="abstract operation">
