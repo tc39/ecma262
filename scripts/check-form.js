@@ -243,7 +243,8 @@ const legacy = new Set([
 
 Promise.all([usernames, authors, delegates, emeriti]).then(([usernames, authors, delegates, emeriti]) => {
 	let legacyCount = legacy.size;
-	const missing = authors.filter(a => {
+	const missing = authors.filter(author => {
+		const a = author.toLowerCase();
 		const signed = usernames.has(a)
 			|| delegates.has(a)
 			|| emeriti.has(a)
