@@ -8,7 +8,7 @@ const oldestAncestor = String(exec(`bash -c 'diff -u <(git rev-list --first-pare
 
 console.log(`Oldest ancestor SHA: ${oldestAncestor}`);
 
-const messages = oldestAncestor && String(exec(`git log --format=%s ${oldestAncestor}..HEAD | sed '/^[[:space:]]*\$/d'`)).trim().split('\n').reverse();
+const messages = oldestAncestor && String(exec(`git log --format=%s ${oldestAncestor}..HEAD | sed '/^[[:space:]]*$/d'`)).trim().split('\n').reverse();
 
 const errors = [];
 
