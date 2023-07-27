@@ -34,7 +34,7 @@ const request = async (url, method = 'GET', postData) => {
 	// adapted from https://medium.com/@gevorggalstyan/how-to-promisify-node-js-http-https-requests-76a5a58ed90c
 	const lib = url.startsWith('https://') ? require('https') : require('http');
 
-	const [h, path] = url.split('://')[1].split('/');
+	const [h] = url.split('://')[1].split('/');
 	const [host, port] = h.split(':');
 
 	const params = {
