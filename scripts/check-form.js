@@ -96,6 +96,7 @@ const legacyCommitsWithUnknownAuthors = new Set([
 	'cdf5865b7da09cce276581f134349e24d2b6c199',
 	'b7d01876c19751e4c75d9910ce4fb2e0d1dc45fa',
 	'cc46cc38b9374d13f958cc6992daaec73d5fbecd',
+	'f424bf075fe582ed8acc36e8a420ee713a21561a', // https://github.com/tc39/ecma262/pull/3142
 ]);
 
 function getAuthorFromCommit(commitObj) {
