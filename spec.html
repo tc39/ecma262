@@ -5745,6 +5745,25 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-isintegerindexinrange" type="abstract operation">
+      <h1>
+        IsIntegerIndexInRange (
+          _n_: a Number,
+          _length_: a non-negative integer,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It determines if _n_ corresponds with an integer index less than _length_.</dd>
+      </dl>
+      <emu-alg>
+        1. If IsIntegralNumber(_n_) is *false*, return *false*.
+        1. If _n_ is *-0*<sub>𝔽</sub>, return *false*.
+        1. If ℝ(_n_) &lt; 0 or ℝ(_n_) ≥ _length_, return *false*.
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-isintegralnumber" type="abstract operation" oldids="sec-isinteger">
       <h1>
         IsIntegralNumber (
@@ -14124,7 +14143,7 @@
         <emu-alg>
           1. Let _desc_ be OrdinaryGetOwnProperty(_S_, _P_).
           1. If _desc_ is not *undefined*, return _desc_.
-          1. Return StringGetOwnProperty(_S_, _P_).
+          1. Return StringGetIndexPropertyDescriptor(_S_, _P_).
         </emu-alg>
       </emu-clause>
 
@@ -14140,7 +14159,7 @@
           <dd>a String exotic object _S_</dd>
         </dl>
         <emu-alg>
-          1. Let _stringDesc_ be StringGetOwnProperty(_S_, _P_).
+          1. Let _stringDesc_ be StringGetIndexPropertyDescriptor(_S_, _P_).
           1. If _stringDesc_ is not *undefined*, then
             1. Let _extensible_ be _S_.[[Extensible]].
             1. Return IsCompatiblePropertyDescriptor(_extensible_, _Desc_, _stringDesc_).
@@ -14195,26 +14214,27 @@
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-stringgetownproperty" type="abstract operation">
+      <emu-clause id="sec-stringgetindexpropertydescriptor" type="abstract operation" oldids="sec-stringgetownproperty">
         <h1>
-          StringGetOwnProperty (
+          StringGetIndexPropertyDescriptor (
             _S_: an Object that has a [[StringData]] internal slot,
             _P_: a property key,
           ): a Property Descriptor or *undefined*
         </h1>
         <dl class="header">
+          <dt>description</dt>
+          <dd>It returns a Property Descriptor for property _P_ of _S_ if and only if _P_ is a canonical representation of an integer index that exists on _S_.</dd>
         </dl>
         <emu-alg>
           1. If _P_ is not a String, return *undefined*.
-          1. Let _index_ be CanonicalNumericIndexString(_P_).
-          1. If _index_ is *undefined*, return *undefined*.
-          1. If IsIntegralNumber(_index_) is *false*, return *undefined*.
-          1. If _index_ is *-0*<sub>𝔽</sub>, return *undefined*.
+          1. Let _n_ be CanonicalNumericIndexString(_P_).
+          1. If _n_ is *undefined*, return *undefined*.
           1. Let _str_ be _S_.[[StringData]].
           1. Assert: _str_ is a String.
           1. Let _len_ be the length of _str_.
-          1. If ℝ(_index_) &lt; 0 or _len_ ≤ ℝ(_index_), return *undefined*.
-          1. Let _resultStr_ be the substring of _str_ from ℝ(_index_) to ℝ(_index_) + 1.
+          1. If IsIntegerIndexInRange(_n_, _len_) is *false*, return *undefined*.
+          1. Let _index_ be ℝ(_n_).
+          1. Let _resultStr_ be the substring of _str_ from _index_ to _index_ + 1.
           1. Return the PropertyDescriptor { [[Value]]: _resultStr_, [[Writable]]: *false*, [[Enumerable]]: *true*, [[Configurable]]: *false* }.
         </emu-alg>
       </emu-clause>
@@ -14521,7 +14541,7 @@
         <emu-alg>
           1. If _P_ is a String, then
             1. Let _numericIndex_ be CanonicalNumericIndexString(_P_).
-            1. If _numericIndex_ is not *undefined*, return IsValidIntegerIndex(_O_, _numericIndex_).
+            1. If _numericIndex_ is not *undefined*, return IntegerIndexedElementExists(_O_, _numericIndex_).
           1. Return ? OrdinaryHasProperty(_O_, _P_).
         </emu-alg>
       </emu-clause>
@@ -14541,7 +14561,7 @@
           1. If _P_ is a String, then
             1. Let _numericIndex_ be CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
-              1. If IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *false*.
+              1. If IntegerIndexedElementExists(_O_, _numericIndex_) is *false*, return *false*.
               1. If _Desc_ has a [[Configurable]] field and _Desc_.[[Configurable]] is *false*, return *false*.
               1. If _Desc_ has an [[Enumerable]] field and _Desc_.[[Enumerable]] is *false*, return *false*.
               1. If IsAccessorDescriptor(_Desc_) is *true*, return *false*.
@@ -14591,7 +14611,7 @@
               1. If SameValue(_O_, _Receiver_) is *true*, then
                 1. Perform ? IntegerIndexedElementSet(_O_, _numericIndex_, _V_).
                 1. Return *true*.
-              1. If IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *true*.
+              1. If IntegerIndexedElementExists(_O_, _numericIndex_) is *false*, return *true*.
           1. Return ? OrdinarySet(_O_, _P_, _V_, _Receiver_).
         </emu-alg>
       </emu-clause>
@@ -14610,7 +14630,8 @@
           1. If _P_ is a String, then
             1. Let _numericIndex_ be CanonicalNumericIndexString(_P_).
             1. If _numericIndex_ is not *undefined*, then
-              1. If IsValidIntegerIndex(_O_, _numericIndex_) is *false*, return *true*; else return *false*.
+              1. If IntegerIndexedElementExists(_O_, _numericIndex_) is *false*, return *true*.
+              1. Return *false*.
           1. Return ! OrdinaryDelete(_O_, _P_).
         </emu-alg>
       </emu-clause>
@@ -14659,21 +14680,20 @@
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-isvalidintegerindex" type="abstract operation">
+      <emu-clause id="sec-integerindexedelementexists" type="abstract operation" oldids="sec-isvalidintegerindex">
         <h1>
-          IsValidIntegerIndex (
+          IntegerIndexedElementExists (
             _O_: an Integer-Indexed exotic object,
-            _index_: a Number,
+            _n_: a Number,
           ): a Boolean
         </h1>
         <dl class="header">
+          <dt>description</dt>
+          <dd>It returns true if and only if _O_ is backed by a non-detached buffer and _n_ corresponds with an integer index of _O_.</dd>
         </dl>
         <emu-alg>
           1. If IsDetachedBuffer(_O_.[[ViewedArrayBuffer]]) is *true*, return *false*.
-          1. If IsIntegralNumber(_index_) is *false*, return *false*.
-          1. If _index_ is *-0*<sub>𝔽</sub>, return *false*.
-          1. If ℝ(_index_) &lt; 0 or ℝ(_index_) ≥ _O_.[[ArrayLength]], return *false*.
-          1. Return *true*.
+          1. Return IsIntegerIndexInRange(_n_, _O_.[[ArrayLength]]).
         </emu-alg>
       </emu-clause>
 
@@ -14687,7 +14707,7 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. If IsValidIntegerIndex(_O_, _index_) is *false*, return *undefined*.
+          1. If IntegerIndexedElementExists(_O_, _index_) is *false*, return *undefined*.
           1. Let _offset_ be _O_.[[ByteOffset]].
           1. Let _elementSize_ be TypedArrayElementSize(_O_).
           1. Let _indexedPosition_ be (ℝ(_index_) × _elementSize_) + _offset_.
@@ -14709,7 +14729,7 @@
         <emu-alg>
           1. If _O_.[[ContentType]] is ~BigInt~, let _numValue_ be ? ToBigInt(_value_).
           1. Otherwise, let _numValue_ be ? ToNumber(_value_).
-          1. If IsValidIntegerIndex(_O_, _index_) is *true*, then
+          1. If IntegerIndexedElementExists(_O_, _index_) is *true*, then
             1. Let _offset_ be _O_.[[ByteOffset]].
             1. Let _elementSize_ be TypedArrayElementSize(_O_).
             1. Let _indexedPosition_ be (ℝ(_index_) × _elementSize_) + _offset_.
