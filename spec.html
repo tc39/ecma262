@@ -36297,7 +36297,7 @@ THH:mm:ss.sss
             A <dfn id="pattern-capturerange" variants="CaptureRanges">CaptureRange</dfn> is a Record { [[StartIndex]], [[EndIndex]] } that represents the range of characters included in a capture, where [[StartIndex]] is an integer representing the start index (inclusive) of the range within _Input_, and [[EndIndex]] is an integer representing the end index (exclusive) of the range within _Input_. For any CaptureRange, these indices must satisfy the invariant that [[StartIndex]] ≤ [[EndIndex]].
           </li>
           <li>
-            A <dfn id="pattern-matchstate" variants="MatchStates">MatchState</dfn> is an ordered triple (_input_, _endIndex_, _captures_) where _input_ is a List of characters representing the String being matched, _endIndex_ is an integer, and _captures_ is a List of values, one for each left-capturing parenthesis in the pattern. States are used to represent partial match states in the regular expression matching algorithms. The _endIndex_ is one plus the index of the last input character matched so far by the pattern, while _captures_ holds the results of capturing parentheses. The _n_<sup>th</sup> element of _captures_ is either a CaptureRange representing the range of characters captured by the _n_<sup>th</sup> set of capturing parentheses, or *undefined* if the _n_<sup>th</sup> set of capturing parentheses hasn't been reached yet. Due to backtracking, many States may be in use at any time during the matching process.
+            A <dfn id="pattern-matchstate" variants="MatchStates">MatchState</dfn> is a Record { [[Input]], [[EndIndex]], [[Captures]] } where [[Input]] is a List of characters representing the String being matched, [[EndIndex]] is an integer, and [[Captures]] is a List of values, one for each left-capturing parenthesis in the pattern. States are used to represent partial match states in the regular expression matching algorithms. The [[EndIndex]] is one plus the index of the last input character matched so far by the pattern, while [[Captures]] holds the results of capturing parentheses. The _n_<sup>th</sup> element of [[Captures]] is either a CaptureRange representing the range of characters captured by the _n_<sup>th</sup> set of capturing parentheses, or *undefined* if the _n_<sup>th</sup> set of capturing parentheses hasn't been reached yet. Due to backtracking, many States may be in use at any time during the matching process.
           </li>
           <li>
             A <dfn id="pattern-matchresult" variants="MatchResults">MatchResult</dfn> is either a MatchState or the special token ~failure~ that indicates that the match failed.
@@ -36306,7 +36306,7 @@ THH:mm:ss.sss
             A <dfn id="pattern-matchercontinuation" variants="MatcherContinuations">MatcherContinuation</dfn> is an Abstract Closure that takes one MatchState argument and returns a MatchResult result. The MatcherContinuation attempts to match the remaining portion (specified by the closure's captured values) of the pattern against _Input_, starting at the intermediate state given by its MatchState argument. If the match succeeds, the MatcherContinuation returns the final MatchState that it reached; if the match fails, the MatcherContinuation returns ~failure~.
           </li>
           <li>
-            A <dfn id="pattern-matcher" variants="Matchers">Matcher</dfn> is an Abstract Closure that takes two arguments—a MatchState and a MatcherContinuation—and returns a MatchResult result. A Matcher attempts to match a middle subpattern (specified by the closure's captured values) of the pattern against the MatchState's _input_, starting at the intermediate state given by its MatchState argument. The MatcherContinuation argument should be a closure that matches the rest of the pattern. After matching the subpattern of a pattern to obtain a new MatchState, the Matcher then calls MatcherContinuation on that new MatchState to test if the rest of the pattern can match as well. If it can, the Matcher returns the MatchState returned by MatcherContinuation; if not, the Matcher may try different choices at its choice points, repeatedly calling MatcherContinuation until it either succeeds or all possibilities have been exhausted.
+            A <dfn id="pattern-matcher" variants="Matchers">Matcher</dfn> is an Abstract Closure that takes two arguments—a MatchState and a MatcherContinuation—and returns a MatchResult result. A Matcher attempts to match a middle subpattern (specified by the closure's captured values) of the pattern against the MatchState's [[Input]], starting at the intermediate state given by its MatchState argument. The MatcherContinuation argument should be a closure that matches the rest of the pattern. After matching the subpattern of a pattern to obtain a new MatchState, the Matcher then calls MatcherContinuation on that new MatchState to test if the rest of the pattern can match as well. If it can, the Matcher returns the MatchState returned by MatcherContinuation; if not, the Matcher may try different choices at its choice points, repeatedly calling MatcherContinuation until it either succeeds or all possibilities have been exhausted.
           </li>
         </ul>
 
@@ -36374,7 +36374,7 @@ THH:mm:ss.sss
               1. Assert: _y_ is a MatchState.
               1. Return _y_.
             1. Let _cap_ be a List of _rer_.[[CapturingGroupsCount]] *undefined* values, indexed 1 through _rer_.[[CapturingGroupsCount]].
-            1. Let _x_ be the MatchState (_Input_, _index_, _cap_).
+            1. Let _x_ be the MatchState { [[Input]]: _Input_, [[EndIndex]]: _index_, [[Captures]]: _cap_ }.
             1. Return _m_(_x_, _c_).
         </emu-alg>
         <emu-note>
@@ -36473,15 +36473,15 @@ THH:mm:ss.sss
             1. If _max_ = 0, return _c_(_x_).
             1. Let _d_ be a new MatcherContinuation with parameters (_y_) that captures _m_, _min_, _max_, _greedy_, _x_, _c_, _parenIndex_, and _parenCount_ and performs the following steps when called:
               1. Assert: _y_ is a MatchState.
-              1. [id="step-repeatmatcher-done"] If _min_ = 0 and _y_'s _endIndex_ = _x_'s _endIndex_, return ~failure~.
+              1. [id="step-repeatmatcher-done"] If _min_ = 0 and _y_.[[EndIndex]] = _x_.[[EndIndex]], return ~failure~.
               1. If _min_ = 0, let _min2_ be 0; otherwise let _min2_ be _min_ - 1.
               1. If _max_ = +∞, let _max2_ be +∞; otherwise let _max2_ be _max_ - 1.
               1. Return RepeatMatcher(_m_, _min2_, _max2_, _greedy_, _y_, _c_, _parenIndex_, _parenCount_).
-            1. Let _cap_ be a copy of _x_'s _captures_ List.
+            1. Let _cap_ be a copy of _x_.[[Captures]].
             1. [id="step-repeatmatcher-clear-captures"] For each integer _k_ in the inclusive interval from _parenIndex_ + 1 to _parenIndex_ + _parenCount_, set _cap_[_k_] to *undefined*.
-            1. Let _Input_ be _x_'s _input_.
-            1. Let _e_ be _x_'s _endIndex_.
-            1. Let _xr_ be the MatchState (_Input_, _e_, _cap_).
+            1. Let _Input_ be _x_.[[Input]].
+            1. Let _e_ be _x_.[[EndIndex]].
+            1. Let _xr_ be the MatchState { [[Input]]: _Input_, [[EndIndex]]: _e_, [[Captures]]: _cap_ }.
             1. If _min_ ≠ 0, return _m_(_xr_, _d_).
             1. If _greedy_ is *false*, then
               1. Let _z_ be _c_(_x_).
@@ -36612,8 +36612,8 @@ THH:mm:ss.sss
           1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_ and performs the following steps when called:
             1. Assert: _x_ is a MatchState.
             1. Assert: _c_ is a MatcherContinuation.
-            1. Let _Input_ be _x_'s _input_.
-            1. Let _e_ be _x_'s _endIndex_.
+            1. Let _Input_ be _x_.[[Input]].
+            1. Let _e_ be _x_.[[EndIndex]].
             1. If _e_ = 0, or if _rer_.[[Multiline]] is *true* and the character _Input_[_e_ - 1] is matched by |LineTerminator|, then
               1. Return _c_(_x_).
             1. Return ~failure~.
@@ -36626,8 +36626,8 @@ THH:mm:ss.sss
           1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_ and performs the following steps when called:
             1. Assert: _x_ is a MatchState.
             1. Assert: _c_ is a MatcherContinuation.
-            1. Let _Input_ be _x_'s _input_.
-            1. Let _e_ be _x_'s _endIndex_.
+            1. Let _Input_ be _x_.[[Input]].
+            1. Let _e_ be _x_.[[EndIndex]].
             1. Let _InputLength_ be the number of elements in _Input_.
             1. If _e_ = _InputLength_, or if _rer_.[[Multiline]] is *true* and the character _Input_[_e_] is matched by |LineTerminator|, then
               1. Return _c_(_x_).
@@ -36638,8 +36638,8 @@ THH:mm:ss.sss
           1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_ and performs the following steps when called:
             1. Assert: _x_ is a MatchState.
             1. Assert: _c_ is a MatcherContinuation.
-            1. Let _Input_ be _x_'s _input_.
-            1. Let _e_ be _x_'s _endIndex_.
+            1. Let _Input_ be _x_.[[Input]].
+            1. Let _e_ be _x_.[[EndIndex]].
             1. Let _a_ be IsWordChar(_rer_, _Input_, _e_ - 1).
             1. Let _b_ be IsWordChar(_rer_, _Input_, _e_).
             1. If _a_ is *true* and _b_ is *false*, or if _a_ is *false* and _b_ is *true*, return _c_(_x_).
@@ -36650,8 +36650,8 @@ THH:mm:ss.sss
           1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_ and performs the following steps when called:
             1. Assert: _x_ is a MatchState.
             1. Assert: _c_ is a MatcherContinuation.
-            1. Let _Input_ be _x_'s _input_.
-            1. Let _e_ be _x_'s _endIndex_.
+            1. Let _Input_ be _x_.[[Input]].
+            1. Let _e_ be _x_.[[EndIndex]].
             1. Let _a_ be IsWordChar(_rer_, _Input_, _e_ - 1).
             1. Let _b_ be IsWordChar(_rer_, _Input_, _e_).
             1. If _a_ is *true* and _b_ is *true*, or if _a_ is *false* and _b_ is *false*, return _c_(_x_).
@@ -36668,11 +36668,11 @@ THH:mm:ss.sss
               1. Return _y_.
             1. Let _r_ be _m_(_x_, _d_).
             1. If _r_ is ~failure~, return ~failure~.
-            1. Let _y_ be _r_'s MatchState.
-            1. Let _cap_ be _y_'s _captures_ List.
-            1. Let _Input_ be _x_'s _input_.
-            1. Let _xe_ be _x_'s _endIndex_.
-            1. Let _z_ be the MatchState (_Input_, _xe_, _cap_).
+            1. Assert: _r_ is a MatchState.
+            1. Let _cap_ be _r_.[[Captures]].
+            1. Let _Input_ be _x_.[[Input]].
+            1. Let _xe_ be _x_.[[EndIndex]].
+            1. Let _z_ be the MatchState { [[Input]]: _Input_, [[EndIndex]]: _xe_, [[Captures]]: _cap_ }.
             1. Return _c_(_z_).
         </emu-alg>
         <emu-note>
@@ -36718,11 +36718,11 @@ THH:mm:ss.sss
               1. Return _y_.
             1. Let _r_ be _m_(_x_, _d_).
             1. If _r_ is ~failure~, return ~failure~.
-            1. Let _y_ be _r_'s MatchState.
-            1. Let _cap_ be _y_'s _captures_ List.
-            1. Let _Input_ be _x_'s _input_.
-            1. Let _xe_ be _x_'s _endIndex_.
-            1. Let _z_ be the MatchState (_Input_, _xe_, _cap_).
+            1. Assert: _r_ is a MatchState.
+            1. Let _cap_ be _r_.[[Captures]].
+            1. Let _Input_ be _x_.[[Input]].
+            1. Let _xe_ be _x_.[[EndIndex]].
+            1. Let _z_ be the MatchState { [[Input]]: _Input_, [[EndIndex]]: _xe_, [[Captures]]: _cap_ }.
             1. Return _c_(_z_).
         </emu-alg>
         <emu-grammar>Assertion :: `(?&lt;!` Disjunction `)`</emu-grammar>
@@ -36868,10 +36868,10 @@ THH:mm:ss.sss
             1. Assert: _c_ is a MatcherContinuation.
             1. Let _d_ be a new MatcherContinuation with parameters (_y_) that captures _x_, _c_, _direction_, and _parenIndex_ and performs the following steps when called:
               1. Assert: _y_ is a MatchState.
-              1. Let _cap_ be a copy of _y_'s _captures_ List.
-              1. Let _Input_ be _x_'s _input_.
-              1. Let _xe_ be _x_'s _endIndex_.
-              1. Let _ye_ be _y_'s _endIndex_.
+              1. Let _cap_ be a copy of _y_.[[Captures]].
+              1. Let _Input_ be _x_.[[Input]].
+              1. Let _xe_ be _x_.[[EndIndex]].
+              1. Let _ye_ be _y_.[[EndIndex]].
               1. If _direction_ is ~forward~, then
                 1. Assert: _xe_ ≤ _ye_.
                 1. Let _r_ be the CaptureRange { [[StartIndex]]: _xe_, [[EndIndex]]: _ye_ }.
@@ -36880,7 +36880,7 @@ THH:mm:ss.sss
                 1. Assert: _ye_ ≤ _xe_.
                 1. Let _r_ be the CaptureRange { [[StartIndex]]: _ye_, [[EndIndex]]: _xe_ }.
               1. Set _cap_[_parenIndex_ + 1] to _r_.
-              1. Let _z_ be the MatchState (_Input_, _ye_, _cap_).
+              1. Let _z_ be the MatchState { [[Input]]: _Input_, [[EndIndex]]: _ye_, [[Captures]]: _cap_ }.
               1. Return _c_(_z_).
             1. Return _m_(_x_, _d_).
         </emu-alg>
@@ -36957,8 +36957,8 @@ THH:mm:ss.sss
             1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_, _A_, _invert_, and _direction_ and performs the following steps when called:
               1. Assert: _x_ is a MatchState.
               1. Assert: _c_ is a MatcherContinuation.
-              1. Let _Input_ be _x_'s _input_.
-              1. Let _e_ be _x_'s _endIndex_.
+              1. Let _Input_ be _x_.[[Input]].
+              1. Let _e_ be _x_.[[EndIndex]].
               1. If _direction_ is ~forward~, let _f_ be _e_ + 1.
               1. Else, let _f_ be _e_ - 1.
               1. Let _InputLength_ be the number of elements in _Input_.
@@ -36969,8 +36969,8 @@ THH:mm:ss.sss
               1. If there exists a CharSetElement in _A_ containing exactly one character _a_ such that Canonicalize(_rer_, _a_) is _cc_, let _found_ be *true*. Otherwise, let _found_ be *false*.
               1. If _invert_ is *false* and _found_ is *false*, return ~failure~.
               1. If _invert_ is *true* and _found_ is *true*, return ~failure~.
-              1. Let _cap_ be _x_'s _captures_ List.
-              1. Let _y_ be the MatchState (_Input_, _f_, _cap_).
+              1. Let _cap_ be _x_.[[Captures]].
+              1. Let _y_ be the MatchState { [[Input]]: _Input_, [[EndIndex]]: _f_, [[Captures]]: _cap_ }.
               1. Return _c_(_y_).
           </emu-alg>
         </emu-clause>
@@ -36990,11 +36990,11 @@ THH:mm:ss.sss
             1. Return a new Matcher with parameters (_x_, _c_) that captures _rer_, _n_, and _direction_ and performs the following steps when called:
               1. Assert: _x_ is a MatchState.
               1. Assert: _c_ is a MatcherContinuation.
-              1. Let _Input_ be _x_'s _input_.
-              1. Let _cap_ be _x_'s _captures_ List.
+              1. Let _Input_ be _x_.[[Input]].
+              1. Let _cap_ be _x_.[[Captures]].
               1. Let _r_ be _cap_[_n_].
               1. If _r_ is *undefined*, return _c_(_x_).
-              1. Let _e_ be _x_'s _endIndex_.
+              1. Let _e_ be _x_.[[EndIndex]].
               1. Let _rs_ be _r_.[[StartIndex]].
               1. Let _re_ be _r_.[[EndIndex]].
               1. Let _len_ be _re_ - _rs_.
@@ -37004,7 +37004,7 @@ THH:mm:ss.sss
               1. If _f_ &lt; 0 or _f_ > _InputLength_, return ~failure~.
               1. Let _g_ be min(_e_, _f_).
               1. If there exists an integer _i_ in the interval from 0 (inclusive) to _len_ (exclusive) such that Canonicalize(_rer_, _Input_[_rs_ + _i_]) is not Canonicalize(_rer_, _Input_[_g_ + _i_]), return ~failure~.
-              1. Let _y_ be the MatchState (_Input_, _f_, _cap_).
+              1. Let _y_ be the MatchState { [[Input]]: _Input_, [[EndIndex]]: _f_, [[Captures]]: _cap_ }.
               1. Return _c_(_y_).
           </emu-alg>
         </emu-clause>
@@ -38207,11 +38207,11 @@ THH:mm:ss.sss
             1. Else,
               1. Assert: _r_ is a MatchState.
               1. Set _matchSucceeded_ to *true*.
-          1. Let _e_ be _r_'s _endIndex_ value.
+          1. Let _e_ be _r_.[[EndIndex]].
           1. If _fullUnicode_ is *true*, set _e_ to GetStringIndex(_S_, _e_).
           1. If _global_ is *true* or _sticky_ is *true*, then
             1. Perform ? Set(_R_, *"lastIndex"*, 𝔽(_e_), *true*).
-          1. Let _n_ be the number of elements in _r_'s _captures_ List.
+          1. Let _n_ be the number of elements in _r_.[[Captures]].
           1. Assert: _n_ = _R_.[[RegExpRecord]].[[CapturingGroupsCount]].
           1. Assert: _n_ &lt; 2<sup>32</sup> - 1.
           1. Let _A_ be ! ArrayCreate(_n_ + 1).
@@ -38232,7 +38232,7 @@ THH:mm:ss.sss
             1. Let _hasGroups_ be *false*.
           1. Perform ! CreateDataPropertyOrThrow(_A_, *"groups"*, _groups_).
           1. For each integer _i_ such that 1 ≤ _i_ ≤ _n_, in ascending order, do
-            1. Let _captureI_ be _i_<sup>th</sup> element of _r_'s _captures_ List.
+            1. Let _captureI_ be _i_<sup>th</sup> element of _r_.[[Captures]].
             1. If _captureI_ is *undefined*, then
               1. Let _capturedValue_ be *undefined*.
               1. Append *undefined* to _indices_.
