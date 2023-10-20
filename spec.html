@@ -14836,9 +14836,9 @@
           1. If IsValidIntegerIndex(_O_, _index_) is *false*, return *undefined*.
           1. Let _offset_ be _O_.[[ByteOffset]].
           1. Let _elementSize_ be TypedArrayElementSize(_O_).
-          1. Let _indexedPosition_ be (ℝ(_index_) × _elementSize_) + _offset_.
+          1. Let _byteIndexInBuffer_ be (ℝ(_index_) × _elementSize_) + _offset_.
           1. Let _elementType_ be TypedArrayElementType(_O_).
-          1. Return GetValueFromBuffer(_O_.[[ViewedArrayBuffer]], _indexedPosition_, _elementType_, *true*, ~unordered~).
+          1. Return GetValueFromBuffer(_O_.[[ViewedArrayBuffer]], _byteIndexInBuffer_, _elementType_, *true*, ~unordered~).
         </emu-alg>
       </emu-clause>
 
@@ -14858,9 +14858,9 @@
           1. If IsValidIntegerIndex(_O_, _index_) is *true*, then
             1. Let _offset_ be _O_.[[ByteOffset]].
             1. Let _elementSize_ be TypedArrayElementSize(_O_).
-            1. Let _indexedPosition_ be (ℝ(_index_) × _elementSize_) + _offset_.
+            1. Let _byteIndexInBuffer_ be (ℝ(_index_) × _elementSize_) + _offset_.
             1. Let _elementType_ be TypedArrayElementType(_O_).
-            1. Perform SetValueInBuffer(_O_.[[ViewedArrayBuffer]], _indexedPosition_, _elementType_, _numValue_, *true*, ~unordered~).
+            1. Perform SetValueInBuffer(_O_.[[ViewedArrayBuffer]], _byteIndexInBuffer_, _elementType_, _numValue_, *true*, ~unordered~).
           1. Return ~unused~.
         </emu-alg>
         <emu-note>
@@ -44435,8 +44435,8 @@ THH:mm:ss.sss
           1. If _mode_ is ~sync~ and AgentCanSuspend() is *false*, throw a *TypeError* exception.
           1. Let _block_ be _buffer_.[[ArrayBufferData]].
           1. Let _offset_ be _typedArray_.[[ByteOffset]].
-          1. Let _indexedPosition_ be (_i_ × 4) + _offset_.
-          1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
+          1. Let _byteIndexInBuffer_ be (_i_ × 4) + _offset_.
+          1. Let _WL_ be GetWaiterList(_block_, _byteIndexInBuffer_).
           1. If _mode_ is ~sync~, then
             1. Let _promiseCapability_ be ~blocking~.
             1. Let _resultObject_ be *undefined*.
@@ -44445,7 +44445,7 @@ THH:mm:ss.sss
             1. Let _resultObject_ be OrdinaryObjectCreate(%Object.prototype%).
           1. Perform EnterCriticalSection(_WL_).
           1. Let _elementType_ be TypedArrayElementType(_typedArray_).
-          1. Let _w_ be GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, ~seq-cst~).
+          1. Let _w_ be GetValueFromBuffer(_buffer_, _byteIndexInBuffer_, _elementType_, *true*, ~seq-cst~).
           1. If _v_ ≠ _w_, then
             1. Perform LeaveCriticalSection(_WL_).
             1. If _mode_ is ~sync~, return *"not-equal"*.
@@ -44511,7 +44511,7 @@ THH:mm:ss.sss
         <h1>
           AtomicCompareExchangeInSharedBlock (
             _block_: a Shared Data Block,
-            _indexedPosition_: an integer,
+            _byteIndexInBuffer_: an integer,
             _elementSize_: a non-negative integer,
             _expectedBytes_: a List of byte values,
             _replacementBytes_: a List of byte values,
@@ -44528,9 +44528,9 @@ THH:mm:ss.sss
           1. If ByteListEqual(_rawBytesRead_, _expectedBytes_) is *true*, then
             1. Let _second_ be a new read-modify-write modification function with parameters (_oldBytes_, _newBytes_) that captures nothing and performs the following steps atomically when called:
               1. Return _newBytes_.
-            1. Let _event_ be ReadModifyWriteSharedMemory { [[Order]]: ~seq-cst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _indexedPosition_, [[ElementSize]]: _elementSize_, [[Payload]]: _replacementBytes_, [[ModifyOp]]: _second_ }.
+            1. Let _event_ be ReadModifyWriteSharedMemory { [[Order]]: ~seq-cst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _byteIndexInBuffer_, [[ElementSize]]: _elementSize_, [[Payload]]: _replacementBytes_, [[ModifyOp]]: _second_ }.
           1. Else,
-            1. Let _event_ be ReadSharedMemory { [[Order]]: ~seq-cst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _indexedPosition_, [[ElementSize]]: _elementSize_ }.
+            1. Let _event_ be ReadSharedMemory { [[Order]]: ~seq-cst~, [[NoTear]]: *true*, [[Block]]: _block_, [[ByteIndex]]: _byteIndexInBuffer_, [[ElementSize]]: _elementSize_ }.
           1. Append _event_ to _eventsRecord_.[[EventList]].
           1. Append Chosen Value Record { [[Event]]: _event_, [[ChosenValue]]: _rawBytesRead_ } to _execution_.[[ChosenValues]].
           1. Return _rawBytesRead_.
@@ -44551,13 +44551,13 @@ THH:mm:ss.sss
           <dd>_op_ takes two List of byte values arguments and returns a List of byte values. This operation atomically loads a value, combines it with another value, and stores the result of the combination. It returns the loaded value.</dd>
         </dl>
         <emu-alg>
-          1. Let _indexedPosition_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
+          1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
           1. If _typedArray_.[[ContentType]] is ~bigint~, let _v_ be ? ToBigInt(_value_).
           1. Otherwise, let _v_ be 𝔽(? ToIntegerOrInfinity(_value_)).
-          1. Perform ? RevalidateAtomicAccess(_typedArray_, _indexedPosition_).
+          1. Perform ? RevalidateAtomicAccess(_typedArray_, _byteIndexInBuffer_).
           1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
           1. Let _elementType_ be TypedArrayElementType(_typedArray_).
-          1. Return GetModifySetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _v_, _op_).
+          1. Return GetModifySetValueInBuffer(_buffer_, _byteIndexInBuffer_, _elementType_, _v_, _op_).
         </emu-alg>
       </emu-clause>
 
@@ -44648,7 +44648,7 @@ THH:mm:ss.sss
       <h1>Atomics.compareExchange ( _typedArray_, _index_, _expectedValue_, _replacementValue_ )</h1>
       <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Let _indexedPosition_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
+        1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
         1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
         1. Let _block_ be _buffer_.[[ArrayBufferData]].
         1. If _typedArray_.[[ContentType]] is ~bigint~, then
@@ -44657,18 +44657,18 @@ THH:mm:ss.sss
         1. Else,
           1. Let _expected_ be 𝔽(? ToIntegerOrInfinity(_expectedValue_)).
           1. Let _replacement_ be 𝔽(? ToIntegerOrInfinity(_replacementValue_)).
-        1. Perform ? RevalidateAtomicAccess(_typedArray_, _indexedPosition_).
+        1. Perform ? RevalidateAtomicAccess(_typedArray_, _byteIndexInBuffer_).
         1. Let _elementType_ be TypedArrayElementType(_typedArray_).
         1. Let _elementSize_ be TypedArrayElementSize(_typedArray_).
         1. Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
         1. Let _expectedBytes_ be NumericToRawBytes(_elementType_, _expected_, _isLittleEndian_).
         1. Let _replacementBytes_ be NumericToRawBytes(_elementType_, _replacement_, _isLittleEndian_).
         1. If IsSharedArrayBuffer(_buffer_) is *true*, then
-          1. Let _rawBytesRead_ be AtomicCompareExchangeInSharedBlock(_block_, _indexedPosition_, _elementSize_, _expectedBytes_, _replacementBytes_).
+          1. Let _rawBytesRead_ be AtomicCompareExchangeInSharedBlock(_block_, _byteIndexInBuffer_, _elementSize_, _expectedBytes_, _replacementBytes_).
         1. Else,
-          1. Let _rawBytesRead_ be a List of length _elementSize_ whose elements are the sequence of _elementSize_ bytes starting with _block_[_indexedPosition_].
+          1. Let _rawBytesRead_ be a List of length _elementSize_ whose elements are the sequence of _elementSize_ bytes starting with _block_[_byteIndexInBuffer_].
           1. If ByteListEqual(_rawBytesRead_, _expectedBytes_) is *true*, then
-            1. Store the individual bytes of _replacementBytes_ into _block_, starting at _block_[_indexedPosition_].
+            1. Store the individual bytes of _replacementBytes_ into _block_, starting at _block_[_byteIndexInBuffer_].
         1. Return RawBytesToNumeric(_elementType_, _rawBytesRead_, _isLittleEndian_).
       </emu-alg>
     </emu-clause>
@@ -44706,11 +44706,11 @@ THH:mm:ss.sss
       <h1>Atomics.load ( _typedArray_, _index_ )</h1>
       <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Let _indexedPosition_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
-        1. Perform ? RevalidateAtomicAccess(_typedArray_, _indexedPosition_).
+        1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
+        1. Perform ? RevalidateAtomicAccess(_typedArray_, _byteIndexInBuffer_).
         1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
         1. Let _elementType_ be TypedArrayElementType(_typedArray_).
-        1. Return GetValueFromBuffer(_buffer_, _indexedPosition_, _elementType_, *true*, ~seq-cst~).
+        1. Return GetValueFromBuffer(_buffer_, _byteIndexInBuffer_, _elementType_, *true*, ~seq-cst~).
       </emu-alg>
     </emu-clause>
 
@@ -44728,13 +44728,13 @@ THH:mm:ss.sss
       <h1>Atomics.store ( _typedArray_, _index_, _value_ )</h1>
       <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Let _indexedPosition_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
+        1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
         1. If _typedArray_.[[ContentType]] is ~bigint~, let _v_ be ? ToBigInt(_value_).
         1. Otherwise, let _v_ be 𝔽(? ToIntegerOrInfinity(_value_)).
-        1. Perform ? RevalidateAtomicAccess(_typedArray_, _indexedPosition_).
+        1. Perform ? RevalidateAtomicAccess(_typedArray_, _byteIndexInBuffer_).
         1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
         1. Let _elementType_ be TypedArrayElementType(_typedArray_).
-        1. Perform SetValueInBuffer(_buffer_, _indexedPosition_, _elementType_, _v_, *true*, ~seq-cst~).
+        1. Perform SetValueInBuffer(_buffer_, _byteIndexInBuffer_, _elementType_, _v_, *true*, ~seq-cst~).
         1. Return _v_.
       </emu-alg>
     </emu-clause>
@@ -44783,7 +44783,7 @@ THH:mm:ss.sss
       <p>This function notifies some agents that are sleeping in the wait queue.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
-        1. Let _indexedPosition_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_, *true*).
+        1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_, *true*).
         1. If _count_ is *undefined*, then
           1. Let _c_ be +∞.
         1. Else,
@@ -44792,7 +44792,7 @@ THH:mm:ss.sss
         1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
         1. Let _block_ be _buffer_.[[ArrayBufferData]].
         1. If IsSharedArrayBuffer(_buffer_) is *false*, return *+0*<sub>𝔽</sub>.
-        1. Let _WL_ be GetWaiterList(_block_, _indexedPosition_).
+        1. Let _WL_ be GetWaiterList(_block_, _byteIndexInBuffer_).
         1. Perform EnterCriticalSection(_WL_).
         1. Let _S_ be RemoveWaiters(_WL_, _c_).
         1. For each element _W_ of _S_, do
