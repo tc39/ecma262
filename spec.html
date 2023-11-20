@@ -10869,17 +10869,6 @@
                 <emu-not-ref>Contains</emu-not-ref> bindings for all declarations in global code for the associated realm code except for |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, and |VariableDeclaration| bindings.
               </td>
             </tr>
-            <tr>
-              <td>
-                [[VarNames]]
-              </td>
-              <td>
-                a List of Strings
-              </td>
-              <td>
-                The string names bound by |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, and |VariableDeclaration| declarations in global code for the associated realm.
-              </td>
-            </tr>
           </table>
         </emu-table>
         <emu-table id="table-additional-methods-of-global-environment-records" caption="Additional Methods of Global Environment Records" oldids="table-19">
@@ -10900,14 +10889,6 @@
               </td>
               <td>
                 Return the value of this Environment Record's `this` binding.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                HasVarDeclaration (N)
-              </td>
-              <td>
-                Determines if the argument identifier has a binding in this Environment Record that was created using a |VariableDeclaration|, |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, or |AsyncGeneratorDeclaration|.
               </td>
             </tr>
             <tr>
@@ -11117,10 +11098,7 @@
             1. Let _globalObject_ be _ObjRec_.[[BindingObject]].
             1. Let _existingProp_ be ? HasOwnProperty(_globalObject_, _N_).
             1. If _existingProp_ is *true*, then
-              1. Let _status_ be ? <emu-meta effects="user-code">_ObjRec_.DeleteBinding</emu-meta>(_N_).
-              1. If _status_ is *true* and _envRec_.[[VarNames]] contains _N_, then
-                1. Remove _N_ from _envRec_.[[VarNames]].
-              1. Return _status_.
+              1. Return ? <emu-meta effects="user-code">_ObjRec_.DeleteBinding</emu-meta>(_N_).
             1. Return *true*.
           </emu-alg>
         </emu-clause>
@@ -11172,26 +11150,6 @@
           </dl>
           <emu-alg>
             1. Return _envRec_.[[GlobalThisValue]].
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-hasvardeclaration" type="concrete method">
-          <h1>
-            HasVarDeclaration (
-              _N_: a String,
-            ): a Boolean
-          </h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Global Environment Record _envRec_</dd>
-
-            <dt>description</dt>
-            <dd>It determines if the argument identifier has a binding in this record that was created using a |VariableStatement| or a |FunctionDeclaration|.</dd>
-          </dl>
-          <emu-alg>
-            1. Let _varDeclaredNames_ be _envRec_.[[VarNames]].
-            1. If _varDeclaredNames_ contains _N_, return *true*.
-            1. Return *false*.
           </emu-alg>
         </emu-clause>
 
@@ -11298,7 +11256,7 @@
             <dd>a Global Environment Record _envRec_</dd>
 
             <dt>description</dt>
-            <dd>It creates and initializes a mutable binding in the associated Object Environment Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is reused and assumed to be initialized.</dd>
+            <dd>It creates and initializes a mutable binding in the associated Object Environment Record. If a binding already exists, it is reused and assumed to be initialized.</dd>
           </dl>
           <emu-alg>
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
@@ -11308,8 +11266,6 @@
             1. If _hasProperty_ is *false* and _extensible_ is *true*, then
               1. Perform ? <emu-meta effects="user-code">_ObjRec_.CreateMutableBinding</emu-meta>(_N_, _D_).
               1. Perform ? <emu-meta effects="user-code">_ObjRec_.InitializeBinding</emu-meta>(_N_, *undefined*).
-            1. If _envRec_.[[VarNames]] does not contain _N_, then
-              1. Append _N_ to _envRec_.[[VarNames]].
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -11327,7 +11283,7 @@
             <dd>a Global Environment Record _envRec_</dd>
 
             <dt>description</dt>
-            <dd>It creates and initializes a mutable binding in the associated Object Environment Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is replaced.</dd>
+            <dd>It creates and initializes a mutable binding in the associated Object Environment Record. If a binding already exists, it is replaced.</dd>
           </dl>
           <emu-alg>
             1. Let _ObjRec_ be _envRec_.[[ObjectRecord]].
@@ -11339,8 +11295,6 @@
               1. Let _desc_ be the PropertyDescriptor { [[Value]]: _V_ }.
             1. Perform ? DefinePropertyOrThrow(_globalObject_, _N_, _desc_).
             1. [id="step-createglobalfunctionbinding-set"] Perform ? Set(_globalObject_, _N_, _V_, *false*).
-            1. If _envRec_.[[VarNames]] does not contain _N_, then
-              1. Append _N_ to _envRec_.[[VarNames]].
             1. Return ~unused~.
           </emu-alg>
           <emu-note>
@@ -11569,7 +11523,6 @@
           1. Set _env_.[[ObjectRecord]] to _objRec_.
           1. Set _env_.[[GlobalThisValue]] to _thisValue_.
           1. Set _env_.[[DeclarativeRecord]] to _dclRec_.
-          1. Set _env_.[[VarNames]] to a new empty List.
           1. Set _env_.[[OuterEnv]] to *null*.
           1. Return _env_.
         </emu-alg>
@@ -26156,9 +26109,9 @@
         1. Let _lexNames_ be the LexicallyDeclaredNames of _script_.
         1. Let _varNames_ be the VarDeclaredNames of _script_.
         1. For each element _name_ of _lexNames_, do
-          1. If _env_.HasVarDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
           1. If _env_.HasLexicalDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
           1. Let _hasRestrictedGlobal_ be ? _env_.HasRestrictedGlobalProperty(_name_).
+          1. NOTE: Global `var` and `function` bindings (except those that are introduced by non-strict direct eval) are non-configurable and are therefore restricted global properties.
           1. If _hasRestrictedGlobal_ is *true*, throw a *SyntaxError* exception.
         1. For each element _name_ of _varNames_, do
           1. If _env_.HasLexicalDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
