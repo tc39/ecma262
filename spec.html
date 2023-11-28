@@ -6769,6 +6769,65 @@
         1. Return ~unused~.
       </emu-alg>
     </emu-clause>
+
+    <emu-clause id="sec-add-value-to-keyed-group" type="abstract operation">
+      <h1>
+        AddValueToKeyedGroup (
+          _groups_: a List of Records with fields [[Key]] (an ECMAScript language value) and [[Elements]] (a List of ECMAScript language values),
+          _key_: an ECMAScript language value,
+          _value_: an ECMAScript language value,
+        ): ~unused~
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. For each Record { [[Key]], [[Elements]] } _g_ of _groups_, do
+          1. If SameValue(_g_.[[Key]], _key_) is *true*, then
+            1. Assert: Exactly one element of _groups_ meets this criterion.
+            1. Append _value_ to _g_.[[Elements]].
+            1. Return ~unused~.
+        1. Let _group_ be the Record { [[Key]]: _key_, [[Elements]]: « _value_ » }.
+        1. Append _group_ to _groups_.
+        1. Return ~unused~.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-groupby" type="abstract operation">
+      <h1>
+        GroupBy (
+          _items_: an ECMAScript language value,
+          _callbackfn_: an ECMAScript language value,
+          _keyCoercion_: ~property~ or ~zero~,
+        ): either a normal completion containing a List of Records with fields [[Key]] (an ECMAScript language value) and [[Elements]] (a List of ECMAScript language values), or a throw completion
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. Perform ? RequireObjectCoercible(_items_).
+        1. If IsCallable(_callbackfn_) is *false*, throw a *TypeError* exception.
+        1. Let _groups_ be a new empty List.
+        1. Let _iteratorRecord_ be ? GetIterator(_items_, ~sync~).
+        1. Let _k_ be 0.
+        1. Repeat,
+          1. If _k_ ≥ 2<sup>53</sup> - 1, then
+            1. Let _error_ be ThrowCompletion(a newly created *TypeError* object).
+            1. Return ? IteratorClose(_iteratorRecord_, _error_).
+          1. Let _next_ be ? IteratorStep(_iteratorRecord_).
+          1. If _next_ is *false*, then
+            1. Return _groups_.
+          1. Let _value_ be ? IteratorValue(_next_).
+          1. Let _key_ be Completion(Call(_callbackfn_, *undefined*, « _value_, 𝔽(_k_) »)).
+          1. IfAbruptCloseIterator(_key_, _iteratorRecord_).
+          1. If _keyCoercion_ is ~property~, then
+            1. Set _key_ to Completion(ToPropertyKey(_key_)).
+            1. IfAbruptCloseIterator(_key_, _iteratorRecord_).
+          1. Else,
+            1. Assert: _keyCoercion_ is ~zero~.
+            1. If _key_ is *-0*<sub>𝔽</sub>, set _key_ to *+0*<sub>𝔽</sub>.
+          1. Perform AddValueToKeyedGroup(_groups_, _key_, _value_).
+          1. Set _k_ to _k_ + 1.
+      </emu-alg>
+    </emu-clause>
   </emu-clause>
 
   <emu-clause id="sec-operations-on-iterator-objects">
@@ -29795,6 +29854,24 @@
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-object.groupby">
+        <h1>Object.groupBy ( _items_, _callbackfn_ )</h1>
+        <emu-note>
+          <p>_callbackfn_ should be a function that accepts two arguments. `groupBy` calls _callbackfn_ once for each element in _items_, in ascending order, and constructs a new object. Each value returned by _callbackfn_ is coerced to a property key. For each such property key, the result object has a property whose key is that property key and whose value is an array containing all the elements for which the _callbackfn_ return value coerced to that key.</p>
+          <p>_callbackfn_ is called with two arguments: the value of the element and the index of the element.</p>
+          <p>The return value of `groupBy` is an object that does not inherit from %Object.prototype%.</p>
+        </emu-note>
+        <p>This function performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _groups_ be ? GroupBy(_items_, _callbackfn_, ~property~).
+          1. Let _obj_ be OrdinaryObjectCreate(*null*).
+          1. For each Record { [[Key]], [[Elements]] } _g_ of _groups_, do
+            1. Let _elements_ be CreateArrayFromList(_g_.[[Elements]]).
+            1. Perform ! CreateDataPropertyOrThrow(_obj_, _g_.[[Key]], _elements_).
+          1. Return _obj_.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-object.hasown">
         <h1>Object.hasOwn ( _O_, _P_ )</h1>
         <p>This function performs the following steps when called:</p>
@@ -41754,6 +41831,25 @@ THH:mm:ss.sss
         <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
         <li>has the following properties:</li>
       </ul>
+
+      <emu-clause id="sec-map.groupby">
+        <h1>Map.groupBy ( _items_, _callbackfn_ )</h1>
+        <emu-note>
+          <p>_callbackfn_ should be a function that accepts two arguments. `groupBy` calls _callbackfn_ once for each element in _items_, in ascending order, and constructs a new Map. Each value returned by _callbackfn_ is used as a key in the Map. For each such key, the result Map has an entry whose key is that key and whose value is an array containing all the elements for which _callbackfn_ returned that key.</p>
+          <p>_callbackfn_ is called with two arguments: the value of the element and the index of the element.</p>
+          <p>The return value of `groupBy` is a Map.</p>
+        </emu-note>
+        <p>This function performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _groups_ be ? GroupBy(_items_, _callbackfn_, ~zero~).
+          1. Let _map_ be ! Construct(%Map%).
+          1. For each Record { [[Key]], [[Elements]] } _g_ of _groups_, do
+            1. Let _elements_ be CreateArrayFromList(_g_.[[Elements]]).
+            1. Let _entry_ be the Record { [[Key]]: _g_.[[Key]], [[Value]]: _elements_ }.
+            1. Append _entry_ to _map_.[[MapData]].
+          1. Return _map_.
+        </emu-alg>
+      </emu-clause>
 
       <emu-clause id="sec-map.prototype">
         <h1>Map.prototype</h1>
