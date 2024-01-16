@@ -70,7 +70,7 @@ If you wish to submit a proposal or make a significant PR, and you are not a rep
 
 Ecma TC39 accepts contributions from non-member individuals who have accepted the TC39 copyright and patent policies. Currently all ECMAScript related technical work is done by the TC39 RF TG (Royalty Free Task Group), for which the following IPR policies apply:
 
-  * [Ecma International RF Patent Policy](https://ecma-international.org/memento/Policies/Ecma_Royalty-Free_Patent_Policy_Extension_Option.htm)
-  * [Ecma International Software Copyright Policy](https://ecma-international.org/memento/Policies/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.htm) ([PDF](https://ecma-international.org/memento/Policies/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.pdf))
+  * [Ecma International RF Patent Policy](https://ecma-international.org/policies/by-ipr/royalty-free-patent-policy-extension-option/)
+  * [Ecma International Software Copyright Policy](https://ecma-international.org/policies/by-ipr/ecma-international-policy-on-submission-inclusion-and-licensing-of-software/) ([PDF](https://www.ecma-international.org/wp-content/uploads/Ecma_Policy_on_Submission_Inclusion_and_Licensing_of_Software.pdf))
 
 [Matrix chat room]: https://github.com/tc39/how-we-work/blob/HEAD/matrix-guide.md
