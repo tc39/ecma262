@@ -4703,14 +4703,14 @@
           </tr>
           <tr>
             <td>[[Decorator]]</td>
-            <td>a function object.</td>
-            <td>The decorator function.</td>
+            <td>an ECMAScript language value</td>
+            <td>The value of the decorator expression. This can be any value, for simplicity, but will throw an error when called if it is not a function.</td>
           </tr>
           <tr>
             <td>[[Receiver]]</td>
             <td>a Reference Record or an ECMAScript language value</td>
             <td>
-              The receiver that the decorator function should be called with.
+              The receiver that the decorator should be called with.
             </td>
           </tr>
         </table>
@@ -4756,10 +4756,10 @@
               [[Kind]]
             </td>
             <td>
-              ~field~, ~method~, ~accessor~, ~getter~, or ~setter~
+              ~field~, ~method~, ~accessor~, ~getter~, ~setter~
             </td>
             <td>
-              ~field~, ~method~, ~accessor~, ~getter~, or ~setter~
+              ~field~, ~method~, ~accessor~, ~getter~, ~setter~
             </td>
             <td>
               The kind of the element.
@@ -6874,7 +6874,7 @@
         InitializePrivateMethods (
           _O_: an Object,
           _elementDefinitions_: a List of ClassElementDefinition Records,
-        ): either a normal completion containing ~unused~ or an abrupt completion
+        ): either a normal completion containing ~unused~ or a throw completion
       </h1>
       <dl class="header">
       </dl>
@@ -6882,19 +6882,27 @@
         1. Let _privateMethods_ be a new empty List.
         1. For each element _element_ of _elementDefinitions_, do
           1. If _element_.[[Key]] is a Private Name and _element_.[[Kind]] is ~method~, ~getter~, ~setter~, or ~accessor~, then
-            1. If _privateMethods_ contains a PrivateElement _existing_ such that _existing.[[Key]] is _element_.[[Key]], then
-              1. Assert: _element_.[[Kind]] is ~getter~ or ~setter~.
-              1. Assert: _existing_.[[Kind]] is ~accessor~.
-              1. If _element_.[[Get]] is *undefined*, then
-                1. Let _combined_ be PrivateElement { [[Key]]: _existing_.[[Key]], [[Kind]]: ~accessor~, [[Get]]: _existing_.[[Get]], [[Set]]: _element_.[[Set]] }.
-              1. Else,
-                1. Let _combined_ be PrivateElement { [[Key]]: _existing_.[[Key]], [[Kind]]: ~accessor~, [[Get]]: _element_.[[Get]], [[Set]]: _existing_.[[Set]] }.
-              1. Replace _existing_ in _privateMethods_ with _combined_.
-            1. Else,
-              1. If _element_.[[Kind]] is ~getter~ or ~setter~, let _kind_ be ~accessor~.
-              1. Else, let _kind_ be _element_.[[Kind]].
-              1. Let _privateElement_ be PrivateElement { [[Key]]: _element_.[[Key]], [[Kind]]: _kind_, [[Value]]: _element_.[[Value]], [[Get]]: _element_.[[Get]], [[Set]]: _element_.[[Set]] }.
+            1. If _element_.[[Kind]] is ~method~, then
+              1. Let _privateElement_ be PrivateElement { [[Key]]: _element_.[[Key]], [[Kind]]: ~method~, [[Value]]: _element_.[[Value]] }.
               1. Append _privateElement_ to _privateMethods_.
+            1. Else if _element_.[[Kind]] is ~accessor~, then
+              1. Let _privateElement_ be PrivateElement { [[Key]]: _element_.[[Key]], [[Kind]]: ~accessor~, [[Get]]: _element_.[[Get]], [[Set]]: _element_.[[Set]] }.
+              1. Append _privateElement_ to _privateMethods_.
+            1. Else,
+              1. Assert: _element_.[[Kind]] is ~getter~ or ~setter~.
+              1. If _element_.[[Kind]] is ~getter~, let _getter_ be _element_.[[Get]].
+              1. Else, let _getter_ be *undefined*.
+              1. If _element_.[[Kind]] is ~setter~, let _setter_ be _element_.[[Set]].
+              1. Else, let _setter_ be *undefined*.
+              1. Let _existing_ be *undefined*.
+              1. If _privateMethods_ contains a PrivateElement _e_ such that _existing_.[[Key]] is _e_.[[Key]], then
+                1. Assert: _e_.[[Kind]] is ~accessor~.
+                1. Set _existing_ to _e_.
+                1. If _e_.[[Get]] is not *undefined*, set _getter_ to _existing_.[[Get]].
+                1. If _e_.[[Set]] is not *undefined*, set _setter_ to _existing_.[[Set]].
+              1. Let _privateElement_ be PrivateElement { [[Key]]: _element_.[[Key]], [[Kind]]: ~accessor~, [[Get]]: getter, [[Set]]: setter }.
+              1. If _existing_ is not *undefined*, replace _existing_ in _privateMethods_ with _privateElement_.
+              1. Else, append _privateElement_ to _privateMethods_.
         1. For each element _method_ of _privateMethods_, do
           1. Perform ? PrivateMethodOrAccessorAdd(_O_, _method_).
         1. Return ~unused~.
@@ -6906,13 +6914,13 @@
         InitializeFieldOrAccessor (
           _receiver_: an Object,
           _elementRecord_: a ClassElementDefinition Record,
-        ): either a normal completion containing ~unused~ or an abrupt completion
+        ): either a normal completion containing ~unused~ or a throw completion
       </h1>
       <dl class="header">
       </dl>
       <emu-alg>
         1. Assert: _elementRecord_.[[Kind]] is ~field~ or ~accessor~.
-        1. If _elementRecord_.[[BackingStorageKey]] is present, let _fieldName_ be _elementRecord_.[[BackingStorageKey]].
+        1. If _elementRecord_ has a [[BackingStorageKey]] field, let _fieldName_ be _elementRecord_.[[BackingStorageKey]].
         1. Else, let _fieldName_ be _elementRecord_.[[Key]].
         1. Let _initValue_ be *undefined*.
         1. For each element _initializer_ of _elementRecord_.[[Initializers]], do
@@ -9368,8 +9376,7 @@
       </emu-alg>
       <emu-grammar>ClassExpression : DecoratorList? `class` ClassTail</emu-grammar>
       <emu-alg>
-        1. If |DecoratorList?| is present, then
-          1. Let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
+        1. If |DecoratorList?| is present, let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
         1. Else, let _decorators_ be a new empty List.
         1. Let _value_ be ? ClassDefinitionEvaluation of |ClassTail| with arguments *undefined*, _name_, and _decorators_.
         1. Set _value_.[[SourceText]] to the source text matched by |ClassExpression|.
@@ -13801,10 +13808,10 @@
         1. Assert: _methodDefinition_.[[Kind]] is ~method~, ~getter~, ~setter~, or ~accessor~.
         1. Let _key_ be _methodDefinition_.[[Key]].
         1. If _key_ is not a Private Name, then
-          1. Let _desc_ be the PropertyDescriptor { [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
+          1. Let _desc_ be the PropertyDescriptor { [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
           1. If _methodDefinition_.[[Kind]] is ~getter~ or ~accessor~, set _desc_.[[Get]] to _methodDefinition_.[[Get]].
           1. If _methodDefinition_.[[Kind]] is ~setter~ or ~accessor~, set _desc_.[[Set]] to _methodDefinition_.[[Set]].
-          1. If _methodDefinition_.[[Kind]] is ~method~, set _desc_.[[Value]] to _methodDefinition_.[[Value]].
+          1. If _methodDefinition_.[[Kind]] is ~method~, set _desc_.[[Value]] to _methodDefinition_.[[Value]] and _desc_.[[Writable]] to *true*.
           1. Perform ? DefinePropertyOrThrow(_homeObject_, _key_, _desc_).
         1. Return ~unused~.
       </emu-alg>
@@ -24595,7 +24602,7 @@
       <h1>
         CreateDecoratorAccessObject (
           _kind_: ~field~, ~method~, ~accessor~, ~getter~, or ~setter~,
-          _name_: either a String, a Symbol, or a Private Name,
+          _name_: a property key or a Private Name,
         ): an Object
       </h1>
       <dl class="header">
@@ -24607,24 +24614,24 @@
         1. If _kind_ is ~field~, ~method~, ~accessor~, or ~getter~, then
           1. Let _getterClosure_ be a new Abstract Closure with parameters (_obj_) that captures _name_ and performs the following steps when called:
             1. If _obj_ is not an Object, throw a *TypeError* exception.
-            1. If _name_ is either a String or a Symbol, return ? Get(_obj_, _name_).
-            1. Else, return ? PrivateGet(_name_, _obj_).
+            1. If _name_ is a property key, return ? Get(_obj_, _name_).
+            1. Else, return ? PrivateGet(_obj_, _name_).
           1. Let _getter_ be CreateBuiltinFunction(_getterClosure_, 1, *""*, « »).
           1. Perform ! CreateDataPropertyOrThrow(_accessObj_, *"get"*, _getter_).
         1. If _kind_ is ~field~, ~accessor~, or ~setter~, then
           1. Let _setterClosure_ be a new Abstract Closure with parameters (_obj_, _value_) that captures _name_ and performs the following steps when called:
             1. If _obj_ is not an Object, throw a *TypeError* exception.
-            1. If _name_ is either a String or a Symbol, perform ? Set(_obj_, _name_, _value_, *true*).
-            1. Else, perform ? PrivateSet(_name_, _obj_, _value_).
+            1. If _name_ is a property key, perform ? Set(_obj_, _name_, _value_, *true*).
+            1. Else, perform ? PrivateSet(_obj_, _name_, _value_).
             1. Return *undefined*.
           1. Let _setter_ be CreateBuiltinFunction(_setterClosure_, 2, *""*, « »).
           1. Perform ! CreateDataPropertyOrThrow(_accessObj_, *"set"*, _setter_).
         1. Let _hasClosure_ be a new Abstract Closure with parameters (_obj_) that captures _name_ and performs the following steps when called:
           1. If _obj_ is not an Object, throw a *TypeError* exception.
-          1. If _name_ is either a String or a Symbol, return ? HasProperty(_obj_, _name_).
+          1. If _name_ is a property key, return ? HasProperty(_obj_, _name_).
           1. If PrivateElementFind(_obj_, _name_) is not ~empty~, return *true*.
           1. Return *false*.
-        1. Let _has_ be CreateBuiltinFunction(_hasClosure_, 1, *""*, « »).
+        1. Let _has_ be CreateBuiltinFunction(_hasClosure_, 1, *"has"*, « »).
         1. Perform ! CreateDataPropertyOrThrow(_accessObj_, *"has"*, _has_).
         1. Return _accessObj_.
       </emu-alg>
@@ -24655,7 +24662,7 @@
       <h1>
         CreateDecoratorContextObject (
           _kind_: ~class~, ~field~, ~method~, ~accessor~, ~getter~, or ~setter~,
-          _name_: a String, a Symbol, or a Private Name,
+          _name_: a property key or a Private Name,
           _initializers_: a List of function objects,
           _decorationState_: a Record with a field [[Finished]] (a Boolean),
           optional _isStatic_: a Boolean,
@@ -24667,11 +24674,16 @@
       </dl>
       <emu-alg>
         1. Let _contextObj_ be OrdinaryObjectCreate(%Object.prototype%).
-        1. If _kind_ is ~method~, let _kindStr_ be *"method"*.
-        1. Else if _kind_ is ~getter~, let _kindStr_ be *"getter"*.
-        1. Else if _kind_ is ~setter~, let _kindStr_ be *"setter"*.
-        1. Else if _kind_ is ~accessor~, let _kindStr_ be *"accessor"*.
-        1. Else if _kind_ is ~field~, let _kindStr_ be *"field"*.
+        1. If _kind_ is ~method~, then
+          1. Let _kindStr_ be *"method"*.
+        1. Else if _kind_ is ~getter~, then
+          1. Let _kindStr_ be *"getter"*.
+        1. Else if _kind_ is ~setter~, then
+          1. Let _kindStr_ be *"setter"*.
+        1. Else if _kind_ is ~accessor~, then
+          1. Let _kindStr_ be *"accessor"*.
+        1. Else if _kind_ is ~field~, then
+          1. Let _kindStr_ be *"field"*.
         1. Else,
           1. Assert: _kind_ is ~class~.
           1. Let _kindStr_ be *"class"*.
@@ -24717,9 +24729,12 @@
           1. Let _decorationState_ be the Record { [[Finished]]: *false* }.
           1. Let _context_ be CreateDecoratorContextObject(_kind_, _key_, _extraInitializers_, _decorationState_, _isStatic_).
           1. Let _value_ be *undefined*.
-          1. If _kind_ is ~method~, set _value_ to _elementRecord_.[[Value]].
-          1. Else if _kind_ is ~getter~, set _value_ to _elementRecord_.[[Get]].
-          1. Else if _kind_ is ~setter~, set _value_ to _elementRecord_.[[Set]].
+          1. If _kind_ is ~method~, then
+            1. Set _value_ to _elementRecord_.[[Value]].
+          1. Else if _kind_ is ~getter~, then
+            1. Set _value_ to _elementRecord_.[[Get]].
+          1. Else if _kind_ is ~setter~, then
+            1. Set _value_ to _elementRecord_.[[Set]].
           1. Else if _kind_ is ~accessor~, then
             1. Set _value_ to OrdinaryObjectCreate(%Object.prototype%).
             1. Perform ! CreateDataPropertyOrThrow(_value_, *"get"*, _elementRecord_.[[Get]]).
@@ -24740,7 +24755,8 @@
               1. Let _initializer_ be ? Get(_newValue_, *"init"*).
               1. If IsCallable(_initializer_) is *true*, prepend _initializer_ to _elementRecord_.[[Initializers]].
               1. Else if _initializer_ is not *undefined*, throw a *TypeError* exception.
-            1. Else if _newValue_ is not *undefined*, throw a *TypeError* exception.
+            1. Else if _newValue_ is not *undefined*, then
+              1. throw a *TypeError* exception.
           1. Else,
             1. If IsCallable(_newValue_) is *true*, then
               1. If _kind_ is ~getter~, then
@@ -24749,7 +24765,8 @@
                 1. Set _elementRecord_.[[Set]] to _newValue_.
               1. Else,
                 1. Set _elementRecord_.[[Value]] to _newValue_.
-            1. Else if _newValue_ is not *undefined*, throw a *TypeError* exception.
+            1. Else if _newValue_ is not *undefined*, then
+              1. throw a *TypeError* exception.
         1. Set _elementRecord_.[[Decorators]] to ~empty~.
         1. Return ~unused~.
       </emu-alg>
@@ -25326,7 +25343,7 @@
       <emu-alg>
         1. Let _getterClosure_ be a new Abstract Closure with no parameters that captures _privateStateName_ and performs the following steps when called:
           1. Let _o_ be the *this* value.
-          1. Return ? PrivateGet(_privateStateName_, _o_).
+          1. Return ? PrivateGet(_o_, _privateStateName_).
         1. Let _getter_ be CreateBuiltinFunction(_getterClosure_, 0, *"get"*, « »).
         1. Perform SetFunctionName(_getter_, _name_, *"get"*).
         1. Perform MakeMethod(_getter_, _homeObject_).
@@ -25347,7 +25364,7 @@
       <emu-alg>
         1. Let _setterClosure_ be a new Abstract Closure with parameters (_value_) that captures _privateStateName_ and performs the following steps when called:
           1. Let _o_ be the *this* value.
-          1. Perform ? PrivateSet(_privateStateName_, _o_, _value_).
+          1. Perform ? PrivateSet(_o_, _privateStateName_, _value_).
           1. Return *undefined*.
         1. Let _setter_ be CreateBuiltinFunction(_setterClosure_, 1, *"set"*, « »).
         1. Perform SetFunctionName(_setter_, _name_, *"set"*).
@@ -25380,9 +25397,11 @@
         FieldDefinition : `accessor` ClassElementName Initializer?
       </emu-grammar>
       <emu-alg>
-        1. Let _name_ be the result of evaluating |ClassElementName|.
-        1. ReturnIfAbrupt(_name_).
-        1. Let _privateStateDesc_ be the string-concatenation of _name_ and *" accessor storage"*.
+        1. Let _name_ be ? Evaluation of |ClassElementName|.
+        1. If _name_ is a Private Name, let _readableName_ be _name_.[[Description]].
+        1. Else if _name_ is a Symbol, let _readableName_ be SymbolDescriptiveString(_name).
+        1. Else, let _readableName_ be _name_.
+        1. Let _privateStateDesc_ be the string-concatenation of _readableName_ and *" accessor storage"*.
         1. Let _privateStateName_ be a new Private Name whose [[Description]] is _privateStateDesc_.
         1. Let _getter_ be MakeAutoAccessorGetter(_homeObject_, _name_, _privateStateName_).
         1. Let _setter_ be MakeAutoAccessorSetter(_homeObject_, _name_, _privateStateName_).
@@ -25615,7 +25634,7 @@
         1. Let _newF_ be Completion(ApplyDecoratorsToClassDefinition(_F_, _decorators_, _className_, _classExtraInitializers_)).
         1. If _newF_ is an abrupt completion, then
           1. Set the running execution context's PrivateEnvironment to _outerPrivateEnvironment_.
-          1. Return ? _result_.
+          1. Return ? _newF_.
         1. Set _F_ to _newF_.[[Value]].
         1. If _classBinding_ is not *undefined*, then
           1. Perform _classEnv_.InitializeBinding(_classBinding_, _F_).
@@ -25674,8 +25693,7 @@
       <h1>Runtime Semantics: Evaluation</h1>
       <emu-grammar>ClassDeclaration : DecoratorList? `class` BindingIdentifier ClassTail</emu-grammar>
       <emu-alg>
-        1. If |DecoratorList?| is present, then
-          1. Let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
+        1. If |DecoratorList?| is present, let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
         1. Else, let _decorators_ be a new empty List.
         1. Perform ? BindingClassDeclarationEvaluation of this |ClassDeclaration| with argument _decorators_.
         1. Return ~empty~.
@@ -25685,8 +25703,7 @@
       </emu-note>
       <emu-grammar>ClassExpression : DecoratorList? `class` ClassTail</emu-grammar>
       <emu-alg>
-        1. If |DecoratorList?| is present, then
-          1. Let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
+        1. If |DecoratorList?| is present, let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
         1. Else, let _decorators_ be a new empty List.
         1. Let _value_ be ? ClassDefinitionEvaluation of |ClassTail| with arguments *undefined*, *""*, and _decorators_.
         1. Set _value_.[[SourceText]] to the source text matched by |ClassExpression|.
@@ -25695,8 +25712,7 @@
       <emu-grammar>ClassExpression : DecoratorList? `class` BindingIdentifier ClassTail</emu-grammar>
       <emu-alg>
         1. Let _className_ be StringValue of |BindingIdentifier|.
-        1. If |DecoratorList?| is present, then
-          1. Let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
+        1. If |DecoratorList?| is present, let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
         1. Else, let _decorators_ be a new empty List.
         1. Let _value_ be ? ClassDefinitionEvaluation of |ClassTail| with arguments _className_, _className_, and _decorators_.
         1. Set _value_.[[SourceText]] to the source text matched by |ClassExpression|.
@@ -29433,8 +29449,7 @@
         </emu-alg>
         <emu-grammar>ExportDeclaration : DecoratorList? `export` `default` ClassDeclaration</emu-grammar>
         <emu-alg>
-          1. If |DecoratorList| is present, then
-            1. Let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
+          1. If |DecoratorList| is present, let _decorators_ be ? DecoratorListEvaluation of |DecoratorList|.
           1. Else, let _decorators_ be a new empty List.
           1. Let _value_ be ? BindingClassDeclarationEvaluation of |ClassDeclaration| with argument _decorators_.
           1. Let _className_ be the sole element of BoundNames of |ClassDeclaration|.
