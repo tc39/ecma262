@@ -42748,6 +42748,40 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-arraybuffercopyanddetach" type="abstract operation">
+        <h1>
+          ArrayBufferCopyAndDetach (
+            _arrayBuffer_: an ECMAScript language value,
+            _newLength_: an ECMAScript language value,
+            _preserveResizability_: ~preserve-resizability~ or ~fixed-length~,
+          ): either a normal completion containing an ArrayBuffer or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Perform ? RequireInternalSlot(_arrayBuffer_, [[ArrayBufferData]]).
+          1. If IsSharedArrayBuffer(_arrayBuffer_) is *true*, throw a *TypeError* exception.
+          1. If _newLength_ is *undefined*, then
+            1. Let _newByteLength_ be _arrayBuffer_.[[ArrayBufferByteLength]].
+          1. Else,
+            1. Let _newByteLength_ be ? ToIndex(_newLength_).
+          1. If IsDetachedBuffer(_arrayBuffer_) is *true*, throw a *TypeError* exception.
+          1. If _preserveResizability_ is ~preserve-resizability~ and IsFixedLengthArrayBuffer(_arrayBuffer_) is *false*, then
+            1. Let _newMaxByteLength_ be _arrayBuffer_.[[ArrayBufferMaxByteLength]].
+          1. Else,
+            1. Let _newMaxByteLength_ be ~empty~.
+          1. If _arrayBuffer_.[[ArrayBufferDetachKey]] is not *undefined*, throw a *TypeError* exception.
+          1. Let _newBuffer_ be ? <emu-meta suppress-effects="user-code">AllocateArrayBuffer(%ArrayBuffer%, _newByteLength_, _newMaxByteLength_)</emu-meta>.
+          1. Let _copyLength_ be min(_newByteLength_, _arrayBuffer_.[[ArrayBufferByteLength]]).
+          1. Let _fromBlock_ be _arrayBuffer_.[[ArrayBufferData]].
+          1. Let _toBlock_ be _newBuffer_.[[ArrayBufferData]].
+          1. Perform CopyDataBlockBytes(_toBlock_, 0, _fromBlock_, 0, _copyLength_).
+          1. NOTE: Neither creation of the new Data Block nor copying from the old Data Block are observable. Implementations may implement this method as a zero-copy move or a `realloc`.
+          1. Perform ! DetachArrayBuffer(_arrayBuffer_).
+          1. Return _newBuffer_.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-isdetachedbuffer" type="abstract operation">
         <h1>
           IsDetachedBuffer (
@@ -42770,6 +42804,8 @@ THH:mm:ss.sss
           ): either a normal completion containing ~unused~ or a throw completion
         </h1>
         <dl class="header">
+          <dt>skip global checks</dt>
+          <dd>true</dd>
         </dl>
         <emu-alg>
           1. Assert: IsSharedArrayBuffer(_arrayBuffer_) is *false*.
@@ -43192,6 +43228,17 @@ THH:mm:ss.sss
         <p>The initial value of `ArrayBuffer.prototype.constructor` is %ArrayBuffer%.</p>
       </emu-clause>
 
+      <emu-clause id="sec-get-arraybuffer.prototype.detached">
+        <h1>get ArrayBuffer.prototype.detached</h1>
+        <p>`ArrayBuffer.prototype.detached` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_O_, [[ArrayBufferData]]).
+          1. If IsSharedArrayBuffer(_O_) is *true*, throw a *TypeError* exception.
+          1. Return IsDetachedBuffer(_O_).
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-get-arraybuffer.prototype.maxbytelength">
         <h1>get ArrayBuffer.prototype.maxByteLength</h1>
         <p>`ArrayBuffer.prototype.maxByteLength` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
@@ -43276,6 +43323,24 @@ THH:mm:ss.sss
             1. Let _count_ be min(_newLen_, _currentLen_ - _first_).
             1. Perform CopyDataBlockBytes(_toBuf_, 0, _fromBuf_, _first_, _count_).
           1. Return _new_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-arraybuffer.prototype.transfer">
+        <h1>ArrayBuffer.prototype.transfer ( [ _newLength_ ] )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Return ? ArrayBufferCopyAndDetach(_O_, _newLength_, ~preserve-resizability~).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-arraybuffer.prototype.transfertofixedlength">
+        <h1>ArrayBuffer.prototype.transferToFixedLength ( [ _newLength_ ] )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Return ? ArrayBufferCopyAndDetach(_O_, _newLength_, ~fixed-length~).
         </emu-alg>
       </emu-clause>
 
