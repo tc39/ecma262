@@ -1229,7 +1229,7 @@
                 <ins>`"Symbol.asyncDispose"`</ins>
               </td>
               <td>
-                <ins>A method that performs explicit resource cleanup on an object. Called by the semantics of the `using await` declaration and AsyncDisposableStack objects.</ins>
+                <ins>A method that performs explicit resource cleanup on an object. Called by the semantics of the `await using` declaration and AsyncDisposableStack objects.</ins>
               </td>
             </tr>
             <tr>
@@ -7252,7 +7252,7 @@
               [[ResourceValue]]
             </td>
             <td>
-              an ECMAScript language value.
+              an Object or *undefined*.
             </td>
             <td>
               The value to be disposed.
@@ -7266,7 +7266,7 @@
               ~sync-dispose~ or ~async-dispose~
             </td>
             <td>
-              Indicates whether the resource was added by a `using` declaration or DisposableStack object (~sync-dispose~) or a `using await` declaration or AsyncDisposableStack object (~async-dispose~).
+              Indicates whether the resource was added by a `using` declaration or DisposableStack object (~sync-dispose~) or by an `await using` declaration or AsyncDisposableStack object (~async-dispose~).
             </td>
           </tr>
           <tr>
@@ -7300,7 +7300,7 @@
           _disposeCapability_: a DisposeCapability Record,
           _V_: an ECMAScript language value,
           _hint_: either ~sync-dispose~ or ~async-dispose~,
-          optional _method_: an ECMAScript language value,
+          optional _method_: a function object,
         ): either a normal completion containing ~unused~ or a throw completion
       </h1>
       <dl class="header">
@@ -7308,12 +7308,11 @@
       <emu-alg>
         1. If _method_ is not present, then
           1. If _V_ is either *null* or *undefined* and _hint_ is ~sync-dispose~, return ~unused~.
+          1. NOTE: When _V_ is either *null* or *undefined* and _hint_ is ~async-dispose~, we record that the resource was evaluated to ensure we will still perform an Await when resources are later disposed.
           1. Let _resource_ be ? CreateDisposableResource(_V_, _hint_).
         1. Else,
-          1. If _V_ is either *null* or *undefined*, then
-            1. Let _resource_ be ? CreateDisposableResource(*undefined*, _hint_, _method_).
-          1. Else,
-            1. Let _resource_ be ? CreateDisposableResource(_V_, _hint_, _method_).
+          1. Assert: V is *undefined*.
+          1. Let _resource_ be ? CreateDisposableResource(*undefined*, _hint_, _method_).
         1. Append _resource_ to _disposeCapability_.[[DisposableResourceStack]].
         1. Return ~unused~.
       </emu-alg>
@@ -7324,7 +7323,7 @@
         CreateDisposableResource (
           _V_: an ECMAScript language value,
           _hint_: either ~sync-dispose~ or ~async-dispose~,
-          optional _method_: an ECMAScript language value,
+          optional _method_: a function object,
         ): either a normal completion containing a DisposableResource Record or a throw completion
       </h1>
       <dl class="header">
@@ -7339,7 +7338,6 @@
             1. Set _method_ to ? GetDisposeMethod(_V_, _hint_).
             1. If _method_ is *undefined*, throw a *TypeError* exception.
         1. Else,
-          1. If _V_ is not an Object, throw a *TypeError* exception.
           1. If IsCallable(_method_) is *false*, throw a *TypeError* exception.
         1. Return the DisposableResource Record { [[ResourceValue]]: _V_, [[Hint]]: _hint_, [[DisposeMethod]]: _method_ }.
       </emu-alg>
@@ -7400,10 +7398,10 @@
       <dl class="header">
       </dl>
       <emu-alg>
-        1. For each element _resource_ of _disposeCapability_.[[DisposableResourceStack]], in reverse List order, do
+        1. For each element _resource_ of _disposeCapability_.[[DisposableResourceStack]], in reverse list order, do
           1. Let _result_ be Completion(Dispose(_resource_.[[ResourceValue]], _resource_.[[Hint]], _resource_.[[DisposeMethod]])).
-          1. If _result_.[[Type]] is ~throw~, then
-            1. If _completion_.[[Type]] is ~throw~, then
+          1. If _result_ is a throw completion, then
+            1. If _completion_ is a throw completion, then
               1. Set _result_ to _result_.[[Value]].
               1. Let _suppressed_ be _completion_.[[Value]].
               1. Let _error_ be a newly created *SuppressedError* object.
@@ -7462,7 +7460,9 @@
       <emu-grammar>
         UsingDeclaration :
           `using` BindingList `;`
-          `using` `await` BindingList `;`
+
+        AwaitUsingDeclaration :
+          CoverAwaitExpressionAndAwaitUsingDeclarationHead BindingList `;`
       </emu-grammar>
       <emu-alg>
         1. Return the BoundNames of |BindingList|.
@@ -7733,15 +7733,21 @@
       <emu-alg>
         1. Return IsConstantDeclaration of |LetOrConst|.
       </emu-alg>
-      <emu-grammar>LexicalDeclaration : UsingDeclaration</emu-grammar>
-      <emu-alg>
-        1. Return *true*.
-      </emu-alg>
       <emu-grammar>LetOrConst : `let`</emu-grammar>
       <emu-alg>
         1. Return *false*.
       </emu-alg>
       <emu-grammar>LetOrConst : `const`</emu-grammar>
+      <emu-alg>
+        1. Return *true*.
+      </emu-alg>
+      <emu-grammar>
+        UsingDeclaration :
+          `using` BindingList `;`
+
+        AwaitUsingDeclaration :
+          CoverAwaitExpressionAndAwaitUsingDeclarationHead BindingList `;`
+      </emu-grammar>
       <emu-alg>
         1. Return *true*.
       </emu-alg>
@@ -7798,7 +7804,9 @@
       <emu-grammar>
         UsingDeclaration :
           `using` BindingList `;`
-          `using` `await` BindingList `;`
+
+        AwaitUsingDeclaration :
+          CoverAwaitExpressionAndAwaitUsingDeclarationHead BindingList `;`
       </emu-grammar>
       <emu-alg>
         1. Return *true*.
@@ -7810,7 +7818,7 @@
       <emu-grammar>
         ForDeclaration :
           `using` ForBinding
-          `using` `await` ForBinding
+          `await` `using` ForBinding
       </emu-grammar>
       <emu-alg>
         1. Return *true*.
@@ -7854,8 +7862,8 @@
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-static-semantics-isusingawaitdeclaration" type="sdo">
-      <h1>Static Semantics: IsUsingAwaitDeclaration ( ): a Boolean</h1>
+    <emu-clause id="sec-static-semantics-isawaitusingdeclaration" type="sdo">
+      <h1>Static Semantics: IsAwaitUsingDeclaration ( ): a Boolean</h1>
       <dl class="header">
       </dl>
       <emu-grammar>LexicalDeclaration : LetOrConst BindingList `;`</emu-grammar>
@@ -7866,7 +7874,7 @@
       <emu-alg>
         1. Return *false*.
       </emu-alg>
-      <emu-grammar>UsingDeclaration : `using` `await` BindingList `;`</emu-grammar>
+      <emu-grammar>AwaitUsingDeclaration : CoverAwaitExpressionAndAwaitUsingDeclarationHead BindingList `;`</emu-grammar>
       <emu-alg>
         1. Return *true*.
       </emu-alg>
@@ -7878,7 +7886,7 @@
       <emu-alg>
         1. Return *false*.
       </emu-alg>
-      <emu-grammar>ForDeclaration : `using` `await` ForBinding</emu-grammar>
+      <emu-grammar>ForDeclaration : `await` `using` ForBinding</emu-grammar>
       <emu-alg>
         1. Return *true*.
       </emu-alg>
@@ -9394,7 +9402,10 @@
           `-` UnaryExpression
           `~` UnaryExpression
           `!` UnaryExpression
-          AwaitExpression
+          CoverAwaitExpressionAndAwaitUsingDeclarationHead
+
+        AwaitExpression :
+          `await` UnaryExpression
 
         ExponentiationExpression :
           UpdateExpression `**` ExponentiationExpression
@@ -10175,7 +10186,10 @@
           `-` UnaryExpression
           `~` UnaryExpression
           `!` UnaryExpression
-          AwaitExpression
+          CoverAwaitExpressionAndAwaitUsingDeclarationHead
+
+        AwaitExpression :
+          `await` UnaryExpression
 
         ExponentiationExpression :
           UpdateExpression `**` ExponentiationExpression
@@ -10403,7 +10417,7 @@
               InitializeBinding(N, V, _hint_)
             </td>
             <td>
-              Set the value of an already existing but uninitialized binding in an Environment Record. The String value _N_ is the text of the bound name. _V_ is the value for the binding and is a value of any ECMAScript language type. _hint_ indicates whether the binding came from either a `using` declaration (~sync-dispose~), a `using await` declaration (~async-dispose~), or a regular variable declaration (~normal~).
+              Set the value of an already existing but uninitialized binding in an Environment Record. The String value _N_ is the text of the bound name. _V_ is the value for the binding and is a value of any ECMAScript language type. _hint_ indicates whether the binding came from either a `using` declaration (~sync-dispose~), an `await using` declaration (~async-dispose~), or a regular variable declaration (~normal~).
             </td>
           </tr>
           <tr>
@@ -10460,7 +10474,7 @@
       <emu-clause id="sec-declarative-environment-records">
         <h1>Declarative Environment Records</h1>
         <p>Each <dfn variants="Declarative Environment Records">Declarative Environment Record</dfn> is associated with an ECMAScript program scope containing variable, constant, let, class, module, import, and/or function declarations. A Declarative Environment Record binds the set of identifiers defined by the declarations contained within its scope.</p>
-        <p>Every declarative Environment Record also has a [[DisposeCapability]] field, which contains a DisposeCapability Record. This field holds a stack of resources tracked by the `using` declarations and `using await` declarations that must be disposed when the Evaluation step that constructed the Environment Record has completed.</p>
+        <p>Every declarative Environment Record also has a [[DisposeCapability]] field, which contains a DisposeCapability Record. This field holds a stack of resources tracked by the `using` declarations and `await using` declarations that must be disposed when the Evaluation step that constructed the Environment Record has completed.</p>
         <p>The behaviour of the concrete specification methods for Declarative Environment Records is defined by the following algorithms.</p>
 
         <emu-clause id="sec-declarative-environment-records-hasbinding-n" type="concrete method">
@@ -11801,6 +11815,7 @@
           1. Else, set _env_.[[ThisBindingStatus]] to ~uninitialized~.
           1. Set _env_.[[NewTarget]] to _newTarget_.
           1. Set _env_.[[OuterEnv]] to _F_.[[Environment]].
+          1. Set _env_.[[DisposeCapability]] to NewDisposeCapability().
           1. Return _env_.
         </emu-alg>
       </emu-clause>
@@ -11838,6 +11853,7 @@
         <emu-alg>
           1. Let _env_ be a new Module Environment Record containing no bindings.
           1. Set _env_.[[OuterEnv]] to _E_.
+          1. Set _env_.[[DisposeCapability]] to NewDisposeCapability().
           1. Return _env_.
         </emu-alg>
       </emu-clause>
@@ -17030,7 +17046,7 @@
       <h1>Keywords and Reserved Words</h1>
       <p>A <dfn variants="keywords">keyword</dfn> is a token that matches |IdentifierName|, but also has a syntactic use; that is, it appears literally, in a `fixed width` font, in some syntactic production. The keywords of ECMAScript include `if`, `while`, `async`, `await`, and many others.</p>
       <p>A <dfn variants="reserved words">reserved word</dfn> is an |IdentifierName| that cannot be used as an identifier. Many keywords are reserved words, but some are not, and some are reserved only in certain contexts. `if` and `while` are reserved words. `await` is reserved only inside async functions and modules. `async` is not reserved; it can be used as a variable name or statement label without restriction.</p>
-      <p>This specification uses a combination of grammatical productions and early error rules to specify which names are valid identifiers and which are reserved words. All tokens in the |ReservedWord| list below, except for `await` and `yield`, are unconditionally reserved. Exceptions for `await` and `yield` are specified in <emu-xref href="#sec-identifiers"></emu-xref>, using parameterized syntactic productions. Lastly, several early error rules restrict the set of valid identifiers. See <emu-xref href="#sec-identifiers-static-semantics-early-errors"></emu-xref>, <emu-xref href="#sec-let-const-and-using-declarations-static-semantics-early-errors"></emu-xref>, <emu-xref href="#sec-for-in-and-for-of-statements-static-semantics-early-errors"></emu-xref>, and <emu-xref href="#sec-class-definitions-static-semantics-early-errors"></emu-xref>. In summary, there are five categories of identifier names:</p>
+      <p>This specification uses a combination of grammatical productions and early error rules to specify which names are valid identifiers and which are reserved words. All tokens in the |ReservedWord| list below, except for `await` and `yield`, are unconditionally reserved. Exceptions for `await` and `yield` are specified in <emu-xref href="#sec-identifiers"></emu-xref>, using parameterized syntactic productions. Lastly, several early error rules restrict the set of valid identifiers. See <emu-xref href="#sec-identifiers-static-semantics-early-errors"></emu-xref>, <emu-xref href="#sec-let-const-using-and-await-using-declarations-static-semantics-early-errors"></emu-xref>, <emu-xref href="#sec-for-in-and-for-of-statements-static-semantics-early-errors"></emu-xref>, and <emu-xref href="#sec-class-definitions-static-semantics-early-errors"></emu-xref>. In summary, there are five categories of identifier names:</p>
       <ul>
         <li>
           <p>Those that are always allowed as identifiers, and are not keywords, such as `Math`, `window`, `toString`, and `_`;</p>
@@ -20203,7 +20219,21 @@
         `-` UnaryExpression[?Yield, ?Await]
         `~` UnaryExpression[?Yield, ?Await]
         `!` UnaryExpression[?Yield, ?Await]
-        [+Await] AwaitExpression[?Yield]
+        [+Await] CoverAwaitExpressionAndAwaitUsingDeclarationHead[?Yield] #awaitusingcover
+
+      CoverAwaitExpressionAndAwaitUsingDeclarationHead[Yield] :
+        `await` UnaryExpression[?Yield, +Await]
+    </emu-grammar>
+
+    <h2>Supplemental Syntax</h2>
+    <p>
+      When processing an instance of the production<br>
+      <emu-grammar>UnaryExpression : CoverAwaitExpressionAndAwaitUsingDeclarationHead</emu-grammar><br>
+      the interpretation of |CoverAwaitExpressionAndAwaitUsingDeclarationHead| is refined using the following grammar:
+    </p>
+    <emu-grammar>
+      AwaitExpression[Yield] :
+        `await` UnaryExpression[?Yield, +Await]
     </emu-grammar>
 
     <emu-clause id="sec-delete-operator">
@@ -21610,16 +21640,17 @@
   <emu-clause id="sec-declarations-and-the-variable-statement">
     <h1>Declarations and the Variable Statement</h1>
 
-    <emu-clause id="sec-let-const-and-using-declarations" oldids="sec-let-and-const-declarations">
-      <h1>Let, Const, and Using Declarations</h1>
+    <emu-clause id="sec-let-const-using-and-await-using-declarations" oldids="sec-let-and-const-declarations">
+      <h1>Let, Const, Using, and Await Using Declarations</h1>
       <emu-note>
-        <p>`let`, `const`, `using`, and `using await` declarations define variables that are scoped to the running execution context's LexicalEnvironment. The variables are created when their containing Environment Record is instantiated but may not be accessed in any way until the variable's |LexicalBinding| is evaluated. A variable defined by a |LexicalBinding| with an |Initializer| is assigned the value of its |Initializer|'s |AssignmentExpression| when the |LexicalBinding| is evaluated, not when the variable is created. If a |LexicalBinding| in a `let` declaration does not have an |Initializer| the variable is assigned the value *undefined* when the |LexicalBinding| is evaluated.</p>
+        <p>`let`, `const`, `using`, and `await using` declarations define variables that are scoped to the running execution context's LexicalEnvironment. The variables are created when their containing Environment Record is instantiated but may not be accessed in any way until the variable's |LexicalBinding| is evaluated. A variable defined by a |LexicalBinding| with an |Initializer| is assigned the value of its |Initializer|'s |AssignmentExpression| when the |LexicalBinding| is evaluated, not when the variable is created. If a |LexicalBinding| in a `let` declaration does not have an |Initializer| the variable is assigned the value *undefined* when the |LexicalBinding| is evaluated.</p>
       </emu-note>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
         LexicalDeclaration[In, Yield, Await] :
           LetOrConst BindingList[?In, ?Yield, ?Await, +Pattern] `;`
           UsingDeclaration[?In, ?Yield, ?Await]
+          [+Await] AwaitUsingDeclaration[?In, ?Yield]
 
         LetOrConst :
           `let`
@@ -21627,7 +21658,9 @@
 
         UsingDeclaration[In, Yield, Await] :
           `using` [no LineTerminator here] BindingList[?In, ?Yield, ?Await, ~Pattern] `;`
-          [+Await] `using` [no LineTerminator here] `await` [no LineTerminator here] BindingList[?In, ?Yield, +Await, ~Pattern] `;`
+
+        AwaitUsingDeclaration[In, Yield] :
+          CoverAwaitExpressionAndAwaitUsingDeclarationHead[?Yield] [no LineTerminator here] BindingList[?In, ?Yield, +Await, ~Pattern] `;`
 
         BindingList[In, Yield, Await, Pattern] :
           LexicalBinding[?In, ?Yield, ?Await, ?Pattern]
@@ -21638,7 +21671,18 @@
           [+Pattern] BindingPattern[?Yield, ?Await] Initializer[?In, ?Yield, ?Await]
       </emu-grammar>
 
-      <emu-clause id="sec-let-const-and-using-declarations-static-semantics-early-errors" oldids="sec-let-and-const-declarations-static-semantics-early-errors">
+      <h2>Supplemental Syntax</h2>
+      <p>
+        When processing an instance of the production<br>
+        <emu-grammar>AwaitUsingDeclaration : CoverAwaitExpressionAndAwaitUsingDeclarationHead BindingList `;`</emu-grammar><br>
+        the interpretation of |CoverAwaitExpressionAndAwaitUsingDeclarationHead| is refined using the following grammar:
+      </p>
+      <emu-grammar type="definition">
+        AwaitUsingDeclarationHead :
+          `await` [no LineTerminator here] `using`
+      </emu-grammar>
+
+      <emu-clause id="sec-let-const-using-and-await-using-declarations-static-semantics-early-errors" oldids="sec-let-and-const-declarations-static-semantics-early-errors">
         <h1>Static Semantics: Early Errors</h1>
         <emu-grammar>LexicalDeclaration : LetOrConst BindingList `;`</emu-grammar>
         <ul>
@@ -21652,7 +21696,6 @@
         <emu-grammar>
           UsingDeclaration :
             `using` BindingList `;`
-            `using` `await` BindingList `;`
         </emu-grammar>
         <ul>
           <li>
@@ -21665,6 +21708,22 @@
             It is a Syntax Error if the goal symbol is |Script| and |UsingDeclaration| is not contained, either directly or indirectly, within a |Block|, |CaseBlock|, |ForStatement|, |ForInOfStatement|, |FunctionBody|, |GeneratorBody|, |AsyncGeneratorBody|, |AsyncFunctionBody|, |ClassStaticBlockBody|, or |ClassBody|.
           </li>
         </ul>
+        <emu-grammar>
+          AwaitUsingDeclaration :
+            CoverAwaitExpressionAndAwaitUsingDeclarationHead BindingList `;`
+        </emu-grammar>
+        <ul>
+          <li>|CoverAwaitExpressionAndAwaitUsingDeclarationHead| must cover an |AwaitUsingDeclarationHead|.</li>
+          <li>
+            It is a Syntax Error if the BoundNames of |BindingList| contains *"let"*.
+          </li>
+          <li>
+            It is a Syntax Error if the BoundNames of |BindingList| contains any duplicate entries.
+          </li>
+          <li>
+            It is a Syntax Error if the goal symbol is |Script| and |AwaitUsingDeclaration| is not contained, either directly or indirectly, within a |Block|, |CaseBlock|, |ForStatement|, |ForInOfStatement|, |FunctionBody|, |GeneratorBody|, |AsyncGeneratorBody|, |AsyncFunctionBody|, |ClassStaticBlockBody|, or |ClassBody|.
+          </li>
+        </ul>
         <emu-grammar>LexicalBinding : BindingIdentifier Initializer?</emu-grammar>
         <ul>
           <li>
@@ -21673,7 +21732,7 @@
         </ul>
       </emu-clause>
 
-      <emu-clause id="sec-let-const-and-using-declarations-runtime-semantics-evaluation" oldids="sec-let-and-const-declarations-runtime-semantics-evaluation" type="sdo">
+      <emu-clause id="sec-let-const-using-and-await-using-declarations-runtime-semantics-evaluation" oldids="sec-let-and-const-declarations-runtime-semantics-evaluation" type="sdo">
         <h1>Runtime Semantics: Evaluation</h1>
         <emu-grammar>LexicalDeclaration : LetOrConst BindingList `;`</emu-grammar>
         <emu-alg>
@@ -21685,14 +21744,14 @@
           1. Perform ? BindingEvaluation of |BindingList| with argument ~sync-dispose~.
           1. Return ~empty~.
         </emu-alg>
-        <emu-grammar>UsingDeclaration : `using` `await` BindingList `;`</emu-grammar>
+        <emu-grammar>AwaitUsingDeclaration : CoverAwaitExpressionAndAwaitUsingDeclarationHead BindingList `;`</emu-grammar>
         <emu-alg>
           1. Perform ? BindingEvaluation of |BindingList| with argument ~async-dispose~.
           1. Return ~empty~.
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-let-const-and-using-declarations-runtime-semantics-bindingevaluation" type="sdo">
+      <emu-clause id="sec-let-const-using-and-await-using-declarations-runtime-semantics-bindingevaluation" type="sdo">
         <h1>
           Runtime Semantics: BindingEvaluation (
             _hint_: one of ~normal~, ~sync-dispose~, or ~async-dispose~,
@@ -21713,7 +21772,7 @@
           1. Return ~unused~.
         </emu-alg>
         <emu-note>
-          <p>A static semantics rule ensures that this form of |LexicalBinding| never occurs in a `const` or `using` declaration.</p>
+          <p>A static semantics rule ensures that this form of |LexicalBinding| never occurs in a `const`, `using`, or `await using` declaration.</p>
         </emu-note>
         <emu-grammar>LexicalBinding : BindingIdentifier Initializer</emu-grammar>
         <emu-alg>
@@ -22340,7 +22399,7 @@
         ForDeclaration[Yield, Await, Using] :
           LetOrConst ForBinding[?Yield, ?Await, +Pattern]
           [+Using] `using` [no LineTerminator here] ForBinding[?Yield, ?Await, ~Pattern]
-          [+Using, +Await] `using` [no LineTerminator here] `await` [no LineTerminator here] ForBinding[?Yield, +Await, ~Pattern]
+          [+Using, +Await] `await` [no LineTerminator here] `using` [no LineTerminator here] ForBinding[?Yield, +Await, ~Pattern]
 
         ForBinding[Yield, Await, Pattern] :
           BindingIdentifier[?Yield, ?Await]
@@ -22489,10 +22548,9 @@
         <emu-grammar>
           ForDeclaration :
             `using` ForBinding
-            `using` `await` ForBinding
+            `await` `using` ForBinding
         </emu-grammar>
         <emu-alg>
-          1. Assert: _environment_ is a Declarative Environment Record.
           1. For each element _name_ of the BoundNames of |ForBinding|, do
             1. Perform ! _environment_.CreateImmutableBinding(_name_, *true*).
         </emu-alg>
@@ -22616,7 +22674,7 @@
           1. If _iteratorKind_ is not present, set _iteratorKind_ to ~sync~.
           1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
           1. Let _V_ be *undefined*.
-          1. If IsUsingAwaitDeclaration of _lhs_ is *true*, then
+          1. If IsAwaitUsingDeclaration of _lhs_ is *true*, then
             1. Let _hint_ be ~async-dispose~.
           1. Else if IsUsingDeclaration of _lhs_ is *true*, then
             1. Let _hint_ be ~sync-dispose~.
@@ -23858,7 +23916,7 @@
       </dl>
       <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
       <emu-alg>
-        1. Perform ! FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
+        1. Perform ? FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
         1. Return ? Evaluation of |FunctionStatementList|.
       </emu-alg>
     </emu-clause>
@@ -25669,6 +25727,13 @@
         1. Return InstantiateAsyncFunctionExpression of |AsyncFunctionExpression|.
       </emu-alg>
       <emu-grammar>
+        UnaryExpression : CoverAwaitExpressionAndAwaitUsingDeclarationHead
+      </emu-grammar>
+      <emu-alg>
+        1. Let _expr_ be the |AwaitExpression| that is covered by CoverAwaitExpressionAndAwaitUsingDeclarationHead.
+        1. Return ? Evaluation of _expr_.
+      </emu-alg>
+      <emu-grammar>
         AwaitExpression : `await` UnaryExpression
       </emu-grammar>
       <emu-alg>
@@ -25857,7 +25922,7 @@
         <p>A potential tail position call that is immediately followed by return GetValue of the call result is also a possible tail position call. A function call cannot return a Reference Record, so such a GetValue operation will always return the same value as the actual function call result.</p>
       </emu-note>
       <emu-note>
-        <p>A `using` declaration or `using await` declaration that precedes a call in the same |Block|, |CaseBlock|, |ForStatement|, |ForInOfStatement|, |FunctionBody|, |GeneratorBody|, |AsyncGeneratorBody|, |AsyncFunctionBody|, or |ClassStaticBlockBody| prevents that call from being a possible tail position call.</p>
+        <p>A `using` declaration or `await using` declaration that precedes a call in the same |Block|, |CaseBlock|, |ForStatement|, |ForInOfStatement|, |FunctionBody|, |GeneratorBody|, |AsyncGeneratorBody|, |AsyncFunctionBody|, or |ClassStaticBlockBody| prevents that call from being a possible tail position call.</p>
       </emu-note>
 
       <emu-grammar>StatementList : StatementList StatementListItem</emu-grammar>
@@ -26060,7 +26125,10 @@
           `-` UnaryExpression
           `~` UnaryExpression
           `!` UnaryExpression
-          AwaitExpression
+          CoverAwaitExpressionAndAwaitUsingDeclarationHead
+
+        AwaitExpression :
+          `await` UnaryExpression
 
         CallExpression :
           SuperCall
@@ -26214,7 +26282,13 @@
         1. Return *false*.
       </emu-alg>
 
-      <emu-grammar>LexicalDeclaration : UsingDeclaration</emu-grammar>
+      <emu-grammar>
+        UsingDeclaration :
+          `using` BindingList `;`
+
+        AwaitUsingDeclaration :
+          CoverAwaitExpressionAndAwaitUsingDeclarationHead BindingList `;`
+      </emu-grammar>
       <emu-alg>
         1. Return *true*.
       </emu-alg>
@@ -46844,7 +46918,7 @@ THH:mm:ss.sss
               <td>
                 <p>Invoking this method notifies the <em>AsyncDisposable</em> object that the caller does not intend to continue to use this object. This method should perform any necessary logic to perform explicit clean-up of the resource including, but not limited to, file system handles, streams, host objects, etc. When an exception is thrown from this method, it typically means that the resource could not be explicitly freed. An <em>AsyncDisposable</em> object is not considered "disposed" until the resulting Promise has been fulfilled.</p>
                 <p>If called more than once on the same object, the function should not throw an exception. However, this requirement is not enforced.</p>
-                <p>When using an <em>AsyncDisposable</em> object, it is good practice to create the instance with a `using await` declaration, as the resource will be automatically disposed when the |Block| or |Module| immediately containing the declaration has been evaluated.</p>
+                <p>When using an <em>AsyncDisposable</em> object, it is good practice to create the instance with a `await using` declaration, as the resource will be automatically disposed when the |Block| or |Module| immediately containing the declaration has been evaluated.</p>
               </td>
             </tr>
           </table>
@@ -46891,7 +46965,14 @@ THH:mm:ss.sss
       <p>The DisposableStack constructor:</p>
       <ul>
         <li>has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
+        <li>has the following properties:</li>
       </ul>
+
+      <emu-clause id="sec-disposablestack.prototype">
+        <h1>DisposableStack.prototype</h1>
+        <p>The initial value of `DisposableStack.prototype` is the DisposableStack prototype object.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-properties-of-the-disposablestack-prototype-object">
@@ -46986,7 +47067,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-disposablestack.prototype-@@dispose">
         <h1>DisposableStack.prototype [ @@dispose ] ( )</h1>
-        <p>The initial value of the @@dispose property is %DisposableStack.prototype.dispose%, defined in <emu-xref href="#sec-disposablestack.prototype.dispose"></emu-xref>.</p>
+        <p>The initial value of the `@@dispose` property is %DisposableStack.prototype.dispose%, defined in <emu-xref href="#sec-disposablestack.prototype.dispose"></emu-xref>.</p>
       </emu-clause>
 
       <emu-clause id="sec-disposablestack.prototype-@@toStringTag">
@@ -47077,7 +47158,14 @@ THH:mm:ss.sss
       <p>The AsyncDisposableStack constructor:</p>
       <ul>
         <li>Has a [[Prototype]] internal slot whose value is %Function.prototype%.</li>
+        <li>has the following properties:</li>
       </ul>
+
+      <emu-clause id="sec-asyncdisposablestack.prototype">
+        <h1>AsyncDisposableStack.prototype</h1>
+        <p>The initial value of `AsyncDisposableStack.prototype` is the AsyncDisposableStack prototype object.</p>
+        <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-properties-of-the-asyncdisposablestack-prototype-object">
@@ -47180,7 +47268,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-asyncdisposablestack.prototype-@@asyncDispose">
         <h1>AsyncDisposableStack.prototype [ @@asyncDispose ] ( )</h1>
-        <p>The initial value of the @@asyncDispose property is %AsyncDisposableStack.prototype.disposeAsync%, defined in <emu-xref href="#sec-asyncdisposablestack.prototype.disposeAsync"></emu-xref>.</p>
+        <p>The initial value of the `@@asyncDispose` property is %AsyncDisposableStack.prototype.disposeAsync%, defined in <emu-xref href="#sec-asyncdisposablestack.prototype.disposeAsync"></emu-xref>.</p>
       </emu-clause>
 
       <emu-clause id="sec-asyncdisposablestack.prototype-@@toStringTag">
@@ -50567,6 +50655,14 @@ THH:mm:ss.sss
     <emu-prodref name="LexicalDeclaration"></emu-prodref>
     <emu-prodref name="LetOrConst"></emu-prodref>
     <emu-prodref name="UsingDeclaration"></emu-prodref>
+    <emu-prodref name="AwaitUsingDeclaration"></emu-prodref>
+    <p>
+      In certain circumstances when processing an instance of the production<br>
+      <emu-prodref name="AwaitUsingDeclaration"></emu-prodref><br>
+      the interpretation of |CoverAwaitExpressionAndAwaitUsingDeclarationHead| is refined using the following grammar:
+    </p>
+    <emu-prodref name="AwaitUsingDeclarationHead"></emu-prodref>
+    <p>&nbsp;</p>
     <emu-prodref name="BindingList"></emu-prodref>
     <emu-prodref name="LexicalBinding"></emu-prodref>
     <emu-prodref name="VariableStatement"></emu-prodref>
@@ -50660,7 +50756,14 @@ THH:mm:ss.sss
     <emu-prodref name="AsyncFunctionExpression"></emu-prodref>
     <emu-prodref name="AsyncMethod"></emu-prodref>
     <emu-prodref name="AsyncFunctionBody"></emu-prodref>
+    <emu-prodref name="CoverAwaitExpressionAndAwaitUsingDeclarationHead"></emu-prodref>
+    <p>
+      When processing an instance of the production<br>
+      <emu-prodref name="UnaryExpression" a="awaitusingcover"></emu-prodref><br>
+      the interpretation of |CoverAwaitExpressionAndAwaitUsingDeclarationHead| is refined using the following grammar:
+    </p>
     <emu-prodref name="AwaitExpression"></emu-prodref>
+    <p>&nbsp;</p>
     <emu-prodref name="ClassDeclaration"></emu-prodref>
     <emu-prodref name="ClassExpression"></emu-prodref>
     <emu-prodref name="ClassTail"></emu-prodref>
