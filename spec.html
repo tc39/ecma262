@@ -11624,18 +11624,35 @@
       </table>
     </emu-table>
 
-    <emu-clause id="sec-createrealm" type="abstract operation">
-      <h1>CreateRealm ( ): a Realm Record</h1>
+    <emu-clause id="sec-initializehostdefinedrealm" type="abstract operation" oldids="sec-createrealm,sec-setrealmglobalobject">
+      <h1>InitializeHostDefinedRealm ( ): either a normal completion containing ~unused~ or a throw completion</h1>
       <dl class="header">
       </dl>
       <emu-alg>
-        1. Let _realmRec_ be a new Realm Record.
-        1. Perform CreateIntrinsics(_realmRec_).
-        1. Set _realmRec_.[[AgentSignifier]] to AgentSignifier().
-        1. Set _realmRec_.[[GlobalObject]] to *undefined*.
-        1. Set _realmRec_.[[GlobalEnv]] to *undefined*.
-        1. Set _realmRec_.[[TemplateMap]] to a new empty List.
-        1. Return _realmRec_.
+        1. Let _realm_ be a new Realm Record.
+        1. Perform CreateIntrinsics(_realm_).
+        1. Set _realm_.[[AgentSignifier]] to AgentSignifier().
+        1. Set _realm_.[[GlobalObject]] to *undefined*.
+        1. Set _realm_.[[GlobalEnv]] to *undefined*.
+        1. Set _realm_.[[TemplateMap]] to a new empty List.
+        1. Let _newContext_ be a new execution context.
+        1. Set the Function of _newContext_ to *null*.
+        1. Set the Realm of _newContext_ to _realm_.
+        1. Set the ScriptOrModule of _newContext_ to *null*.
+        1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
+        1. If the host requires use of an exotic object to serve as _realm_'s global object, then
+          1. Let _global_ be such an object created in a host-defined manner.
+        1. Else,
+          1. Let _global_ be OrdinaryObjectCreate(_realm_.[[Intrinsics]].[[%Object.prototype%]]).
+        1. If the host requires that the `this` binding in _realm_'s global scope return an object other than the global object, then
+          1. Let _thisValue_ be such an object created in a host-defined manner.
+        1. Else,
+          1. Let _thisValue_ be _global_.
+        1. Set _realm_.[[GlobalObject]] to _global_.
+        1. Set _realm_.[[GlobalEnv]] to NewGlobalEnvironment(_global_, _thisValue_).
+        1. Perform ? SetDefaultGlobalBindings(_realm_).
+        1. Create any host-defined global object properties on _global_.
+        1. Return ~unused~.
       </emu-alg>
     </emu-clause>
 
@@ -11655,34 +11672,11 @@
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-setrealmglobalobject" type="abstract operation">
-      <h1>
-        SetRealmGlobalObject (
-          _realmRec_: a Realm Record,
-          _globalObj_: an Object or *undefined*,
-          _thisValue_: an Object or *undefined*,
-        ): ~unused~
-      </h1>
-      <dl class="header">
-      </dl>
-      <emu-alg>
-        1. If _globalObj_ is *undefined*, then
-          1. Let _intrinsics_ be _realmRec_.[[Intrinsics]].
-          1. Set _globalObj_ to OrdinaryObjectCreate(_intrinsics_.[[%Object.prototype%]]).
-        1. Assert: _globalObj_ is an Object.
-        1. If _thisValue_ is *undefined*, set _thisValue_ to _globalObj_.
-        1. Set _realmRec_.[[GlobalObject]] to _globalObj_.
-        1. Let _newGlobalEnv_ be NewGlobalEnvironment(_globalObj_, _thisValue_).
-        1. Set _realmRec_.[[GlobalEnv]] to _newGlobalEnv_.
-        1. Return ~unused~.
-      </emu-alg>
-    </emu-clause>
-
     <emu-clause id="sec-setdefaultglobalbindings" type="abstract operation">
       <h1>
         SetDefaultGlobalBindings (
           _realmRec_: a Realm Record,
-        ): either a normal completion containing an Object or a throw completion
+        ): either a normal completion containing ~unused~ or a throw completion
       </h1>
       <dl class="header">
       </dl>
@@ -11692,7 +11686,7 @@
           1. Let _name_ be the String value of the property name.
           1. Let _desc_ be the fully populated data Property Descriptor for the property, containing the specified attributes for the property. For properties listed in <emu-xref href="#sec-function-properties-of-the-global-object"></emu-xref>, <emu-xref href="#sec-constructor-properties-of-the-global-object"></emu-xref>, or <emu-xref href="#sec-other-properties-of-the-global-object"></emu-xref> the value of the [[Value]] attribute is the corresponding intrinsic object from _realmRec_.
           1. Perform ? DefinePropertyOrThrow(_global_, _name_, _desc_).
-        1. Return _global_.
+        1. Return ~unused~.
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -12091,27 +12085,6 @@
       </dl>
       <p>An implementation of HostEnqueueTimeoutJob must conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref>.</p>
     </emu-clause>
-  </emu-clause>
-
-  <emu-clause id="sec-initializehostdefinedrealm" type="abstract operation">
-    <h1>InitializeHostDefinedRealm ( ): either a normal completion containing ~unused~ or a throw completion</h1>
-    <dl class="header">
-    </dl>
-
-    <emu-alg>
-      1. Let _realm_ be CreateRealm().
-      1. Let _newContext_ be a new execution context.
-      1. Set the Function of _newContext_ to *null*.
-      1. Set the Realm of _newContext_ to _realm_.
-      1. Set the ScriptOrModule of _newContext_ to *null*.
-      1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
-      1. If the host requires use of an exotic object to serve as _realm_'s global object, let _global_ be such an object created in a host-defined manner. Otherwise, let _global_ be *undefined*, indicating that an ordinary object should be created as the global object.
-      1. If the host requires that the `this` binding in _realm_'s global scope return an object other than the global object, let _thisValue_ be such an object created in a host-defined manner. Otherwise, let _thisValue_ be *undefined*, indicating that _realm_'s global `this` binding should be the global object.
-      1. Perform SetRealmGlobalObject(_realm_, _global_, _thisValue_).
-      1. Let _globalObj_ be ? SetDefaultGlobalBindings(_realm_).
-      1. Create any host-defined global object properties on _globalObj_.
-      1. Return ~unused~.
-    </emu-alg>
   </emu-clause>
 
   <emu-clause id="sec-agents">
