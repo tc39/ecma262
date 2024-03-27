@@ -854,7 +854,9 @@ let referencePane = {
     this.$tableContainer.appendChild(this.$table);
     this.$pane.appendChild(this.$tableContainer);
 
-    menu.$specContainer.appendChild(this.$container);
+    if (menu != null) {
+      menu.$specContainer.appendChild(this.$container);
+    }
   },
 
   activate() {
@@ -1189,6 +1191,9 @@ function doShortcut(e) {
 }
 
 function init() {
+  if (document.getElementById('menu') == null) {
+    return;
+  }
   menu = new Menu();
   let $container = document.getElementById('spec-container');
   $container.addEventListener(
