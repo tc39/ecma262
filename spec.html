@@ -19223,7 +19223,7 @@
               1. If _argList_ has no elements, return *undefined*.
               1. Let _evalArg_ be the first element of _argList_.
               1. If IsStrict(this |CallExpression|) is *true*, let _strictCaller_ be *true*. Otherwise let _strictCaller_ be *false*.
-              1. [id="step-callexpression-evaluation-direct-eval"] Return ? PerformEval(_evalArg_, _strictCaller_, *true*).
+              1. [id="step-callexpression-evaluation-direct-eval"] Return ? PerformEval(_evalArg_, _strictCaller_, ~direct-eval~).
           1. Let _thisCall_ be this |CallExpression|.
           1. Let _tailCall_ be IsInTailPosition(_thisCall_).
           1. Return ? EvaluateCall(_func_, _ref_, _arguments_, _tailCall_).
@@ -28862,7 +28862,7 @@
       <p>This function is the <dfn>%eval%</dfn> intrinsic object.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
-        1. Return ? PerformEval(_x_, *false*, *false*).
+        1. Return ? PerformEval(_x_, *false*, ~indirect-eval~).
       </emu-alg>
 
       <emu-clause id="sec-performeval" type="abstract operation" oldids="sec-performeval-rules-outside-functions,sec-performeval-rules-outside-methods,sec-performeval-rules-outside-constructors">
@@ -28870,30 +28870,29 @@
           PerformEval (
             _x_: an ECMAScript language value,
             _strictCaller_: a Boolean,
-            _direct_: a Boolean,
+            _direct_: ~direct-eval~ or ~indirect-eval~,
           ): either a normal completion containing an ECMAScript language value or a throw completion
         </h1>
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Assert: If _direct_ is *false*, then _strictCaller_ is also *false*.
-          1. If _x_ is an Object, then
-            1. Let _code_ be HostGetCodeForEval(_x_).
-            1. If _code_ is ~unknown~ return _x_.
-            1. Else, let _xStr_ be _code_.
-          1. Else if _x_ is a String, then
+          1. Assert: If _direct_ is *indirect-eval*, then _strictCaller_ is also *false*.
+          1. If _x_ is a String, then
             1. Let _xStr_ be _x_.
+          1. Else if _x_ is an Object, then
+            1. Let _code_ be HostGetCodeForEval(_x_).
+            1. If _code_ is a String, let _xStr_ be _code_.
+            1. Else, return _x_.
           1. Else,
             1. Return _x_.
           1. Let _evalRealm_ be the current Realm Record.
           1. NOTE: In the case of a direct eval, _evalRealm_ is the realm of both the caller of `eval` and of the `eval` function itself.
-          1. Let _type_ be ~direct-eval~ if _direct_ is *true*, or ~indirect-eval~ if _direct_ is *false*.
-          1. Perform ? HostEnsureCanCompileStrings(_evalRealm_, « », _xStr_, _type_, « », _x_).
+          1. Perform ? HostEnsureCanCompileStrings(_evalRealm_, « », _xStr_, _direct_, « », _x_).
           1. Let _inFunction_ be *false*.
           1. Let _inMethod_ be *false*.
           1. Let _inDerivedConstructor_ be *false*.
           1. Let _inClassFieldInitializer_ be *false*.
-          1. If _direct_ is *true*, then
+          1. If _direct_ is ~direct-eval~, then
             1. Let _thisEnvRec_ be GetThisEnvironment().
             1. If _thisEnvRec_ is a Function Environment Record, then
               1. Let _F_ be _thisEnvRec_.[[FunctionObject]].
@@ -28903,7 +28902,7 @@
               1. Let _classFieldInitializerName_ be _F_.[[ClassFieldInitializerName]].
               1. If _classFieldInitializerName_ is not ~empty~, set _inClassFieldInitializer_ to *true*.
           1. Perform the following substeps in an implementation-defined order, possibly interleaving parsing and error detection:
-            1. Let _script_ be ParseText(_x_, |Script|).
+            1. Let _script_ be ParseText(_xStr_, |Script|).
             1. If _script_ is a List of errors, throw a *SyntaxError* exception.
             1. If _script_ Contains |ScriptBody| is *false*, return *undefined*.
             1. Let _body_ be the |ScriptBody| of _script_.
@@ -28914,8 +28913,8 @@
           1. If _strictCaller_ is *true*, let _strictEval_ be *true*.
           1. Else, let _strictEval_ be ScriptIsStrict of _script_.
           1. Let _runningContext_ be the running execution context.
-          1. NOTE: If _direct_ is *true*, _runningContext_ will be the execution context that performed the direct eval. If _direct_ is *false*, _runningContext_ will be the execution context for the invocation of the `eval` function.
-          1. If _direct_ is *true*, then
+          1. NOTE: If _direct_ is ~direct-eval~, _runningContext_ will be the execution context that performed the direct eval. If _direct_ is ~indirect-eval~, _runningContext_ will be the execution context for the invocation of the `eval` function.
+          1. If _direct_ is ~direct-eval~, then
             1. Let _lexEnv_ be NewDeclarativeEnvironment(_runningContext_'s LexicalEnvironment).
             1. Let _varEnv_ be _runningContext_'s VariableEnvironment.
             1. Let _privateEnv_ be _runningContext_'s PrivateEnvironment.
@@ -28973,7 +28972,7 @@
         <h1>
           HostGetCodeForEval (
             _argument_: an Object,
-          ): a String or ~unknown~
+          ): a String or ~no-code~
         </h1>
         <dl class="header">
           <dt>description</dt>
@@ -28983,7 +28982,7 @@
         <p>
           _argument_ represents the Object to be checked for code.
         </p>
-        <p>The default implementation of HostGetCodeForEval is to return ~unknown~.</p>
+        <p>The default implementation of HostGetCodeForEval is to return ~no-code~.</p>
       </emu-clause>
 
       <emu-clause id="sec-evaldeclarationinstantiation" type="abstract operation">
