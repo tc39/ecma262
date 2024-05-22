@@ -6865,7 +6865,7 @@
               a Boolean
             </td>
             <td>
-              Whether the iterator has been closed.
+              Whether the iterator has completed or been closed.
             </td>
           </tr>
         </table>
@@ -6925,10 +6925,16 @@
       </dl>
       <emu-alg>
         1. If _value_ is not present, then
-          1. Let _result_ be ? Call(_iteratorRecord_.[[NextMethod]], _iteratorRecord_.[[Iterator]]).
+          1. Let _result_ be Completion(Call(_iteratorRecord_.[[NextMethod]], _iteratorRecord_.[[Iterator]])).
         1. Else,
-          1. Let _result_ be ? Call(_iteratorRecord_.[[NextMethod]], _iteratorRecord_.[[Iterator]], « _value_ »).
-        1. If _result_ is not an Object, throw a *TypeError* exception.
+          1. Let _result_ be Completion(Call(_iteratorRecord_.[[NextMethod]], _iteratorRecord_.[[Iterator]], « _value_ »)).
+        1. If _result_ is a throw completion, then
+          1. Set _iteratorRecord_.[[Done]] to *true*.
+          1. Return ? _result_.
+        1. Set _result_ to ! _result_.
+        1. If _result_ is not an Object, then
+          1. Set _iteratorRecord_.[[Done]] to *true*.
+          1. Throw a *TypeError* exception.
         1. Return _result_.
       </emu-alg>
     </emu-clause>
@@ -6963,16 +6969,22 @@
       <h1>
         IteratorStep (
           _iteratorRecord_: an Iterator Record,
-        ): either a normal completion containing either an Object or *false*, or a throw completion
+        ): either a normal completion containing either an Object or ~done~, or a throw completion
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It requests the next value from _iteratorRecord_.[[Iterator]] by calling _iteratorRecord_.[[NextMethod]] and returns either *false* indicating that the iterator has reached its end or the IteratorResult object if a next value is available.</dd>
+        <dd>It requests the next value from _iteratorRecord_.[[Iterator]] by calling _iteratorRecord_.[[NextMethod]] and returns either ~done~ indicating that the iterator has reached its end or the IteratorResult object if a next value is available.</dd>
       </dl>
       <emu-alg>
         1. Let _result_ be ? IteratorNext(_iteratorRecord_).
-        1. Let _done_ be ? IteratorComplete(_result_).
-        1. If _done_ is *true*, return *false*.
+        1. Let _done_ be Completion(IteratorComplete(_result_)).
+        1. If _done_ is a throw completion, then
+          1. Set _iteratorRecord_.[[Done]] to *true*.
+          1. Return ? _done_.
+        1. Set _done_ to ! _done_.
+        1. If _done_ is *true*, then
+          1. Set _iteratorRecord_.[[Done]] to *true*.
+          1. Return ~done~.
         1. Return _result_.
       </emu-alg>
     </emu-clause>
@@ -6988,20 +7000,10 @@
         <dd>It requests the next value from _iteratorRecord_.[[Iterator]] by calling _iteratorRecord_.[[NextMethod]] and returns either ~done~ indicating that the iterator has reached its end or the value from the IteratorResult object if a next value is available.</dd>
       </dl>
       <emu-alg>
-        1. Let _result_ be Completion(IteratorNext(_iteratorRecord_)).
-        1. If _result_ is a throw completion, then
-          1. Set _iteratorRecord_.[[Done]] to *true*.
-          1. Return ? _result_.
-        1. Set _result_ to ! _result_.
-        1. Let _done_ be Completion(IteratorComplete(_result_)).
-        1. If _done_ is a throw completion, then
-          1. Set _iteratorRecord_.[[Done]] to *true*.
-          1. Return ? _done_.
-        1. Set _done_ to ! _done_.
-        1. If _done_ is *true*, then
-          1. Set _iteratorRecord_.[[Done]] to *true*.
+        1. Let _result_ be ? IteratorStep(_iteratorRecord_).
+        1. If _result_ is ~done~, then
           1. Return ~done~.
-        1. Let _value_ be Completion(Get(_result_, *"value"*)).
+        1. Let _value_ be Completion(IteratorValue(_result_)).
         1. If _value_ is a throw completion, then
           1. Set _iteratorRecord_.[[Done]] to *true*.
         1. Return ? _value_.
@@ -20907,20 +20909,14 @@
         <emu-grammar>Elision : `,`</emu-grammar>
         <emu-alg>
           1. If _iteratorRecord_.[[Done]] is *false*, then
-            1. Let _next_ be Completion(IteratorStep(_iteratorRecord_)).
-            1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
-            1. ReturnIfAbrupt(_next_).
-            1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
+            1. Perform ? IteratorStep(_iteratorRecord_).
           1. Return ~unused~.
         </emu-alg>
         <emu-grammar>Elision : Elision `,`</emu-grammar>
         <emu-alg>
           1. Perform ? IteratorDestructuringAssignmentEvaluation of |Elision| with argument _iteratorRecord_.
           1. If _iteratorRecord_.[[Done]] is *false*, then
-            1. Let _next_ be Completion(IteratorStep(_iteratorRecord_)).
-            1. If _next_ is an abrupt completion, set _iteratorRecord_.[[Done]] to *true*.
-            1. ReturnIfAbrupt(_next_).
-            1. If _next_ is *false*, set _iteratorRecord_.[[Done]] to *true*.
+            1. Perform ? IteratorStep(_iteratorRecord_).
           1. Return ~unused~.
         </emu-alg>
         <emu-grammar>AssignmentElement : DestructuringAssignmentTarget Initializer?</emu-grammar>
