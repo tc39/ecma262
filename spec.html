@@ -4022,7 +4022,7 @@
     <emu-clause id="sec-set-and-relation-specification-type">
       <h1>The Set and Relation Specification Types</h1>
       <p>The <em>Set</em> type is used to explain a collection of unordered elements for use in the memory model. It is distinct from the ECMAScript collection type of the same name. To disambiguate, instances of the ECMAScript collection are consistently referred to as "Set objects" within this specification. Values of the Set type are simple collections of elements, where no element appears more than once. Elements may be added to and removed from Sets. Sets may be unioned, intersected, or subtracted from each other.</p>
-      <p>The <dfn variants="Relations">Relation</dfn> type is used to explain constraints on Sets. Values of the Relation type are Sets of ordered pairs of values from its value domain. For example, a Relation on events is a set of ordered pairs of events. For a Relation _R_ and two values _a_ and _b_ in the value domain of _R_, _a_ _R_ _b_ is shorthand for saying the ordered pair (_a_, _b_) is a member of _R_. A Relation is least with respect to some conditions when it is the smallest Relation that satisfies those conditions.</p>
+      <p>The <dfn variants="Relations">Relation</dfn> type is used to explain constraints on Sets. Values of the Relation type are Sets of ordered pairs of values from its value domain. For example, a Relation on events is a set of ordered pairs of events. For a Relation _R_ and two values _a_ and _b_ in the value domain of _R_, _a_ _R_ _b_ is shorthand for saying the ordered pair (_a_, _b_) is a member of _R_. A Relation is the <dfn id="least-relation">least Relation</dfn> with respect to some conditions when it is the smallest Relation that satisfies those conditions.</p>
       <p>A <dfn variants="strict partial orders">strict partial order</dfn> is a Relation value _R_ that satisfies the following.</p>
       <ul>
         <li>
@@ -48696,7 +48696,7 @@ THH:mm:ss.sss
     <p>In addition to Shared Data Block and Synchronize events, there are host-specific events.</p>
     <p>Let the range of a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory event be the Set of contiguous integers from its [[ByteIndex]] to [[ByteIndex]] + [[ElementSize]] - 1. Two events' ranges are equal when the events have the same [[Block]], and the ranges are element-wise equal. Two events' ranges are overlapping when the events have the same [[Block]], the ranges are not equal and their intersection is non-empty. Two events' ranges are disjoint when the events do not have the same [[Block]] or their ranges are neither equal nor overlapping.</p>
     <emu-note>
-      <p>Examples of host-specific synchronizing events that should be accounted for are: sending a SharedArrayBuffer from one agent to another (e.g., by `postMessage` in a browser), starting and stopping agents, and communicating within the agent cluster via channels other than shared memory. It is assumed those events are appended to agent-order during evaluation like the other SharedArrayBuffer events.</p>
+      <p>Examples of host-specific synchronizing events that should be accounted for are: sending a SharedArrayBuffer from one agent to another (e.g., by `postMessage` in a browser), starting and stopping agents, and communicating within the agent cluster via channels other than shared memory. For a particular execution _execution_, those events are provided by the host via the host-synchronizes-with strict partial order. Additionally, hosts can add host-specific synchronizing events to _execution_.[[EventList]] so as to participate in the is-agent-order-before Relation.</p>
     </emu-note>
     <p>Events are ordered within candidate executions by the relations defined below.</p>
   </emu-clause>
@@ -48774,40 +48774,10 @@ THH:mm:ss.sss
           <td>a List of Chosen Value Records</td>
           <td>Maps ReadSharedMemory or ReadModifyWriteSharedMemory events to the List of byte values chosen during the evaluation.</td>
         </tr>
-        <tr>
-          <td>[[AgentOrder]]</td>
-          <td>an agent-order Relation</td>
-          <td>Defined below.</td>
-        </tr>
-        <tr>
-          <td>[[ReadsBytesFrom]]</td>
-          <td>a reads-bytes-from mathematical function</td>
-          <td>Defined below.</td>
-        </tr>
-        <tr>
-          <td>[[ReadsFrom]]</td>
-          <td>a reads-from Relation</td>
-          <td>Defined below.</td>
-        </tr>
-        <tr>
-          <td>[[HostSynchronizesWith]]</td>
-          <td>a host-synchronizes-with Relation</td>
-          <td>Defined below.</td>
-        </tr>
-        <tr>
-          <td>[[SynchronizesWith]]</td>
-          <td>a synchronizes-with Relation</td>
-          <td>Defined below.</td>
-        </tr>
-        <tr>
-          <td>[[HappensBefore]]</td>
-          <td>a happens-before Relation</td>
-          <td>Defined below.</td>
-        </tr>
       </table>
     </emu-table>
 
-    <p>An <dfn variants="empty candidate executions">empty candidate execution</dfn> is a candidate execution Record whose fields are empty Lists and Relations.</p>
+    <p>An <dfn variants="empty candidate executions">empty candidate execution</dfn> is a candidate execution Record whose fields are empty Lists.</p>
   </emu-clause>
 
   <emu-clause id="sec-abstract-operations-for-the-memory-model" oldids="sec-synchronizeeventset">
@@ -48907,7 +48877,7 @@ THH:mm:ss.sss
       <dl class="header">
       </dl>
       <emu-alg>
-        1. Let _Ws_ be _execution_.[[ReadsBytesFrom]](_R_).
+        1. Let _Ws_ be reads-bytes-from(_R_) in _execution_.
         1. Assert: _Ws_ is a List of WriteSharedMemory or ReadModifyWriteSharedMemory events with length equal to _R_.[[ElementSize]].
         1. Return ComposeWriteEventBytes(_execution_, _R_.[[ByteIndex]], _Ws_).
       </emu-alg>
@@ -48917,11 +48887,13 @@ THH:mm:ss.sss
   <emu-clause id="sec-relations-of-candidate-executions">
     <h1>Relations of Candidate Executions</h1>
 
-    <emu-clause id="sec-agent-order" aoid="agent-order">
-      <h1>agent-order</h1>
-      <p>For a candidate execution _execution_, _execution_.[[AgentOrder]] is a Relation on events that satisfies the following.</p>
+    <p>The following relations and mathematical functions are parameterized over a particular candidate execution and order its events.</p>
+
+    <emu-clause id="sec-agent-order">
+      <h1>is-agent-order-before</h1>
+      <p>For a candidate execution _execution_, its <dfn>is-agent-order-before</dfn> Relation is the least Relation on events that satisfies the following.</p>
       <ul>
-        <li>For each pair (_E_, _D_) in EventSet(_execution_), _execution_.[[AgentOrder]] contains (_E_, _D_) if there is some Agent Events Record _aer_ in _execution_.[[EventsRecords]] such that _E_ and _D_ are in _aer_.[[EventList]] and _E_ is before _D_ in List order of _aer_.[[EventList]].</li>
+        <li>For events _E_ and _D_, _E_ is-agent-order-before _D_ in _execution_ if there is some Agent Events Record _aer_ in _execution_.[[EventsRecords]] such that _aer_.[[EventList]] contains both _E_ and _D_ and _E_ is before _D_ in List order of _aer_.[[EventList]].</li>
       </ul>
 
       <emu-note>
@@ -48931,88 +48903,94 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-reads-bytes-from" aoid="reads-bytes-from">
       <h1>reads-bytes-from</h1>
-      <p>For a candidate execution _execution_, _execution_.[[ReadsBytesFrom]] is a mathematical function mapping events in SharedDataBlockEventSet(_execution_) to Lists of events in SharedDataBlockEventSet(_execution_) that satisfies the following conditions.</p>
+      <p>For a candidate execution _execution_, its <em>reads-bytes-from</em> function is a mathematical function mapping events in SharedDataBlockEventSet(_execution_) to Lists of events in SharedDataBlockEventSet(_execution_) that satisfies the following conditions.</p>
       <ul>
         <li>
-          <p>For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ in SharedDataBlockEventSet(_execution_), _execution_.[[ReadsBytesFrom]](_R_) is a List of length _R_.[[ElementSize]] whose elements are WriteSharedMemory or ReadModifyWriteSharedMemory events _Ws_ such that all of the following are true.</p>
+          <p>For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ in SharedDataBlockEventSet(_execution_), reads-bytes-from(_R_) in _execution_ is a List of length _R_.[[ElementSize]] whose elements are WriteSharedMemory or ReadModifyWriteSharedMemory events _Ws_ such that all of the following are true.</p>
           <ul>
             <li>Each event _W_ with index _i_ in _Ws_ has _R_.[[ByteIndex]] + _i_ in its range.</li>
             <li>_R_ is not in _Ws_.</li>
           </ul>
         </li>
       </ul>
+      <p>A candidate execution always admits a reads-bytes-from function.</p>
     </emu-clause>
 
-    <emu-clause id="sec-reads-from" aoid="reads-from">
+    <emu-clause id="sec-reads-from">
       <h1>reads-from</h1>
-      <p>For a candidate execution _execution_, _execution_.[[ReadsFrom]] is the least Relation on events that satisfies the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>reads-from</dfn> Relation is the least Relation on events that satisfies the following.</p>
       <ul>
-        <li>For each pair (_R_, _W_) in SharedDataBlockEventSet(_execution_), _execution_.[[ReadsFrom]] contains (_R_, _W_) if _execution_.[[ReadsBytesFrom]](_R_) contains _W_.</li>
+        <li>For events _R_ and _W_, _R_ reads-from _W_ in _execution_ if SharedDataBlockEventSet(_execution_) contains both _R_ and _W_, and reads-bytes-from(_R_) in _execution_ contains _W_.</li>
       </ul>
     </emu-clause>
 
-    <emu-clause id="sec-host-synchronizes-with" aoid="host-synchronizes-with">
+    <emu-clause id="sec-host-synchronizes-with">
       <h1>host-synchronizes-with</h1>
-      <p>For a candidate execution _execution_, _execution_.[[HostSynchronizesWith]] is a host-provided strict partial order on host-specific events that satisfies at least the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>host-synchronizes-with</dfn> Relation is a host-provided strict partial order on host-specific events that satisfies at least the following.</p>
       <ul>
-        <li>If _execution_.[[HostSynchronizesWith]] contains (_E_, _D_), _E_ and _D_ are in HostEventSet(_execution_).</li>
-        <li>There is no cycle in the union of _execution_.[[HostSynchronizesWith]] and _execution_.[[AgentOrder]].</li>
+        <li>If _E_ host-synchronizes-with _D_ in _execution_, HostEventSet(_execution_) contains _E_ and _D_.</li>
+        <li>There is no cycle in the union of host-synchronizes-with and is-agent-order-before in _execution_.</li>
       </ul>
 
       <emu-note>
-        <p>For two host-specific events _E_ and _D_, _E_ host-synchronizes-with _D_ implies _E_ happens-before _D_.</p>
+        <p>For two host-specific events _E_ and _D_ in a candidate execution _execution_, _E_ host-synchronizes-with _D_ in _execution_ implies _E_ happens-before _D_ in _execution_.</p>
       </emu-note>
       <emu-note>
-        <p>The host-synchronizes-with relation allows the host to provide additional synchronization mechanisms, such as `postMessage` between HTML workers.</p>
+        <p>This Relation allows the host to provide additional synchronization mechanisms, such as `postMessage` between HTML workers.</p>
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-synchronizes-with" aoid="synchronizes-with">
+    <emu-clause id="sec-synchronizes-with">
       <h1>synchronizes-with</h1>
-      <p>For a candidate execution _execution_, _execution_.[[SynchronizesWith]] is the least Relation on events that satisfies the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>synchronizes-with</dfn> Relation is the least Relation on events that satisfies the following.</p>
       <ul>
         <li>
-          For each pair (_R_, _W_) in _execution_.[[ReadsFrom]], _execution_.[[SynchronizesWith]] contains (_W_, _R_) if _R_.[[Order]] is ~seq-cst~, _W_.[[Order]] is ~seq-cst~, and _R_ and _W_ have equal ranges.
+          For events _R_ and _W_, _W_ synchronizes-with _R_ in _execution_ if _R_ reads-from _W_ in _execution_, _R_.[[Order]] is ~seq-cst~, _W_.[[Order]] is ~seq-cst~, and _R_ and _W_ have equal ranges.
         </li>
         <li>
           For each element _eventsRecord_ of _execution_.[[EventsRecords]], the following is true.
           <ul>
-            <li>For each pair (_S_, _Sw_) in _eventsRecord_.[[AgentSynchronizesWith]], _execution_.[[SynchronizesWith]] contains (_S_, _Sw_).</li>
+            <li>For events _S_ and _Sw_, _S_ synchronizes-with _Sw_ in _execution_ if _eventsRecord_.[[AgentSynchronizesWith]] contains (_S_, _Sw_).</li>
           </ul>
         </li>
-        <li>For each pair (_E_, _D_) in _execution_.[[HostSynchronizesWith]], _execution_.[[SynchronizesWith]] contains (_E_, _D_).</li>
+        <li>For events _E_ and _D_, _E_ synchronizes-with _D_ in _execution_ if _execution_.[[HostSynchronizesWith]] contains (_E_, _D_).</li>
       </ul>
 
       <emu-note>
-        <p>Owing to convention, write events synchronizes-with read events, instead of read events synchronizes-with write events.</p>
+        <p>Owing to convention in memory model literature, in a candidate execution _execution_, write events synchronizes-with read events, instead of read events synchronizes-with write events.</p>
       </emu-note>
 
       <emu-note>
-        <p>~init~ events do not participate in synchronizes-with, and are instead constrained directly by happens-before.</p>
+        <p>In a candidate execution _execution_, ~init~ events do not participate in this Relation and are instead constrained directly by happens-before.</p>
       </emu-note>
 
       <emu-note>
-        <p>Not all ~seq-cst~ events related by reads-from are related by synchronizes-with. Only events that also have equal ranges are related by synchronizes-with.</p>
+        <p>In a candidate execution _execution_, not all ~seq-cst~ events related by reads-from are related by synchronizes-with. Only events that also have equal ranges are related by synchronizes-with.</p>
       </emu-note>
 
       <emu-note>
-        <p>For Shared Data Block events _R_ and _W_ such that _W_ synchronizes-with _R_, _R_ may reads-from other writes than _W_.</p>
+        <p>For Shared Data Block events _R_ and _W_ in a candidate execution _execution_ such that _W_ synchronizes-with _R_, _R_ may reads-from other writes than _W_.</p>
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-happens-before" aoid="happens-before">
+    <emu-clause id="sec-happens-before">
       <h1>happens-before</h1>
-      <p>For a candidate execution _execution_, _execution_.[[HappensBefore]] is the least Relation on events that satisfies the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>happens-before</dfn> Relation is the least Relation on events that satisfies the following.</p>
 
       <ul>
-        <li>For each pair (_E_, _D_) in _execution_.[[AgentOrder]], _execution_.[[HappensBefore]] contains (_E_, _D_).</li>
-        <li>For each pair (_E_, _D_) in _execution_.[[SynchronizesWith]], _execution_.[[HappensBefore]] contains (_E_, _D_).</li>
-        <li>For each pair (_E_, _D_) in SharedDataBlockEventSet(_execution_), _execution_.[[HappensBefore]] contains (_E_, _D_) if _E_.[[Order]] is ~init~ and _E_ and _D_ have overlapping ranges.</li>
-        <li>For each pair (_E_, _D_) in EventSet(_execution_), _execution_.[[HappensBefore]] contains (_E_, _D_) if there is an event _F_ such that the pairs (_E_, _F_) and (_F_, _D_) are in _execution_.[[HappensBefore]].</li>
+        <li>
+          <p>For events _E_ and _D_, _E_ happens-before _D_ in _execution_ if any of the following conditions are true.</p>
+          <ul>
+            <li>_E_ is-agent-order-before _D_ in _execution_.</li>
+            <li>_E_ synchronizes-with _D_ in _execution_.</li>
+            <li>SharedDataBlockEventSet(_execution_) contains both _E_ and _D_, _E_.[[Order]] is ~init~, and _E_ and _D_ have overlapping ranges.</li>
+            <li>There is an event _F_ such that _E_ happens-before _F_ and _F_ happens-before _D_ in _execution_.</li>
+          </ul>
+        </li>
       </ul>
 
       <emu-note>
-        <p>Because happens-before is a superset of agent-order, candidate executions are consistent with the single-thread evaluation semantics of ECMAScript.</p>
+        <p>Because happens-before is a superset of agent-order, a candidate execution is consistent with the single-thread evaluation semantics of ECMAScript.</p>
       </emu-note>
     </emu-clause>
   </emu-clause>
@@ -49043,12 +49021,12 @@ THH:mm:ss.sss
       <p>A candidate execution _execution_ has coherent reads if the following algorithm returns *true*.</p>
       <emu-alg>
         1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ of SharedDataBlockEventSet(_execution_), do
-          1. Let _Ws_ be _execution_.[[ReadsBytesFrom]](_R_).
+          1. Let _Ws_ be reads-bytes-from(_R_) in _execution_.
           1. Let _byteLocation_ be _R_.[[ByteIndex]].
           1. For each element _W_ of _Ws_, do
-            1. If _execution_.[[HappensBefore]] contains (_R_, _W_), then
+            1. If _R_ happens-before _W_ in _execution_, then
               1. Return *false*.
-            1. If there exists a WriteSharedMemory or ReadModifyWriteSharedMemory event _V_ that has _byteLocation_ in its range such that the pairs (_W_, _V_) and (_V_, _R_) are in _execution_.[[HappensBefore]], then
+            1. If there exists a WriteSharedMemory or ReadModifyWriteSharedMemory event _V_ that has _byteLocation_ in its range such that _W_ happens-before _V_ in _execution_ and _V_ happens-before _R_ in _execution_, then
               1. Return *false*.
             1. Set _byteLocation_ to _byteLocation_ + 1.
         1. Return *true*.
@@ -49062,8 +49040,8 @@ THH:mm:ss.sss
         1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ of SharedDataBlockEventSet(_execution_), do
           1. If _R_.[[NoTear]] is *true*, then
             1. Assert: The remainder of dividing _R_.[[ByteIndex]] by _R_.[[ElementSize]] is 0.
-            1. For each event _W_ such that _execution_.[[ReadsFrom]] contains (_R_, _W_) and _W_.[[NoTear]] is *true*, do
-              1. If _R_ and _W_ have equal ranges and there exists an event _V_ such that _V_ and _W_ have equal ranges, _V_.[[NoTear]] is *true*, _W_ and _V_ are not the same Shared Data Block event, and _execution_.[[ReadsFrom]] contains (_R_, _V_), then
+            1. For each event _W_ such that _R_ reads-from _W_ in _execution_ and _W_.[[NoTear]] is *true*, do
+              1. If _R_ and _W_ have equal ranges and there exists an event _V_ such that _V_ and _W_ have equal ranges, _V_.[[NoTear]] is *true*, _W_ and _V_ are not the same Shared Data Block event, and _R_ reads-from _V_ in _execution_, then
                 1. Return *false*.
         1. Return *true*.
       </emu-alg>
@@ -49074,17 +49052,17 @@ THH:mm:ss.sss
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-memory-order" aoid="memory-order">
+    <emu-clause id="sec-memory-order">
       <h1>Sequentially Consistent Atomics</h1>
-      <p>For a candidate execution _execution_, memory-order is a strict total order of all events in EventSet(_execution_) that satisfies the following.</p>
+      <p>For a candidate execution _execution_, <dfn>is-memory-order-before</dfn> is a strict total order of all events in EventSet(_execution_) that satisfies the following.</p>
       <ul>
-        <li>For each pair (_E_, _D_) in _execution_.[[HappensBefore]], (_E_, _D_) is in memory-order.</li>
+        <li>For events _E_ and _D_, _E_ is-memory-order-before _D_ in _execution_ if _E_ happens-before _D_ in _execution_.</li>
         <li>
-          <p>For each pair (_R_, _W_) in _execution_.[[ReadsFrom]], there is no WriteSharedMemory or ReadModifyWriteSharedMemory event _V_ in SharedDataBlockEventSet(_execution_) such that _V_.[[Order]] is ~seq-cst~, the pairs (_W_, _V_) and (_V_, _R_) are in memory-order, and any of the following conditions are true.</p>
+          <p>For events _R_ and _W_ such that _R_ reads-from _W_ in _execution_, there is no WriteSharedMemory or ReadModifyWriteSharedMemory event _V_ in SharedDataBlockEventSet(_execution_) such that _V_.[[Order]] is ~seq-cst~, _W_ is-memory-order-before _V_ in _execution_, _V_ is-memory-order-before _R_ in _execution_, and any of the following conditions are true.</p>
           <ul>
-            <li>_execution_.[[SynchronizesWith]] contains the pair (_W_, _R_), and _V_ and _R_ have equal ranges.</li>
-            <li>The pairs (_W_, _R_) and (_V_, _R_) are in _execution_.[[HappensBefore]], _W_.[[Order]] is ~seq-cst~, and _W_ and _V_ have equal ranges.</li>
-            <li>The pairs (_W_, _R_) and (_W_, _V_) are in _execution_.[[HappensBefore]], _R_.[[Order]] is ~seq-cst~, and _V_ and _R_ have equal ranges.</li>
+            <li>_W_ synchronizes-with _R_ in _execution_, and _V_ and _R_ have equal ranges.</li>
+            <li>_W_ happens-before _R_ and _V_ happens-before _R_ in _execution_, _W_.[[Order]] is ~seq-cst~, and _W_ and _V_ have equal ranges.</li>
+            <li>_W_ happens-before _R_ and _W_ happens-before _V_ in _execution_, _R_.[[Order]] is ~seq-cst~, and _V_ and _R_ have equal ranges.</li>
           </ul>
           <emu-note>
             <p>This clause additionally constrains ~seq-cst~ events on equal ranges.</p>
@@ -49097,10 +49075,10 @@ THH:mm:ss.sss
           </emu-note>
         </li>
       </ul>
-      <p>A candidate execution has sequentially consistent atomics if a memory-order exists.</p>
+      <p>A candidate execution has sequentially consistent atomics if it admits an is-memory-order-before Relation.</p>
 
       <emu-note>
-        <p>While memory-order includes all events in EventSet(_execution_), those that are not constrained by happens-before or synchronizes-with are allowed to occur anywhere in the order.</p>
+        <p>While is-memory-order-before includes all events in EventSet(_execution_), those that are not constrained by happens-before or synchronizes-with in _execution_ are allowed to occur anywhere in the order.</p>
       </emu-note>
     </emu-clause>
 
@@ -49108,8 +49086,8 @@ THH:mm:ss.sss
       <h1>Valid Executions</h1>
       <p>A candidate execution _execution_ is a valid execution (or simply an execution) if all of the following are true.</p>
       <ul>
-        <li>The host provides a host-synchronizes-with Relation for _execution_.[[HostSynchronizesWith]].</li>
-        <li>_execution_.[[HappensBefore]] is a strict partial order.</li>
+        <li>The host provides a host-synchronizes-with Relation for _execution_.</li>
+        <li>_execution_ admits a happens-before Relation that is a strict partial order.</li>
         <li>_execution_ has valid chosen reads.</li>
         <li>_execution_ has coherent reads.</li>
         <li>_execution_ has tear free reads.</li>
@@ -49121,13 +49099,13 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-races">
     <h1>Races</h1>
-    <p>For an execution _execution_, two events _E_ and _D_ in SharedDataBlockEventSet(_execution_) are in a race if the following algorithm returns *true*.</p>
+    <p>For an execution _execution_ and events _E_ and _D_ that are contained in SharedDataBlockEventSet(_execution_), _E_ and _D_ are in a <em>race</em> if the following algorithm returns *true*.</p>
     <emu-alg>
       1. If _E_ and _D_ are not the same Shared Data Block event, then
-        1. If the pairs (_E_, _D_) and (_D_, _E_) are not in _execution_.[[HappensBefore]], then
+        1. If it is not the case that both _E_ happens-before _D_ in _execution_ and _D_ happens-before _E_ in _execution_, then
           1. If _E_ and _D_ are both WriteSharedMemory or ReadModifyWriteSharedMemory events and _E_ and _D_ do not have disjoint ranges, then
             1. Return *true*.
-          1. If _execution_.[[ReadsFrom]] contains either (_E_, _D_) or (_D_, _E_), then
+          1. If _E_ reads-from _D_ in _execution_ or _D_ reads-from _E_ in _execution_, then
             1. Return *true*.
       1. Return *false*.
     </emu-alg>
@@ -49135,9 +49113,9 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-data-races">
     <h1>Data Races</h1>
-    <p>For an execution _execution_, two events _E_ and _D_ in SharedDataBlockEventSet(_execution_) are in a data race if the following algorithm returns *true*.</p>
+    <p>For an execution _execution_ and events _E_ and _D_ that are contained in SharedDataBlockEventSet(_execution_), _E_ and _D_ are in a <dfn>data race</dfn> if the following algorithm returns *true*.</p>
     <emu-alg>
-      1. If _E_ and _D_ are in a race in _execution_, then
+      1. If _E_ and _D_ are in a <emu-xref href="#sec-races">race</emu-xref> in _execution_, then
         1. If _E_.[[Order]] is not ~seq-cst~ or _D_.[[Order]] is not ~seq-cst~, then
           1. Return *true*.
         1. If _E_ and _D_ have overlapping ranges, then
@@ -49148,7 +49126,7 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-data-race-freedom">
     <h1>Data Race Freedom</h1>
-    <p>An execution _execution_ is data race free if there are no two events in SharedDataBlockEventSet(_execution_) that are in a data race.</p>
+    <p>An execution _execution_ is <dfn>data race free</dfn> if there are no two events in SharedDataBlockEventSet(_execution_) that are in a data race.</p>
     <p>A program is data race free if all its executions are data race free.</p>
     <p>The memory model guarantees sequential consistency of all events for data race free programs.</p>
   </emu-clause>
@@ -49163,14 +49141,14 @@ THH:mm:ss.sss
 
     <emu-note>
       <p>The following are guidelines for ECMAScript implementers writing compiler transformations for programs using shared memory.</p>
-      <p>It is desirable to allow most program transformations that are valid in a single-agent setting in a multi-agent setting, to ensure that the performance of each agent in a multi-agent program is as good as it would be in a single-agent setting. Frequently these transformations are hard to judge. We outline some rules about program transformations that are intended to be taken as normative (in that they are implied by the memory model or stronger than what the memory model implies) but which are likely not exhaustive. These rules are intended to apply to program transformations that precede the introductions of the events that make up the agent-order.</p>
-      <p>Let an <dfn variants="agent-order slices">agent-order slice</dfn> be the subset of the agent-order pertaining to a single agent.</p>
+      <p>It is desirable to allow most program transformations that are valid in a single-agent setting in a multi-agent setting, to ensure that the performance of each agent in a multi-agent program is as good as it would be in a single-agent setting. Frequently these transformations are hard to judge. We outline some rules about program transformations that are intended to be taken as normative (in that they are implied by the memory model or stronger than what the memory model implies) but which are likely not exhaustive. These rules are intended to apply to program transformations that precede the introductions of the events that make up the is-agent-order-before Relation.</p>
+      <p>Let an <dfn variants="agent-order slices">agent-order slice</dfn> be the subset of the is-agent-order-before Relation pertaining to a single agent.</p>
       <p>Let <dfn>possible read values</dfn> of a read event be the set of all values of ValueOfReadEvent for that event across all valid executions.</p>
       <p>Any transformation of an agent-order slice that is valid in the absence of shared memory is valid in the presence of shared memory, with the following exceptions.</p>
       <ul>
         <li>
-          <p><em>Atomics are carved in stone</em>: Program transformations must not cause the ~seq-cst~ events in an agent-order slice to be reordered with its ~unordered~ operations, nor its ~seq-cst~ operations to be reordered with each other, nor may a program transformation remove a ~seq-cst~ operation from the agent-order.</p>
-          <p>(In practice, the prohibition on reorderings forces a compiler to assume that every ~seq-cst~ operation is a synchronization and included in the final memory-order, which it would usually have to assume anyway in the absence of inter-agent program analysis. It also forces the compiler to assume that every call where the callee's effects on the memory-order are unknown may contain ~seq-cst~ operations.)</p>
+          <p><em>Atomics are carved in stone</em>: Program transformations must not cause the ~seq-cst~ events in an agent-order slice to be reordered with its ~unordered~ operations, nor its ~seq-cst~ operations to be reordered with each other, nor may a program transformation remove a ~seq-cst~ operation from the is-agent-order-before Relation.</p>
+          <p>(In practice, the prohibition on reorderings forces a compiler to assume that every ~seq-cst~ operation is a synchronization and included in the final is-memory-order-before Relation, which it would usually have to assume anyway in the absence of inter-agent program analysis. It also forces the compiler to assume that every call where the callee's effects on the memory-order are unknown may contain ~seq-cst~ operations.)</p>
         </li>
         <li>
           <p><em>Reads must be stable</em>: Any given shared memory read must only observe a single value in an execution.</p>
