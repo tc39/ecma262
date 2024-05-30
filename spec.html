@@ -4163,7 +4163,7 @@
     <emu-clause id="sec-reference-record-specification-type" oldids="sec-reference-specification-type">
       <h1>The Reference Record Specification Type</h1>
       <p>The <dfn variants="Reference Records">Reference Record</dfn> type is used to explain the behaviour of such operators as `delete`, `typeof`, the assignment operators, the `super` keyword and other language features. For example, the left-hand operand of an assignment is expected to produce a Reference Record.</p>
-      <p>A Reference Record is a resolved name or property binding; its fields are defined by <emu-xref href="#table-reference-record-fields"></emu-xref>.</p>
+      <p>A Reference Record is a resolved name or (possibly not-yet-resolved) property binding; its fields are defined by <emu-xref href="#table-reference-record-fields"></emu-xref>.</p>
 
       <emu-table id="table-reference-record-fields" caption="Reference Record Fields">
         <table>
@@ -4179,8 +4179,8 @@
           </tr>
           <tr>
             <td oldids="sec-getreferencedname,ao-getreferencedname">[[ReferencedName]]</td>
-            <td>a String, a Symbol, or a Private Name</td>
-            <td>The name of the binding. Always a String if [[Base]] value is an Environment Record.</td>
+            <td>an ECMAScript language value or a Private Name</td>
+            <td>The name of the binding. Always a String if [[Base]] value is an Environment Record. Otherwise, may be an ECMAScript language value other than a String or a Symbol until ToPropertyKey is performed.</td>
           </tr>
           <tr>
             <td oldids="sec-isstrictreference,ao-isstrictreference">[[Strict]]</td>
@@ -4265,6 +4265,8 @@
             1. [id="step-getvalue-toobject"] Let _baseObj_ be ? ToObject(_V_.[[Base]]).
             1. If IsPrivateReference(_V_) is *true*, then
               1. Return ? PrivateGet(_baseObj_, _V_.[[ReferencedName]]).
+            1. If _V_.[[ReferencedName]] is not a property key, then
+              1. Set _V_.[[ReferencedName]] to ? ToPropertyKey(_V_.[[ReferencedName]]).
             1. Return ? <emu-meta effects="user-code">_baseObj_.[[Get]]</emu-meta>(_V_.[[ReferencedName]], GetThisValue(_V_)).
           1. Else,
             1. Let _base_ be _V_.[[Base]].
@@ -4296,6 +4298,8 @@
             1. [id="step-putvalue-toobject"] Let _baseObj_ be ? ToObject(_V_.[[Base]]).
             1. If IsPrivateReference(_V_) is *true*, then
               1. Return ? PrivateSet(_baseObj_, _V_.[[ReferencedName]], _W_).
+            1. If _V_.[[ReferencedName]] is not a property key, then
+              1. Set _V_.[[ReferencedName]] to ? ToPropertyKey(_V_.[[ReferencedName]]).
             1. Let _succeeded_ be ? <emu-meta effects="user-code">_baseObj_.[[Set]]</emu-meta>(_V_.[[ReferencedName]], _W_, GetThisValue(_V_)).
             1. If _succeeded_ is *false* and _V_.[[Strict]] is *true*, throw a *TypeError* exception.
             1. Return ~unused~.
@@ -19106,8 +19110,8 @@
       <emu-alg>
         1. Let _propertyNameReference_ be ? Evaluation of _expression_.
         1. Let _propertyNameValue_ be ? GetValue(_propertyNameReference_).
-        1. Let _propertyKey_ be ? ToPropertyKey(_propertyNameValue_).
-        1. Return the Reference Record { [[Base]]: _baseValue_, [[ReferencedName]]: _propertyKey_, [[Strict]]: _strict_, [[ThisValue]]: ~empty~ }.
+        1. NOTE: In most cases, ToPropertyKey will be performed on _propertyNameValue_ immediately after this step. However, in the case of `a[b] = c`, it will not be performed until after evaluation of `c`.
+        1. Return the Reference Record { [[Base]]: _baseValue_, [[ReferencedName]]: _propertyNameValue_, [[Strict]]: _strict_, [[ThisValue]]: ~empty~ }.
       </emu-alg>
     </emu-clause>
 
@@ -19239,9 +19243,9 @@
           1. Let _actualThis_ be ? _env_.GetThisBinding().
           1. Let _propertyNameReference_ be ? Evaluation of |Expression|.
           1. Let _propertyNameValue_ be ? GetValue(_propertyNameReference_).
-          1. Let _propertyKey_ be ? ToPropertyKey(_propertyNameValue_).
           1. Let _strict_ be IsStrict(this |SuperProperty|).
-          1. Return ? MakeSuperPropertyReference(_actualThis_, _propertyKey_, _strict_).
+          1. NOTE: In most cases, ToPropertyKey will be performed on _propertyNameValue_ immediately after this step. However, in the case of `super[b] = c`, it will not be performed until after evaluation of `c`.
+          1. Return ? MakeSuperPropertyReference(_actualThis_, _propertyNameValue_, _strict_).
         </emu-alg>
         <emu-grammar>SuperProperty : `super` `.` IdentifierName</emu-grammar>
         <emu-alg>
@@ -19286,7 +19290,7 @@
         <h1>
           MakeSuperPropertyReference (
             _actualThis_: an ECMAScript language value,
-            _propertyKey_: a property key,
+            _propertyKey_: an ECMAScript language value,
             _strict_: a Boolean,
           ): either a normal completion containing a Super Reference Record or a throw completion
         </h1>
@@ -19800,6 +19804,8 @@
             1. Assert: IsPrivateReference(_ref_) is *false*.
             1. If IsSuperReference(_ref_) is *true*, throw a *ReferenceError* exception.
             1. [id="step-delete-operator-toobject"] Let _baseObj_ be ? ToObject(_ref_.[[Base]]).
+            1. If _ref_.[[ReferencedName]] is not a property key, then
+              1. Set _ref_.[[ReferencedName]] to ? ToPropertyKey(_ref_.[[ReferencedName]]).
             1. Let _deleteStatus_ be ? <emu-meta effects="user-code">_baseObj_.[[Delete]]</emu-meta>(_ref_.[[ReferencedName]]).
             1. If _deleteStatus_ is *false* and _ref_.[[Strict]] is *true*, throw a *TypeError* exception.
             1. Return _deleteStatus_.
@@ -20460,7 +20466,8 @@
         1. If |LeftHandSideExpression| is neither an |ObjectLiteral| nor an |ArrayLiteral|, then
           1. Let _lref_ be ? Evaluation of |LeftHandSideExpression|.
           1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and IsIdentifierRef of |LeftHandSideExpression| is *true*, then
-            1. Let _rval_ be ? NamedEvaluation of |AssignmentExpression| with argument _lref_.[[ReferencedName]].
+            1. Let _lhs_ be the StringValue of |LeftHandSideExpression|.
+            1. Let _rval_ be ? NamedEvaluation of |AssignmentExpression| with argument _lhs_.
           1. Else,
             1. Let _rref_ be ? Evaluation of |AssignmentExpression|.
             1. Let _rval_ be ? GetValue(_rref_).
@@ -20509,7 +20516,8 @@
         1. Let _lbool_ be ToBoolean(_lval_).
         1. If _lbool_ is *false*, return _lval_.
         1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and IsIdentifierRef of |LeftHandSideExpression| is *true*, then
-          1. Let _rval_ be ? NamedEvaluation of |AssignmentExpression| with argument _lref_.[[ReferencedName]].
+          1. Let _lhs_ be the StringValue of |LeftHandSideExpression|.
+          1. Let _rval_ be ? NamedEvaluation of |AssignmentExpression| with argument _lhs_.
         1. Else,
           1. Let _rref_ be ? Evaluation of |AssignmentExpression|.
           1. Let _rval_ be ? GetValue(_rref_).
@@ -20523,7 +20531,8 @@
         1. Let _lbool_ be ToBoolean(_lval_).
         1. If _lbool_ is *true*, return _lval_.
         1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and IsIdentifierRef of |LeftHandSideExpression| is *true*, then
-          1. Let _rval_ be ? NamedEvaluation of |AssignmentExpression| with argument _lref_.[[ReferencedName]].
+          1. Let _lhs_ be the StringValue of |LeftHandSideExpression|.
+          1. Let _rval_ be ? NamedEvaluation of |AssignmentExpression| with argument _lhs_.
         1. Else,
           1. Let _rref_ be ? Evaluation of |AssignmentExpression|.
           1. Let _rval_ be ? GetValue(_rref_).
@@ -20536,7 +20545,8 @@
         1. [id="step-assignmentexpression-evaluation-lgcl-nullish-getvalue"] Let _lval_ be ? GetValue(_lref_).
         1. If _lval_ is neither *undefined* nor *null*, return _lval_.
         1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true* and IsIdentifierRef of |LeftHandSideExpression| is *true*, then
-          1. Let _rval_ be ? NamedEvaluation of |AssignmentExpression| with argument _lref_.[[ReferencedName]].
+          1. Let _lhs_ be the StringValue of |LeftHandSideExpression|.
+          1. Let _rval_ be ? NamedEvaluation of |AssignmentExpression| with argument _lhs_.
         1. Else,
           1. Let _rref_ be ? Evaluation of |AssignmentExpression|.
           1. Let _rval_ be ? GetValue(_rref_).
@@ -20903,7 +20913,8 @@
               1. Set _value_ to _next_.
           1. If |Initializer| is present and _value_ is *undefined*, then
             1. If IsAnonymousFunctionDefinition(|Initializer|) is *true* and IsIdentifierRef of |DestructuringAssignmentTarget| is *true*, then
-              1. Let _v_ be ? NamedEvaluation of |Initializer| with argument _lref_.[[ReferencedName]].
+              1. Let _target_ be the StringValue of |DestructuringAssignmentTarget|.
+              1. Let _v_ be ? NamedEvaluation of |Initializer| with argument _target_.
             1. Else,
               1. Let _defaultValue_ be ? Evaluation of |Initializer|.
               1. Let _v_ be ? GetValue(_defaultValue_).
@@ -20951,7 +20962,8 @@
           1. Let _v_ be ? GetV(_value_, _propertyName_).
           1. If |Initializer| is present and _v_ is *undefined*, then
             1. If IsAnonymousFunctionDefinition(|Initializer|) is *true* and IsIdentifierRef of |DestructuringAssignmentTarget| is *true*, then
-              1. Let _rhsValue_ be ? NamedEvaluation of |Initializer| with argument _lref_.[[ReferencedName]].
+              1. Let _target_ be the StringValue of |DestructuringAssignmentTarget|.
+              1. Let _rhsValue_ be ? NamedEvaluation of |Initializer| with argument _target_.
             1. Else,
               1. Let _defaultValue_ be ? Evaluation of |Initializer|.
               1. Let _rhsValue_ be ? GetValue(_defaultValue_).
