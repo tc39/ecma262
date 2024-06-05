@@ -42020,6 +42020,152 @@ THH:mm:ss.sss
     <p>Set objects are collections of ECMAScript language values. A distinct value may only occur once as an element of a Set's collection. Distinct values are discriminated using the SameValueZero comparison algorithm.</p>
     <p>Set objects must be implemented using either hash tables or other mechanisms that, on average, provide access times that are sublinear on the number of elements in the collection. The data structure used in this specification is only intended to describe the required observable semantics of Set objects. It is not intended to be a viable implementation model.</p>
 
+    <emu-clause id="sec-abstract-operations-for-set-objects">
+      <h1>Abstract Operations For Set Objects</h1>
+
+      <emu-clause id="sec-set-records">
+        <h1>Set Records</h1>
+        <p>An <dfn variants="Set Records">Set Record</dfn> is a Record value used to encapsulate the interface of a Set or similar object.</p>
+        <p>Set Records have the fields listed in <emu-xref href="#table-set-record-fields"></emu-xref>.</p>
+        <emu-table id="table-set-record-fields" caption="Set Record Fields">
+          <table>
+            <tr>
+              <th>
+                Field Name
+              </th>
+              <th>
+                Value
+              </th>
+              <th>
+                Meaning
+              </th>
+            </tr>
+            <tr>
+              <td>
+                [[SetObject]]
+              </td>
+              <td>
+                an Object
+              </td>
+              <td>
+                the Set or similar object.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[Size]]
+              </td>
+              <td>
+                a non-negative integer or +∞
+              </td>
+              <td>
+                The reported size of the object.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[Has]]
+              </td>
+              <td>
+                a function object
+              </td>
+              <td>
+                The `has` method of the object.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[Keys]]
+              </td>
+              <td>
+                a function object
+              </td>
+              <td>
+                The `keys` method of the object.
+              </td>
+            </tr>
+          </table>
+        </emu-table>
+      </emu-clause>
+
+      <emu-clause id="sec-getsetrecord" type="abstract operation">
+        <h1>
+          GetSetRecord (
+            _obj_: an ECMAScript language value,
+          ): either a normal completion containing a Set Record or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If _obj_ is not an Object, throw a *TypeError* exception.
+          1. Let _rawSize_ be ? Get(_obj_, *"size"*).
+          1. Let _numSize_ be ? ToNumber(_rawSize_).
+          1. NOTE: If _rawSize_ is *undefined*, then _numSize_ will be *NaN*.
+          1. If _numSize_ is *NaN*, throw a *TypeError* exception.
+          1. Let _intSize_ be ! ToIntegerOrInfinity(_numSize_).
+          1. If _intSize_ &lt; 0, throw a *RangeError* exception.
+          1. Let _has_ be ? Get(_obj_, *"has"*).
+          1. If IsCallable(_has_) is *false*, throw a *TypeError* exception.
+          1. Let _keys_ be ? Get(_obj_, *"keys"*).
+          1. If IsCallable(_keys_) is *false*, throw a *TypeError* exception.
+          1. Return a new Set Record { [[SetObject]]: _obj_, [[Size]]: _intSize_, [[Has]]: _has_, [[Keys]]: _keys_ }.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-setdatahas" type="abstract operation">
+        <h1>
+          SetDataHas (
+            _setData_: a List of either ECMAScript language values or ~empty~,
+            _value_: an ECMAScript language value,
+          ): a Boolean
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If SetDataIndex(_setData_, _value_) is ~not-found~, return *false*.
+          1. Return *true*.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-setdataindex" type="abstract operation">
+        <h1>
+          SetDataIndex (
+            _setData_: a List of either ECMAScript language values or ~empty~,
+            _value_: an ECMAScript language value,
+          ): a non-negative integer or ~not-found~
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Set _value_ to CanonicalizeKeyedCollectionKey(_value_).
+          1. Let _size_ be the number of elements in _setData_.
+          1. Let _index_ be 0.
+          1. Repeat, while _index_ &lt; _size_,
+            1. Let _e_ be _setData_[_index_].
+            1. If _e_ is not ~empty~ and _e_ is _value_, then
+              1. Return _index_.
+            1. Set _index_ to _index_ + 1.
+          1. Return ~not-found~.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-setdatasize" type="abstract operation">
+        <h1>
+          SetDataSize (
+            _setData_: a List of either ECMAScript language values or ~empty~,
+          ): a non-negative integer
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Let _count_ be 0.
+          1. For each element _e_ of _setData_, do
+            1. If _e_ is not ~empty~, set _count_ to _count_ + 1.
+          1. Return _count_.
+        </emu-alg>
+      </emu-clause>
+    </emu-clause>
+
     <emu-clause id="sec-set-constructor">
       <h1>The Set Constructor</h1>
       <p>The Set constructor:</p>
@@ -42141,6 +42287,40 @@ THH:mm:ss.sss
         </emu-note>
       </emu-clause>
 
+      <emu-clause id="sec-set.prototype.difference">
+        <h1>Set.prototype.difference ( _other_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_O_, [[SetData]]).
+          1. Let _otherRec_ be ? GetSetRecord(_other_).
+          1. Let _resultSetData_ be a copy of _O_.[[SetData]].
+          1. If SetDataSize(_O_.[[SetData]]) ≤ _otherRec_.[[Size]], then
+            1. Let _thisSize_ be the number of elements in _O_.[[SetData]].
+            1. Let _index_ be 0.
+            1. Repeat, while _index_ &lt; _thisSize_,
+              1. Let _e_ be _resultSetData_[_index_].
+              1. If _e_ is not ~empty~, then
+                1. Let _inOther_ be ToBoolean(? Call(_otherRec_.[[Has]], _otherRec_.[[SetObject]], « _e_ »)).
+                1. If _inOther_ is *true*, then
+                  1. Set _resultSetData_[_index_] to ~empty~.
+              1. Set _index_ to _index_ + 1.
+          1. Else,
+            1. Let _keysIter_ be ? GetIteratorFromMethod(_otherRec_.[[SetObject]], _otherRec_.[[Keys]]).
+            1. Let _next_ be ~not-started~.
+            1. Repeat, while _next_ is not ~done~,
+              1. Set _next_ to ? IteratorStepValue(_keysIter_).
+              1. If _next_ is not ~done~, then
+                1. Set _next_ to CanonicalizeKeyedCollectionKey(_next_).
+                1. Let _valueIndex_ be SetDataIndex(_resultSetData_, _next_).
+                1. If _valueIndex_ is not ~not-found~, then
+                  1. Set _resultSetData_[_valueIndex_] to ~empty~.
+          1. Let _result_ be OrdinaryObjectCreate(%Set.prototype%, « [[SetData]] »).
+          1. Set _result_.[[SetData]] to _resultSetData_.
+          1. Return _result_.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-set.prototype.entries">
         <h1>Set.prototype.entries ( )</h1>
         <p>This method performs the following steps when called:</p>
@@ -42195,6 +42375,119 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-set.prototype.intersection">
+        <h1>Set.prototype.intersection ( _other_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_O_, [[SetData]]).
+          1. Let _otherRec_ be ? GetSetRecord(_other_).
+          1. Let _resultSetData_ be a new empty List.
+          1. If SetDataSize(_O_.[[SetData]]) ≤ _otherRec_.[[Size]], then
+            1. Let _thisSize_ be the number of elements in _O_.[[SetData]].
+            1. Let _index_ be 0.
+            1. Repeat, while _index_ &lt; _thisSize_,
+              1. Let _e_ be _O_.[[SetData]][_index_].
+              1. Set _index_ to _index_ + 1.
+              1. If _e_ is not ~empty~, then
+                1. Let _inOther_ be ToBoolean(? Call(_otherRec_.[[Has]], _otherRec_.[[SetObject]], « _e_ »)).
+                1. If _inOther_ is *true*, then
+                  1. NOTE: It is possible for earlier calls to _otherRec_.[[Has]] to remove and re-add an element of _O_.[[SetData]], which can cause the same element to be visited twice during this iteration.
+                  1. If SetDataHas(_resultSetData_, _e_) is *false*, then
+                    1. Append _e_ to _resultSetData_.
+                1. NOTE: The number of elements in _O_.[[SetData]] may have increased during execution of _otherRec_.[[Has]].
+                1. Set _thisSize_ to the number of elements in _O_.[[SetData]].
+          1. Else,
+            1. Let _keysIter_ be ? GetIteratorFromMethod(_otherRec_.[[SetObject]], _otherRec_.[[Keys]]).
+            1. Let _next_ be ~not-started~.
+            1. Repeat, while _next_ is not ~done~,
+              1. Set _next_ to ? IteratorStepValue(_keysIter_).
+              1. If _next_ is not ~done~, then
+                1. Set _next_ to CanonicalizeKeyedCollectionKey(_next_).
+                1. Let _inThis_ be SetDataHas(_O_.[[SetData]], _next_).
+                1. If _inThis_ is *true*, then
+                  1. NOTE: Because _other_ is an arbitrary object, it is possible for its *"keys"* iterator to produce the same value more than once.
+                  1. If SetDataHas(_resultSetData_, _next_) is *false*, then
+                    1. Append _next_ to _resultSetData_.
+          1. Let _result_ be OrdinaryObjectCreate(%Set.prototype%, « [[SetData]] »).
+          1. Set _result_.[[SetData]] to _resultSetData_.
+          1. Return _result_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-set.prototype.isdisjointfrom">
+        <h1>Set.prototype.isDisjointFrom ( _other_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_O_, [[SetData]]).
+          1. Let _otherRec_ be ? GetSetRecord(_other_).
+          1. If SetDataSize(_O_.[[SetData]]) ≤ _otherRec_.[[Size]], then
+            1. Let _thisSize_ be the number of elements in _O_.[[SetData]].
+            1. Let _index_ be 0.
+            1. Repeat, while _index_ &lt; _thisSize_,
+              1. Let _e_ be _O_.[[SetData]][_index_].
+              1. Set _index_ to _index_ + 1.
+              1. If _e_ is not ~empty~, then
+                1. Let _inOther_ be ToBoolean(? Call(_otherRec_.[[Has]], _otherRec_.[[SetObject]], « _e_ »)).
+                1. If _inOther_ is *true*, return *false*.
+                1. NOTE: The number of elements in _O_.[[SetData]] may have increased during execution of _otherRec_.[[Has]].
+                1. Set _thisSize_ to the number of elements in _O_.[[SetData]].
+          1. Else,
+            1. Let _keysIter_ be ? GetIteratorFromMethod(_otherRec_.[[SetObject]], _otherRec_.[[Keys]]).
+            1. Let _next_ be ~not-started~.
+            1. Repeat, while _next_ is not ~done~,
+              1. Set _next_ to ? IteratorStepValue(_keysIter_).
+              1. If _next_ is not ~done~, then
+                1. If SetDataHas(_O_.[[SetData]], _next_) is *true*, then
+                  1. Perform ? IteratorClose(_keysIter_, NormalCompletion(~unused~)).
+                  1. Return *false*.
+          1. Return *true*.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-set.prototype.issubsetof">
+        <h1>Set.prototype.isSubsetOf ( _other_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_O_, [[SetData]]).
+          1. Let _otherRec_ be ? GetSetRecord(_other_).
+          1. If SetDataSize(_O_.[[SetData]]) > _otherRec_.[[Size]], return *false*.
+          1. Let _thisSize_ be the number of elements in _O_.[[SetData]].
+          1. Let _index_ be 0.
+          1. Repeat, while _index_ &lt; _thisSize_,
+            1. Let _e_ be _O_.[[SetData]][_index_].
+            1. Set _index_ to _index_ + 1.
+            1. If _e_ is not ~empty~, then
+              1. Let _inOther_ be ToBoolean(? Call(_otherRec_.[[Has]], _otherRec_.[[SetObject]], « _e_ »)).
+              1. If _inOther_ is *false*, return *false*.
+              1. NOTE: The number of elements in _O_.[[SetData]] may have increased during execution of _otherRec_.[[Has]].
+              1. Set _thisSize_ to the number of elements in _O_.[[SetData]].
+          1. Return *true*.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-set.prototype.issupersetof">
+        <h1>Set.prototype.isSupersetOf ( _other_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_O_, [[SetData]]).
+          1. Let _otherRec_ be ? GetSetRecord(_other_).
+          1. If SetDataSize(_O_.[[SetData]]) &lt; _otherRec_.[[Size]], return *false*.
+          1. Let _keysIter_ be ? GetIteratorFromMethod(_otherRec_.[[SetObject]], _otherRec_.[[Keys]]).
+          1. Let _next_ be ~not-started~.
+          1. Repeat, while _next_ is not ~done~,
+            1. Set _next_ to ? IteratorStepValue(_keysIter_).
+            1. If _next_ is not ~done~, then
+              1. If SetDataHas(_O_.[[SetData]], _next_) is *false*, then
+                1. Perform ? IteratorClose(_keysIter_, NormalCompletion(~unused~)).
+                1. Return *false*.
+          1. Return *true*.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-set.prototype.keys">
         <h1>Set.prototype.keys ( )</h1>
         <p>The initial value of the *"keys"* property is %Set.prototype.values%, defined in <emu-xref href="#sec-set.prototype.values"></emu-xref>.</p>
@@ -42209,10 +42502,56 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _S_ be the *this* value.
           1. Perform ? RequireInternalSlot(_S_, [[SetData]]).
-          1. Let _count_ be 0.
-          1. For each element _e_ of _S_.[[SetData]], do
-            1. If _e_ is not ~empty~, set _count_ to _count_ + 1.
-          1. Return 𝔽(_count_).
+          1. Let _size_ be SetDataSize(_S_.[[SetData]]).
+          1. Return 𝔽(_size_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-set.prototype.symmetricdifference">
+        <h1>Set.prototype.symmetricDifference ( _other_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_O_, [[SetData]]).
+          1. Let _otherRec_ be ? GetSetRecord(_other_).
+          1. Let _keysIter_ be ? GetIteratorFromMethod(_otherRec_.[[SetObject]], _otherRec_.[[Keys]]).
+          1. Let _resultSetData_ be a copy of _O_.[[SetData]].
+          1. Let _next_ be ~not-started~.
+          1. Repeat, while _next_ is not ~done~,
+            1. Set _next_ to ? IteratorStepValue(_keysIter_).
+            1. If _next_ is not ~done~, then
+              1. Set _next_ to CanonicalizeKeyedCollectionKey(_next_).
+              1. Let _resultIndex_ be SetDataIndex(_resultSetData_, _next_).
+              1. If _resultIndex_ is ~not-found~, let _alreadyInResult_ be *false*. Otherwise let _alreadyInResult_ be *true*.
+              1. If SetDataHas(_O_.[[SetData]], _next_) is *true*, then
+                1. If _alreadyInResult_ is *true*, set _resultSetData_[_resultIndex_] to ~empty~.
+              1. Else,
+                1. If _alreadyInResult_ is *false*, append _next_ to _resultSetData_.
+          1. Let _result_ be OrdinaryObjectCreate(%Set.prototype%, « [[SetData]] »).
+          1. Set _result_.[[SetData]] to _resultSetData_.
+          1. Return _result_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-set.prototype.union">
+        <h1>Set.prototype.union ( _other_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _O_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_O_, [[SetData]]).
+          1. Let _otherRec_ be ? GetSetRecord(_other_).
+          1. Let _keysIter_ be ? GetIteratorFromMethod(_otherRec_.[[SetObject]], _otherRec_.[[Keys]]).
+          1. Let _resultSetData_ be a copy of _O_.[[SetData]].
+          1. Let _next_ be ~not-started~.
+          1. Repeat, while _next_ is not ~done~,
+            1. Set _next_ to ? IteratorStepValue(_keysIter_).
+            1. If _next_ is not ~done~, then
+              1. Set _next_ to CanonicalizeKeyedCollectionKey(_next_).
+              1. If SetDataHas(_resultSetData_, _next_) is *false*, then
+                1. Append _next_ to _resultSetData_.
+          1. Let _result_ be OrdinaryObjectCreate(%Set.prototype%, « [[SetData]] »).
+          1. Set _result_.[[SetData]] to _resultSetData_.
+          1. Return _result_.
         </emu-alg>
       </emu-clause>
 
