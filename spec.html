@@ -12158,6 +12158,11 @@
           <td>a List of either Objects or Symbols</td>
           <td>Initially a new empty List, representing the list of objects and/or symbols to be kept alive until the end of the current Job</td>
         </tr>
+        <tr>
+          <td>[[AsyncEvaluationCount]]</td>
+          <td>an integer</td>
+          <td>Initially 0, used to track the order in which modules that are asynchronous or have asynchronous dependencies have their [[AsyncEvaluationOrder]] field set.</td>
+        </tr>
       </table>
     </emu-table>
 
@@ -12197,6 +12202,21 @@
       </emu-alg>
       <emu-note>
         <p>In some environments it may not be reasonable for a given agent to suspend. For example, in a web browser environment, it may be reasonable to disallow suspending a document's main event handling thread, while still allowing workers' event handling threads to suspend.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-getmoduleasyncevaluationcount" type="abstract operation">
+      <h1>GetModuleAsyncEvaluationCount ( ): an integer</h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. Let _AR_ be the Agent Record of the surrounding agent.
+        1. Let _count_ be _AR_.[[AsyncEvaluationCount]].
+        1. Set _AR_.[[AsyncEvaluationCount]] to _count_ + 1.
+        1. Return _count_.
+      </emu-alg>
+      <emu-note>
+        <p>This value is only used to keep track of the relative evaluation order between pending modules. An implementation may unobservably reset [[AsyncEvaluationCount]] to 0 whenever there are no pending modules.</p>
       </emu-note>
     </emu-clause>
   </emu-clause>
@@ -26387,13 +26407,13 @@
             </tr>
             <tr>
               <td>
-                [[AsyncEvaluation]]
+                [[AsyncEvaluationOrder]]
               </td>
               <td>
-                a Boolean
+                an integer or ~unset~
               </td>
               <td>
-                Whether this module is either itself asynchronous or has an asynchronous dependency. Note: The order in which this field is set is used to order queued executions, see <emu-xref href="#sec-async-module-execution-fulfilled"></emu-xref>.
+                If this module is asynchronous or has an asynchronous dependency, this is a number representing the order in which modules that are asynchronous or have an asynchronous dependency start waiting on a pending promise.
               </td>
             </tr>
             <tr>
@@ -26730,7 +26750,7 @@
             1. Else,
               1. Assert: _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. If _module_.[[AsyncEvaluation]] is *false*, then
+              1. If _module_.[[AsyncEvaluationOrder]] is ~unset~, then
                 1. Assert: _module_.[[Status]] is ~evaluated~.
                 1. Perform ! Call(_capability_.[[Resolve]], *undefined*, « *undefined* »).
               1. Assert: _stack_ is empty.
@@ -26780,13 +26800,12 @@
                     1. Set _requiredModule_ to _requiredModule_.[[CycleRoot]].
                     1. Assert: _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
                     1. If _requiredModule_.[[EvaluationError]] is not ~empty~, return ? _requiredModule_.[[EvaluationError]].
-                  1. If _requiredModule_.[[AsyncEvaluation]] is *true*, then
+                  1. If _requiredModule_.[[AsyncEvaluationOrder]] is an integer, then
                     1. Set _module_.[[PendingAsyncDependencies]] to _module_.[[PendingAsyncDependencies]] + 1.
                     1. Append _module_ to _requiredModule_.[[AsyncParentModules]].
               1. If _module_.[[PendingAsyncDependencies]] > 0 or _module_.[[HasTLA]] is *true*, then
-                1. Assert: _module_.[[AsyncEvaluation]] is *false* and was never previously set to *true*.
-                1. Set _module_.[[AsyncEvaluation]] to *true*.
-                1. NOTE: The order in which module records have their [[AsyncEvaluation]] fields transition to *true* is significant. (See <emu-xref href="#sec-async-module-execution-fulfilled"></emu-xref>.)
+                1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~ and was never previously set to an integer.
+                1. Set _module_.[[AsyncEvaluationOrder]] to GetModuleAsyncEvaluationCount().
                 1. If _module_.[[PendingAsyncDependencies]] = 0, perform ExecuteAsyncModule(_module_).
               1. Else,
                 1. Perform ? <emu-meta effects="user-code">_module_.ExecuteModule()</emu-meta>.
@@ -26798,7 +26817,7 @@
                   1. Let _requiredModule_ be the last element of _stack_.
                   1. Remove the last element of _stack_.
                   1. Assert: _requiredModule_ is a Cyclic Module Record.
-                  1. If _requiredModule_.[[AsyncEvaluation]] is *false*, set _requiredModule_.[[Status]] to ~evaluated~.
+                  1. If _requiredModule_.[[AsyncEvaluationOrder]] is ~unset~, set _requiredModule_.[[Status]] to ~evaluated~.
                   1. Otherwise, set _requiredModule_.[[Status]] to ~evaluating-async~.
                   1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
                   1. Set _requiredModule_.[[CycleRoot]] to _module_.
@@ -26853,7 +26872,7 @@
                 1. If _execList_ does not contain _m_ and _m_.[[CycleRoot]].[[EvaluationError]] is ~empty~, then
                   1. Assert: _m_.[[Status]] is ~evaluating-async~.
                   1. Assert: _m_.[[EvaluationError]] is ~empty~.
-                  1. Assert: _m_.[[AsyncEvaluation]] is *true*.
+                  1. Assert: _m_.[[AsyncEvaluationOrder]] is an integer.
                   1. Assert: _m_.[[PendingAsyncDependencies]] > 0.
                   1. Set _m_.[[PendingAsyncDependencies]] to _m_.[[PendingAsyncDependencies]] - 1.
                   1. If _m_.[[PendingAsyncDependencies]] = 0, then
@@ -26879,17 +26898,17 @@
                 1. Assert: _module_.[[EvaluationError]] is not ~empty~.
                 1. Return ~unused~.
               1. Assert: _module_.[[Status]] is ~evaluating-async~.
-              1. Assert: _module_.[[AsyncEvaluation]] is *true*.
+              1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. Set _module_.[[AsyncEvaluation]] to *false*.
+              1. Set _module_.[[AsyncEvaluationOrder]] to ~unset~.
               1. Set _module_.[[Status]] to ~evaluated~.
               1. If _module_.[[TopLevelCapability]] is not ~empty~, then
                 1. Assert: _module_.[[CycleRoot]] and _module_ are the same Module Record.
                 1. Perform ! Call(_module_.[[TopLevelCapability]].[[Resolve]], *undefined*, « *undefined* »).
               1. Let _execList_ be a new empty List.
               1. Perform GatherAvailableAncestors(_module_, _execList_).
-              1. Let _sortedExecList_ be a List whose elements are the elements of _execList_, in the order in which they had their [[AsyncEvaluation]] fields set to *true* in InnerModuleEvaluation.
-              1. Assert: All elements of _sortedExecList_ have their [[AsyncEvaluation]] field set to *true*, [[PendingAsyncDependencies]] field set to 0, and [[EvaluationError]] field set to ~empty~.
+              1. Assert: All elements of _execList_ have their [[AsyncEvaluationOrder]] field set to an integer, [[PendingAsyncDependencies]] field set to 0, and [[EvaluationError]] field set to ~empty~.
+              1. Let _sortedExecList_ be a List whose elements are the elements of _execList_, sorted by ascending order of their [[AsyncEvaluationOrder]] field.
               1. For each Cyclic Module Record _m_ of _sortedExecList_, do
                 1. If _m_.[[Status]] is ~evaluated~, then
                   1. Assert: _m_.[[EvaluationError]] is not ~empty~.
@@ -26922,7 +26941,7 @@
                 1. Assert: _module_.[[EvaluationError]] is not ~empty~.
                 1. Return ~unused~.
               1. Assert: _module_.[[Status]] is ~evaluating-async~.
-              1. Assert: _module_.[[AsyncEvaluation]] is *true*.
+              1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
               1. Set _module_.[[EvaluationError]] to ThrowCompletion(_error_).
               1. Set _module_.[[Status]] to ~evaluated~.
@@ -26990,7 +27009,7 @@
           </emu-figure>
           <p>Loading and linking happen as before, and all modules end up with [[Status]] set to ~linked~.</p>
 
-          <p>Calling _A_.Evaluate() calls InnerModuleEvaluation on _A_, _B_, and _D_, which all transition to ~evaluating~. Then InnerModuleEvaluation is called on _A_ again, which is a no-op because it is already ~evaluating~. At this point, _D_.[[PendingAsyncDependencies]] is 0, so ExecuteAsyncModule(_D_) is called and we call _D_.ExecuteModule with a new PromiseCapability tracking the asynchronous execution of _D_. We unwind back to the InnerModuleEvaluation on _B_, setting _B_.[[PendingAsyncDependencies]] to 1 and _B_.[[AsyncEvaluation]] to *true*. We unwind back to the original InnerModuleEvaluation on _A_, setting _A_.[[PendingAsyncDependencies]] to 1. In the next iteration of the loop over _A_'s dependencies, we call InnerModuleEvaluation on _C_ and thus on _D_ (again a no-op) and _E_. As _E_ has no dependencies and is not part of a cycle, we call ExecuteAsyncModule(_E_) in the same manner as _D_ and _E_ is immediately removed from the stack. We unwind once more to the original InnerModuleEvaluation on _A_, setting _C_.[[AsyncEvaluation]] to *true*. Now we finish the loop over _A_'s dependencies, set _A_.[[AsyncEvaluation]] to *true*, and remove the entire strongly connected component from the stack, transitioning all of the modules to ~evaluating-async~ at once. At this point, the fields of the modules are as given in <emu-xref href="#table-module-graph-cycle-async-fields-1"></emu-xref>.</p>
+          <p>Calling _A_.Evaluate() calls InnerModuleEvaluation on _A_, _B_, and _D_, which all transition to ~evaluating~. Then InnerModuleEvaluation is called on _A_ again, which is a no-op because it is already ~evaluating~. At this point, _D_.[[PendingAsyncDependencies]] is 0, so ExecuteAsyncModule(_D_) is called and we call _D_.ExecuteModule with a new PromiseCapability tracking the asynchronous execution of _D_. We unwind back to the InnerModuleEvaluation on _B_, setting _B_.[[PendingAsyncDependencies]] to 1 and _B_.[[AsyncEvaluationOrder]]. We unwind back to the original InnerModuleEvaluation on _A_, setting _A_.[[PendingAsyncDependencies]] to 1. In the next iteration of the loop over _A_'s dependencies, we call InnerModuleEvaluation on _C_ and thus on _D_ (again a no-op) and _E_. As _E_ has no dependencies and is not part of a cycle, we call ExecuteAsyncModule(_E_) in the same manner as _D_ and _E_ is immediately removed from the stack. We unwind once more to the original InnerModuleEvaluation on _A_, setting _C_. Now we finish the loop over _A_'s dependencies, set _A_.[[AsyncEvaluationOrder]], and remove the entire strongly connected component from the stack, transitioning all of the modules to ~evaluating-async~ at once. At this point, the fields of the modules are as given in <emu-xref href="#table-module-graph-cycle-async-fields-1"></emu-xref>.</p>
 
           <emu-table id="table-module-graph-cycle-async-fields-1" caption="Module fields after the initial Evaluate() call">
             <table>
@@ -27000,7 +27019,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                 </tr>
@@ -27010,7 +27029,7 @@
                 <td>0</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>4</td>
                 <td>« »</td>
                 <td>2 (_B_ and _C_)</td>
               </tr>
@@ -27019,7 +27038,7 @@
                 <td>1</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>1</td>
                 <td>« _A_ »</td>
                 <td>1 (_D_)</td>
               </tr>
@@ -27028,7 +27047,7 @@
                 <td>3</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>3</td>
                 <td>« _A_ »</td>
                 <td>2 (_D_ and _E_)</td>
               </tr>
@@ -27037,7 +27056,7 @@
                 <td>2</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>0</td>
                 <td>« _B_, _C_ »</td>
                 <td>0</td>
               </tr>
@@ -27046,7 +27065,7 @@
                 <td>4</td>
                 <td>4</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>2</td>
                 <td>« _C_ »</td>
                 <td>0</td>
               </tr>
@@ -27063,7 +27082,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                 </tr>
@@ -27073,7 +27092,7 @@
                 <td>3</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>3</td>
                 <td>« _A_ »</td>
                 <td>1 (_D_)</td>
               </tr>
@@ -27082,7 +27101,7 @@
                 <td>4</td>
                 <td>4</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>2</td>
                 <td>« _C_ »</td>
                 <td>0</td>
               </tr>
@@ -27099,7 +27118,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                 </tr>
@@ -27109,7 +27128,7 @@
                 <td>1</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>1</td>
                 <td>« _A_ »</td>
                 <td>0</td>
               </tr>
@@ -27118,7 +27137,7 @@
                 <td>3</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>3</td>
                 <td>« _A_ »</td>
                 <td>0</td>
               </tr>
@@ -27127,7 +27146,7 @@
                 <td>2</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>0</td>
                 <td>« _B_, _C_ »</td>
                 <td>0</td>
               </tr>
@@ -27144,7 +27163,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                 </tr>
@@ -27154,7 +27173,7 @@
                 <td>0</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>4</td>
                 <td>« »</td>
                 <td>1 (_B_)</td>
               </tr>
@@ -27163,7 +27182,7 @@
                 <td>3</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>3</td>
                 <td>« _A_ »</td>
                 <td>0</td>
               </tr>
@@ -27180,7 +27199,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                 </tr>
@@ -27190,7 +27209,7 @@
                 <td>0</td>
                 <td>0</td>
                 <td>~evaluating-async~</td>
-                <td>*true*</td>
+                <td>4</td>
                 <td>« »</td>
                 <td>0</td>
               </tr>
@@ -27199,7 +27218,7 @@
                 <td>1</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>1</td>
                 <td>« _A_ »</td>
                 <td>0</td>
               </tr>
@@ -27216,7 +27235,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                 </tr>
@@ -27226,7 +27245,7 @@
                 <td>0</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>4</td>
                 <td>« »</td>
                 <td>0</td>
               </tr>
@@ -27243,7 +27262,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                   <th>[[EvaluationError]]</th>
@@ -27254,7 +27273,7 @@
                 <td>0</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>4</td>
                 <td>« »</td>
                 <td>1 (_B_)</td>
                 <td>~empty~</td>
@@ -27264,7 +27283,7 @@
                 <td>3</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>3</td>
                 <td>« _A_ »</td>
                 <th>0</th>
                 <td>_C_'s evaluation error</td>
@@ -27282,7 +27301,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                   <th>[[EvaluationError]]</th>
@@ -27293,7 +27312,7 @@
                 <td>0</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>4</td>
                 <td>« »</td>
                 <td>0</td>
                 <td>_C_'s Evaluation Error</td>
@@ -27311,7 +27330,7 @@
                   <th>[[DFSIndex]]</th>
                   <th>[[DFSAncestorIndex]]</th>
                   <th>[[Status]]</th>
-                  <th>[[AsyncEvaluation]]</th>
+                  <th>[[AsyncEvaluationOrder]]</th>
                   <th>[[AsyncParentModules]]</th>
                   <th>[[PendingAsyncDependencies]]</th>
                   <th>[[EvaluationError]]</th>
@@ -27322,7 +27341,7 @@
                 <td>0</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>4</td>
                 <td>« »</td>
                 <td>0</td>
                 <td>_C_'s Evaluation Error</td>
@@ -27332,7 +27351,7 @@
                 <td>1</td>
                 <td>0</td>
                 <td>~evaluated~</td>
-                <td>*true*</td>
+                <td>1</td>
                 <td>« _A_ »</td>
                 <td>0</td>
                 <td>~empty~</td>
@@ -27882,7 +27901,7 @@
               1. Else,
                 1. Append _ee_ to _indirectExportEntries_.
             1. Let _async_ be _body_ Contains `await`.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluation]]: *false*, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~ }.
+            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluationOrder]]: ~unset~, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~ }.
           </emu-alg>
           <emu-note>
             <p>An implementation may parse module source text and analyse it for Early Error conditions prior to the evaluation of ParseModule for that module source text. However, the reporting of any errors must be deferred until the point where this specification actually performs ParseModule upon that source text.</p>
