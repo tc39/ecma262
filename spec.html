@@ -7402,18 +7402,36 @@
       <dl class="header">
       </dl>
       <emu-alg>
+        1. Let _needsAwait_ be *false*.
+        1. Let _hasAwaited_ be *false*.
         1. For each element _resource_ of _disposeCapability_.[[DisposableResourceStack]], in reverse list order, do
-          1. Let _result_ be Completion(Dispose(_resource_.[[ResourceValue]], _resource_.[[Hint]], _resource_.[[DisposeMethod]])).
-          1. If _result_ is a throw completion, then
-            1. If _completion_ is a throw completion, then
-              1. Set _result_ to _result_.[[Value]].
-              1. Let _suppressed_ be _completion_.[[Value]].
-              1. Let _error_ be a newly created *SuppressedError* object.
-              1. Perform CreateNonEnumerableDataPropertyOrThrow(_error_, *"error"*, _result_).
-              1. Perform CreateNonEnumerableDataPropertyOrThrow(_error_, *"suppressed"*, _suppressed_).
-              1. Set _completion_ to ThrowCompletion(_error_).
-            1. Else,
-              1. Set _completion_ to _result_.
+          1. Let _value_ be _resource_.[[ResourceValue]].
+          1. Let _hint_ be _resource_.[[Hint]].
+          1. Let _method_ be _resource_.[[DisposeMethod]].
+          1. If _hint_ is ~sync-dispose~ and _needsAwait_ is *true* and _hasAwaited_ is *false*, then
+            1. Perform ! Await(*undefined*).
+            1. Set _needsAwait_ to *false*.
+          1. If _method_ is not *undefined*, then
+            1. Let _result_ be Completion(Call(_method_, _value_)).
+            1. If _result_ is a normal completion and _hint_ is ~async-dispose~, then
+              1. Set _result_ to Completion(Await(_result_.[[Value]])).
+              1. Set _hasAwaited_ to *true*.
+            1. If _result_ is a throw completion, then
+              1. If _completion_ is a throw completion, then
+                1. Set _result_ to _result_.[[Value]].
+                1. Let _suppressed_ be _completion_.[[Value]].
+                1. Let _error_ be a newly created *SuppressedError* object.
+                1. Perform CreateNonEnumerableDataPropertyOrThrow(_error_, *"error"*, _result_).
+                1. Perform CreateNonEnumerableDataPropertyOrThrow(_error_, *"suppressed"*, _suppressed_).
+                1. Set _completion_ to ThrowCompletion(_error_).
+              1. Else,
+                1. Set _completion_ to _result_.
+          1. Else,
+            1. Assert: _hint_ is ~async-dispose~.
+            1. Set _needsAwait_ to *true*.
+            1. NOTE: This can only indicate a case where either *null* or *undefined* was the initialized value of an `await using` declaration.
+        1. If _needsAwait_ is *true* and _hasAwaited_ is *false*, then
+          1. Perform ! Await(*undefined*).
         1. NOTE: After _disposeCapability_ has been disposed, it will never be used again. The contents of _disposeCapability_.[[DisposableResourceStack]] can be discarded in implementations, such as by garbage collection, at this point.
         1. Set _disposeCapability_.[[DisposableResourceStack]] to a new empty List.
         1. Return ? _completion_.
