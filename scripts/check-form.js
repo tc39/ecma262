@@ -28,7 +28,7 @@ if (typeof all !== 'undefined' && all !== '--all') {
 	throw '`all` arg, if provided, must be `--all`'
 }
 
-const sha = String(execSync(`git rev-parse --short ${branch}`)).trim();
+const sha = String(execSync(`git rev-parse ${branch}`)).trim();
 
 const request = async (url, method = 'GET', postData) => {
 	// adapted from https://medium.com/@gevorggalstyan/how-to-promisify-node-js-http-https-requests-76a5a58ed90c
