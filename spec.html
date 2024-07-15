@@ -11747,6 +11747,14 @@
             The Module Record or Script Record from which associated code originates. If there is no originating script or module, as is the case for the original execution context created in InitializeHostDefinedRealm, the value is *null*.
           </td>
         </tr>
+        <tr>
+          <td>
+            HideParentScriptOrModule
+          </td>
+          <td>
+            A Boolean indicating wether, when looking for an execution context with a non-*null* ScriptOrModule component, this execution context should allow looking at its ancestors or not. If not explicitly set, defaults to *false*.
+          </td>
+        </tr>
       </table>
     </emu-table>
     <p>Evaluation of code by the running execution context may be suspended at various points defined within this specification. Once the running execution context has been suspended a different execution context may become the running execution context and commence evaluating its code. At some later time a suspended execution context may again become the running execution context and continue evaluating its code at the point where it had previously been suspended. Transition of the running execution context status among execution contexts usually occurs in stack-like last-in/first-out manner. However, some ECMAScript features require non-LIFO transitions of the running execution context.</p>
@@ -11825,9 +11833,10 @@
       </dl>
 
       <emu-alg>
-        1. If the execution context stack is empty, return *null*.
-        1. Let _ec_ be the topmost execution context on the execution context stack whose ScriptOrModule component is not *null*.
-        1. If no such execution context exists, return *null*. Otherwise, return _ec_'s ScriptOrModule.
+        1. For each execution context _ec_ in the execution context stack, in order from top to bottom, do
+          1. If _ec_'s ScriptOrModule is not *null*, return _ec_'s ScriptOrModule.
+          1. If _ec_'s HideParentScriptOrModule is *true*, return *null*.
+        1. Return *null*.
       </emu-alg>
     </emu-clause>
 
@@ -13137,10 +13146,10 @@
             [[ScriptOrModule]]
           </td>
           <td>
-            a Script Record or a Module Record
+            a Script Record, a Module Record, *null* or ~hidden~.
           </td>
           <td>
-            The script or module in which the function was created.
+            The script or module in which the function was created. It is *null* when the function is created while there is no active script or module when the function is created, and it is ~hidden~ if the function has been created through one of the Function constructors.
           </td>
         </tr>
         <tr>
@@ -13281,7 +13290,11 @@
           1. Set the Function of _calleeContext_ to _F_.
           1. Let _calleeRealm_ be _F_.[[Realm]].
           1. Set the Realm of _calleeContext_ to _calleeRealm_.
-          1. Set the ScriptOrModule of _calleeContext_ to _F_.[[ScriptOrModule]].
+          1. If _F_.[[ScriptOrModule]] is ~hidden~, then
+            1. Set the ScriptOrModule of _calleeContext_ to *null*.
+            1. Set the HideParentScriptOrModule of _calleeContext_ to *true*.
+          1. Else,
+            1. Set the ScriptOrModule of _calleeContext_ to _F_.[[ScriptOrModule]].
           1. Let _localEnv_ be NewFunctionEnvironment(_F_, _newTarget_).
           1. Set the LexicalEnvironment of _calleeContext_ to _localEnv_.
           1. Set the VariableEnvironment of _calleeContext_ to _localEnv_.
@@ -28966,7 +28979,11 @@
           1. Let _evalContext_ be a new ECMAScript code execution context.
           1. Set _evalContext_'s Function to *null*.
           1. Set _evalContext_'s Realm to _evalRealm_.
-          1. Set _evalContext_'s ScriptOrModule to _runningContext_'s ScriptOrModule.
+          1. If _direct_ is *true*, then
+            1. Set _evalContext_'s ScriptOrModule to _runningContext_'s ScriptOrModule.
+          1. Else,
+            1. Set _evalContext_'s ScriptOrModule to *null*.
+            1. Set _evalContext_'s HideParentScriptOrModule to *true*.
           1. Set _evalContext_'s VariableEnvironment to _varEnv_.
           1. Set _evalContext_'s LexicalEnvironment to _lexEnv_.
           1. Set _evalContext_'s PrivateEnvironment to _privateEnv_.
@@ -30262,6 +30279,7 @@
             1. Let _env_ be _currentRealm_.[[GlobalEnv]].
             1. Let _privateEnv_ be *null*.
             1. Let _F_ be OrdinaryFunctionCreate(_proto_, _sourceText_, _parameters_, _body_, ~non-lexical-this~, _env_, _privateEnv_).
+            1. Set _F_.[[ScriptOrModule]] to ~hidden~.
             1. Perform SetFunctionName(_F_, *"anonymous"*).
             1. If _kind_ is ~generator~, then
               1. Let _prototype_ be OrdinaryObjectCreate(%GeneratorFunction.prototype.prototype%).
