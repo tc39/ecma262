@@ -37830,6 +37830,64 @@ THH:mm:ss.sss
         <li>has the following properties:</li>
       </ul>
 
+      <emu-clause id="sec-regexp.escape">
+        <h1>RegExp.escape ( _S_ )</h1>
+        <p>This function returns a copy of _S_ in which characters that are potentially special in a regular expression |Pattern| have been replaced by equivalent escape sequences.</p>
+        <p>It performs the following steps when called:</p>
+
+        <emu-alg>
+          1. If _S_ is not a String, throw a *TypeError* exception.
+          1. Let _escaped_ be the empty String.
+          1. Let _cpList_ be StringToCodePoints(_S_).
+          1. For each code point _c_ of _cpList_, do
+            1. If _escaped_ is the empty String and _c_ is matched by either |DecimalDigit| or |AsciiLetter|, then
+              1. NOTE: Escaping a leading digit ensures that output corresponds with pattern text which may be used after a `\0` character escape or a |DecimalEscape| such as `\1` and still match _S_ rather than be interpreted as an extension of the preceding escape sequence. Escaping a leading ASCII letter does the same for the context after `\c`.
+              1. Let _numericValue_ be the numeric value of _c_.
+              1. Let _hex_ be Number::toString(𝔽(_numericValue_), 16).
+              1. Assert: The length of _hex_ is 2.
+              1. Set _escaped_ to the string-concatenation of the code unit 0x005C (REVERSE SOLIDUS), *"x"*, and _hex_.
+            1. Else,
+              1. Set _escaped_ to the string-concatenation of _escaped_ and EncodeForRegExpEscape(_c_).
+          1. Return _escaped_.
+        </emu-alg>
+
+        <emu-note>
+          <p>Despite having similar names, EscapeRegExpPattern and `RegExp.escape` do not perform similar actions. The former escapes a pattern for representation as a string, while this function escapes a string for representation inside a pattern.</p>
+        </emu-note>
+
+        <emu-clause id="sec-encodeforregexpescape" type="abstract operation">
+          <h1>
+            EncodeForRegExpEscape (
+              _c_: a code point,
+            ): a String
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>It returns a string representing a |Pattern| for matching _c_. If _c_ is white space or an ASCII punctuator, the returned value is an escape sequence. Otherwise, the returned value is a string representation of _c_ itself.</dd>
+          </dl>
+
+          <emu-alg>
+            1. If _c_ is matched by |SyntaxCharacter| or _c_ is U+002F (SOLIDUS), then
+              1. Return the string-concatenation of 0x005C (REVERSE SOLIDUS) and UTF16EncodeCodePoint(_c_).
+            1. Else if _c_ is the code point listed in some cell of the “Code Point” column of <emu-xref href="#table-controlescape-code-point-values"></emu-xref>, then
+              1. Return the string-concatenation of 0x005C (REVERSE SOLIDUS) and the string in the “ControlEscape” column of the row whose “Code Point” column contains _c_.
+            1. Let _otherPunctuators_ be the string-concatenation of *",-=&lt;>#&amp;!%:;@~'`"* and the code unit 0x0022 (QUOTATION MARK).
+            1. Let _toEscape_ be StringToCodePoints(_otherPunctuators_).
+            1. If _toEscape_ contains _c_, _c_ is matched by either |WhiteSpace| or |LineTerminator|, or _c_ has the same numeric value as a leading surrogate or trailing surrogate, then
+              1. Let _cNum_ be the numeric value of _c_.
+              1. If _cNum_ ≤ 0xFF, then
+                1. Let _hex_ be Number::toString(𝔽(_cNum_), 16).
+                1. Return the string-concatenation of the code unit 0x005C (REVERSE SOLIDUS), *"x"*, and StringPad(_hex_, 2, *"0"*, ~start~).
+              1. Let _escaped_ be the empty String.
+              1. Let _codeUnits_ be UTF16EncodeCodePoint(_c_).
+              1. For each code unit _cu_ of _codeUnits_, do
+                1. Set _escaped_ to the string-concatenation of _escaped_ and UnicodeEscape(_cu_).
+              1. Return _escaped_.
+            1. Return UTF16EncodeCodePoint(_c_).
+          </emu-alg>
+        </emu-clause>
+      </emu-clause>
+
       <emu-clause id="sec-regexp.prototype">
         <h1>RegExp.prototype</h1>
         <p>The initial value of `RegExp.prototype` is the RegExp prototype object.</p>
