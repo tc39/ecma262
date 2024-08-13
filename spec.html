@@ -822,21 +822,14 @@
         <p>When a phrase of the form “[lookahead …]” appears in the right-hand side of a production, it indicates that the production may only be used if the “lookahead” (the items that immediately follow the corresponding point in the input) satisfies a specified constraint. If the production is in the syntactic grammar, the items of the lookahead are input elements (mainly tokens); otherwise, they are code points.</p>
         <p>The forms of lookahead restriction, along with the constraint that each imposes on the lookahead, are as follows:</p>
         <ul>
-          <li>“[lookahead = _seq_]”: _seq_ matches a prefix of the lookahead</li>
-          <li>“[lookahead ≠ _seq_]”: _seq_ does <em>not</em> match any prefix of the lookahead</li>
-          <li>“[lookahead ∈ _set_]”: some element of _set_ matches a prefix of the lookahead</li>
-          <li>“[lookahead ∉ _set_]”: <em>no</em> element of _set_ matches any prefix of the lookahead</li>
+          <li>“[lookahead ~ _pattern_]”: _pattern_ must match the lookahead</li>
+          <li>“[lookahead !~ _pattern_]”: _pattern_ must <em>not</em> match the lookahead</li>
         </ul>
-        <p>In the above:</p>
-        <ul>
-          <li>_seq_ is a sequence of terminal symbols from the production's grammar; and</li>
-          <li>_set_ is either:
-            <ul>
-              <li>an explicit non-empty set of terminal sequences. In the syntactic grammar, such a sequence can also include a "[no LineTerminator here]" phrase.</li>
-              <li>a non-empty sequence of symbols from the production's grammar, including one nonterminal. This sequence represents the set of all terminal sequences to which that sequence could expand. In the syntactic grammar, it is considered an editorial error if the nonterminal could expand to infinitely many distinct terminal sequences. In other grammars, it is considered an editorial error if the nonterminal's expansion is not a regular set (i.e., if it isn't equivalent to a regular expression over code points).</li>
-            </ul>
-          </li>
-        </ul>
+        <p>In the above, _pattern_ is a set of one or more alternatives, separated by `|`. It matches the lookahead if any of its alternatives matches the lookahead. Each alternative is a sequence of one or more terminal and nonterminal symbols from the grammar of the containing production. In the syntactic grammar, such a sequence may also include a "[no LineTerminator here]" phrase. A sequence matches the lookahead if some prefix of the lookahead can be parsed according to that sequence.</p>
+        <emu-note>
+          <p>In effect, the alternatives of _pattern_ are the right-hand sides of an anonymous nonterminal, and the parser must attempt to recognize an instance of that nonterminal starting at the corresponding point in the input. If it can, _pattern_ matches the lookahead.</p>
+        </emu-note>
+        <p>To make this feasible, there are restrictions on _pattern_. In the syntactic grammar, _pattern_ must not involve nonterminals. In other grammars, _pattern_ must be equivalent to a regular expression over code points. Any violation of these restrictions is considered an editorial error.</p>
         <p>As an example, given the definitions:</p>
         <emu-grammar type="definition" example>
           DecimalDigit :: one of
@@ -849,11 +842,11 @@
         <p>the definition:</p>
         <emu-grammar type="definition" example>
           LookaheadExample ::
-            `n` [lookahead &notin; { `1`, `3`, `5`, `7`, `9` }] DecimalDigits
-            DecimalDigit [lookahead &notin; DecimalDigit]
+            `n` [lookahead !~ `1` | `3` | `5` | `7` | `9`] DecimalDigits
+            DecimalDigit [lookahead !~ DecimalDigit]
         </emu-grammar>
         <p>matches either the letter `n` followed by one or more decimal digits the first of which is even, or a decimal digit not followed by another decimal digit.</p>
-        <p>Note that when these phrases are used in the syntactic grammar, it may not be possible to unambiguously identify the tokens in the lookahead because determining later tokens requires knowing which lexical goal symbol to use at later positions. As such, when these are used in the syntactic grammar, it is considered an editorial error for a token sequence _seq_ to appear in a lookahead restriction (including as part of a set of sequences) if the choices of lexical goal symbols to use could change whether or not _seq_ would be a prefix of the resulting token sequence.</p>
+        <p>Note that when a lookahead restriction is used in the syntactic grammar, it may not be possible to unambiguously identify the tokens in the lookahead because determining later tokens requires knowing which lexical goal symbol to use at later positions. As such, when a lookahead restriction is used in the syntactic grammar, it is considered an editorial error if the choices of lexical goal symbols to use could change whether or not the restriction's _pattern_ would match the lookahead.</p>
       </emu-clause>
 
       <emu-clause id="sec-no-lineterminator-here">
@@ -16503,7 +16496,7 @@
 
       LineTerminatorSequence ::
         &lt;LF&gt;
-        &lt;CR&gt; [lookahead != &lt;LF&gt;]
+        &lt;CR&gt; [lookahead !~ &lt;LF&gt;]
         &lt;LS&gt;
         &lt;PS&gt;
         &lt;CR&gt; &lt;LF&gt;
@@ -16756,7 +16749,7 @@
         OtherPunctuator
 
       OptionalChainingPunctuator ::
-        `?.` [lookahead &notin; DecimalDigit]
+        `?.` [lookahead !~ DecimalDigit]
 
       // emu-format ignore
       OtherPunctuator :: one of
@@ -17135,7 +17128,7 @@
 
         EscapeSequence ::
           CharacterEscapeSequence
-          `0` [lookahead &notin; DecimalDigit]
+          `0` [lookahead !~ DecimalDigit]
           LegacyOctalEscapeSequence
           NonOctalDecimalEscapeSequence
           HexEscapeSequence
@@ -17158,9 +17151,9 @@
           `u`
 
         LegacyOctalEscapeSequence ::
-          `0` [lookahead &isin; { `8`, `9` }]
-          NonZeroOctalDigit [lookahead &notin; OctalDigit]
-          ZeroToThree OctalDigit [lookahead &notin; OctalDigit]
+          `0` [lookahead ~ `8` | `9`]
+          NonZeroOctalDigit [lookahead !~ OctalDigit]
+          ZeroToThree OctalDigit [lookahead !~ OctalDigit]
           FourToSeven OctalDigit
           ZeroToThree OctalDigit OctalDigit
 
@@ -17585,7 +17578,7 @@
           TemplateCharacter TemplateCharacters?
 
         TemplateCharacter ::
-          `$` [lookahead != `{`]
+          `$` [lookahead !~ `{`]
           `\` TemplateEscapeSequence
           `\` NotEscapeSequence
           LineContinuation
@@ -17594,22 +17587,22 @@
 
         TemplateEscapeSequence ::
           CharacterEscapeSequence
-          `0` [lookahead &notin; DecimalDigit]
+          `0` [lookahead !~ DecimalDigit]
           HexEscapeSequence
           UnicodeEscapeSequence
 
         NotEscapeSequence ::
           `0` DecimalDigit
           DecimalDigit but not `0`
-          `x` [lookahead &notin; HexDigit]
-          `x` HexDigit [lookahead &notin; HexDigit]
-          `u` [lookahead &notin; HexDigit] [lookahead != `{`]
-          `u` HexDigit [lookahead &notin; HexDigit]
-          `u` HexDigit HexDigit [lookahead &notin; HexDigit]
-          `u` HexDigit HexDigit HexDigit [lookahead &notin; HexDigit]
-          `u` `{` [lookahead &notin; HexDigit]
-          `u` `{` NotCodePoint [lookahead &notin; HexDigit]
-          `u` `{` CodePoint [lookahead &notin; HexDigit] [lookahead != `}`]
+          `x` [lookahead !~ HexDigit]
+          `x` HexDigit [lookahead !~ HexDigit]
+          `u` [lookahead !~ HexDigit | `{`]
+          `u` HexDigit [lookahead !~ HexDigit]
+          `u` HexDigit HexDigit [lookahead !~ HexDigit]
+          `u` HexDigit HexDigit HexDigit [lookahead !~ HexDigit]
+          `u` `{` [lookahead !~ HexDigit]
+          `u` `{` NotCodePoint [lookahead !~ HexDigit]
+          `u` `{` CodePoint [lookahead !~ HexDigit | `}`]
 
         NotCodePoint ::
           HexDigits[~Sep] [> but only if the MV of |HexDigits| > 0x10FFFF]
@@ -17705,31 +17698,31 @@
             The TRV of <emu-grammar>NotEscapeSequence :: `0` DecimalDigit</emu-grammar> is the string-concatenation of the code unit 0x0030 (DIGIT ZERO) and the TRV of |DecimalDigit|.
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `x` [lookahead &notin; HexDigit]</emu-grammar> is the String value consisting of the code unit 0x0078 (LATIN SMALL LETTER X).
+            The TRV of <emu-grammar>NotEscapeSequence :: `x` [lookahead !~ HexDigit]</emu-grammar> is the String value consisting of the code unit 0x0078 (LATIN SMALL LETTER X).
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `x` HexDigit [lookahead &notin; HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0078 (LATIN SMALL LETTER X) and the TRV of |HexDigit|.
+            The TRV of <emu-grammar>NotEscapeSequence :: `x` HexDigit [lookahead !~ HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0078 (LATIN SMALL LETTER X) and the TRV of |HexDigit|.
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `u` [lookahead &notin; HexDigit] [lookahead != `{`]</emu-grammar> is the String value consisting of the code unit 0x0075 (LATIN SMALL LETTER U).
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` [lookahead !~ HexDigit | `{`]</emu-grammar> is the String value consisting of the code unit 0x0075 (LATIN SMALL LETTER U).
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit [lookahead &notin; HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U) and the TRV of |HexDigit|.
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit [lookahead !~ HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U) and the TRV of |HexDigit|.
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit HexDigit [lookahead &notin; HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U), the TRV of the first |HexDigit|, and the TRV of the second |HexDigit|.
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit HexDigit [lookahead !~ HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U), the TRV of the first |HexDigit|, and the TRV of the second |HexDigit|.
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit HexDigit HexDigit [lookahead &notin; HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U), the TRV of the first |HexDigit|, the TRV of the second |HexDigit|, and the TRV of the third |HexDigit|.
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` HexDigit HexDigit HexDigit [lookahead !~ HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U), the TRV of the first |HexDigit|, the TRV of the second |HexDigit|, and the TRV of the third |HexDigit|.
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` [lookahead &notin; HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U) and the code unit 0x007B (LEFT CURLY BRACKET).
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` [lookahead !~ HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U) and the code unit 0x007B (LEFT CURLY BRACKET).
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` NotCodePoint [lookahead &notin; HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U), the code unit 0x007B (LEFT CURLY BRACKET), and the TRV of |NotCodePoint|.
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` NotCodePoint [lookahead !~ HexDigit]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U), the code unit 0x007B (LEFT CURLY BRACKET), and the TRV of |NotCodePoint|.
           </li>
           <li>
-            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` CodePoint [lookahead &notin; HexDigit] [lookahead != `}`]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U), the code unit 0x007B (LEFT CURLY BRACKET), and the TRV of |CodePoint|.
+            The TRV of <emu-grammar>NotEscapeSequence :: `u` `{` CodePoint [lookahead !~ HexDigit | `}`]</emu-grammar> is the string-concatenation of the code unit 0x0075 (LATIN SMALL LETTER U), the code unit 0x007B (LEFT CURLY BRACKET), and the TRV of |CodePoint|.
           </li>
           <li>
             The TRV of <emu-grammar>DecimalDigit :: one of `0` `1` `2` `3` `4` `5` `6` `7` `8` `9`</emu-grammar> is the result of performing UTF16EncodeCodePoint on the single code point matched by this production.
@@ -21582,7 +21575,7 @@
     <h2>Syntax</h2>
     <emu-grammar type="definition">
       ExpressionStatement[Yield, Await] :
-        [lookahead &notin; { `{`, `function`, `async` [no LineTerminator here] `function`, `class`, `let` `[` }] Expression[+In, ?Yield, ?Await] `;`
+        [lookahead !~ `{` | `function` | `async` [no LineTerminator here] `function` | `class` | `let` `[`] Expression[+In, ?Yield, ?Await] `;`
     </emu-grammar>
     <emu-note>
       <p>An |ExpressionStatement| cannot start with a U+007B (LEFT CURLY BRACKET) because that might make it ambiguous with a |Block|. An |ExpressionStatement| cannot start with the `function` or `class` keywords because that would make it ambiguous with a |FunctionDeclaration|, a |GeneratorDeclaration|, or a |ClassDeclaration|. An |ExpressionStatement| cannot start with `async function` because that would make it ambiguous with an |AsyncFunctionDeclaration| or a |AsyncGeneratorDeclaration|. An |ExpressionStatement| cannot start with the two token sequence `let [` because that would make it ambiguous with a `let` |LexicalDeclaration| whose first |LexicalBinding| was an |ArrayBindingPattern|.</p>
@@ -21604,9 +21597,9 @@
     <emu-grammar type="definition">
       IfStatement[Yield, Await, Return] :
         `if` `(` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return] `else` Statement[?Yield, ?Await, ?Return]
-        `if` `(` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return] [lookahead != `else`]
+        `if` `(` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return] [lookahead !~ `else`]
     </emu-grammar>
-    <emu-note>The lookahead-restriction [lookahead ≠ `else`] resolves the classic "dangling else" problem in the usual way. That is, when the choice of associated `if` is otherwise ambiguous, the `else` is associated with the nearest (innermost) of the candidate `if`s</emu-note>
+    <emu-note>The lookahead-restriction [lookahead !~ `else`] resolves the classic "dangling else" problem in the usual way. That is, when the choice of associated `if` is otherwise ambiguous, the `else` is associated with the nearest (innermost) of the candidate `if`s</emu-note>
 
     <emu-clause id="sec-if-statement-static-semantics-early-errors">
       <h1>Static Semantics: Early Errors</h1>
@@ -21808,7 +21801,7 @@
       <h2>Syntax</h2>
       <emu-grammar type="definition">
         ForStatement[Yield, Await, Return] :
-          `for` `(` [lookahead != `let` `[`] Expression[~In, ?Yield, ?Await]? `;` Expression[+In, ?Yield, ?Await]? `;` Expression[+In, ?Yield, ?Await]? `)` Statement[?Yield, ?Await, ?Return]
+          `for` `(` [lookahead !~ `let` `[`] Expression[~In, ?Yield, ?Await]? `;` Expression[+In, ?Yield, ?Await]? `;` Expression[+In, ?Yield, ?Await]? `)` Statement[?Yield, ?Await, ?Return]
           `for` `(` `var` VariableDeclarationList[~In, ?Yield, ?Await] `;` Expression[+In, ?Yield, ?Await]? `;` Expression[+In, ?Yield, ?Await]? `)` Statement[?Yield, ?Await, ?Return]
           `for` `(` LexicalDeclaration[~In, ?Yield, ?Await] Expression[+In, ?Yield, ?Await]? `;` Expression[+In, ?Yield, ?Await]? `)` Statement[?Yield, ?Await, ?Return]
       </emu-grammar>
@@ -21945,13 +21938,13 @@
       <h2>Syntax</h2>
       <emu-grammar type="definition">
         ForInOfStatement[Yield, Await, Return] :
-          `for` `(` [lookahead != `let` `[`] LeftHandSideExpression[?Yield, ?Await] `in` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
+          `for` `(` [lookahead !~ `let` `[`] LeftHandSideExpression[?Yield, ?Await] `in` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
           `for` `(` `var` ForBinding[?Yield, ?Await] `in` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
           `for` `(` ForDeclaration[?Yield, ?Await] `in` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
-          `for` `(` [lookahead &notin; { `let`, `async` `of` }] LeftHandSideExpression[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
+          `for` `(` [lookahead !~ `let` | `async` `of`] LeftHandSideExpression[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
           `for` `(` `var` ForBinding[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
           `for` `(` ForDeclaration[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
-          [+Await] `for` `await` `(` [lookahead != `let`] LeftHandSideExpression[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
+          [+Await] `for` `await` `(` [lookahead !~ `let`] LeftHandSideExpression[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
           [+Await] `for` `await` `(` `var` ForBinding[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
           [+Await] `for` `await` `(` ForDeclaration[?Yield, ?Await] `of` AssignmentExpression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
 
@@ -23568,7 +23561,7 @@
         CoverParenthesizedExpressionAndArrowParameterList[?Yield, ?Await] #parencover
 
       ConciseBody[In] :
-        [lookahead != `{`] ExpressionBody[?In, ~Await]
+        [lookahead !~ `{`] ExpressionBody[?In, ~Await]
         `{` FunctionBody[~Yield, ~Await] `}`
 
       ExpressionBody[In, Await] :
@@ -25273,7 +25266,7 @@
         CoverCallExpressionAndAsyncArrowHead[?Yield, ?Await] [no LineTerminator here] `=>` AsyncConciseBody[?In] #callcover
 
       AsyncConciseBody[In] :
-        [lookahead != `{`] ExpressionBody[?In, +Await]
+        [lookahead !~ `{`] ExpressionBody[?In, +Await]
         `{` AsyncFunctionBody `}`
 
       AsyncArrowBindingIdentifier[Yield] :
@@ -28512,7 +28505,7 @@
           `export` Declaration[~Yield, +Await]
           `export` `default` HoistableDeclaration[~Yield, +Await, +Default]
           `export` `default` ClassDeclaration[~Yield, +Await, +Default]
-          `export` `default` [lookahead &notin; { `function`, `async` [no LineTerminator here] `function`, `class` }] AssignmentExpression[+In, ~Yield, +Await] `;`
+          `export` `default` [lookahead !~ `function` | `async` [no LineTerminator here] `function` | `class`] AssignmentExpression[+In, ~Yield, +Await] `;`
 
         ExportFromClause :
           `*`
@@ -35634,7 +35627,7 @@ THH:mm:ss.sss
         CharacterEscape[UnicodeMode] ::
           ControlEscape
           `c` AsciiLetter
-          `0` [lookahead &notin; DecimalDigit]
+          `0` [lookahead !~ DecimalDigit]
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?UnicodeMode]
           IdentityEscape[?UnicodeMode]
@@ -35693,7 +35686,7 @@ THH:mm:ss.sss
           [~UnicodeMode] SourceCharacter but not UnicodeIDContinue
 
         DecimalEscape ::
-          NonZeroDigit DecimalDigits[~Sep]? [lookahead &notin; DecimalDigit]
+          NonZeroDigit DecimalDigits[~Sep]? [lookahead !~ DecimalDigit]
 
         CharacterClassEscape[UnicodeMode] ::
           `d`
@@ -35733,7 +35726,7 @@ THH:mm:ss.sss
           `_`
 
         CharacterClass[UnicodeMode, UnicodeSetsMode] ::
-          `[` [lookahead != `^`] ClassContents[?UnicodeMode, ?UnicodeSetsMode] `]`
+          `[` [lookahead !~ `^`] ClassContents[?UnicodeMode, ?UnicodeSetsMode] `]`
           `[^` ClassContents[?UnicodeMode, ?UnicodeSetsMode] `]`
 
         ClassContents[UnicodeMode, UnicodeSetsMode] ::
@@ -35775,8 +35768,8 @@ THH:mm:ss.sss
           ClassSetOperand ClassUnion?
 
         ClassIntersection ::
-          ClassSetOperand `&amp;&amp;` [lookahead != `&amp;`] ClassSetOperand
-          ClassIntersection `&amp;&amp;` [lookahead != `&amp;`] ClassSetOperand
+          ClassSetOperand `&amp;&amp;` [lookahead !~ `&amp;`] ClassSetOperand
+          ClassIntersection `&amp;&amp;` [lookahead !~ `&amp;`] ClassSetOperand
 
         ClassSubtraction ::
           ClassSetOperand `--` ClassSetOperand
@@ -35791,7 +35784,7 @@ THH:mm:ss.sss
           ClassSetCharacter
 
         NestedClass ::
-          `[` [lookahead != `^`] ClassContents[+UnicodeMode, +UnicodeSetsMode] `]`
+          `[` [lookahead !~ `^`] ClassContents[+UnicodeMode, +UnicodeSetsMode] `]`
           `[^` ClassContents[+UnicodeMode, +UnicodeSetsMode] `]`
           `\` CharacterClassEscape[+UnicodeMode]
       </emu-grammar>
@@ -35814,7 +35807,7 @@ THH:mm:ss.sss
           ClassSetCharacter NonEmptyClassString?
 
         ClassSetCharacter ::
-          [lookahead &notin; ClassSetReservedDoublePunctuator] SourceCharacter but not ClassSetSyntaxCharacter
+          [lookahead !~ ClassSetReservedDoublePunctuator] SourceCharacter but not ClassSetSyntaxCharacter
           `\` CharacterEscape[+UnicodeMode]
           `\` ClassSetReservedPunctuator
           `\b`
@@ -36196,7 +36189,7 @@ THH:mm:ss.sss
           1. Let _i_ be the numeric value of _ch_.
           1. Return the remainder of dividing _i_ by 32.
         </emu-alg>
-        <emu-grammar>CharacterEscape :: `0` [lookahead &notin; DecimalDigit]</emu-grammar>
+        <emu-grammar>CharacterEscape :: `0` [lookahead !~ DecimalDigit]</emu-grammar>
         <emu-alg>
           1. Return the numeric value of U+0000 (NULL).
         </emu-alg>
@@ -50350,13 +50343,13 @@ THH:mm:ss.sss
 
         ExtendedAtom[NamedCaptureGroups] ::
           `.`
-          `\` [lookahead &notin; { `b`, `B` }] AtomEscape[~UnicodeMode, ?NamedCaptureGroups]
-          `\` [lookahead == `c`] [lookahead != `c` AsciiLetter]
+          `\` [lookahead !~ `b` | `B`] AtomEscape[~UnicodeMode, ?NamedCaptureGroups]
+          `\` [lookahead ~ `c`] [lookahead !~ `c` AsciiLetter]
           CharacterClass[~UnicodeMode, ~UnicodeSetsMode]
           `(` GroupSpecifier[~UnicodeMode]? Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?NamedCaptureGroups] `)`
           `(?:` Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?NamedCaptureGroups] `)`
           InvalidBracedQuantifier
-          [lookahead &notin; InvalidBracedQuantifier] ExtendedPatternCharacter
+          [lookahead !~ InvalidBracedQuantifier] ExtendedPatternCharacter
 
         InvalidBracedQuantifier ::
           `{` DecimalDigits[~Sep] `}`
@@ -50371,7 +50364,7 @@ THH:mm:ss.sss
           [~UnicodeMode] ConstrainedDecimalEscape
           CharacterClassEscape[?UnicodeMode]
           [+UnicodeMode] CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
-          [~UnicodeMode] [lookahead &notin; ConstrainedDecimalEscape] CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
+          [~UnicodeMode] [lookahead !~ ConstrainedDecimalEscape] CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
           [+NamedCaptureGroups] `k` GroupName[?UnicodeMode]
 
         ConstrainedDecimalEscape ::
@@ -50380,11 +50373,11 @@ THH:mm:ss.sss
         CharacterEscape[UnicodeMode, NamedCaptureGroups] ::
           ControlEscape
           `c` AsciiLetter
-          `0` [lookahead &notin; DecimalDigit]
+          `0` [lookahead !~ DecimalDigit]
           HexEscapeSequence
           RegExpUnicodeEscapeSequence[?UnicodeMode]
           [~UnicodeMode] LegacyOctalEscapeSequence
-          [lookahead &notin; HexEscapeSequence] [lookahead &notin; RegExpUnicodeEscapeSequence] IdentityEscape[?UnicodeMode, ?NamedCaptureGroups]
+          [lookahead !~ HexEscapeSequence | RegExpUnicodeEscapeSequence] IdentityEscape[?UnicodeMode, ?NamedCaptureGroups]
 
         IdentityEscape[UnicodeMode, NamedCaptureGroups] ::
           [+UnicodeMode] SyntaxCharacter
@@ -50401,14 +50394,14 @@ THH:mm:ss.sss
         ClassAtomNoDash[UnicodeMode, NamedCaptureGroups] ::
           SourceCharacter but not one of `\` or `]` or `-`
           `\` ClassEscape[?UnicodeMode, ?NamedCaptureGroups]
-          `\` [lookahead == `c`] [lookahead != `c` ClassControlLetter] [lookahead != `c` AsciiLetter]
+          `\` [lookahead ~ `c`] [lookahead !~ `c` ClassControlLetter | `c` AsciiLetter]
 
         ClassEscape[UnicodeMode, NamedCaptureGroups] ::
           `b`
           [+UnicodeMode] `-`
           [~UnicodeMode] `c` ClassControlLetter
           CharacterClassEscape[?UnicodeMode]
-          [lookahead != `b`] CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
+          [lookahead !~ `b`] CharacterEscape[?UnicodeMode, ?NamedCaptureGroups]
 
         ClassControlLetter ::
           DecimalDigit
@@ -50457,7 +50450,7 @@ THH:mm:ss.sss
         <h1>Static Semantics: IsCharacterClass</h1>
         <p>The semantics of <emu-xref href="#sec-patterns-static-semantics-is-character-class"></emu-xref> is extended as follows:</p>
         <emu-grammar>
-          ClassAtomNoDash :: `\` [lookahead == `c`]
+          ClassAtomNoDash :: `\` [lookahead ~ `c`] [lookahead !~ `c` ClassControlLetter | `c` AsciiLetter]
         </emu-grammar>
         <emu-alg>
           1. Return *false*.
@@ -50468,7 +50461,7 @@ THH:mm:ss.sss
         <h1>Static Semantics: CharacterValue</h1>
         <p>The semantics of <emu-xref href="#sec-patterns-static-semantics-character-value"></emu-xref> is extended as follows:</p>
         <emu-grammar>
-          ClassAtomNoDash :: `\` [lookahead == `c`]
+          ClassAtomNoDash :: `\` [lookahead ~ `c`] [lookahead !~ `c` ClassControlLetter | `c` AsciiLetter]
         </emu-grammar>
         <emu-alg>
           1. Return the numeric value of U+005C (REVERSE SOLIDUS).
@@ -50502,7 +50495,7 @@ THH:mm:ss.sss
       <emu-annex id="sec-compileatom-annexb">
         <h1>Runtime Semantics: CompileAtom</h1>
         <p>CompileAtom rules for the |Atom| productions except for <emu-grammar>Atom :: PatternCharacter</emu-grammar> are also used for the |ExtendedAtom| productions, but with |ExtendedAtom| substituted for |Atom|. The following rules, with parameter _direction_, are also added:</p>
-        <emu-grammar>ExtendedAtom :: `\` [lookahead == `c`]</emu-grammar>
+        <emu-grammar>ExtendedAtom :: `\` [lookahead ~ `c`] [lookahead !~ `c` AsciiLetter]</emu-grammar>
         <emu-alg>
           1. Let _A_ be the CharSet containing the single character `\\` U+005C (REVERSE SOLIDUS).
           1. Return CharacterSetMatcher(_rer_, _A_, *false*, _direction_).
@@ -50544,7 +50537,7 @@ THH:mm:ss.sss
           1. Let _c_ be the character whose character value is _cv_.
           1. Return the CharSet containing the single character _c_.
         </emu-alg>
-        <emu-grammar>ClassAtomNoDash :: `\` [lookahead == `c`]</emu-grammar>
+        <emu-grammar>ClassAtomNoDash :: `\` [lookahead ~ `c`] [lookahead !~ `c` ClassControlLetter | `c` AsciiLetter]</emu-grammar>
         <emu-alg>
           1. Return the CharSet containing the single character `\\` U+005C (REVERSE SOLIDUS).
         </emu-alg>
@@ -51194,7 +51187,7 @@ THH:mm:ss.sss
           `if` `(` Expression[+In, ?Yield, ?Await] `)` FunctionDeclaration[?Yield, ?Await, ~Default] `else` Statement[?Yield, ?Await, ?Return]
           `if` `(` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return] `else` FunctionDeclaration[?Yield, ?Await, ~Default]
           `if` `(` Expression[+In, ?Yield, ?Await] `)` FunctionDeclaration[?Yield, ?Await, ~Default] `else` FunctionDeclaration[?Yield, ?Await, ~Default]
-          `if` `(` Expression[+In, ?Yield, ?Await] `)` FunctionDeclaration[?Yield, ?Await, ~Default] [lookahead != `else`]
+          `if` `(` Expression[+In, ?Yield, ?Await] `)` FunctionDeclaration[?Yield, ?Await, ~Default] [lookahead !~ `else`]
       </emu-grammar>
       <p>This production only applies when parsing non-strict code. Source text matched by this production is processed as if each matching occurrence of |FunctionDeclaration[?Yield, ?Await, ~Default]| was the sole |StatementListItem| of a |BlockStatement| occupying that position in the source text. The semantics of such a synthetic |BlockStatement| includes the web legacy compatibility semantics specified in <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics"></emu-xref>.</p>
     </emu-annex>
