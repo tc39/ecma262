@@ -51347,10 +51347,8 @@ THH:mm:ss.sss
       </table>
     </emu-table>
 
-    <p>These events are introduced by abstract operations or by methods on the Atomics object.</p>
-    <p>Some operations may also introduce <dfn>Synchronize</dfn> events. A <dfn variants="Synchronize events">Synchronize event</dfn> has no fields, and exists purely to directly constrain the permitted orderings of other events.</p>
-    <p>In addition to Shared Data Block and Synchronize events, there are host-specific events.</p>
-    <p>Let the range of a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory event be the Set of contiguous integers from its [[ByteIndex]] to [[ByteIndex]] + [[ElementSize]] - 1. Two events' ranges are equal when the events have the same [[Block]], and the ranges are element-wise equal. Two events' ranges are overlapping when the events have the same [[Block]], the ranges are not equal and their intersection is non-empty. Two events' ranges are disjoint when the events do not have the same [[Block]] or their ranges are neither equal nor overlapping.</p>
+    <p>Shared Data Block events are introduced to candidate execution Agent Events Records by abstract operations or by methods on the Atomics object. Some operations also introduce <dfn variants="Synchronize,Synchronize event">Synchronize events</dfn>, which have no fields and exist purely to directly constrain the permitted orderings of other events. And finally, there are host-specific events.</p>
+    <p>Let the range of a Shared Data Block event be the Set of contiguous integers from its [[ByteIndex]] to [[ByteIndex]] + [[ElementSize]] - 1. Two events' ranges are equal when the events have the same [[Block]], [[ByteIndex]], and [[ElementSize]]. Two events' ranges are overlapping when the events have the same [[Block]], the ranges are not equal, and their intersection is non-empty. Two events' ranges are disjoint when the events do not have the same [[Block]] or their ranges are neither equal nor overlapping.</p>
     <emu-note>
       <p>Examples of host-specific synchronizing events that should be accounted for are: sending a SharedArrayBuffer from one agent to another (e.g., by `postMessage` in a browser), starting and stopping agents, and communicating within the agent cluster via channels other than shared memory. For a particular execution _execution_, those events are provided by the host via the host-synchronizes-with strict partial order. Additionally, hosts can add host-specific synchronizing events to _execution_.[[EventList]] so as to participate in the is-agent-order-before Relation.</p>
     </emu-note>
@@ -51466,14 +51464,14 @@ THH:mm:ss.sss
       <h1>
         SharedDataBlockEventSet (
           _execution_: a candidate execution,
-        ): a Set of events
+        ): a Set of Shared Data Block events
       </h1>
       <dl class="header">
       </dl>
       <emu-alg>
         1. Let _events_ be an empty Set.
         1. For each event _E_ of EventSet(_execution_), do
-          1. If _E_ is a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory event, add _E_ to _events_.
+          1. If _E_ is a Shared Data Block event, add _E_ to _events_.
         1. Return _events_.
       </emu-alg>
     </emu-clause>
@@ -51709,7 +51707,7 @@ THH:mm:ss.sss
       </emu-alg>
 
       <emu-note>
-        <p>An event's [[NoTear]] field is *true* when that event was introduced via accessing an integer TypedArray, and *false* when introduced via accessing a floating point TypedArray or DataView.</p>
+        <p>A Shared Data Block event's [[NoTear]] field is *true* when that event was introduced via accessing an integer TypedArray, and *false* when introduced via accessing a floating point TypedArray or DataView.</p>
         <p>Intuitively, this requirement says when a memory range is accessed in an aligned fashion via an integer TypedArray, a single write event on that range must "win" when in a data race with other write events with equal ranges. More precisely, this requirement says an aligned read event cannot read a value composed of bytes from multiple, different write events all with equal ranges. It is possible, however, for an aligned read event to read from multiple write events with overlapping ranges.</p>
       </emu-note>
     </emu-clause>
@@ -51809,7 +51807,7 @@ THH:mm:ss.sss
       <p>Any transformation of an agent-order slice that is valid in the absence of shared memory is valid in the presence of shared memory, with the following exceptions.</p>
       <ul>
         <li>
-          <p><em>Atomics are carved in stone</em>: Program transformations must not cause the ~seq-cst~ events in an agent-order slice to be reordered with its ~unordered~ operations, nor its ~seq-cst~ operations to be reordered with each other, nor may a program transformation remove a ~seq-cst~ operation from the is-agent-order-before Relation.</p>
+          <p><em>Atomics are carved in stone</em>: Program transformations must not cause any Shared Data Block events having [[Order]] ~seq-cst~ to be removed from the is-agent-order-before Relation, nor to be reordered with respect to each other, nor to be reordered inside an agent-order slice with respect to events having [[Order]] ~unordered~.</p>
           <p>(In practice, the prohibition on reorderings forces a compiler to assume that every ~seq-cst~ operation is a synchronization and included in the final is-memory-order-before Relation, which it would usually have to assume anyway in the absence of inter-agent program analysis. It also forces the compiler to assume that every call where the callee's effects on the memory-order are unknown may contain ~seq-cst~ operations.)</p>
         </li>
         <li>
