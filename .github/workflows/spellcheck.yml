@@ -1,14 +1,19 @@
-name: Build Preview
+name: 'ecma-262'
 
 on: [pull_request]
 
 jobs:
-  build:
-    name: 'build PR preview'
+  spellcheck:
+    name: 'check for newly-introduced spelling errors'
     runs-on: ubuntu-latest
 
     steps:
+      - run: sudo apt-get install aspell
       - uses: actions/checkout@v3
+        with:
+          # Number of commits to fetch. 0 indicates all history for all branches and tags.
+          # Default: 1
+          fetch-depth: 0
       - uses: ljharb/actions/node/install@d9f477827ed71a259056764107f74afc29febcae
         name: 'nvm install lts/* && npm ci --no-audit'
         env:
@@ -16,10 +21,4 @@ jobs:
         with:
           node-version: lts/*
           use-npm-ci: true
-      - run: npm run build-only
-      - run: node scripts/insert_snapshot_warning
-      - run: echo ${{ github.event.number }} > out/pr.txt
-      - uses: actions/upload-artifact@v3
-        with:
-          name: out
-          path: out/
+      - run: node scripts/spellcheck.mjs origin/"${GITHUB_BASE_REF}"

@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
+const { JSDOM, VirtualConsole } = require('jsdom');
 const { execSync } = require('child_process');
 
 const COMMIT = String(execSync('git rev-parse --verify HEAD')).trim();
@@ -13,21 +13,30 @@ const WARNING_CSS = fs.readFileSync(path.join(__dirname, 'snapshot_warning.css')
 
 console.log('Inserting snapshot reference warning...');
 
-JSDOM.fromFile('./out/index.html', { contentType: 'text/html; charset=utf-8' }).then((dom) => {
-  const { document } = dom.window;
+const virtualConsole = new VirtualConsole();
+virtualConsole.on('error', () => {
+  // Suppress warnings from e.g. CSS features not supported by JSDOM
+});
 
-  const style = document.createElement('style');
-  style.textContent = WARNING_CSS;
-  document.head.append(style);
+(async () => {
+  let files = ['out/index.html', ...fs.readdirSync('out/multipage').filter(f => f.endsWith('.html')).map(f => 'out/multipage/' + f)];
+  for (let file of files) {
+    console.log(file);
+    let dom = await JSDOM.fromFile(file, { contentType: 'text/html; charset=utf-8', virtualConsole });
+    const { document } = dom.window;
 
-  // insert WARNING_HTML in beginning of body so it renders
-  // first even on slower devices and browsers
-  document.body.insertAdjacentHTML('afterbegin', WARNING_HTML);
+    const style = document.createElement('style');
+    style.textContent = WARNING_CSS;
+    document.head.append(style);
 
-  fs.writeFileSync('./out/index.html', dom.serialize(), 'utf8');
+    // insert WARNING_HTML in beginning of body so it renders
+    // first even on slower devices and browsers
+    document.body.insertAdjacentHTML('afterbegin', WARNING_HTML);
 
+    fs.writeFileSync(file, dom.serialize(), 'utf8');
+  }
   console.log('Done!');
-}).catch((reason) => {
-  console.error(reason);
-  process.exitCode = 1;
+})().catch(e => {
+  console.error(e);
+  process.exit(1);
 });
