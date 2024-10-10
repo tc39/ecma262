@@ -4057,7 +4057,7 @@
     <emu-clause id="sec-set-and-relation-specification-type">
       <h1>The Set and Relation Specification Types</h1>
       <p>The <em>Set</em> type is used to explain a collection of unordered elements for use in the memory model. It is distinct from the ECMAScript collection type of the same name. To disambiguate, instances of the ECMAScript collection are consistently referred to as "Set objects" within this specification. Values of the Set type are simple collections of elements, where no element appears more than once. Elements may be added to and removed from Sets. Sets may be unioned, intersected, or subtracted from each other.</p>
-      <p>The <dfn variants="Relations">Relation</dfn> type is used to explain constraints on Sets. Values of the Relation type are Sets of ordered pairs of values from its value domain. For example, a Relation on events is a set of ordered pairs of events. For a Relation _R_ and two values _a_ and _b_ in the value domain of _R_, _a_ _R_ _b_ is shorthand for saying the ordered pair (_a_, _b_) is a member of _R_. A Relation is the <dfn id="least-relation">least Relation</dfn> with respect to some conditions when it is the smallest Relation that satisfies those conditions.</p>
+      <p>The <dfn variants="Relations">Relation</dfn> type is used to explain constraints on Sets. Values of the Relation type are Sets of ordered pairs of values from its value domain. For example, a Relation on Memory events is a set of ordered pairs of Memory events. For a Relation _R_ and two values _a_ and _b_ in the value domain of _R_, _a_ _R_ _b_ is shorthand for saying the ordered pair (_a_, _b_) is a member of _R_. A Relation is the <dfn id="least-relation">least Relation</dfn> with respect to some conditions when it is the smallest Relation that satisfies those conditions.</p>
       <p>A <dfn variants="strict partial orders">strict partial order</dfn> is a Relation value _R_ that satisfies the following.</p>
       <ul>
         <li>
@@ -14771,7 +14771,7 @@
 
       <emu-clause id="sec-typedarray-with-buffer-witness-records" oldids="sec-integer-indexed-object-with-buffer-witness-records">
         <h1>TypedArray With Buffer Witness Records</h1>
-        <p>An <dfn variants="TypedArray With Buffer Witness Records">TypedArray With Buffer Witness Record</dfn> is a Record value used to encapsulate a TypedArray along with a cached byte length of the viewed buffer. It is used to help ensure there is a single shared memory read event of the byte length data block when the viewed buffer is a growable SharedArrayBuffer.</p>
+        <p>An <dfn variants="TypedArray With Buffer Witness Records">TypedArray With Buffer Witness Record</dfn> is a Record value used to encapsulate a TypedArray along with a cached byte length of the viewed buffer. It is used to help ensure there is a single ReadSharedMemory event of the byte length data block when the viewed buffer is a growable SharedArrayBuffer.</p>
         <p>TypedArray With Buffer Witness Records have the fields listed in <emu-xref href="#table-typedarray-with-buffer-witness-record-fields"></emu-xref>.</p>
         <emu-table id="table-typedarray-with-buffer-witness-record-fields" oldids="table-integer-indexed-object-with-buffer-witness-record-fields" caption="TypedArray With Buffer Witness Record Fields">
           <table>
@@ -14867,12 +14867,12 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, return 0.
-          1. Let _length_ be TypedArrayLength(_taRecord_).
-          1. If _length_ = 0, return 0.
+          1. Assert: IsTypedArrayOutOfBounds(_taRecord_) is *false*.
           1. Let _O_ be _taRecord_.[[Object]].
           1. If _O_.[[ByteLength]] is not ~auto~, return _O_.[[ByteLength]].
+          1. Let _length_ be TypedArrayLength(_taRecord_).
           1. Let _elementSize_ be TypedArrayElementSize(_O_).
+          1. NOTE: The returned byte length is always an integer multiple of _elementSize_, even when the underlying buffer has been resized to a non-integer multiple.
           1. Return _length_ × _elementSize_.
         </emu-alg>
       </emu-clause>
@@ -14911,16 +14911,19 @@
         <emu-alg>
           1. Let _O_ be _taRecord_.[[Object]].
           1. Let _bufferByteLength_ be _taRecord_.[[CachedBufferByteLength]].
-          1. Assert: IsDetachedBuffer(_O_.[[ViewedArrayBuffer]]) is *true* if and only if _bufferByteLength_ is ~detached~.
-          1. If _bufferByteLength_ is ~detached~, return *true*.
+          1. If IsDetachedBuffer(_O_.[[ViewedArrayBuffer]]) is *true*, then
+            1. Assert: _bufferByteLength_ is ~detached~.
+            1. Return *true*.
+          1. Assert: _bufferByteLength_ is a non-negative integer.
           1. Let _byteOffsetStart_ be _O_.[[ByteOffset]].
           1. If _O_.[[ArrayLength]] is ~auto~, then
             1. Let _byteOffsetEnd_ be _bufferByteLength_.
           1. Else,
             1. Let _elementSize_ be TypedArrayElementSize(_O_).
-            1. Let _byteOffsetEnd_ be _byteOffsetStart_ + _O_.[[ArrayLength]] × _elementSize_.
+            1. Let _arrayByteLength_ be _O_.[[ArrayLength]] × _elementSize_.
+            1. Let _byteOffsetEnd_ be _byteOffsetStart_ + _arrayByteLength_.
+          1. NOTE: A 0-length TypedArray whose [[ByteOffset]] is _bufferByteLength_ is not considered out-of-bounds.
           1. If _byteOffsetStart_ > _bufferByteLength_ or _byteOffsetEnd_ > _bufferByteLength_, return *true*.
-          1. NOTE: 0-length TypedArrays are not considered out-of-bounds.
           1. Return *false*.
         </emu-alg>
       </emu-clause>
@@ -40635,6 +40638,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_O_, [[TypedArrayName]]).
           1. Assert: _O_ has a [[ViewedArrayBuffer]] internal slot.
           1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_O_, ~seq-cst~).
+          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, return *+0*<sub>𝔽</sub>.
           1. Let _size_ be TypedArrayByteLength(_taRecord_).
           1. Return 𝔽(_size_).
         </emu-alg>
@@ -42244,7 +42248,7 @@ THH:mm:ss.sss
 
   <emu-clause id="sec-set-objects">
     <h1>Set Objects</h1>
-    <p>Set objects are collections of ECMAScript language values. A distinct value may only occur once as an element of a Set's collection. Distinct values are discriminated using the SameValueZero comparison algorithm.</p>
+    <p><dfn variants="Set object">Set objects</dfn> are collections of ECMAScript language values. A Set may contain each distinct value at most once. Distinct values are discriminated using the SameValueZero comparison algorithm.</p>
     <p>Set objects must be implemented using either hash tables or other mechanisms that, on average, provide access times that are sublinear on the number of elements in the collection. The data structure used in this specification is only intended to describe the required observable semantics of Set objects. It is not intended to be a viable implementation model.</p>
 
     <emu-clause id="sec-abstract-operations-for-set-objects">
@@ -43238,7 +43242,7 @@ THH:mm:ss.sss
         <dl class="header">
         </dl>
         <emu-alg>
-          1. If IsSharedArrayBuffer(_arrayBuffer_) is *true* and _arrayBuffer_ has an [[ArrayBufferByteLengthData]] internal slot, then
+          1. If IsGrowableSharedArrayBuffer(_arrayBuffer_) is *true*, then
             1. Let _bufferByteLengthBlock_ be _arrayBuffer_.[[ArrayBufferByteLengthData]].
             1. Let _rawLength_ be GetRawBytesFromSharedBlock(_bufferByteLengthBlock_, 0, ~biguint64~, *true*, _order_).
             1. Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
@@ -43933,14 +43937,27 @@ THH:mm:ss.sss
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>It tests whether an object is an ArrayBuffer, a SharedArrayBuffer, or a subtype of either.</dd>
+          <dd>It tests whether an object is a SharedArrayBuffer.</dd>
         </dl>
         <emu-alg>
-          1. Let _bufferData_ be _obj_.[[ArrayBufferData]].
-          1. If _bufferData_ is *null*, return *false*.
-          1. If _bufferData_ is a Data Block, return *false*.
-          1. Assert: _bufferData_ is a Shared Data Block.
-          1. Return *true*.
+          1. If _obj_.[[ArrayBufferData]] is a Shared Data Block, return *true*.
+          1. Return *false*.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-isgrowablesharedarraybuffer" type="abstract operation">
+        <h1>
+          IsGrowableSharedArrayBuffer (
+            _obj_: an ArrayBuffer or a SharedArrayBuffer,
+          ): a Boolean
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It tests whether an object is a growable SharedArrayBuffer.</dd>
+        </dl>
+        <emu-alg>
+          1. If IsSharedArrayBuffer(_obj_) is *true* and _obj_ has an [[ArrayBufferByteLengthData]] internal slot, return *true*.
+          1. Return *false*.
         </emu-alg>
       </emu-clause>
 
@@ -43958,12 +43975,12 @@ THH:mm:ss.sss
         <p>The implementation of HostGrowSharedArrayBuffer must conform to the following requirements:</p>
         <ul>
           <li>If the abstract operation does not complete normally with ~unhandled~, and _newByteLength_ &lt; the current byte length of the _buffer_ or _newByteLength_ > _buffer_.[[ArrayBufferMaxByteLength]], throw a *RangeError* exception.</li>
-          <li>Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record. If the abstract operation completes normally with ~handled~, a WriteSharedMemory or ReadModifyWriteSharedMemory event whose [[Order]] is ~seq-cst~, [[Payload]] is NumericToRawBytes(~biguint64~, _newByteLength_, _isLittleEndian_), [[Block]] is _buffer_.[[ArrayBufferByteLengthData]], [[ByteIndex]] is 0, and [[ElementSize]] is 8 is added to the surrounding agent's candidate execution such that racing calls to `SharedArrayBuffer.prototype.grow` are not "lost", i.e. silently do nothing.</li>
+          <li>Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record. If the abstract operation completes normally with ~handled~, a WriteSharedMemory or ReadModifyWriteSharedMemory event whose [[Order]] is ~seq-cst~, [[Payload]] is NumericToRawBytes(~biguint64~, _newByteLength_, _isLittleEndian_), [[Block]] is _buffer_.[[ArrayBufferByteLengthData]], [[ByteIndex]] is 0, and [[ElementSize]] is 8 is added to the surrounding agent's candidate execution such that racing calls to <emu-xref href="#sec-sharedarraybuffer.prototype.grow" title></emu-xref> are not "lost", i.e. silently do nothing.</li>
         </ul>
 
         <emu-note>
-          <p>The second requirement above is intentionally vague about how or when the current byte length of _buffer_ is read. Because the byte length must be updated via an atomic read-modify-write operation on the underlying hardware, architectures that use load-link/store-conditional or load-exclusive/store-exclusive instruction pairs may wish to keep the paired instructions close in the instruction stream. As such, SharedArrayBuffer.prototype.grow itself does not perform bounds checking on _newByteLength_ before calling HostGrowSharedArrayBuffer, nor is there a requirement on when the current byte length is read.</p>
-          <p>This is in contrast with HostResizeArrayBuffer, which is guaranteed that the value of _newByteLength_ is ≥ 0 and ≤ _buffer_.[[ArrayBufferMaxByteLength]].</p>
+          <p>The second requirement above is intentionally vague about how or when the current byte length of _buffer_ is read. Because the byte length must be updated via an atomic read-modify-write operation on the underlying hardware, architectures that use load-link/store-conditional or load-exclusive/store-exclusive instruction pairs may wish to keep the paired instructions close in the instruction stream. As such, <emu-xref href="#sec-sharedarraybuffer.prototype.grow" title></emu-xref> itself does not perform bounds checking on _newByteLength_ before calling HostGrowSharedArrayBuffer, nor is there a requirement on when the current byte length is read.</p>
+          <p>This is in contrast with HostResizeArrayBuffer, which is guaranteed that 0 ≤ _newByteLength_ ≤ _buffer_.[[ArrayBufferMaxByteLength]].</p>
         </emu-note>
 
         <p>The default implementation of HostGrowSharedArrayBuffer is to return NormalCompletion(~unhandled~).</p>
@@ -44183,7 +44200,7 @@ THH:mm:ss.sss
 
       <emu-clause id="sec-dataview-with-buffer-witness-records">
         <h1>DataView With Buffer Witness Records</h1>
-        <p>A <dfn variants="DataView With Buffer Witness Records">DataView With Buffer Witness Record</dfn> is a Record value used to encapsulate a DataView along with a cached byte length of the viewed buffer. It is used to help ensure there is a single shared memory read event of the byte length data block when the viewed buffer is a growable SharedArrayBuffers.</p>
+        <p>A <dfn variants="DataView With Buffer Witness Records">DataView With Buffer Witness Record</dfn> is a Record value used to encapsulate a DataView along with a cached byte length of the viewed buffer. It is used to help ensure there is a single ReadSharedMemory event of the byte length data block when the viewed buffer is a growable SharedArrayBuffer.</p>
         <p>DataView With Buffer Witness Records have the fields listed in <emu-xref href="#table-dataview-with-buffer-witness-record-fields"></emu-xref>.</p>
         <emu-table id="table-dataview-with-buffer-witness-record-fields" caption="DataView With Buffer Witness Record Fields">
           <table>
@@ -44276,15 +44293,17 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _view_ be _viewRecord_.[[Object]].
           1. Let _bufferByteLength_ be _viewRecord_.[[CachedBufferByteLength]].
-          1. Assert: IsDetachedBuffer(_view_.[[ViewedArrayBuffer]]) is *true* if and only if _bufferByteLength_ is ~detached~.
-          1. If _bufferByteLength_ is ~detached~, return *true*.
+          1. If IsDetachedBuffer(_view_.[[ViewedArrayBuffer]]) is *true*, then
+            1. Assert: _bufferByteLength_ is ~detached~.
+            1. Return *true*.
+          1. Assert: _bufferByteLength_ is a non-negative integer.
           1. Let _byteOffsetStart_ be _view_.[[ByteOffset]].
           1. If _view_.[[ByteLength]] is ~auto~, then
             1. Let _byteOffsetEnd_ be _bufferByteLength_.
           1. Else,
             1. Let _byteOffsetEnd_ be _byteOffsetStart_ + _view_.[[ByteLength]].
+          1. NOTE: A 0-length DataView whose [[ByteOffset]] is _bufferByteLength_ is not considered out-of-bounds.
           1. If _byteOffsetStart_ > _bufferByteLength_ or _byteOffsetEnd_ > _bufferByteLength_, return *true*.
-          1. NOTE: 0-length DataViews are not considered out-of-bounds.
           1. Return *false*.
         </emu-alg>
       </emu-clause>
@@ -49203,9 +49222,9 @@ THH:mm:ss.sss
 <emu-clause id="sec-memory-model">
   <h1>Memory Model</h1>
   <p>The memory consistency model, or <dfn>memory model</dfn>, specifies the possible orderings of Shared Data Block events, arising via accessing TypedArray instances backed by a SharedArrayBuffer and via methods on the Atomics object. When the program has no data races (defined below), the ordering of events appears as sequentially consistent, i.e., as an interleaving of actions from each agent. When the program has data races, shared memory operations may appear sequentially inconsistent. For example, programs may exhibit causality-violating behaviour and other astonishments. These astonishments arise from compiler transforms and the design of CPUs (e.g., out-of-order execution and speculation). The memory model defines both the precise conditions under which a program exhibits sequentially consistent behaviour as well as the possible values read from data races. To wit, there is no undefined behaviour.</p>
-  <p>The memory model is defined as relational constraints on events introduced by abstract operations on SharedArrayBuffer or by methods on the Atomics object during an evaluation.</p>
+  <p>The memory model is defined as relational constraints on Memory events introduced by abstract operations on SharedArrayBuffer or by methods on the Atomics object during an evaluation.</p>
   <emu-note>
-    <p>This section provides an axiomatic model on events introduced by the abstract operations on SharedArrayBuffers. It bears stressing that the model is not expressible algorithmically, unlike the rest of this specification. The nondeterministic introduction of events by abstract operations is the interface between the operational semantics of ECMAScript evaluation and the axiomatic semantics of the memory model. The semantics of these events is defined by considering graphs of all events in an evaluation. These are neither Static Semantics nor Runtime Semantics. There is no demonstrated algorithmic implementation, but instead a set of constraints that determine if a particular event graph is allowed or disallowed.</p>
+    <p>This section provides an axiomatic model on Memory events introduced by the abstract operations on SharedArrayBuffers. It bears stressing that the model is not expressible algorithmically, unlike the rest of this specification. The nondeterministic introduction of events by abstract operations is the interface between the operational semantics of ECMAScript evaluation and the axiomatic semantics of the memory model. The semantics of these events is defined by considering graphs of all events in an evaluation. These are neither Static Semantics nor Runtime Semantics. There is no demonstrated algorithmic implementation, but instead a set of constraints that determine if a particular event graph is allowed or disallowed.</p>
   </emu-note>
 
   <emu-clause id="sec-memory-model-fundamentals">
@@ -49214,7 +49233,7 @@ THH:mm:ss.sss
     <emu-note>
       <p>No orderings weaker than sequentially consistent and stronger than unordered, such as release-acquire, are supported.</p>
     </emu-note>
-    <p>A <dfn variants="Shared Data Block events">Shared Data Block event</dfn> is either a <dfn>ReadSharedMemory</dfn>, <dfn>WriteSharedMemory</dfn>, or <dfn>ReadModifyWriteSharedMemory</dfn> Record.</p>
+    <p>A <dfn variants="Shared Data Block events">Shared Data Block event</dfn> is either a <dfn>ReadSharedMemory</dfn>, <dfn>WriteSharedMemory</dfn>, or <dfn>ReadModifyWriteSharedMemory</dfn> Record. A <dfn variants="read events">read event</dfn> is either a ReadSharedMemory or a ReadModifyWriteSharedMemory. A <dfn variants="write events">write event</dfn> is either a WriteSharedMemory or a ReadModifyWriteSharedMemory.</p>
 
     <emu-table id="table-readsharedmemory-fields" caption="ReadSharedMemory Event Fields">
       <table>
@@ -49233,7 +49252,7 @@ THH:mm:ss.sss
         <tr>
           <td>[[NoTear]]</td>
           <td>a Boolean</td>
-          <td>Whether this event is allowed to read from multiple write events with equal range as this event.</td>
+          <td>Whether this event is allowed to read from multiple write events with equal memory range as this event.</td>
         </tr>
         <tr>
           <td>[[Block]]</td>
@@ -49270,7 +49289,7 @@ THH:mm:ss.sss
         <tr>
           <td>[[NoTear]]</td>
           <td>a Boolean</td>
-          <td>Whether this event is allowed to be read from multiple read events with equal range as this event.</td>
+          <td>Whether this event is allowed to be read from multiple read events with equal memory range as this event.</td>
         </tr>
         <tr>
           <td>[[Block]]</td>
@@ -49342,10 +49361,8 @@ THH:mm:ss.sss
       </table>
     </emu-table>
 
-    <p>These events are introduced by abstract operations or by methods on the Atomics object.</p>
-    <p>Some operations may also introduce <dfn>Synchronize</dfn> events. A <dfn variants="Synchronize events">Synchronize event</dfn> has no fields, and exists purely to directly constrain the permitted orderings of other events.</p>
-    <p>In addition to Shared Data Block and Synchronize events, there are host-specific events.</p>
-    <p>Let the range of a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory event be the Set of contiguous integers from its [[ByteIndex]] to [[ByteIndex]] + [[ElementSize]] - 1. Two events' ranges are equal when the events have the same [[Block]], and the ranges are element-wise equal. Two events' ranges are overlapping when the events have the same [[Block]], the ranges are not equal and their intersection is non-empty. Two events' ranges are disjoint when the events do not have the same [[Block]] or their ranges are neither equal nor overlapping.</p>
+    <p>Shared Data Block events are introduced to candidate execution Agent Events Records by abstract operations or by methods on the Atomics object. Some operations also introduce <dfn variants="Synchronize,Synchronize event">Synchronize events</dfn>, which have no fields and exist purely to directly constrain the permitted orderings of other events. And finally, there are host-specific events. A <dfn variants="Memory events">Memory event</dfn> is either a Shared Data Block event, Synchronize event, or such a host-specific event.</p>
+    <p>Let the <dfn variants="memory ranges">memory range</dfn> of a Shared Data Block event _e_ be the Set of all integers in the interval from _e_.[[ByteIndex]] (inclusive) to _e_.[[ByteIndex]] + _e_.[[ElementSize]] (exclusive). Two events' memory ranges are equal when the events have the same [[Block]], [[ByteIndex]], and [[ElementSize]]. Two events' memory ranges are overlapping when the events have the same [[Block]], the ranges are not equal, and their intersection is non-empty. Two events' memory ranges are disjoint when the events do not have the same [[Block]] or their ranges are neither equal nor overlapping.</p>
     <emu-note>
       <p>Examples of host-specific synchronizing events that should be accounted for are: sending a SharedArrayBuffer from one agent to another (e.g., by `postMessage` in a browser), starting and stopping agents, and communicating within the agent cluster via channels other than shared memory. For a particular execution _execution_, those events are provided by the host via the host-synchronizes-with strict partial order. Additionally, hosts can add host-specific synchronizing events to _execution_.[[EventList]] so as to participate in the is-agent-order-before Relation.</p>
     </emu-note>
@@ -49371,7 +49388,7 @@ THH:mm:ss.sss
         </tr>
         <tr>
           <td>[[EventList]]</td>
-          <td>a List of events</td>
+          <td>a List of Memory events</td>
           <td>Events are appended to the list during evaluation.</td>
         </tr>
         <tr>
@@ -49424,7 +49441,7 @@ THH:mm:ss.sss
         <tr>
           <td>[[EventsRecords]]</td>
           <td>a List of Agent Events Records</td>
-          <td>Maps an agent to Lists of events appended during the evaluation.</td>
+          <td>Maps an agent to Lists of Memory events appended during the evaluation.</td>
         </tr>
         <tr>
           <td>[[ChosenValues]]</td>
@@ -49444,14 +49461,14 @@ THH:mm:ss.sss
       <h1>
         EventSet (
           _execution_: a candidate execution,
-        ): a Set of events
+        ): a Set of Memory events
       </h1>
       <dl class="header">
       </dl>
       <emu-alg>
         1. Let _events_ be an empty Set.
         1. For each Agent Events Record _aer_ of _execution_.[[EventsRecords]], do
-          1. For each event _E_ of _aer_.[[EventList]], do
+          1. For each Memory event _E_ of _aer_.[[EventList]], do
             1. Add _E_ to _events_.
         1. Return _events_.
       </emu-alg>
@@ -49461,14 +49478,14 @@ THH:mm:ss.sss
       <h1>
         SharedDataBlockEventSet (
           _execution_: a candidate execution,
-        ): a Set of events
+        ): a Set of Shared Data Block events
       </h1>
       <dl class="header">
       </dl>
       <emu-alg>
         1. Let _events_ be an empty Set.
-        1. For each event _E_ of EventSet(_execution_), do
-          1. If _E_ is a ReadSharedMemory, WriteSharedMemory, or ReadModifyWriteSharedMemory event, add _E_ to _events_.
+        1. For each Memory event _E_ of EventSet(_execution_), do
+          1. If _E_ is a Shared Data Block event, add _E_ to _events_.
         1. Return _events_.
       </emu-alg>
     </emu-clause>
@@ -49477,15 +49494,12 @@ THH:mm:ss.sss
       <h1>
         HostEventSet (
           _execution_: a candidate execution,
-        ): a Set of events
+        ): a Set of Memory events
       </h1>
       <dl class="header">
       </dl>
       <emu-alg>
-        1. Let _events_ be an empty Set.
-        1. For each event _E_ of EventSet(_execution_), do
-          1. If _E_ is not in SharedDataBlockEventSet(_execution_), add _E_ to _events_.
-        1. Return _events_.
+        1. Return a new Set containing all elements of EventSet(_execution_) that are not in SharedDataBlockEventSet(_execution_).
       </emu-alg>
     </emu-clause>
 
@@ -49503,7 +49517,7 @@ THH:mm:ss.sss
         1. Let _byteLocation_ be _byteIndex_.
         1. Let _bytesRead_ be a new empty List.
         1. For each element _W_ of _Ws_, do
-          1. Assert: _W_ has _byteLocation_ in its range.
+          1. Assert: _W_ has _byteLocation_ in its memory range.
           1. Let _payloadIndex_ be _byteLocation_ - _W_.[[ByteIndex]].
           1. If _W_ is a WriteSharedMemory event, then
             1. Let _byte_ be _W_.[[Payload]][_payloadIndex_].
@@ -49544,11 +49558,11 @@ THH:mm:ss.sss
   <emu-clause id="sec-relations-of-candidate-executions">
     <h1>Relations of Candidate Executions</h1>
 
-    <p>The following relations and mathematical functions are parameterized over a particular candidate execution and order its events.</p>
+    <p>The following relations and mathematical functions are parameterized over a particular candidate execution and order its Memory events.</p>
 
     <emu-clause id="sec-agent-order">
       <h1>is-agent-order-before</h1>
-      <p>For a candidate execution _execution_, its <dfn>is-agent-order-before</dfn> Relation is the least Relation on events that satisfies the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>is-agent-order-before</dfn> Relation is the least Relation on Memory events that satisfies the following.</p>
       <ul>
         <li>For events _E_ and _D_, _E_ is-agent-order-before _D_ in _execution_ if there is some Agent Events Record _aer_ in _execution_.[[EventsRecords]] such that _aer_.[[EventList]] contains both _E_ and _D_ and _E_ is before _D_ in List order of _aer_.[[EventList]].</li>
       </ul>
@@ -49560,12 +49574,12 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-reads-bytes-from" aoid="reads-bytes-from">
       <h1>reads-bytes-from</h1>
-      <p>For a candidate execution _execution_, its <em>reads-bytes-from</em> function is a mathematical function mapping events in SharedDataBlockEventSet(_execution_) to Lists of events in SharedDataBlockEventSet(_execution_) that satisfies the following conditions.</p>
+      <p>For a candidate execution _execution_, its <em>reads-bytes-from</em> function is a mathematical function mapping Memory events in SharedDataBlockEventSet(_execution_) to Lists of events in SharedDataBlockEventSet(_execution_) that satisfies the following conditions.</p>
       <ul>
         <li>
           <p>For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ in SharedDataBlockEventSet(_execution_), reads-bytes-from(_R_) in _execution_ is a List of length _R_.[[ElementSize]] whose elements are WriteSharedMemory or ReadModifyWriteSharedMemory events _Ws_ such that all of the following are true.</p>
           <ul>
-            <li>Each event _W_ with index _i_ in _Ws_ has _R_.[[ByteIndex]] + _i_ in its range.</li>
+            <li>Each event _W_ with index _i_ in _Ws_ has _R_.[[ByteIndex]] + _i_ in its memory range.</li>
             <li>_R_ is not in _Ws_.</li>
           </ul>
         </li>
@@ -49575,7 +49589,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-reads-from">
       <h1>reads-from</h1>
-      <p>For a candidate execution _execution_, its <dfn>reads-from</dfn> Relation is the least Relation on events that satisfies the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>reads-from</dfn> Relation is the least Relation on Memory events that satisfies the following.</p>
       <ul>
         <li>For events _R_ and _W_, _R_ reads-from _W_ in _execution_ if SharedDataBlockEventSet(_execution_) contains both _R_ and _W_, and reads-bytes-from(_R_) in _execution_ contains _W_.</li>
       </ul>
@@ -49583,7 +49597,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-host-synchronizes-with">
       <h1>host-synchronizes-with</h1>
-      <p>For a candidate execution _execution_, its <dfn>host-synchronizes-with</dfn> Relation is a host-provided strict partial order on host-specific events that satisfies at least the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>host-synchronizes-with</dfn> Relation is a host-provided strict partial order on host-specific Memory events that satisfies at least the following.</p>
       <ul>
         <li>If _E_ host-synchronizes-with _D_ in _execution_, HostEventSet(_execution_) contains _E_ and _D_.</li>
         <li>There is no cycle in the union of host-synchronizes-with and is-agent-order-before in _execution_.</li>
@@ -49599,10 +49613,10 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-synchronizes-with">
       <h1>synchronizes-with</h1>
-      <p>For a candidate execution _execution_, its <dfn>synchronizes-with</dfn> Relation is the least Relation on events that satisfies the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>synchronizes-with</dfn> Relation is the least Relation on Memory events that satisfies the following.</p>
       <ul>
         <li>
-          For events _R_ and _W_, _W_ synchronizes-with _R_ in _execution_ if _R_ reads-from _W_ in _execution_, _R_.[[Order]] is ~seq-cst~, _W_.[[Order]] is ~seq-cst~, and _R_ and _W_ have equal ranges.
+          For events _R_ and _W_, _W_ synchronizes-with _R_ in _execution_ if _R_ reads-from _W_ in _execution_, _R_.[[Order]] is ~seq-cst~, _W_.[[Order]] is ~seq-cst~, and _R_ and _W_ have equal memory ranges.
         </li>
         <li>
           For each element _eventsRecord_ of _execution_.[[EventsRecords]], the following is true.
@@ -49622,7 +49636,7 @@ THH:mm:ss.sss
       </emu-note>
 
       <emu-note>
-        <p>In a candidate execution _execution_, not all ~seq-cst~ events related by reads-from are related by synchronizes-with. Only events that also have equal ranges are related by synchronizes-with.</p>
+        <p>In a candidate execution _execution_, not all ~seq-cst~ events related by reads-from are related by synchronizes-with. Only events that also have equal memory ranges are related by synchronizes-with.</p>
       </emu-note>
 
       <emu-note>
@@ -49632,7 +49646,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-happens-before">
       <h1>happens-before</h1>
-      <p>For a candidate execution _execution_, its <dfn>happens-before</dfn> Relation is the least Relation on events that satisfies the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>happens-before</dfn> Relation is the least Relation on Memory events that satisfies the following.</p>
 
       <ul>
         <li>
@@ -49640,7 +49654,7 @@ THH:mm:ss.sss
           <ul>
             <li>_E_ is-agent-order-before _D_ in _execution_.</li>
             <li>_E_ synchronizes-with _D_ in _execution_.</li>
-            <li>SharedDataBlockEventSet(_execution_) contains both _E_ and _D_, _E_.[[Order]] is ~init~, and _E_ and _D_ have overlapping ranges.</li>
+            <li>SharedDataBlockEventSet(_execution_) contains both _E_ and _D_, _E_.[[Order]] is ~init~, and _E_ and _D_ have overlapping memory ranges.</li>
             <li>There is an event _F_ such that _E_ happens-before _F_ and _F_ happens-before _D_ in _execution_.</li>
           </ul>
         </li>
@@ -49683,7 +49697,7 @@ THH:mm:ss.sss
           1. For each element _W_ of _Ws_, do
             1. If _R_ happens-before _W_ in _execution_, then
               1. Return *false*.
-            1. If there exists a WriteSharedMemory or ReadModifyWriteSharedMemory event _V_ that has _byteLocation_ in its range such that _W_ happens-before _V_ in _execution_ and _V_ happens-before _R_ in _execution_, then
+            1. If there exists a WriteSharedMemory or ReadModifyWriteSharedMemory event _V_ that has _byteLocation_ in its memory range such that _W_ happens-before _V_ in _execution_ and _V_ happens-before _R_ in _execution_, then
               1. Return *false*.
             1. Set _byteLocation_ to _byteLocation_ + 1.
         1. Return *true*.
@@ -49697,38 +49711,38 @@ THH:mm:ss.sss
         1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _R_ of SharedDataBlockEventSet(_execution_), do
           1. If _R_.[[NoTear]] is *true*, then
             1. Assert: The remainder of dividing _R_.[[ByteIndex]] by _R_.[[ElementSize]] is 0.
-            1. For each event _W_ such that _R_ reads-from _W_ in _execution_ and _W_.[[NoTear]] is *true*, do
-              1. If _R_ and _W_ have equal ranges and there exists an event _V_ such that _V_ and _W_ have equal ranges, _V_.[[NoTear]] is *true*, _W_ and _V_ are not the same Shared Data Block event, and _R_ reads-from _V_ in _execution_, then
+            1. For each Memory event _W_ such that _R_ reads-from _W_ in _execution_ and _W_.[[NoTear]] is *true*, do
+              1. If _R_ and _W_ have equal memory ranges and there exists a Memory event _V_ such that _V_ and _W_ have equal memory ranges, _V_.[[NoTear]] is *true*, _W_ and _V_ are not the same Shared Data Block event, and _R_ reads-from _V_ in _execution_, then
                 1. Return *false*.
         1. Return *true*.
       </emu-alg>
 
       <emu-note>
-        <p>An event's [[NoTear]] field is *true* when that event was introduced via accessing an integer TypedArray, and *false* when introduced via accessing a floating point TypedArray or DataView.</p>
+        <p>A Shared Data Block event's [[NoTear]] field is *true* when that event was introduced via accessing an integer TypedArray, and *false* when introduced via accessing a floating point TypedArray or DataView.</p>
         <p>Intuitively, this requirement says when a memory range is accessed in an aligned fashion via an integer TypedArray, a single write event on that range must "win" when in a data race with other write events with equal ranges. More precisely, this requirement says an aligned read event cannot read a value composed of bytes from multiple, different write events all with equal ranges. It is possible, however, for an aligned read event to read from multiple write events with overlapping ranges.</p>
       </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-memory-order">
       <h1>Sequentially Consistent Atomics</h1>
-      <p>For a candidate execution _execution_, <dfn>is-memory-order-before</dfn> is a strict total order of all events in EventSet(_execution_) that satisfies the following.</p>
+      <p>For a candidate execution _execution_, <dfn>is-memory-order-before</dfn> is a strict total order of all Memory events in EventSet(_execution_) that satisfies the following.</p>
       <ul>
         <li>For events _E_ and _D_, _E_ is-memory-order-before _D_ in _execution_ if _E_ happens-before _D_ in _execution_.</li>
         <li>
           <p>For events _R_ and _W_ such that _R_ reads-from _W_ in _execution_, there is no WriteSharedMemory or ReadModifyWriteSharedMemory event _V_ in SharedDataBlockEventSet(_execution_) such that _V_.[[Order]] is ~seq-cst~, _W_ is-memory-order-before _V_ in _execution_, _V_ is-memory-order-before _R_ in _execution_, and any of the following conditions are true.</p>
           <ul>
-            <li>_W_ synchronizes-with _R_ in _execution_, and _V_ and _R_ have equal ranges.</li>
-            <li>_W_ happens-before _R_ and _V_ happens-before _R_ in _execution_, _W_.[[Order]] is ~seq-cst~, and _W_ and _V_ have equal ranges.</li>
-            <li>_W_ happens-before _R_ and _W_ happens-before _V_ in _execution_, _R_.[[Order]] is ~seq-cst~, and _V_ and _R_ have equal ranges.</li>
+            <li>_W_ synchronizes-with _R_ in _execution_, and _V_ and _R_ have equal memory ranges.</li>
+            <li>_W_ happens-before _R_ and _V_ happens-before _R_ in _execution_, _W_.[[Order]] is ~seq-cst~, and _W_ and _V_ have equal memory ranges.</li>
+            <li>_W_ happens-before _R_ and _W_ happens-before _V_ in _execution_, _R_.[[Order]] is ~seq-cst~, and _V_ and _R_ have equal memory ranges.</li>
           </ul>
           <emu-note>
-            <p>This clause additionally constrains ~seq-cst~ events on equal ranges.</p>
+            <p>This clause additionally constrains ~seq-cst~ events on equal memory ranges.</p>
           </emu-note>
         </li>
         <li>
-          <p>For each WriteSharedMemory or ReadModifyWriteSharedMemory event _W_ in SharedDataBlockEventSet(_execution_), if _W_.[[Order]] is ~seq-cst~, then it is not the case that there is an infinite number of ReadSharedMemory or ReadModifyWriteSharedMemory events in SharedDataBlockEventSet(_execution_) with equal range that is memory-order before _W_.</p>
+          <p>For each WriteSharedMemory or ReadModifyWriteSharedMemory event _W_ in SharedDataBlockEventSet(_execution_), if _W_.[[Order]] is ~seq-cst~, then it is not the case that there is an infinite number of ReadSharedMemory or ReadModifyWriteSharedMemory events in SharedDataBlockEventSet(_execution_) with equal memory range that is memory-order before _W_.</p>
           <emu-note>
-            <p>This clause together with the forward progress guarantee on agents ensure the liveness condition that ~seq-cst~ writes become visible to ~seq-cst~ reads with equal range in finite time.</p>
+            <p>This clause together with the forward progress guarantee on agents ensure the liveness condition that ~seq-cst~ <emu-xref href="#sec-memory-model-fundamentals">writes</emu-xref> become visible to ~seq-cst~ <emu-xref href="#sec-memory-model-fundamentals">reads</emu-xref> with equal memory range in finite time.</p>
           </emu-note>
         </li>
       </ul>
@@ -49760,7 +49774,7 @@ THH:mm:ss.sss
     <emu-alg>
       1. If _E_ and _D_ are not the same Shared Data Block event, then
         1. If it is not the case that both _E_ happens-before _D_ in _execution_ and _D_ happens-before _E_ in _execution_, then
-          1. If _E_ and _D_ are both WriteSharedMemory or ReadModifyWriteSharedMemory events and _E_ and _D_ do not have disjoint ranges, then
+          1. If _E_ and _D_ are both WriteSharedMemory or ReadModifyWriteSharedMemory events and _E_ and _D_ do not have disjoint memory ranges, then
             1. Return *true*.
           1. If _E_ reads-from _D_ in _execution_ or _D_ reads-from _E_ in _execution_, then
             1. Return *true*.
@@ -49775,7 +49789,7 @@ THH:mm:ss.sss
       1. If _E_ and _D_ are in a <emu-xref href="#sec-races">race</emu-xref> in _execution_, then
         1. If _E_.[[Order]] is not ~seq-cst~ or _D_.[[Order]] is not ~seq-cst~, then
           1. Return *true*.
-        1. If _E_ and _D_ have overlapping ranges, then
+        1. If _E_ and _D_ have overlapping memory ranges, then
           1. Return *true*.
       1. Return *false*.
     </emu-alg>
@@ -49798,13 +49812,13 @@ THH:mm:ss.sss
 
     <emu-note>
       <p>The following are guidelines for ECMAScript implementers writing compiler transformations for programs using shared memory.</p>
-      <p>It is desirable to allow most program transformations that are valid in a single-agent setting in a multi-agent setting, to ensure that the performance of each agent in a multi-agent program is as good as it would be in a single-agent setting. Frequently these transformations are hard to judge. We outline some rules about program transformations that are intended to be taken as normative (in that they are implied by the memory model or stronger than what the memory model implies) but which are likely not exhaustive. These rules are intended to apply to program transformations that precede the introductions of the events that make up the is-agent-order-before Relation.</p>
+      <p>It is desirable to allow most program transformations that are valid in a single-agent setting in a multi-agent setting, to ensure that the performance of each agent in a multi-agent program is as good as it would be in a single-agent setting. Frequently these transformations are hard to judge. We outline some rules about program transformations that are intended to be taken as normative (in that they are implied by the memory model or stronger than what the memory model implies) but which are likely not exhaustive. These rules are intended to apply to program transformations that precede the introductions of the Memory events that make up the is-agent-order-before Relation.</p>
       <p>Let an <dfn variants="agent-order slices">agent-order slice</dfn> be the subset of the is-agent-order-before Relation pertaining to a single agent.</p>
       <p>Let <dfn>possible read values</dfn> of a read event be the set of all values of ValueOfReadEvent for that event across all valid executions.</p>
       <p>Any transformation of an agent-order slice that is valid in the absence of shared memory is valid in the presence of shared memory, with the following exceptions.</p>
       <ul>
         <li>
-          <p><em>Atomics are carved in stone</em>: Program transformations must not cause the ~seq-cst~ events in an agent-order slice to be reordered with its ~unordered~ operations, nor its ~seq-cst~ operations to be reordered with each other, nor may a program transformation remove a ~seq-cst~ operation from the is-agent-order-before Relation.</p>
+          <p><em>Atomics are carved in stone</em>: Program transformations must not cause any Shared Data Block events whose [[Order]] is ~seq-cst~ to be removed from the is-agent-order-before Relation, nor to be reordered with respect to each other, nor to be reordered inside an agent-order slice with respect to events whose [[Order]] is ~unordered~.</p>
           <p>(In practice, the prohibition on reorderings forces a compiler to assume that every ~seq-cst~ operation is a synchronization and included in the final is-memory-order-before Relation, which it would usually have to assume anyway in the absence of inter-agent program analysis. It also forces the compiler to assume that every call where the callee's effects on the memory-order are unknown may contain ~seq-cst~ operations.)</p>
         </li>
         <li>
@@ -49840,7 +49854,7 @@ THH:mm:ss.sss
         <li>Lock-free atomic read-modify-write accesses compile to a full fence, an atomic read-modify-write instruction sequence, and a full fence.</li>
         <li>Non-lock-free atomics compile to a spinlock acquire, a full fence, a series of non-atomic load and store instructions, a full fence, and a spinlock release.</li>
       </ul>
-      <p>That mapping is correct so long as an atomic operation on an address range does not race with a non-atomic write or with an atomic operation of different size. However, that is all we need: the memory model effectively demotes the atomic operations involved in a race to non-atomic status. On the other hand, the naive mapping is quite strong: it allows atomic operations to be used as sequentially consistent fences, which the memory model does not actually guarantee.</p>
+      <p>That mapping is correct so long as an atomic operation on a memory range does not race with a non-atomic write or with an atomic operation of different size. However, that is all we need: the memory model effectively demotes the atomic operations involved in a race to non-atomic status. On the other hand, the naive mapping is quite strong: it allows atomic operations to be used as sequentially consistent fences, which the memory model does not actually guarantee.</p>
       <p>Local improvements to those basic patterns are also allowed, subject to the constraints of the memory model. For example:</p>
       <ul>
         <li>There are obvious platform-dependent improvements that remove redundant fences. For example, on x86 the fences around lock-free atomic loads and stores can always be omitted except for the fence following a store, and no fence is needed for lock-free read-modify-write instructions, as these all use <code>LOCK</code>-prefixed instructions. On many platforms there are fences of several strengths, and weaker fences can be used in certain contexts without destroying sequential consistency.</li>
