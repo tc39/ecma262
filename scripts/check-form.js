@@ -100,6 +100,7 @@ const legacyCommitsWithUnknownAuthors = new Set([
 	'bea8d0d682fcf2be2a29564bd2ae66ab9dcce21c', // https://github.com/tc39/ecma262/pull/612, user deleted their github
 	'329069469609d8f05ad64c328e2295c171050ce4', // https://github.com/tc39/ecma262/pull/3249, commit email doesn't point to the github user
 	'57f427b18bf7e629565ac2fcf2392ba7b7d0d8fb', // https://github.com/tc39/ecma262/pull/3127, user account deactivated
+	'aada40840dc152d4759b0e3353542e971db08ee7', // tutizaraz (signed) renamed their account to riwom -> dbarabashh
 ]);
 
 function getAuthorFromCommit(commitObj) {
@@ -204,7 +205,6 @@ const exceptions = new Set([
 	'GeorgNeis',
 	'natashenka', // Google employee
 	'IgorMinar', // former Google employee
-	'riwom', // tutizaraz (signed) renamed their account to riwom
 ].map(x => x.toLowerCase()));
 
 // TODO: remove these as they sign the form
