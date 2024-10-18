@@ -118,7 +118,7 @@ async function getAllCommits(page = 1) {
 	const commitsURL = `https://api.github.com/repos/${slug}/commits?anon=1&per_page=${perPage}&page=${page}&sha=${sha}`;
 	const commits = await request(commitsURL).then((json) => JSON.parse(json));
 	return [...new Set([].concat(
-		commits.flatMap(x => getAuthorFromCommit(x) || []),
+		commits.filter(x => !legacyCommitsWithUnknownAuthors.has(x?.sha)).flatMap(x => getAuthorFromCommit(x) || []),
 		commits.length < perPage ? [] : await getAllCommits(page + 1),
 	))];
 }
