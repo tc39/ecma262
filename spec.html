@@ -13407,8 +13407,8 @@
         1. Let _result_ be Completion(OrdinaryCallEvaluateBody(_F_, _argumentsList_)).
         1. [id="step-call-pop-context-stack"] Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
         1. If _result_ is a return completion, return _result_.[[Value]].
-        1. ReturnIfAbrupt(_result_).
-        1. Return *undefined*.
+        1. Assert: _result_ is a throw completion.
+        1. Return ? _result_.
       </emu-alg>
       <emu-note>
         <p>When _calleeContext_ is removed from the execution context stack in step <emu-xref href="#step-call-pop-context-stack"></emu-xref> it must not be destroyed if it is suspended and retained for later resumption by an accessible Generator.</p>
@@ -13478,7 +13478,7 @@
           Runtime Semantics: EvaluateBody (
             _functionObject_: an ECMAScript function object,
             _argumentsList_: a List of ECMAScript language values,
-          ): either a normal completion containing an ECMAScript language value or an abrupt completion
+          ): a return completion or a throw completion
         </h1>
         <dl class="header">
         </dl>
@@ -13543,7 +13543,7 @@
           OrdinaryCallEvaluateBody (
             _F_: an ECMAScript function object,
             _argumentsList_: a List of ECMAScript language values,
-          ): either a normal completion containing an ECMAScript language value or an abrupt completion
+          ): a return completion or a throw completion
         </h1>
         <dl class="header">
         </dl>
@@ -13580,12 +13580,12 @@
         1. Let _constructorEnv_ be the LexicalEnvironment of _calleeContext_.
         1. Let _result_ be Completion(OrdinaryCallEvaluateBody(_F_, _argumentsList_)).
         1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
-        1. If _result_ is a return completion, then
-          1. If _result_.[[Value]] is an Object, return _result_.[[Value]].
-          1. If _kind_ is ~base~, return _thisArgument_.
-          1. If _result_.[[Value]] is not *undefined*, throw a *TypeError* exception.
-        1. Else,
-          1. ReturnIfAbrupt(_result_).
+        1. If _result_ is a throw completion, then
+          1. Return ? _result_.
+        1. Assert: _result_ is a return completion.
+        1. If _result_.[[Value]] is an Object, return _result_.[[Value]].
+        1. If _kind_ is ~base~, return _thisArgument_.
+        1. If _result_.[[Value]] is not *undefined*, throw a *TypeError* exception.
         1. Let _thisBinding_ be ? _constructorEnv_.GetThisBinding().
         1. Assert: _thisBinding_ is an Object.
         1. Return _thisBinding_.
@@ -14708,7 +14708,20 @@
       <h1>TypedArray Exotic Objects</h1>
       <p>A TypedArray is an exotic object that performs special handling of integer index property keys.</p>
       <p>TypedArrays have the same internal slots as ordinary objects and additionally [[ViewedArrayBuffer]], [[ArrayLength]], [[ByteOffset]], [[ContentType]], and [[TypedArrayName]] internal slots.</p>
-      <p>An object is a <dfn id="typedarray" oldids="integer-indexed-exotic-object" variants="TypedArrays">TypedArray</dfn> if its [[GetOwnProperty]], [[HasProperty]], [[DefineOwnProperty]], [[Get]], [[Set]], [[Delete]], and [[OwnPropertyKeys]] internal methods use the definitions in this section, and its other essential internal methods use the definitions found in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>. These methods are installed by TypedArrayCreate.</p>
+      <p>An object is a <dfn id="typedarray" oldids="integer-indexed-exotic-object" variants="TypedArrays">TypedArray</dfn> if its [[PreventExtensions]], [[GetOwnProperty]], [[HasProperty]], [[DefineOwnProperty]], [[Get]], [[Set]], [[Delete]], and [[OwnPropertyKeys]], internal methods use the definitions in this section, and its other essential internal methods use the definitions found in <emu-xref href="#sec-ordinary-object-internal-methods-and-internal-slots"></emu-xref>. These methods are installed by TypedArrayCreate.</p>
+
+      <emu-clause id="sec-typedarray-preventextensions" type="internal method">
+        <h1>[[PreventExtensions]] ( ): a normal completion containing a Boolean</h1>
+        <dl class="header">
+          <dt>for</dt>
+          <dd>a TypedArray _O_</dd>
+        </dl>
+        <emu-alg>
+          1. NOTE: The extensibility-related invariants specified in <emu-xref href="#sec-invariants-of-the-essential-internal-methods"></emu-xref> do not allow this method to return *true* when _O_ can gain (or lose and then regain) properties, which might occur for properties with integer index names when its underlying buffer is resized.
+          1. If IsTypedArrayFixedLength(_O_) is *false*, return *false*.
+          1. Return OrdinaryPreventExtensions(_O_).
+        </emu-alg>
+      </emu-clause>
 
       <emu-clause id="sec-typedarray-getownproperty" oldids="sec-integer-indexed-exotic-objects-getownproperty-p" type="internal method">
         <h1>
@@ -14936,6 +14949,7 @@
         <emu-alg>
           1. Let _internalSlotsList_ be « [[Prototype]], [[Extensible]], [[ViewedArrayBuffer]], [[TypedArrayName]], [[ContentType]], [[ByteLength]], [[ByteOffset]], [[ArrayLength]] ».
           1. Let _A_ be MakeBasicObject(_internalSlotsList_).
+          1. Set _A_.[[PreventExtensions]] as specified in <emu-xref href="#sec-typedarray-preventextensions"></emu-xref>.
           1. Set _A_.[[GetOwnProperty]] as specified in <emu-xref href="#sec-typedarray-getownproperty"></emu-xref>.
           1. Set _A_.[[HasProperty]] as specified in <emu-xref href="#sec-typedarray-hasproperty"></emu-xref>.
           1. Set _A_.[[DefineOwnProperty]] as specified in <emu-xref href="#sec-typedarray-defineownproperty"></emu-xref>.
@@ -15012,6 +15026,22 @@
           1. If _byteOffsetStart_ > _bufferByteLength_ or _byteOffsetEnd_ > _bufferByteLength_, return *true*.
           1. NOTE: 0-length TypedArrays are not considered out-of-bounds.
           1. Return *false*.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-istypedarrayfixedlength" type="abstract operation">
+        <h1>
+          IsTypedArrayFixedLength (
+            _O_: a TypedArray,
+          ): a Boolean
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If _O_.[[ArrayLength]] is ~auto~, return *false*.
+          1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
+          1. If IsFixedLengthArrayBuffer(_buffer_) is *false* and IsSharedArrayBuffer(_buffer_) is *false*, return *false*.
+          1. Return *true*.
         </emu-alg>
       </emu-clause>
 
@@ -20374,6 +20404,7 @@
         1. Let _rVal_ be ? GetValue(_rRef_).
         1. If _rVal_ is not an Object, throw a *TypeError* exception.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Assert: _privateEnv_ is not *null*.
         1. Let _privateName_ be ResolvePrivateIdentifier(_privateEnv_, _privateIdentifier_).
         1. If PrivateElementFind(_rVal_, _privateName_) is not ~empty~, return *true*.
         1. Return *false*.
@@ -22968,7 +22999,7 @@
       <h1>
         Runtime Semantics: LabelledEvaluation (
           _labelSet_: a List of Strings,
-        ): either a normal completion containing an ECMAScript language value or an abrupt completion
+        ): either a normal completion containing either an ECMAScript language value or ~empty~, or an abrupt completion
       </h1>
       <dl class="header">
       </dl>
@@ -23096,7 +23127,7 @@
       <h1>
         Runtime Semantics: CatchClauseEvaluation (
           _thrownValue_: an ECMAScript language value,
-        ): either a normal completion containing an ECMAScript language value or an abrupt completion
+        ): either a normal completion containing either an ECMAScript language value or ~empty~, or an abrupt completion
       </h1>
       <dl class="header">
       </dl>
@@ -23571,14 +23602,16 @@
         Runtime Semantics: EvaluateFunctionBody (
           _functionObject_: an ECMAScript function object,
           _argumentsList_: a List of ECMAScript language values,
-        ): either a normal completion containing an ECMAScript language value or an abrupt completion
+        ): a return completion or a throw completion
       </h1>
       <dl class="header">
       </dl>
       <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
       <emu-alg>
         1. Perform ? FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
-        1. Return ? Evaluation of |FunctionStatementList|.
+        1. Perform ? Evaluation of |FunctionStatementList|.
+        1. NOTE: If the previous step resulted in a normal completion, then evaluation finished by proceeding past the end of the |FunctionStatementList|.
+        1. Return ReturnCompletion(*undefined*).
       </emu-alg>
     </emu-clause>
 
@@ -23754,7 +23787,7 @@
         Runtime Semantics: EvaluateConciseBody (
           _functionObject_: an ECMAScript function object,
           _argumentsList_: a List of ECMAScript language values,
-        ): either a normal completion containing an ECMAScript language value or an abrupt completion
+        ): a return completion or a throw completion
       </h1>
       <dl class="header">
       </dl>
@@ -24960,7 +24993,7 @@
       <h1>
         Runtime Semantics: EvaluateClassStaticBlockBody (
           _functionObject_: an ECMAScript function object,
-        ): either a normal completion containing an ECMAScript language value or an abrupt completion
+        ): a return completion or a throw completion
       </h1>
       <dl class="header">
       </dl>
@@ -24968,7 +25001,8 @@
       <emu-alg>
         1. Assert: _functionObject_ is a synthetic function created by ClassStaticBlockDefinitionEvaluation step <emu-xref href="#step-synthetic-class-static-block-fn"></emu-xref>.
         1. Perform ! FunctionDeclarationInstantiation(_functionObject_, « »).
-        1. Return ? Evaluation of |ClassStaticBlockStatementList|.
+        1. Perform ? Evaluation of |ClassStaticBlockStatementList|.
+        1. Return ReturnCompletion(*undefined*).
       </emu-alg>
     </emu-clause>
 
