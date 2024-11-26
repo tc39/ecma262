@@ -19,16 +19,22 @@ if (!key) {
 
 const sheetData = `https://sheets.googleapis.com/v4/spreadsheets/${sheetID}/values/Sheet1!A2:A?key=${key}`;
 
-const [,, slug, branch, all] = process.argv;
-
-if (!slug || !branch) {
-	throw 'args required: slug, branch';
+const { values, positionals } = require('util').parseArgs({
+  allowPositionals: true,
+  strict: true,
+});
+if (positionals.length < 1 || positionals.length > 2) {
+	throw 'usage: node check-form.js <slug> [ref]';
 }
-if (typeof all !== 'undefined' && all !== '--all') {
-	throw '`all` arg, if provided, must be `--all`'
+const [slug, ref = 'HEAD'] = positionals;
+
+console.debug({ slug, ref });
+
+if (!slug || !ref) {
+	throw 'args required: slug, ref';
 }
 
-const sha = String(execSync(`git rev-parse ${branch}`)).trim();
+const sha = String(execSync(`git rev-parse ${ref}`)).trim();
 
 const request = async (url, method = 'GET', postData) => {
 	// adapted from https://medium.com/@gevorggalstyan/how-to-promisify-node-js-http-https-requests-76a5a58ed90c
