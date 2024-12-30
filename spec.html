@@ -19781,11 +19781,11 @@
             1. Return ~unused~.
           1. Let _module_ be _moduleCompletion_.[[Value]].
           1. If _phase_ is ~source~, then
-            1. Let _moduleSourceCompletion_ be Completion(_module_.GetModuleSource()).
-            1. If _moduleSourceCompletion_ is an abrupt completion, then
-              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _moduleSourceCompletion_.[[Value]] »).
+            1. Let _moduleSource_ be _module_.[[ModuleSource]].
+            1. If _moduleSource_ is ~empty~, then
+              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a new *SyntaxError* »).
             1. Else,
-              1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « _moduleSourceCompletion_.[[Value]] »).
+              1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « _moduleSource_ »).
             1. Return ~unused~.
           1. Let _loadPromise_ be _module_.LoadRequestedModules().
           1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_reason_) that captures _promiseCapability_ and performs the following steps when called:
@@ -26676,6 +26676,17 @@
             </tr>
             <tr>
               <td>
+                [[ModuleSource]]
+              </td>
+              <td>
+                an Object or ~empty~
+              </td>
+              <td>
+                The Module Source Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or ~empty~ if it is not available for this module kind. When set, it must have a [[Prototype]] internal slot containing an object whose initial [[Prototype]] is %AbstractModuleSource%.
+              </td>
+            </tr>
+            <tr>
+              <td>
                 [[HostDefined]]
               </td>
               <td>
@@ -26742,17 +26753,6 @@
               <td>
                 <p>Returns a promise for the evaluation of this module and its dependencies, resolving on successful evaluation or if it has already been evaluated successfully, and rejecting for an evaluation error or if it has already been evaluated unsuccessfully. If the promise is rejected, hosts are expected to handle the promise rejection and rethrow the evaluation error.</p>
                 <p>Link must have completed successfully prior to invoking this method.</p>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                GetModuleSource()
-              </td>
-              <td>
-                <p>It returns either a normal completion containing the Module Source Object corresponding to this source Module Record's source phase (<emu-xref href="#sec-module-source-objects"></emu-xref>), or a throw completion.</p>
-                <p>When called multiple times on the same Module Record, if GetModuleSource() returns a normal completion it must always return a normal completion containing the same object.</p>
-                <p>The returned object should have a [[Prototype]] internal slot whose value is %AbstractModuleSource.prototype%.</p>
-                <p>For Module Records that do not have a source representation, GetModuleSource() must always return a throw completion whose [[Value]] is a *SyntaxError*.</p>
               </td>
             </tr>
           </table>
@@ -28601,22 +28601,6 @@
 
           <p>The following are the concrete methods for Source Text Module Record that implement the corresponding Cyclic Module Record abstract methods defined in <emu-xref href="#table-cyclic-module-methods"></emu-xref>.</p>
 
-          <emu-clause id="sec-source-text-module-record-getmodulesource" type="concrete method">
-            <h1>GetModuleSource ( ): either a normal completion containing an Object or a throw completion</h1>
-            <dl class="header">
-              <dt>for</dt>
-              <dd>a Source Text Module Record _module_</dd>
-
-              <dt>description</dt>
-              <dd>
-                <p>Source Text Module Record provides a GetModuleSource implementation that always returns an abrupt completion indicating that a source phase import is not available.</p>
-              </dd>
-            </dl>
-            <emu-alg>
-              1. Throw a *SyntaxError* exception.
-            </emu-alg>
-          </emu-clause>
-
           <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
             <h1>InitializeEnvironment ( ): either a normal completion containing ~unused~ or a throw completion</h1>
             <dl class="header">
@@ -28642,7 +28626,8 @@
                   1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                   1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
                 1. Else if _in_.[[ImportName]] is ~source~, then
-                  1. Let _moduleSourceObject_ be ? _importedModule_.GetModuleSource().
+                  1. Let _moduleSourceObject_ be _importedModule_.[[ModuleSource]].
+                  1. If _moduleSourceObject_ is ~empty~, throw a *SyntaxError* exception.
                   1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                   1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _moduleSourceObject_).
                 1. Else,
