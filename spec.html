@@ -35788,7 +35788,15 @@ THH:mm:ss.sss
           `\` AtomEscape[?UnicodeMode, ?NamedCaptureGroups]
           CharacterClass[?UnicodeMode, ?UnicodeSetsMode]
           `(` GroupSpecifier[?UnicodeMode]? Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?NamedCaptureGroups] `)`
-          `(?:` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?NamedCaptureGroups] `)`
+          `(?` RegularExpressionModifiers `:` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?NamedCaptureGroups] `)`
+          `(?` RegularExpressionModifiers `-` RegularExpressionModifiers `:` Disjunction[?UnicodeMode, ?UnicodeSetsMode, ?NamedCaptureGroups] `)`
+
+        RegularExpressionModifiers ::
+          [empty]
+          RegularExpressionModifiers RegularExpressionModifier
+
+        RegularExpressionModifier :: one of
+          `i` `m` `s`
 
         SyntaxCharacter :: one of
           `^` `$` `\` `.` `*` `+` `?` `(` `)` `[` `]` `{` `}` `|`
@@ -36031,6 +36039,27 @@ THH:mm:ss.sss
         <ul>
           <li>
             It is a Syntax Error if the MV of the first |DecimalDigits| is strictly greater than the MV of the second |DecimalDigits|.
+          </li>
+        </ul>
+        <emu-grammar>Atom :: `(?` RegularExpressionModifiers `:` Disjunction `)`</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the source text matched by |RegularExpressionModifiers| contains the same code point more than once.
+          </li>
+        </ul>
+        <emu-grammar>Atom :: `(?` RegularExpressionModifiers `-` RegularExpressionModifiers `:` Disjunction `)`</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if the source text matched by the first |RegularExpressionModifiers| and the source text matched by the second |RegularExpressionModifiers| are both empty.
+          </li>
+          <li>
+            It is a Syntax Error if the source text matched by the first |RegularExpressionModifiers| contains the same code point more than once.
+          </li>
+          <li>
+            It is a Syntax Error if the source text matched by the second |RegularExpressionModifiers| contains the same code point more than once.
+          </li>
+          <li>
+            It is a Syntax Error if any code point in the source text matched by the first |RegularExpressionModifiers| is also contained in the source text matched by the second |RegularExpressionModifiers|.
           </li>
         </ul>
         <emu-grammar>AtomEscape :: `k` GroupName</emu-grammar>
@@ -37230,9 +37259,19 @@ THH:mm:ss.sss
         <emu-note>
           <p>Parentheses of the form `(` |Disjunction| `)` serve both to group the components of the |Disjunction| pattern together and to save the result of the match. The result can be used either in a backreference (`\\` followed by a non-zero decimal number), referenced in a replace String, or returned as part of an array from the regular expression matching Abstract Closure. To inhibit the capturing behaviour of parentheses, use the form `(?:` |Disjunction| `)` instead.</p>
         </emu-note>
-        <emu-grammar>Atom :: `(?:` Disjunction `)`</emu-grammar>
+        <emu-grammar>Atom :: `(?` RegularExpressionModifiers `:` Disjunction `)`</emu-grammar>
         <emu-alg>
-          1. Return CompileSubpattern of |Disjunction| with arguments _rer_ and _direction_.
+          1. Let _addModifiers_ be the source text matched by |RegularExpressionModifiers|.
+          1. Let _removeModifiers_ be the empty String.
+          1. Let _modifiedRer_ be UpdateModifiers(_rer_, CodePointsToString(_addModifiers_), _removeModifiers_).
+          1. Return CompileSubpattern of |Disjunction| with arguments _modifiedRer_ and _direction_.
+        </emu-alg>
+        <emu-grammar>Atom :: `(?` RegularExpressionModifiers `-` RegularExpressionModifiers `:` Disjunction `)`</emu-grammar>
+        <emu-alg>
+          1. Let _addModifiers_ be the source text matched by the first |RegularExpressionModifiers|.
+          1. Let _removeModifiers_ be the source text matched by the second |RegularExpressionModifiers|.
+          1. Let _modifiedRer_ be UpdateModifiers(_rer_, CodePointsToString(_addModifiers_), CodePointsToString(_removeModifiers_)).
+          1. Return CompileSubpattern of |Disjunction| with arguments _modifiedRer_ and _direction_.
         </emu-alg>
 
         <!-- AtomEscape -->
@@ -37383,6 +37422,34 @@ THH:mm:ss.sss
             <p>In case-insignificant matches when HasEitherUnicodeFlag(_rer_) is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode Standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `ß` (U+00DF LATIN SMALL LETTER SHARP S) to `ss` or `SS`. It may however map code points outside the Basic Latin block to code points within it—for example, `ſ` (U+017F LATIN SMALL LETTER LONG S) case-folds to `s` (U+0073 LATIN SMALL LETTER S) and `K` (U+212A KELVIN SIGN) case-folds to `k` (U+006B LATIN SMALL LETTER K). Strings containing those code points are matched by regular expressions such as `/[a-z]/ui`.</p>
             <p>In case-insignificant matches when HasEitherUnicodeFlag(_rer_) is *false*, the mapping is based on Unicode Default Case Conversion algorithm toUppercase rather than toCasefold, which results in some subtle differences. For example, `Ω` (U+2126 OHM SIGN) is mapped by toUppercase to itself but by toCasefold to `ω` (U+03C9 GREEK SMALL LETTER OMEGA) along with `Ω` (U+03A9 GREEK CAPITAL LETTER OMEGA), so *"\u2126"* is matched by `/[ω]/ui` and `/[\u03A9]/ui` but not by `/[ω]/i` or `/[\u03A9]/i`. Also, no code point outside the Basic Latin block is mapped to a code point within it, so strings such as *"\u017F ſ"* and *"\u212A K"* are not matched by `/[a-z]/i`.</p>
           </emu-note>
+        </emu-clause>
+
+        <emu-clause id="sec-updatemodifiers" type="abstract operation">
+          <h1>
+            UpdateModifiers (
+              _rer_: a RegExp Record,
+              _add_: a String,
+              _remove_: a String,
+            ): a RegExp Record
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Assert: _add_ and _remove_ have no elements in common.
+            1. Let _ignoreCase_ be _rer_.[[IgnoreCase]].
+            1. Let _multiline_ be _rer_.[[Multiline]].
+            1. Let _dotAll_ be _rer_.[[DotAll]].
+            1. Let _unicode_ be _rer_.[[Unicode]].
+            1. Let _unicodeSets_ be _rer_.[[UnicodeSets]].
+            1. Let _capturingGroupsCount_ be _rer_.[[CapturingGroupsCount]].
+            1. If _remove_ contains *"i"*, set _ignoreCase_ to *false*.
+            1. Else if _add_ contains *"i"*, set _ignoreCase_ to *true*.
+            1. If _remove_ contains *"m"*, set _multiline_ to *false*.
+            1. Else if _add_ contains *"m"*, set _multiline_ to *true*.
+            1. If _remove_ contains *"s"*, set _dotAll_ to *false*.
+            1. Else if _add_ contains *"s"*, set _dotAll_ to *true*.
+            1. Return the RegExp Record { [[IgnoreCase]]: _ignoreCase_, [[Multiline]]: _multiline_, [[DotAll]]: _dotAll_, [[Unicode]]: _unicode_, [[UnicodeSets]]: _unicodeSets_, [[CapturingGroupsCount]]: _capturingGroupsCount_ }.
+          </emu-alg>
         </emu-clause>
       </emu-clause>
 
@@ -50858,6 +50925,8 @@ THH:mm:ss.sss
     <emu-prodref name="Quantifier"></emu-prodref>
     <emu-prodref name="QuantifierPrefix"></emu-prodref>
     <emu-prodref name="Atom"></emu-prodref>
+    <emu-prodref name="RegularExpressionModifiers"></emu-prodref>
+    <emu-prodref name="RegularExpressionModifier"></emu-prodref>
     <emu-prodref name="SyntaxCharacter"></emu-prodref>
     <emu-prodref name="PatternCharacter"></emu-prodref>
     <emu-prodref name="AtomEscape"></emu-prodref>
@@ -51021,7 +51090,8 @@ THH:mm:ss.sss
           `\` [lookahead == `c`]
           CharacterClass[~UnicodeMode, ~UnicodeSetsMode]
           `(` GroupSpecifier[~UnicodeMode]? Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?NamedCaptureGroups] `)`
-          `(?:` Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?NamedCaptureGroups] `)`
+          `(?` RegularExpressionModifiers `:` Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?NamedCaptureGroups] `)`
+          `(?` RegularExpressionModifiers `-` RegularExpressionModifiers `:` Disjunction[~UnicodeMode, ~UnicodeSetsMode, ?NamedCaptureGroups] `)`
           InvalidBracedQuantifier
           ExtendedPatternCharacter
 
