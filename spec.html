@@ -26755,6 +26755,15 @@
                 <p>Link must have completed successfully prior to invoking this method.</p>
               </td>
             </tr>
+            <tr>
+              <td>
+                GetModuleSourceKind()
+              </td>
+              <td>
+                <p>Returns a constant string for each concrete module record that exposes a source representation through their [[ModuleSource]] field, to be used as the return value of the %Symbol.toStringTag% getter on %AbstractModuleSource%.</p>
+                <p>For Module Records that do not have a source representation (currently all ECMA-262-defined Module Records), GetModuleSourceKind() is never called.</p>
+              </td>
+            </tr>
           </table>
         </emu-table>
 
@@ -29001,26 +29010,27 @@
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-HostGetModuleSourceName" type="host-defined abstract operation">
+      <emu-clause id="sec-HostGetModuleSourceModuleRecord" type="host-defined abstract operation">
         <h1>
-          HostGetModuleSourceName (
-            _moduleSource_: an Object,
-          ): either a normal completion containing a String or a throw completion
+          HostGetModuleSourceModuleRecord (
+            _specifier_: an Object,
+          ): either a Module Record or ~not-a-source~
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd></dd>
+          <dd>Allows hosts to provide the concrete Module Record for a non-ECMA-262 module source object.</dd>
         </dl>
 
-        <p>An implementation of HostGetModuleSourceName must conform to the following requirements:</p>
+        <p>An implementation of HostGetModuleSourceModuleRecord must conform to the following requirements:</p>
         <ul>
           <li>
-            For any object that is a Module Source Object, returns a normal completion for a String corresponding to the source record type to be used as the strongly branded return value of the @@toStringTag getter on %AbstractModuleSource%.
+            Defines any host-specific module sources, by returning their concrete Module Record.
           </li>
           <li>
-            For any object which is not a Module Source Object, returns a throw completion.
+            For all other objects, returns ~not-a-source~.
           </li>
         </ul>
+        <p>The default implementation of HostGetModuleSourceModuleRecord is to return ~not-a-source~.</p>
       </emu-clause>
 
       <emu-clause id="sec-AllImportAttributesSupported" type="abstract operation">
@@ -51364,7 +51374,7 @@ THH:mm:ss.sss
   <emu-clause id="sec-module-source-objects">
     <h1>Module Source Objects</h1>
     <p>Module Source Objects represent modules in their source import phase, which are not linked, instantiated or executed.</p>
-    <p>A <dfn>Module Source Object</dfn> is an object for which HostGetModuleSourceName returns a normal completion.</p>
+    <p>A <dfn>Module Source Object</dfn> is an object for which HostGetModuleSourceModuleRecord returns a Module Record.</p>
     <p>All Module Source Objects must be initialized with a prototype of %AbstractModuleSource%.prototype.</p>
     <p>Hosts may define their own %AbstractModuleSource% subclasses for custom module types.</p>
 
@@ -51425,9 +51435,9 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
-          1. Let _sourceNameResult_ be Completion(HostGetModuleSourceName(_O_)).
-          1. If _sourceNameResult_ is an abrupt completion, return *undefined*.
-          1. Let _name_ be ! _sourceNameResult_.
+          1. Let _module_ be HostGetModuleSourceModuleRecord(_O_).
+          1. If _module_ is ~not-a-source~, return *undefined*.
+          1. Let _name_ be _module_.GetModuleSourceKind().
           1. Assert: _name_ is a String.
           1. Return _name_.
         </emu-alg>
@@ -53525,7 +53535,7 @@ THH:mm:ss.sss
     <p><b>HostEnsureCanCompileStrings(...)</b></p>
     <p><b>HostFinalizeImportMeta(...)</b></p>
     <p><b>HostGetImportMetaProperties(...)</b></p>
-    <p><b>HostGetModuleSourceName(...)</b></p>
+    <p><b>HostGetModuleSourceModuleRecord(...)</b></p>
     <p><b>HostGrowSharedArrayBuffer(...)</b></p>
     <p><b>HostHasSourceTextAvailable(...)</b></p>
     <p><b>HostLoadImportedModule(...)</b></p>
