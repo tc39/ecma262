@@ -10186,7 +10186,7 @@
               HasSuperBinding()
             </td>
             <td>
-              Determine if an Environment Record establishes a `super` method binding. Return *true* if it does and *false* if it does not.
+              Determine if an Environment Record establishes a `super` method binding. Return *true* if it does and *false* if it does not. If it returns *true* it implies that the Environment Record is a Function Environment Record, although the reverse implication does not hold.
             </td>
           </tr>
           <tr>
@@ -10203,7 +10203,6 @@
       <emu-clause id="sec-declarative-environment-records">
         <h1>Declarative Environment Records</h1>
         <p>Each <dfn variants="Declarative Environment Records">Declarative Environment Record</dfn> is associated with an ECMAScript program scope containing variable, constant, let, class, module, import, and/or function declarations. A Declarative Environment Record binds the set of identifiers defined by the declarations contained within its scope.</p>
-        <p>The behaviour of the concrete specification methods for Declarative Environment Records is defined by the following algorithms.</p>
 
         <emu-clause id="sec-declarative-environment-records-hasbinding-n" type="concrete method">
           <h1>
@@ -10451,7 +10450,6 @@
             </tr>
           </table>
         </emu-table>
-        <p>The behaviour of the concrete specification methods for Object Environment Records is defined by the following algorithms.</p>
 
         <emu-clause id="sec-object-environment-records-hasbinding-n" type="concrete method">
           <h1>
@@ -10718,48 +10716,32 @@
             </thead>
             <tr>
               <td>
-                BindThisValue(V)
-              </td>
-              <td>
-                Set the [[ThisValue]] and record that it has been initialized.
-              </td>
-            </tr>
-            <tr>
-              <td>
                 GetThisBinding()
               </td>
               <td>
                 Return the value of this Environment Record's `this` binding. Throws a *ReferenceError* if the `this` binding has not been initialized.
               </td>
             </tr>
-            <tr>
-              <td>
-                GetSuperBase()
-              </td>
-              <td>
-                Return the object that is the base for `super` property accesses bound in this Environment Record. The value *undefined* indicates that such accesses will produce runtime errors.
-              </td>
-            </tr>
           </table>
         </emu-table>
-        <p>The behaviour of the additional concrete specification methods for Function Environment Records is defined by the following algorithms:</p>
 
-        <emu-clause id="sec-bindthisvalue" type="concrete method">
+        <emu-clause id="sec-bindthisvalue" type="abstract operation">
           <h1>
             BindThisValue (
+              _envRec_: a Function Environment Record,
               _V_: an ECMAScript language value,
-            ): either a normal completion containing an ECMAScript language value or a throw completion
+            ): either a normal completion containing ~unused~ or a throw completion
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Function Environment Record _envRec_</dd>
+            <dt>description</dt>
+            <dd>It sets the _envRec_.[[ThisValue]] and records that it has been initialized.</dd>
           </dl>
           <emu-alg>
             1. Assert: _envRec_.[[ThisBindingStatus]] is not ~lexical~.
             1. If _envRec_.[[ThisBindingStatus]] is ~initialized~, throw a *ReferenceError* exception.
             1. Set _envRec_.[[ThisValue]] to _V_.
             1. Set _envRec_.[[ThisBindingStatus]] to ~initialized~.
-            1. Return _V_.
+            1. Return ~unused~.
           </emu-alg>
         </emu-clause>
 
@@ -10799,11 +10781,15 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-getsuperbase" type="concrete method">
-          <h1>GetSuperBase ( ): an Object, *null*, or *undefined*</h1>
+        <emu-clause id="sec-getsuperbase" type="abstract operation">
+          <h1>
+            GetSuperBase (
+              _envRec_: a Function Environment Record,
+            ): an Object, *null*, or *undefined*
+          </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Function Environment Record _envRec_</dd>
+            <dt>description</dt>
+            <dd>It returns the object that is the base for `super` property accesses bound in _envRec_. The value *undefined* indicates that such accesses will produce runtime errors.</dd>
           </dl>
           <emu-alg>
             1. Let _home_ be _envRec_.[[FunctionObject]].[[HomeObject]].
@@ -10818,7 +10804,7 @@
         <h1>Global Environment Records</h1>
         <p>A <dfn variants="Global Environment Records">Global Environment Record</dfn> is used to represent the outer most scope that is shared by all of the ECMAScript |Script| elements that are processed in a common realm. A Global Environment Record provides the bindings for built-in globals (clause <emu-xref href="#sec-global-object"></emu-xref>), properties of the global object, and for all top-level declarations (<emu-xref href="#sec-static-semantics-toplevellexicallyscopeddeclarations"></emu-xref>, <emu-xref href="#sec-static-semantics-toplevelvarscopeddeclarations"></emu-xref>) that occur within a |Script|.</p>
         <p>A Global Environment Record is logically a single record but it is specified as a composite encapsulating an Object Environment Record and a Declarative Environment Record. The Object Environment Record has as its base object the global object of the associated Realm Record. This global object is the value returned by the Global Environment Record's GetThisBinding concrete method. The Object Environment Record component of a Global Environment Record contains the bindings for all built-in globals (clause <emu-xref href="#sec-global-object"></emu-xref>) and all bindings introduced by a |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, or |VariableStatement| contained in global code. The bindings for all other ECMAScript declarations in global code are contained in the Declarative Environment Record component of the Global Environment Record.</p>
-        <p>Properties may be created directly on a global object. Hence, the Object Environment Record component of a Global Environment Record may contain both bindings created explicitly by |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, or |VariableDeclaration| declarations and bindings created implicitly as properties of the global object. In order to identify which bindings were explicitly created using declarations, a Global Environment Record maintains a list of the names bound using its CreateGlobalVarBinding and CreateGlobalFunctionBinding concrete methods.</p>
+        <p>Properties may be created directly on a global object. Hence, the Object Environment Record component of a Global Environment Record may contain both bindings created explicitly by |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, |AsyncGeneratorDeclaration|, or |VariableDeclaration| declarations and bindings created implicitly as properties of the global object. In order to identify which bindings were explicitly created using declarations, a Global Environment Record maintains a list of the names bound using the CreateGlobalVarBinding and CreateGlobalFunctionBinding abstract operations.</p>
         <p>Global Environment Records have the additional fields listed in <emu-xref href="#table-additional-fields-of-global-environment-records"></emu-xref> and the additional methods listed in <emu-xref href="#table-additional-methods-of-global-environment-records"></emu-xref>.</p>
         <emu-table id="table-additional-fields-of-global-environment-records" caption="Additional Fields of Global Environment Records" oldids="table-18">
           <table>
@@ -10901,65 +10887,8 @@
                 Return the value of this Environment Record's `this` binding.
               </td>
             </tr>
-            <tr>
-              <td>
-                HasVarDeclaration (N)
-              </td>
-              <td>
-                Determines if the argument identifier has a binding in this Environment Record that was created using a |VariableDeclaration|, |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, or |AsyncGeneratorDeclaration|.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                HasLexicalDeclaration (N)
-              </td>
-              <td>
-                Determines if the argument identifier has a binding in this Environment Record that was created using a lexical declaration such as a |LexicalDeclaration| or a |ClassDeclaration|.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                HasRestrictedGlobalProperty (N)
-              </td>
-              <td>
-                Determines if the argument is the name of a global object property that may not be shadowed by a global lexical binding.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                CanDeclareGlobalVar (N)
-              </td>
-              <td>
-                Determines if a corresponding CreateGlobalVarBinding call would succeed if called for the same argument _N_.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                CanDeclareGlobalFunction (N)
-              </td>
-              <td>
-                Determines if a corresponding CreateGlobalFunctionBinding call would succeed if called for the same argument _N_.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                CreateGlobalVarBinding(N, D)
-              </td>
-              <td>
-                Used to create and initialize to *undefined* a global `var` binding in the [[ObjectRecord]] component of a Global Environment Record. The binding will be a mutable binding. The corresponding global object property will have attribute values appropriate for a `var`. The String value _N_ is the bound name. If _D_ is *true*, the binding may be deleted. Logically equivalent to CreateMutableBinding followed by a SetMutableBinding but it allows var declarations to receive special treatment.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                CreateGlobalFunctionBinding(N, V, D)
-              </td>
-              <td>
-                Create and initialize a global `function` binding in the [[ObjectRecord]] component of a Global Environment Record. The binding will be a mutable binding. The corresponding global object property will have attribute values appropriate for a `function`. The String value _N_ is the bound name. _V_ is the initialization value. If the Boolean argument _D_ is *true*, the binding may be deleted. Logically equivalent to CreateMutableBinding followed by a SetMutableBinding but it allows function declarations to receive special treatment.
-              </td>
-            </tr>
           </table>
         </emu-table>
-        <p>The behaviour of the concrete specification methods for Global Environment Records is defined by the following algorithms.</p>
 
         <emu-clause id="sec-global-environment-records-hasbinding-n" type="concrete method">
           <h1>
@@ -11174,18 +11103,16 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-hasvardeclaration" type="concrete method">
+        <emu-clause id="sec-hasvardeclaration" type="abstract operation">
           <h1>
             HasVarDeclaration (
+              _envRec_: a Global Environment Record,
               _N_: a String,
             ): a Boolean
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Global Environment Record _envRec_</dd>
-
             <dt>description</dt>
-            <dd>It determines if the argument identifier has a binding in this record that was created using a |VariableStatement| or a |FunctionDeclaration|.</dd>
+            <dd>It determines if the argument identifier has a binding in _envRec_ that was created using a |VariableDeclaration|, |FunctionDeclaration|, |GeneratorDeclaration|, |AsyncFunctionDeclaration|, or |AsyncGeneratorDeclaration|.</dd>
           </dl>
           <emu-alg>
             1. Let _varDeclaredNames_ be _envRec_.[[VarNames]].
@@ -11194,18 +11121,16 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-haslexicaldeclaration" type="concrete method">
+        <emu-clause id="sec-haslexicaldeclaration" type="abstract operation">
           <h1>
             HasLexicalDeclaration (
+              _envRec_: a Global Environment Record,
               _N_: a String,
             ): a Boolean
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Global Environment Record _envRec_</dd>
-
             <dt>description</dt>
-            <dd>It determines if the argument identifier has a binding in this record that was created using a lexical declaration such as a |LexicalDeclaration| or a |ClassDeclaration|.</dd>
+            <dd>It determines if the argument identifier has a binding in _envRec_ that was created using a lexical declaration such as a |LexicalDeclaration| or a |ClassDeclaration|.</dd>
           </dl>
           <emu-alg>
             1. Let _DclRec_ be _envRec_.[[DeclarativeRecord]].
@@ -11213,16 +11138,14 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-hasrestrictedglobalproperty" type="concrete method">
+        <emu-clause id="sec-hasrestrictedglobalproperty" type="abstract operation">
           <h1>
             HasRestrictedGlobalProperty (
+              _envRec_: a Global Environment Record,
               _N_: a String,
             ): either a normal completion containing a Boolean or a throw completion
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Global Environment Record _envRec_</dd>
-
             <dt>description</dt>
             <dd>It determines if the argument identifier is the name of a property of the global object that must not be shadowed by a global lexical binding.</dd>
           </dl>
@@ -11239,16 +11162,14 @@
           </emu-note>
         </emu-clause>
 
-        <emu-clause id="sec-candeclareglobalvar" type="concrete method">
+        <emu-clause id="sec-candeclareglobalvar" type="abstract operation">
           <h1>
             CanDeclareGlobalVar (
+              _envRec_: a Global Environment Record,
               _N_: a String,
             ): either a normal completion containing a Boolean or a throw completion
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Global Environment Record _envRec_</dd>
-
             <dt>description</dt>
             <dd>It determines if a corresponding CreateGlobalVarBinding call would succeed if called for the same argument _N_. Redundant var declarations and var declarations for pre-existing global object properties are allowed.</dd>
           </dl>
@@ -11261,16 +11182,14 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-candeclareglobalfunction" type="concrete method">
+        <emu-clause id="sec-candeclareglobalfunction" type="abstract operation">
           <h1>
             CanDeclareGlobalFunction (
+              _envRec_: a Global Environment Record,
               _N_: a String,
             ): either a normal completion containing a Boolean or a throw completion
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Global Environment Record _envRec_</dd>
-
             <dt>description</dt>
             <dd>It determines if a corresponding CreateGlobalFunctionBinding call would succeed if called for the same argument _N_.</dd>
           </dl>
@@ -11285,17 +11204,15 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-createglobalvarbinding" type="concrete method">
+        <emu-clause id="sec-createglobalvarbinding" type="abstract operation">
           <h1>
             CreateGlobalVarBinding (
+              _envRec_: a Global Environment Record,
               _N_: a String,
               _D_: a Boolean,
             ): either a normal completion containing ~unused~ or a throw completion
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Global Environment Record _envRec_</dd>
-
             <dt>description</dt>
             <dd>It creates and initializes a mutable binding in the associated Object Environment Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is reused and assumed to be initialized.</dd>
           </dl>
@@ -11313,18 +11230,16 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-createglobalfunctionbinding" type="concrete method">
+        <emu-clause id="sec-createglobalfunctionbinding" type="abstract operation">
           <h1>
             CreateGlobalFunctionBinding (
+              _envRec_: a Global Environment Record,
               _N_: a String,
               _V_: an ECMAScript language value,
               _D_: a Boolean,
             ): either a normal completion containing ~unused~ or a throw completion
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Global Environment Record _envRec_</dd>
-
             <dt>description</dt>
             <dd>It creates and initializes a mutable binding in the associated Object Environment Record and records the bound name in the associated [[VarNames]] List. If a binding already exists, it is replaced.</dd>
           </dl>
@@ -11366,14 +11281,6 @@
             </thead>
             <tr>
               <td>
-                CreateImportBinding(N, M, N2)
-              </td>
-              <td>
-                Create an immutable indirect binding in a Module Environment Record. The String value _N_ is the text of the bound name. _M_ is a Module Record, and _N2_ is a binding that exists in _M_'s Module Environment Record.
-              </td>
-            </tr>
-            <tr>
-              <td>
                 GetThisBinding()
               </td>
               <td>
@@ -11382,7 +11289,6 @@
             </tr>
           </table>
         </emu-table>
-        <p>The behaviour of the additional concrete specification methods for Module Environment Records are defined by the following algorithms:</p>
 
         <emu-clause id="sec-module-environment-records-getbindingvalue-n-s" type="concrete method">
           <h1>
@@ -11447,20 +11353,18 @@
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-createimportbinding" type="concrete method">
+        <emu-clause id="sec-createimportbinding" type="abstract operation">
           <h1>
             CreateImportBinding (
+              _envRec_: a Module Environment Record,
               _N_: a String,
               _M_: a Module Record,
               _N2_: a String,
             ): ~unused~
           </h1>
           <dl class="header">
-            <dt>for</dt>
-            <dd>a Module Environment Record _envRec_</dd>
-
             <dt>description</dt>
-            <dd>It creates a new initialized immutable indirect binding for the name _N_. A binding must not already exist in this Environment Record for _N_. _N2_ is the name of a binding that exists in _M_'s Module Environment Record. Accesses to the value of the new binding will indirectly access the bound value of the target binding.</dd>
+            <dd>It creates a new initialized immutable indirect binding for the name _N_. A binding must not already exist in _envRec_ for _N_. _N2_ is the name of a binding that exists in _M_'s Module Environment Record. Accesses to the value of the new binding will indirectly access the bound value of the target binding.</dd>
           </dl>
           <emu-alg>
             1. Assert: _envRec_ does not already have a binding for _N_.
@@ -13466,7 +13370,7 @@
               1. NOTE: ToObject produces wrapper objects using _calleeRealm_.
           1. Assert: _localEnv_ is a Function Environment Record.
           1. Assert: The next step never returns an abrupt completion because _localEnv_.[[ThisBindingStatus]] is not ~initialized~.
-          1. Perform ! _localEnv_.BindThisValue(_thisValue_).
+          1. Perform ! BindThisValue(_localEnv_, _thisValue_).
           1. Return ~unused~.
         </emu-alg>
       </emu-clause>
@@ -19499,7 +19403,8 @@
           1. If IsConstructor(_func_) is *false*, throw a *TypeError* exception.
           1. Let _result_ be ? Construct(_func_, _argList_, _newTarget_).
           1. Let _thisER_ be GetThisEnvironment().
-          1. Perform ? _thisER_.BindThisValue(_result_).
+          1. Assert: _thisER_ is a Function Environment Record.
+          1. Perform ? BindThisValue(_thisER_, _result_).
           1. Let _F_ be _thisER_.[[FunctionObject]].
           1. Assert: _F_ is an ECMAScript function object.
           1. Perform ? InitializeInstanceElements(_result_, _F_).
@@ -19534,7 +19439,8 @@
         <emu-alg>
           1. Let _env_ be GetThisEnvironment().
           1. Assert: _env_.HasSuperBinding() is *true*.
-          1. Let _baseValue_ be _env_.GetSuperBase().
+          1. Assert: _env_ is a Function Environment Record.
+          1. Let _baseValue_ be GetSuperBase(_env_).
           1. Return the Reference Record { [[Base]]: _baseValue_, [[ReferencedName]]: _propertyKey_, [[Strict]]: _strict_, [[ThisValue]]: _actualThis_ }.
         </emu-alg>
       </emu-clause>
@@ -26154,12 +26060,12 @@
         1. Let _lexNames_ be the LexicallyDeclaredNames of _script_.
         1. Let _varNames_ be the VarDeclaredNames of _script_.
         1. For each element _name_ of _lexNames_, do
-          1. If _env_.HasVarDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
-          1. If _env_.HasLexicalDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
-          1. Let _hasRestrictedGlobal_ be ? _env_.HasRestrictedGlobalProperty(_name_).
+          1. If HasVarDeclaration(_env_, _name_) is *true*, throw a *SyntaxError* exception.
+          1. If HasLexicalDeclaration(_env_, _name_) is *true*, throw a *SyntaxError* exception.
+          1. Let _hasRestrictedGlobal_ be ? HasRestrictedGlobalProperty(_env_, _name_).
           1. If _hasRestrictedGlobal_ is *true*, throw a *SyntaxError* exception.
         1. For each element _name_ of _varNames_, do
-          1. If _env_.HasLexicalDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
+          1. If HasLexicalDeclaration(_env_, _name_) is *true*, throw a *SyntaxError* exception.
         1. Let _varDeclarations_ be the VarScopedDeclarations of _script_.
         1. Let _functionsToInitialize_ be a new empty List.
         1. Let _declaredFunctionNames_ be a new empty List.
@@ -26169,7 +26075,7 @@
             1. NOTE: If there are multiple function declarations for the same name, the last declaration is used.
             1. Let _fn_ be the sole element of the BoundNames of _d_.
             1. If _declaredFunctionNames_ does not contain _fn_, then
-              1. Let _fnDefinable_ be ? _env_.CanDeclareGlobalFunction(_fn_).
+              1. Let _fnDefinable_ be ? CanDeclareGlobalFunction(_env_, _fn_).
               1. If _fnDefinable_ is *false*, throw a *TypeError* exception.
               1. Append _fn_ to _declaredFunctionNames_.
               1. Insert _d_ as the first element of _functionsToInitialize_.
@@ -26178,7 +26084,7 @@
           1. If _d_ is either a |VariableDeclaration|, a |ForBinding|, or a |BindingIdentifier|, then
             1. For each String _vn_ of the BoundNames of _d_, do
               1. If _declaredFunctionNames_ does not contain _vn_, then
-                1. Let _vnDefinable_ be ? _env_.CanDeclareGlobalVar(_vn_).
+                1. Let _vnDefinable_ be ? CanDeclareGlobalVar(_env_, _vn_).
                 1. If _vnDefinable_ is *false*, throw a *TypeError* exception.
                 1. If _declaredVarNames_ does not contain _vn_, then
                   1. Append _vn_ to _declaredVarNames_.
@@ -26196,9 +26102,9 @@
         1. For each Parse Node _f_ of _functionsToInitialize_, do
           1. Let _fn_ be the sole element of the BoundNames of _f_.
           1. Let _fo_ be InstantiateFunctionObject of _f_ with arguments _env_ and _privateEnv_.
-          1. Perform ? <emu-meta effects="user-code">_env_.CreateGlobalFunctionBinding</emu-meta>(_fn_, _fo_, *false*).
+          1. Perform ? <emu-meta effects="user-code">CreateGlobalFunctionBinding</emu-meta>(_env_, _fn_, _fo_, *false*).
         1. For each String _vn_ of _declaredVarNames_, do
-          1. Perform ? <emu-meta effects="user-code">_env_.CreateGlobalVarBinding</emu-meta>(_vn_, *false*).
+          1. Perform ? <emu-meta effects="user-code">CreateGlobalVarBinding</emu-meta>(_env_, _vn_, *false*).
         1. Return ~unused~.
       </emu-alg>
       <emu-note>
@@ -28308,7 +28214,7 @@
                   1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                   1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
                 1. Else,
-                  1. Perform _env_.CreateImportBinding(_in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+                  1. Perform CreateImportBinding(_env_, _in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
             1. Let _moduleContext_ be a new ECMAScript code execution context.
             1. Set the Function of _moduleContext_ to *null*.
             1. Assert: _module_.[[Realm]] is not *undefined*.
@@ -29309,7 +29215,7 @@
           1. If _strict_ is *false*, then
             1. If _varEnv_ is a Global Environment Record, then
               1. For each element _name_ of _varNames_, do
-                1. If _varEnv_.HasLexicalDeclaration(_name_) is *true*, throw a *SyntaxError* exception.
+                1. If HasLexicalDeclaration(_varEnv_, _name_) is *true*, throw a *SyntaxError* exception.
                 1. NOTE: `eval` will not create a global var declaration that would be shadowed by a global lexical declaration.
             1. Let _thisEnv_ be _lexEnv_.
             1. Assert: The following loop will terminate.
@@ -29338,7 +29244,7 @@
               1. Let _fn_ be the sole element of the BoundNames of _d_.
               1. If _declaredFunctionNames_ does not contain _fn_, then
                 1. If _varEnv_ is a Global Environment Record, then
-                  1. Let _fnDefinable_ be ? _varEnv_.CanDeclareGlobalFunction(_fn_).
+                  1. Let _fnDefinable_ be ? CanDeclareGlobalFunction(_varEnv_, _fn_).
                   1. If _fnDefinable_ is *false*, throw a *TypeError* exception.
                 1. Append _fn_ to _declaredFunctionNames_.
                 1. Insert _d_ as the first element of _functionsToInitialize_.
@@ -29348,7 +29254,7 @@
               1. For each String _vn_ of the BoundNames of _d_, do
                 1. If _declaredFunctionNames_ does not contain _vn_, then
                   1. If _varEnv_ is a Global Environment Record, then
-                    1. Let _vnDefinable_ be ? _varEnv_.CanDeclareGlobalVar(_vn_).
+                    1. Let _vnDefinable_ be ? CanDeclareGlobalVar(_varEnv_, _vn_).
                     1. If _vnDefinable_ is *false*, throw a *TypeError* exception.
                   1. If _declaredVarNames_ does not contain _vn_, then
                     1. Append _vn_ to _declaredVarNames_.
@@ -29366,7 +29272,7 @@
             1. Let _fn_ be the sole element of the BoundNames of _f_.
             1. Let _fo_ be InstantiateFunctionObject of _f_ with arguments _lexEnv_ and _privateEnv_.
             1. If _varEnv_ is a Global Environment Record, then
-              1. Perform ? _varEnv_.CreateGlobalFunctionBinding(_fn_, _fo_, *true*).
+              1. Perform ? CreateGlobalFunctionBinding(_varEnv_, _fn_, _fo_, *true*).
             1. Else,
               1. Let _bindingExists_ be ! _varEnv_.HasBinding(_fn_).
               1. If _bindingExists_ is *false*, then
@@ -29377,7 +29283,7 @@
                 1. Perform ! _varEnv_.SetMutableBinding(_fn_, _fo_, *false*).
           1. For each String _vn_ of _declaredVarNames_, do
             1. If _varEnv_ is a Global Environment Record, then
-              1. Perform ? _varEnv_.CreateGlobalVarBinding(_vn_, *true*).
+              1. Perform ? CreateGlobalVarBinding(_varEnv_, _vn_, *true*).
             1. Else,
               1. Let _bindingExists_ be ! _varEnv_.HasBinding(_vn_).
               1. If _bindingExists_ is *false*, then
@@ -51812,12 +51718,12 @@ THH:mm:ss.sss
               1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _script_ Contains _x_ is *true*, do
                 1. Let _F_ be the StringValue of the |BindingIdentifier| of _f_.
                 1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _script_, then
-                  1. If _env_.HasLexicalDeclaration(_F_) is *false*, then
-                    1. Let _fnDefinable_ be ? _env_.CanDeclareGlobalVar(_F_).
+                  1. If HasLexicalDeclaration(_env_, _F_) is *false*, then
+                    1. Let _fnDefinable_ be ? CanDeclareGlobalVar(_env_, _F_).
                     1. If _fnDefinable_ is *true*, then
                       1. NOTE: A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName nor the name of another |FunctionDeclaration|.
                       1. If _declaredFunctionOrVarNames_ does not contain _F_, then
-                        1. Perform ? _env_.CreateGlobalVarBinding(_F_, *false*).
+                        1. Perform ? CreateGlobalVarBinding(_env_, _F_, *false*).
                         1. Append _F_ to _declaredFunctionOrVarNames_.
                       1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
                         1. Let _gEnv_ be the running execution context's VariableEnvironment.
@@ -51846,8 +51752,8 @@ THH:mm:ss.sss
                       1. [id="step-evaldeclarationinstantiation-web-compat-bindingexists"] Let _bindingExists_ be *true*.
                   1. Set _thisEnv_ to _thisEnv_.[[OuterEnv]].
                 1. If _bindingExists_ is *false* and _varEnv_ is a Global Environment Record, then
-                  1. If _varEnv_.HasLexicalDeclaration(_F_) is *false*, then
-                    1. Let _fnDefinable_ be ? _varEnv_.CanDeclareGlobalVar(_F_).
+                  1. If HasLexicalDeclaration(_varEnv_, _F_) is *false*, then
+                    1. Let _fnDefinable_ be ? CanDeclareGlobalVar(_varEnv_, _F_).
                   1. Else,
                     1. Let _fnDefinable_ be *false*.
                 1. Else,
@@ -51855,7 +51761,7 @@ THH:mm:ss.sss
                 1. If _bindingExists_ is *false* and _fnDefinable_ is *true*, then
                   1. If _declaredFunctionOrVarNames_ does not contain _F_, then
                     1. If _varEnv_ is a Global Environment Record, then
-                      1. Perform ? _varEnv_.CreateGlobalVarBinding(_F_, *true*).
+                      1. Perform ? CreateGlobalVarBinding(_varEnv_, _F_, *true*).
                     1. Else,
                       1. Let _bindingExists_ be ! _varEnv_.HasBinding(_F_).
                       1. If _bindingExists_ is *false*, then
