@@ -26754,7 +26754,7 @@
                 [[AsyncEvaluationOrder]]
               </td>
               <td>
-                an integer or ~unset~
+                ~unset~, an integer, or ~done~
               </td>
               <td>
                 This field, only used on modules that are either themselves asynchronous or have an asynchronous dependency, determines the order in which execution of pending modules is queues. See <emu-xref href="#sec-async-module-execution-fulfilled"></emu-xref>.
@@ -27088,6 +27088,7 @@
             1. If _result_ is an abrupt completion, then
               1. For each Cyclic Module Record _m_ of _stack_, do
                 1. Assert: _m_.[[Status]] is ~evaluating~.
+                1. Assert: _m_.[[AsyncEvaluationOrder]] is ~unset~.
                 1. Set _m_.[[Status]] to ~evaluated~.
                 1. Set _m_.[[EvaluationError]] to _result_.
               1. Assert: _module_.[[Status]] is ~evaluated~.
@@ -27096,8 +27097,8 @@
             1. Else,
               1. Assert: _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. If _module_.[[AsyncEvaluationOrder]] is ~unset~, then
-                1. Assert: _module_.[[Status]] is ~evaluated~.
+              1. If _module_.[[Status]] is ~evaluated~, then
+                1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~.
                 1. Perform ! Call(_capability_.[[Resolve]], *undefined*, « *undefined* »).
               1. Assert: _stack_ is empty.
             1. Return _capability_.[[Promise]].
@@ -27150,7 +27151,7 @@
                     1. Set _module_.[[PendingAsyncDependencies]] to _module_.[[PendingAsyncDependencies]] + 1.
                     1. Append _module_ to _requiredModule_.[[AsyncParentModules]].
               1. If _module_.[[PendingAsyncDependencies]] > 0 or _module_.[[HasTLA]] is *true*, then
-                1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~ and was never previously set to an integer.
+                1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~.
                 1. Set _module_.[[AsyncEvaluationOrder]] to IncrementModuleAsyncEvaluationCount().
                 1. If _module_.[[PendingAsyncDependencies]] = 0, perform ExecuteAsyncModule(_module_).
               1. Else,
@@ -27163,6 +27164,7 @@
                   1. Let _requiredModule_ be the last element of _stack_.
                   1. Remove the last element of _stack_.
                   1. Assert: _requiredModule_ is a Cyclic Module Record.
+                  1. Assert: _requiredModule_.[[AsyncEvaluationOrder]] is either ~unset~ or an integer.
                   1. If _requiredModule_.[[AsyncEvaluationOrder]] is ~unset~, set _requiredModule_.[[Status]] to ~evaluated~.
                   1. Otherwise, set _requiredModule_.[[Status]] to ~evaluating-async~.
                   1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
@@ -27246,7 +27248,7 @@
               1. Assert: _module_.[[Status]] is ~evaluating-async~.
               1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. Set _module_.[[AsyncEvaluationOrder]] to ~unset~.
+              1. Set _module_.[[AsyncEvaluationOrder]] to ~done~.
               1. Set _module_.[[Status]] to ~evaluated~.
               1. If _module_.[[TopLevelCapability]] is not ~empty~, then
                 1. Assert: _module_.[[CycleRoot]] and _module_ are the same Module Record.
@@ -27265,7 +27267,7 @@
                   1. If _result_ is an abrupt completion, then
                     1. Perform AsyncModuleExecutionRejected(_m_, _result_.[[Value]]).
                   1. Else,
-                    1. Set _m_.[[AsyncEvaluationOrder]] to ~unset~.
+                    1. Set _m_.[[AsyncEvaluationOrder]] to ~done~.
                     1. Set _m_.[[Status]] to ~evaluated~.
                     1. If _m_.[[TopLevelCapability]] is not ~empty~, then
                       1. Assert: _m_.[[CycleRoot]] and _m_ are the same Module Record.
@@ -27292,8 +27294,8 @@
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
               1. Set _module_.[[EvaluationError]] to ThrowCompletion(_error_).
               1. Set _module_.[[Status]] to ~evaluated~.
-              1. Set _module_.[[AsyncEvaluationOrder]] to ~unset~.
-              1. NOTE: _module_.[[AsyncEvaluationOrder]] is set to ~unset~ for symmetry with AsyncModuleExecutionFulfilled. In InnerModuleEvaluation, the value of a module's [[AsyncEvaluationOrder]] internal slot is unused when its [[EvaluationError]] internal slot is not ~empty~.
+              1. Set _module_.[[AsyncEvaluationOrder]] to ~done~.
+              1. NOTE: _module_.[[AsyncEvaluationOrder]] is set to ~done~ for symmetry with AsyncModuleExecutionFulfilled. In InnerModuleEvaluation, the value of a module's [[AsyncEvaluationOrder]] internal slot is unused when its [[EvaluationError]] internal slot is not ~empty~.
               1. For each Cyclic Module Record _m_ of _module_.[[AsyncParentModules]], do
                 1. Perform AsyncModuleExecutionRejected(_m_, _error_).
               1. If _module_.[[TopLevelCapability]] is not ~empty~, then
