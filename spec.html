@@ -47685,7 +47685,7 @@ THH:mm:ss.sss
             1. Else,
               1. Let _result_ be Completion(IteratorNext(_syncIteratorRecord_)).
             1. IfAbruptRejectPromise(_result_, _promiseCapability_).
-            1. Return AsyncFromSyncIteratorContinuation(_result_, _promiseCapability_).
+            1. Return AsyncFromSyncIteratorContinuation(_result_, _promiseCapability_, _syncIteratorRecord_, *true*).
           </emu-alg>
         </emu-clause>
 
@@ -47696,7 +47696,8 @@ THH:mm:ss.sss
             1. Let _O_ be the *this* value.
             1. Assert: _O_ is an Object that has a [[SyncIteratorRecord]] internal slot.
             1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-            1. Let _syncIterator_ be _O_.[[SyncIteratorRecord]].[[Iterator]].
+            1. Let _syncIteratorRecord_ be _O_.[[SyncIteratorRecord]].
+            1. Let _syncIterator_ be _syncIteratorRecord_.[[Iterator]].
             1. Let _return_ be Completion(GetMethod(_syncIterator_, *"return"*)).
             1. IfAbruptRejectPromise(_return_, _promiseCapability_).
             1. If _return_ is *undefined*, then
@@ -47711,7 +47712,7 @@ THH:mm:ss.sss
             1. If _result_ is not an Object, then
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
               1. Return _promiseCapability_.[[Promise]].
-            1. Return AsyncFromSyncIteratorContinuation(_result_, _promiseCapability_).
+            1. Return AsyncFromSyncIteratorContinuation(_result_, _promiseCapability_, _syncIteratorRecord_, *false*).
           </emu-alg>
         </emu-clause>
 
@@ -47723,11 +47724,18 @@ THH:mm:ss.sss
             1. Let _O_ be the *this* value.
             1. Assert: _O_ is an Object that has a [[SyncIteratorRecord]] internal slot.
             1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
-            1. Let _syncIterator_ be _O_.[[SyncIteratorRecord]].[[Iterator]].
+            1. Let _syncIteratorRecord_ be _O_.[[SyncIteratorRecord]].
+            1. Let _syncIterator_ be _syncIteratorRecord_.[[Iterator]].
             1. Let _throw_ be Completion(GetMethod(_syncIterator_, *"throw"*)).
             1. IfAbruptRejectPromise(_throw_, _promiseCapability_).
             1. If _throw_ is *undefined*, then
-              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _value_ »).
+              1. NOTE: If _syncIterator_ does not have a `throw` method, close it to give it a chance to clean up before we reject the capability.
+              1. Let _closeCompletion_ be NormalCompletion(~empty~).
+              1. Let _result_ be Completion(IteratorClose(_syncIteratorRecord_, _closeCompletion_)).
+              1. IfAbruptRejectPromise(_result_, _promiseCapability_).
+              1. NOTE: The next step throws a *TypeError* to indicate that there was a protocol violation: _syncIterator_ does not have a `throw` method.
+              1. NOTE: If closing _syncIterator_ does not throw then the result of that operation is ignored, even if it yields a rejected promise.
+              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
               1. Return _promiseCapability_.[[Promise]].
             1. If _value_ is present, then
               1. Let _result_ be Completion(Call(_throw_, _syncIterator_, « _value_ »)).
@@ -47737,7 +47745,7 @@ THH:mm:ss.sss
             1. If _result_ is not an Object, then
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
               1. Return _promiseCapability_.[[Promise]].
-            1. Return AsyncFromSyncIteratorContinuation(_result_, _promiseCapability_).
+            1. Return AsyncFromSyncIteratorContinuation(_result_, _promiseCapability_, _syncIteratorRecord_, *true*).
           </emu-alg>
         </emu-clause>
       </emu-clause>
@@ -47780,6 +47788,8 @@ THH:mm:ss.sss
           AsyncFromSyncIteratorContinuation (
             _result_: an Object,
             _promiseCapability_: a PromiseCapability Record for an intrinsic %Promise%,
+            _syncIteratorRecord_: an Iterator Record,
+            _closeOnRejection_: a Boolean,
           ): a Promise
         </h1>
         <dl class="header">
@@ -47792,12 +47802,21 @@ THH:mm:ss.sss
           1. Let _value_ be Completion(IteratorValue(_result_)).
           1. IfAbruptRejectPromise(_value_, _promiseCapability_).
           1. Let _valueWrapper_ be Completion(PromiseResolve(%Promise%, _value_)).
+          1. If _valueWrapper_ is an abrupt completion, _done_ is *false*, and _closeOnRejection_ is *true*, then
+            1. Set _valueWrapper_ to Completion(IteratorClose(_syncIteratorRecord_, _valueWrapper_)).
           1. IfAbruptRejectPromise(_valueWrapper_, _promiseCapability_).
           1. Let _unwrap_ be a new Abstract Closure with parameters (_v_) that captures _done_ and performs the following steps when called:
             1. Return CreateIteratorResultObject(_v_, _done_).
           1. Let _onFulfilled_ be CreateBuiltinFunction(_unwrap_, 1, *""*, « »).
           1. NOTE: _onFulfilled_ is used when processing the *"value"* property of an IteratorResult object in order to wait for its value if it is a promise and re-package the result in a new "unwrapped" IteratorResult object.
-          1. Perform PerformPromiseThen(_valueWrapper_, _onFulfilled_, *undefined*, _promiseCapability_).
+          1. If _done_ is *true*, or if _closeOnRejection_ is *false*, then
+            1. Let _onRejected_ be *undefined*.
+          1. Else,
+            1. Let _closeIterator_ be a new Abstract Closure with parameters (_error_) that captures _syncIteratorRecord_ and performs the following steps when called:
+              1. Return ? IteratorClose(_syncIteratorRecord_, ThrowCompletion(_error_)).
+            1. Let _onRejected_ be CreateBuiltinFunction(_closeIterator_, 1, *""*, « »).
+            1. NOTE: _onRejected_ is used to close the Iterator when the *"value"* property of an IteratorResult object it yields is a rejected promise.
+          1. Perform PerformPromiseThen(_valueWrapper_, _onFulfilled_, _onRejected_, _promiseCapability_).
           1. Return _promiseCapability_.[[Promise]].
         </emu-alg>
       </emu-clause>
