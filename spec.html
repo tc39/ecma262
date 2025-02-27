@@ -3541,6 +3541,17 @@
             </tr>
             <tr>
               <td>
+                %Float16Array%
+              </td>
+              <td>
+                `Float16Array`
+              </td>
+              <td>
+                The Float16Array constructor (<emu-xref href="#sec-typedarray-objects"></emu-xref>)
+              </td>
+            </tr>
+            <tr>
+              <td>
                 %Float32Array%
               </td>
               <td>
@@ -30109,6 +30120,11 @@
       <p>See <emu-xref href="#sec-finalization-registry-constructor"></emu-xref>.</p>
     </emu-clause>
 
+    <emu-clause id="sec-float16array">
+      <h1>Float16Array ( . . . )</h1>
+      <p>See <emu-xref href="#sec-typedarray-constructors"></emu-xref>.</p>
+    </emu-clause>
+
     <emu-clause id="sec-float32array">
       <h1>Float32Array ( . . . )</h1>
       <p>See <emu-xref href="#sec-typedarray-constructors"></emu-xref>.</p>
@@ -32750,6 +32766,23 @@
           1. Let _n64_ be the result of converting _n32_ to IEEE 754-2019 binary64 format.
           1. Return the ECMAScript Number value corresponding to _n64_.
         </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-math.f16round">
+        <h1>Math.f16round ( _x_ )</h1>
+        <p>This function performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _n_ be ? ToNumber(_x_).
+          1. If _n_ is *NaN*, return *NaN*.
+          1. If _n_ is one of *+0*<sub>𝔽</sub>, *-0*<sub>𝔽</sub>, *+∞*<sub>𝔽</sub>, or *-∞*<sub>𝔽</sub>, return _n_.
+          1. Let _n16_ be the result of converting _n_ to IEEE 754-2019 binary16 format using roundTiesToEven mode.
+          1. Let _n64_ be the result of converting _n16_ to IEEE 754-2019 binary64 format.
+          1. Return the ECMAScript Number value corresponding to _n64_.
+        </emu-alg>
+        <emu-note>
+          <p>This operation is not the same as casting to binary32 and then to binary16 because of the possibility of double-rounding: consider the number _k_ = *1.00048828125000022204*<sub>𝔽</sub>, for example, for which Math.f16round(_k_) is *1.0009765625*<sub>𝔽</sub>, but Math.f16round(Math.fround(_k_)) is *1*<sub>𝔽</sub>.</p>
+          <p>Not all platforms provide native support for casting from binary64 to binary16. There are various libraries which can provide this, including the MIT-licensed <a href="https://half.sourceforge.net/">half</a> library. Alternatively, it is possible to first cast from binary64 to binary32 under roundTiesToEven and then check whether the result could lead to incorrect double-rounding. The cases which could can be handled explicitly by adjusting the mantissa of the binary32 value so that it is the value which would be produced by performing the initial cast under roundTiesToOdd. Casting the adjusted value to binary16 under roundTiesToEven then produces the correct value.</p>
+        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-math.hypot">
@@ -41125,6 +41158,23 @@ THH:mm:ss.sss
         </tr>
         <tr>
           <td>
+            Float16Array<br>
+            <dfn>%Float16Array%</dfn>
+          </td>
+          <td>
+            ~float16~
+          </td>
+          <td>
+            2
+          </td>
+          <td>
+          </td>
+          <td>
+            16-bit IEEE floating point
+          </td>
+        </tr>
+        <tr>
+          <td>
             Float32Array<br>
             <dfn>%Float32Array%</dfn>
           </td>
@@ -44159,6 +44209,10 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _elementSize_ be the Element Size value specified in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for Element Type _type_.
           1. If _isLittleEndian_ is *false*, reverse the order of the elements of _rawBytes_.
+          1. If _type_ is ~float16~, then
+            1. Let _value_ be the byte elements of _rawBytes_ concatenated and interpreted as a little-endian bit string encoding of an IEEE 754-2019 binary16 value.
+            1. If _value_ is an IEEE 754-2019 binary16 NaN value, return the *NaN* Number value.
+            1. Return the Number value that corresponds to _value_.
           1. If _type_ is ~float32~, then
             1. Let _value_ be the byte elements of _rawBytes_ concatenated and interpreted as a little-endian bit string encoding of an IEEE 754-2019 binary32 value.
             1. If _value_ is an IEEE 754-2019 binary32 NaN value, return the *NaN* Number value.
@@ -44242,7 +44296,9 @@ THH:mm:ss.sss
         <dl class="header">
         </dl>
         <emu-alg>
-          1. If _type_ is ~float32~, then
+          1. If _type_ is ~float16~, then
+            1. Let _rawBytes_ be a List whose elements are the 2 bytes that are the result of converting _value_ to IEEE 754-2019 binary16 format using roundTiesToEven mode. The bytes are arranged in little endian order. If _value_ is *NaN*, _rawBytes_ may be set to any implementation chosen IEEE 754-2019 binary16 format Not-a-Number encoding. An implementation must always choose the same encoding for each implementation distinguishable *NaN* value.
+          1. Else if _type_ is ~float32~, then
             1. Let _rawBytes_ be a List whose elements are the 4 bytes that are the result of converting _value_ to IEEE 754-2019 binary32 format using roundTiesToEven mode. The bytes are arranged in little endian order. If _value_ is *NaN*, _rawBytes_ may be set to any implementation chosen IEEE 754-2019 binary32 format Not-a-Number encoding. An implementation must always choose the same encoding for each implementation distinguishable *NaN* value.
           1. Else if _type_ is ~float64~, then
             1. Let _rawBytes_ be a List whose elements are the 8 bytes that are the IEEE 754-2019 binary64 format encoding of _value_. The bytes are arranged in little endian order. If _value_ is *NaN*, _rawBytes_ may be set to any implementation chosen IEEE 754-2019 binary64 format Not-a-Number encoding. An implementation must always choose the same encoding for each implementation distinguishable *NaN* value.
@@ -45175,6 +45231,16 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
+      <emu-clause id="sec-dataview.prototype.getfloat16">
+        <h1>DataView.prototype.getFloat16 ( _byteOffset_ [ , _littleEndian_ ] )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _v_ be the *this* value.
+          1. If _littleEndian_ is not present, set _littleEndian_ to *false*.
+          1. Return ? GetViewValue(_v_, _byteOffset_, _littleEndian_, ~float16~).
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-dataview.prototype.getfloat32">
         <h1>DataView.prototype.getFloat32 ( _byteOffset_ [ , _littleEndian_ ] )</h1>
         <p>This method performs the following steps when called:</p>
@@ -45268,6 +45334,16 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _v_ be the *this* value.
           1. Return ? SetViewValue(_v_, _byteOffset_, _littleEndian_, ~biguint64~, _value_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-dataview.prototype.setfloat16">
+        <h1>DataView.prototype.setFloat16 ( _byteOffset_, _value_ [ , _littleEndian_ ] )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _v_ be the *this* value.
+          1. If _littleEndian_ is not present, set _littleEndian_ to *false*.
+          1. Return ? SetViewValue(_v_, _byteOffset_, _littleEndian_, ~float16~, _value_).
         </emu-alg>
       </emu-clause>
 
