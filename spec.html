@@ -18652,7 +18652,7 @@
         </emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>. This rule is not applied if this |ObjectLiteral| is contained within a |Script| that is being parsed for JSON.parse (see step <emu-xref href="#step-json-parse-parse"></emu-xref> of <emu-xref href="#sec-json.parse">JSON.parse</emu-xref>).
+            It is a Syntax Error if the PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>. This rule is not applied if this |ObjectLiteral| is contained within a |Script| that is being parsed for ParseJSON (see step <emu-xref href="#step-json-parse-parse"></emu-xref> of ParseJSON).
           </li>
         </ul>
         <emu-note>
@@ -18764,7 +18764,7 @@
         <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>
         <emu-alg>
           1. Let _propKey_ be ? Evaluation of |PropertyName|.
-          1. If this |PropertyDefinition| is contained within a |Script| that is being evaluated for JSON.parse (see step <emu-xref href="#step-json-parse-eval"></emu-xref> of <emu-xref href="#sec-json.parse">JSON.parse</emu-xref>), then
+          1. If this |PropertyDefinition| is contained within a |Script| that is being evaluated for ParseJSON (see step <emu-xref href="#step-json-parse-eval"></emu-xref> of ParseJSON), then
             1. Let _isProtoSetter_ be *false*.
           1. Else if _propKey_ is *"__proto__"* and IsComputedPropertyKey of |PropertyName| is *false*, then
             1. Let _isProtoSetter_ be *true*.
@@ -28698,7 +28698,7 @@
           </dl>
 
           <emu-alg>
-            1. Let _json_ be ? Call(%JSON.parse%, *undefined*, « _source_ »).
+            1. Let _json_ be ? ParseJSON(_source_).
             1. Return CreateDefaultExportSyntheticModule(_json_).
           </emu-alg>
         </emu-clause>
@@ -46401,14 +46401,7 @@ THH:mm:ss.sss
       <p>The optional _reviver_ parameter is a function that takes two parameters, _key_ and _value_. It can filter and transform the results. It is called with each of the _key_/_value_ pairs produced by the parse, and its return value is used instead of the original value. If it returns what it received, the structure is not modified. If it returns *undefined* then the property is deleted from the result.</p>
       <emu-alg>
         1. Let _jsonString_ be ? ToString(_text_).
-        1. [id="step-json-parse-validate"] Parse StringToCodePoints(_jsonString_) as a JSON text as specified in ECMA-404. Throw a *SyntaxError* exception if it is not a valid JSON text as defined in that specification.
-        1. Let _scriptString_ be the string-concatenation of *"("*, _jsonString_, and *");"*.
-        1. [id="step-json-parse-parse"] Let _script_ be ParseText(_scriptString_, |Script|).
-        1. NOTE: The early error rules defined in <emu-xref href="#sec-object-initializer-static-semantics-early-errors"></emu-xref> have special handling for the above invocation of ParseText.
-        1. Assert: _script_ is a Parse Node.
-        1. [id="step-json-parse-eval"] Let _unfiltered_ be ! <emu-meta suppress-effects="user-code">Evaluation of _script_</emu-meta>.
-        1. NOTE: The PropertyDefinitionEvaluation semantics defined in <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> have special handling for the above evaluation.
-        1. [id="step-json-parse-assert-type"] Assert: _unfiltered_ is either a String, a Number, a Boolean, an Object that is defined by either an |ArrayLiteral| or an |ObjectLiteral|, or *null*.
+        1. Let _unfiltered_ be ? ParseJSON(_jsonString_).
         1. If IsCallable(_reviver_) is *true*, then
           1. Let _root_ be OrdinaryObjectCreate(%Object.prototype%).
           1. Let _rootName_ be the empty String.
@@ -46418,10 +46411,35 @@ THH:mm:ss.sss
           1. Return _unfiltered_.
       </emu-alg>
       <p>The *"length"* property of this function is *2*<sub>𝔽</sub>.</p>
-      <emu-note>
-        <p>Valid JSON text is a subset of the ECMAScript |PrimaryExpression| syntax. Step <emu-xref href="#step-json-parse-validate"></emu-xref> verifies that _jsonString_ conforms to that subset, and step <emu-xref href="#step-json-parse-assert-type"></emu-xref> asserts that that parsing and evaluation returns a value of an appropriate type.</p>
-        <p>However, because <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> behaves differently during `JSON.parse`, the same source text can produce different results when evaluated as a |PrimaryExpression| rather than as JSON. Furthermore, the Early Error for duplicate *"__proto__"* properties in object literals, which likewise does not apply during `JSON.parse`, means that not all texts accepted by `JSON.parse` are valid as a |PrimaryExpression|, despite matching the grammar.</p>
-      </emu-note>
+
+      <emu-clause id="sec-ParseJSON" type="abstract operation">
+        <h1>
+          ParseJSON (
+            _text_: a String,
+          ): either a normal completion containing an ECMAScript language value or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. [id="step-json-parse-validate"] If StringToCodePoints(_text_) is not a valid JSON text as specified in ECMA-404, throw a *SyntaxError* exception.
+          1. Let _scriptString_ be the string-concatenation of *"("*, _text_, and *");"*.
+          1. [id="step-json-parse-parse"] Let _script_ be ParseText(_scriptString_, |Script|).
+          1. NOTE: The early error rules defined in <emu-xref href="#sec-object-initializer-static-semantics-early-errors"></emu-xref> have special handling for the above invocation of ParseText.
+          1. Assert: _script_ is a Parse Node.
+          1. [id="step-json-parse-eval"] Let _result_ be ! <emu-meta suppress-effects="user-code">Evaluation of _script_</emu-meta>.
+          1. NOTE: The PropertyDefinitionEvaluation semantics defined in <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> have special handling for the above evaluation.
+          1. [id="step-json-parse-assert-type"] Assert: _result_ is either a String, a Number, a Boolean, an Object that is defined by either an |ArrayLiteral| or an |ObjectLiteral|, or *null*.
+          1. Return _result_.
+        </emu-alg>
+        <p>It is not permitted for a conforming implementation of `JSON.parse` to extend the JSON grammars. If an implementation wishes to support a modified or extended JSON interchange format it must do so by defining a different parse function.</p>
+        <emu-note>
+          <p>Valid JSON text is a subset of the ECMAScript |PrimaryExpression| syntax. Step <emu-xref href="#step-json-parse-validate"></emu-xref> verifies that _jsonString_ conforms to that subset, and step <emu-xref href="#step-json-parse-assert-type"></emu-xref> asserts that evaluation returns a value of an appropriate type.</p>
+          <p>However, because <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref> behaves differently during ParseJSON, the same source text can produce different results when evaluated as a |PrimaryExpression| rather than as JSON. Furthermore, the Early Error for duplicate *"__proto__"* properties in object literals, which likewise does not apply during ParseJSON, means that not all texts accepted by ParseJSON are valid as a |PrimaryExpression|, despite matching the grammar.</p>
+        </emu-note>
+        <emu-note>
+          <p>In the case where there are duplicate name Strings within an object, lexically preceding values for the same key shall be overwritten.</p>
+        </emu-note>
+      </emu-clause>
 
       <emu-clause id="sec-internalizejsonproperty" type="abstract operation">
         <h1>
@@ -46462,10 +46480,6 @@ THH:mm:ss.sss
                   1. Perform ? CreateDataProperty(_val_, _P_, _newElement_).
           1. Return ? Call(_reviver_, _holder_, « _name_, _val_ »).
         </emu-alg>
-        <p>It is not permitted for a conforming implementation of `JSON.parse` to extend the JSON grammars. If an implementation wishes to support a modified or extended JSON interchange format it must do so by defining a different parse function.</p>
-        <emu-note>
-          <p>In the case where there are duplicate name Strings within an object, lexically preceding values for the same key shall be overwritten.</p>
-        </emu-note>
       </emu-clause>
     </emu-clause>
 
