@@ -12305,6 +12305,11 @@
           <td>a List of either Objects or Symbols</td>
           <td>Initially a new empty List, representing the list of objects and/or symbols to be kept alive until the end of the current Job</td>
         </tr>
+        <tr>
+          <td>[[ModuleAsyncEvaluationCount]]</td>
+          <td>an integer</td>
+          <td>Initially 0, used to assign unique incrementing values to the [[AsyncEvaluationOrder]] field of modules that are asynchronous or have asynchronous dependencies.</td>
+        </tr>
       </table>
     </emu-table>
 
@@ -12344,6 +12349,21 @@
       </emu-alg>
       <emu-note>
         <p>In some environments it may not be reasonable for a given agent to suspend. For example, in a web browser environment, it may be reasonable to disallow suspending a document's main event handling thread, while still allowing workers' event handling threads to suspend.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-IncrementModuleAsyncEvaluationCount" type="abstract operation">
+      <h1>IncrementModuleAsyncEvaluationCount ( ): an integer</h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. Let _AR_ be the Agent Record of the surrounding agent.
+        1. Let _count_ be _AR_.[[ModuleAsyncEvaluationCount]].
+        1. Set _AR_.[[ModuleAsyncEvaluationCount]] to _count_ + 1.
+        1. Return _count_.
+      </emu-alg>
+      <emu-note>
+        <p>This value is only used to keep track of the relative evaluation order between pending modules. An implementation may unobservably reset [[ModuleAsyncEvaluationCount]] to 0 whenever there are no pending modules.</p>
       </emu-note>
     </emu-clause>
   </emu-clause>
@@ -26818,13 +26838,13 @@
             </tr>
             <tr>
               <td>
-                [[AsyncEvaluation]]
+                [[AsyncEvaluationOrder]]
               </td>
               <td>
-                a Boolean
+                ~unset~, an integer, or ~done~
               </td>
               <td>
-                Whether this module is either itself asynchronous or has an asynchronous dependency. Note: The order in which this field is set is used to order queued executions, see <emu-xref href="#sec-async-module-execution-fulfilled"></emu-xref>.
+                This field is initially set to ~unset~, and remains ~unset~ for fully synchronous modules. For modules that are either themselves asynchronous or have an asynchronous dependency, it is set to an integer that determines the order in which execution of pending modules is queued by <emu-xref href="#sec-async-module-execution-fulfilled"></emu-xref>. Once the pending module is executed, the field is set to ~done~.
               </td>
             </tr>
             <tr>
@@ -27155,6 +27175,7 @@
             1. If _result_ is an abrupt completion, then
               1. For each Cyclic Module Record _m_ of _stack_, do
                 1. Assert: _m_.[[Status]] is ~evaluating~.
+                1. Assert: _m_.[[AsyncEvaluationOrder]] is ~unset~.
                 1. Set _m_.[[Status]] to ~evaluated~.
                 1. Set _m_.[[EvaluationError]] to _result_.
               1. Assert: _module_.[[Status]] is ~evaluated~.
@@ -27163,8 +27184,9 @@
             1. Else,
               1. Assert: _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. If _module_.[[AsyncEvaluation]] is *false*, then
-                1. Assert: _module_.[[Status]] is ~evaluated~.
+              1. If _module_.[[Status]] is ~evaluated~, then
+                1. NOTE: This implies that evaluation of _module_ completed synchronously.
+                1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~.
                 1. Perform ! Call(_capability_.[[Resolve]], *undefined*, « *undefined* »).
               1. Assert: _stack_ is empty.
             1. Return _capability_.[[Promise]].
@@ -27213,13 +27235,12 @@
                     1. Set _requiredModule_ to _requiredModule_.[[CycleRoot]].
                     1. Assert: _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
                     1. If _requiredModule_.[[EvaluationError]] is not ~empty~, return ? _requiredModule_.[[EvaluationError]].
-                  1. If _requiredModule_.[[AsyncEvaluation]] is *true*, then
+                  1. If _requiredModule_.[[AsyncEvaluationOrder]] is an integer, then
                     1. Set _module_.[[PendingAsyncDependencies]] to _module_.[[PendingAsyncDependencies]] + 1.
                     1. Append _module_ to _requiredModule_.[[AsyncParentModules]].
               1. If _module_.[[PendingAsyncDependencies]] > 0 or _module_.[[HasTLA]] is *true*, then
-                1. Assert: _module_.[[AsyncEvaluation]] is *false* and was never previously set to *true*.
-                1. Set _module_.[[AsyncEvaluation]] to *true*.
-                1. NOTE: The order in which module records have their [[AsyncEvaluation]] fields transition to *true* is significant. (See <emu-xref href="#sec-async-module-execution-fulfilled"></emu-xref>.)
+                1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~.
+                1. Set _module_.[[AsyncEvaluationOrder]] to IncrementModuleAsyncEvaluationCount().
                 1. If _module_.[[PendingAsyncDependencies]] = 0, perform ExecuteAsyncModule(_module_).
               1. Else,
                 1. Perform ? <emu-meta effects="user-code">_module_.ExecuteModule()</emu-meta>.
@@ -27231,7 +27252,8 @@
                   1. Let _requiredModule_ be the last element of _stack_.
                   1. Remove the last element of _stack_.
                   1. Assert: _requiredModule_ is a Cyclic Module Record.
-                  1. If _requiredModule_.[[AsyncEvaluation]] is *false*, set _requiredModule_.[[Status]] to ~evaluated~.
+                  1. Assert: _requiredModule_.[[AsyncEvaluationOrder]] is either an integer or ~unset~.
+                  1. If _requiredModule_.[[AsyncEvaluationOrder]] is ~unset~, set _requiredModule_.[[Status]] to ~evaluated~.
                   1. Otherwise, set _requiredModule_.[[Status]] to ~evaluating-async~.
                   1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
                   1. Set _requiredModule_.[[CycleRoot]] to _module_.
@@ -27286,7 +27308,7 @@
                 1. If _execList_ does not contain _m_ and _m_.[[CycleRoot]].[[EvaluationError]] is ~empty~, then
                   1. Assert: _m_.[[Status]] is ~evaluating-async~.
                   1. Assert: _m_.[[EvaluationError]] is ~empty~.
-                  1. Assert: _m_.[[AsyncEvaluation]] is *true*.
+                  1. Assert: _m_.[[AsyncEvaluationOrder]] is an integer.
                   1. Assert: _m_.[[PendingAsyncDependencies]] > 0.
                   1. Set _m_.[[PendingAsyncDependencies]] to _m_.[[PendingAsyncDependencies]] - 1.
                   1. If _m_.[[PendingAsyncDependencies]] = 0, then
@@ -27312,17 +27334,17 @@
                 1. Assert: _module_.[[EvaluationError]] is not ~empty~.
                 1. Return ~unused~.
               1. Assert: _module_.[[Status]] is ~evaluating-async~.
-              1. Assert: _module_.[[AsyncEvaluation]] is *true*.
+              1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. Set _module_.[[AsyncEvaluation]] to *false*.
+              1. Set _module_.[[AsyncEvaluationOrder]] to ~done~.
               1. Set _module_.[[Status]] to ~evaluated~.
               1. If _module_.[[TopLevelCapability]] is not ~empty~, then
                 1. Assert: _module_.[[CycleRoot]] and _module_ are the same Module Record.
                 1. Perform ! Call(_module_.[[TopLevelCapability]].[[Resolve]], *undefined*, « *undefined* »).
               1. Let _execList_ be a new empty List.
               1. Perform GatherAvailableAncestors(_module_, _execList_).
-              1. Let _sortedExecList_ be a List whose elements are the elements of _execList_, in the order in which they had their [[AsyncEvaluation]] fields set to *true* in InnerModuleEvaluation.
-              1. Assert: All elements of _sortedExecList_ have their [[AsyncEvaluation]] field set to *true*, [[PendingAsyncDependencies]] field set to 0, and [[EvaluationError]] field set to ~empty~.
+              1. Assert: All elements of _execList_ have their [[AsyncEvaluationOrder]] field set to an integer, [[PendingAsyncDependencies]] field set to 0, and [[EvaluationError]] field set to ~empty~.
+              1. Let _sortedExecList_ be a List whose elements are the elements of _execList_, sorted by their [[AsyncEvaluationOrder]] field in ascending order.
               1. For each Cyclic Module Record _m_ of _sortedExecList_, do
                 1. If _m_.[[Status]] is ~evaluated~, then
                   1. Assert: _m_.[[EvaluationError]] is not ~empty~.
@@ -27333,7 +27355,7 @@
                   1. If _result_ is an abrupt completion, then
                     1. Perform AsyncModuleExecutionRejected(_m_, _result_.[[Value]]).
                   1. Else,
-                    1. Set _m_.[[AsyncEvaluation]] to *false*.
+                    1. Set _m_.[[AsyncEvaluationOrder]] to ~done~.
                     1. Set _m_.[[Status]] to ~evaluated~.
                     1. If _m_.[[TopLevelCapability]] is not ~empty~, then
                       1. Assert: _m_.[[CycleRoot]] and _m_ are the same Module Record.
@@ -27356,12 +27378,12 @@
                 1. Assert: _module_.[[EvaluationError]] is not ~empty~.
                 1. Return ~unused~.
               1. Assert: _module_.[[Status]] is ~evaluating-async~.
-              1. Assert: _module_.[[AsyncEvaluation]] is *true*.
+              1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
               1. Assert: _module_.[[EvaluationError]] is ~empty~.
               1. Set _module_.[[EvaluationError]] to ThrowCompletion(_error_).
               1. Set _module_.[[Status]] to ~evaluated~.
-              1. Set _module_.[[AsyncEvaluation]] to *false*.
-              1. NOTE: _module_.[[AsyncEvaluation]] is set to *false* for symmetry with AsyncModuleExecutionFulfilled. In InnerModuleEvaluation, the value of a module's [[AsyncEvaluation]] internal slot is unused when its [[EvaluationError]] internal slot is not ~empty~.
+              1. Set _module_.[[AsyncEvaluationOrder]] to ~done~.
+              1. NOTE: _module_.[[AsyncEvaluationOrder]] is set to ~done~ for symmetry with AsyncModuleExecutionFulfilled. In InnerModuleEvaluation, the value of a module's [[AsyncEvaluationOrder]] internal slot is unused when its [[EvaluationError]] internal slot is not ~empty~.
               1. For each Cyclic Module Record _m_ of _module_.[[AsyncParentModules]], do
                 1. Perform AsyncModuleExecutionRejected(_m_, _error_).
               1. If _module_.[[TopLevelCapability]] is not ~empty~, then
@@ -27426,7 +27448,7 @@
           </emu-figure>
           <p>Loading and linking happen as before, and all modules end up with [[Status]] set to ~linked~.</p>
 
-          <p>Calling _A_.Evaluate() calls InnerModuleEvaluation on _A_, _B_, and _D_, which all transition to ~evaluating~. Then InnerModuleEvaluation is called on _A_ again, which is a no-op because it is already ~evaluating~. At this point, _D_.[[PendingAsyncDependencies]] is 0, so ExecuteAsyncModule(_D_) is called and we call _D_.ExecuteModule with a new PromiseCapability tracking the asynchronous execution of _D_. We unwind back to the InnerModuleEvaluation on _B_, setting _B_.[[PendingAsyncDependencies]] to 1 and _B_.[[AsyncEvaluation]] to *true*. We unwind back to the original InnerModuleEvaluation on _A_, setting _A_.[[PendingAsyncDependencies]] to 1. In the next iteration of the loop over _A_'s dependencies, we call InnerModuleEvaluation on _C_ and thus on _D_ (again a no-op) and _E_. As _E_ has no dependencies and is not part of a cycle, we call ExecuteAsyncModule(_E_) in the same manner as _D_ and _E_ is immediately removed from the stack. We unwind once more to the original InnerModuleEvaluation on _A_, setting _C_.[[AsyncEvaluation]] to *true*. Now we finish the loop over _A_'s dependencies, set _A_.[[AsyncEvaluation]] to *true*, and remove the entire strongly connected component from the stack, transitioning all of the modules to ~evaluating-async~ at once. At this point, the fields of the modules are as given in <emu-xref href="#table-module-graph-cycle-async-fields-1"></emu-xref>.</p>
+          <p>Calling _A_.Evaluate() calls InnerModuleEvaluation on _A_, _B_, and _D_, which all transition to ~evaluating~. Then InnerModuleEvaluation is called on _A_ again, which is a no-op because it is already ~evaluating~. At this point, _D_.[[PendingAsyncDependencies]] is 0, so ExecuteAsyncModule(_D_) is called and we call _D_.ExecuteModule with a new PromiseCapability tracking the asynchronous execution of _D_. We unwind back to the InnerModuleEvaluation on _B_, setting _B_.[[PendingAsyncDependencies]] to 1 and _B_.[[AsyncEvaluationOrder]] to 1. We unwind back to the original InnerModuleEvaluation on _A_, setting _A_.[[PendingAsyncDependencies]] to 1. In the next iteration of the loop over _A_'s dependencies, we call InnerModuleEvaluation on _C_ and thus on _D_ (again a no-op) and _E_. As _E_ has no dependencies and is not part of a cycle, we call ExecuteAsyncModule(_E_) in the same manner as _D_ and _E_ is immediately removed from the stack. We unwind once more to the InnerModuleEvaluation on _C_, setting _C_.[[AsyncEvaluationOrder]] to 3. Now we finish the loop over _A_'s dependencies, set _A_.[[AsyncEvaluationOrder]] to 4, and remove the entire strongly connected component from the stack, transitioning all of the modules to ~evaluating-async~ at once. At this point, the fields of the modules are as given in <emu-xref href="#table-module-graph-cycle-async-fields-1"></emu-xref>.</p>
 
           <emu-table id="table-module-graph-cycle-async-fields-1" caption="Module fields after the initial Evaluate() call">
             <table>
@@ -27470,12 +27492,12 @@
                 <td>~evaluating-async~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
-                <td>*true*</td>
-                <td>*true*</td>
-                <td>*true*</td>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>4</td>
+                <td>1</td>
+                <td>3</td>
+                <td>0</td>
+                <td>2*</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -27523,9 +27545,9 @@
                 <td>~evaluated~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>3</td>
+                <td>2</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -27540,7 +27562,7 @@
             </table>
           </emu-table>
 
-          <p>_D_ is next to finish (as it was the only module that was still executing). When that happens, AsyncModuleExecutionFulfilled is called again and _D_.[[Status]] is set to ~evaluated~. Then _B_.[[PendingAsyncDependencies]] is decremented to become 0, ExecuteAsyncModule is called on _B_, and it starts executing. _C_.[[PendingAsyncDependencies]] is also decremented to become 0, and _C_ starts executing (potentially in parallel to _B_ if _B_ contains an `await`). The fields of the updated modules are as given in <emu-xref href="#table-module-graph-cycle-async-fields-3"></emu-xref>.</p>
+          <p>_D_ is next to finish (as it was the only module that was still executing). When that happens, AsyncModuleExecutionFulfilled is called again and _D_.[[Status]] is set to ~evaluated~. Its ancestors available for execution are _B_ (whose [[AsyncEvaluationOrder]] is 1) and _C_ (whose [[AsyncEvaluationOrder]] is 3), thus _B_ will be handled first: _B_.[[PendingAsyncDependencies]] is decremented to become 0, ExecuteAsyncModule is called on _B_, and it starts executing. _C_.[[PendingAsyncDependencies]] is also decremented to become 0, and _C_ starts executing (potentially in parallel to _B_ if _B_ contains an `await`). The fields of the updated modules are as given in <emu-xref href="#table-module-graph-cycle-async-fields-3"></emu-xref>.</p>
 
           <emu-table id="table-module-graph-cycle-async-fields-3" caption="Module fields after module _D_ finishes executing">
             <table>
@@ -27571,10 +27593,10 @@
                 <td>~evaluated~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
-                <td>*true*</td>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>1</td>
+                <td>3</td>
+                <td>0</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -27618,9 +27640,9 @@
                 <td>~evaluated~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>4</td>
+                <td>3</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -27662,9 +27684,9 @@
                 <td>~evaluated~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>4</td>
+                <td>1</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -27702,8 +27724,8 @@
                 <td>~evaluated~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>4</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -27743,9 +27765,9 @@
                 <td>~evaluated~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>4</td>
+                <td>3</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -27788,8 +27810,8 @@
                 <td>~evaluated~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>4</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -27834,9 +27856,9 @@
                 <td>~evaluated~</td>
               </tr>
               <tr>
-                <th>[[AsyncEvaluation]]</th>
-                <td>*true*</td>
-                <td>*true*</td>
+                <th>[[AsyncEvaluationOrder]]</th>
+                <td>4</td>
+                <td>1</td>
               </tr>
               <tr>
                 <th>[[AsyncParentModules]]</th>
@@ -28398,7 +28420,7 @@
               1. Else,
                 1. Append _ee_ to _indirectExportEntries_.
             1. Let _async_ be _body_ Contains `await`.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluation]]: *false*, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~ }.
+            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluationOrder]]: ~unset~, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, [[DFSIndex]]: ~empty~, [[DFSAncestorIndex]]: ~empty~ }.
           </emu-alg>
           <emu-note>
             <p>An implementation may parse module source text and analyse it for Early Error conditions prior to the evaluation of ParseModule for that module source text. However, the reporting of any errors must be deferred until the point where this specification actually performs ParseModule upon that source text.</p>
