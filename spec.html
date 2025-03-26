@@ -26988,409 +26988,415 @@
           </table>
         </emu-table>
 
-        <emu-clause id="sec-LoadRequestedModules" type="concrete method">
-          <h1>
-            LoadRequestedModules (
-              optional _hostDefined_: anything,
-            ): a Promise
-          </h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Cyclic Module Record _module_</dd>
+        <emu-clause id="sec-cyclic-module-record-module-record-methods">
+          <h1>Implementation of Module Record Abstract Methods</h1>
 
-            <dt>description</dt>
-            <dd>It populates the [[LoadedModules]] of all the Module Records in the dependency graph of _module_ (most of the work is done by the auxiliary function InnerModuleLoading). It takes an optional _hostDefined_ parameter that is passed to the HostLoadImportedModule hook.</dd>
-          </dl>
+          <p>The following are the concrete methods for Cyclic Module Record that implement the corresponding Module Record abstract methods defined in <emu-xref href="#table-abstract-methods-of-module-records"></emu-xref>.</p>
 
-          <emu-alg>
-            1. If _hostDefined_ is not present, let _hostDefined_ be ~empty~.
-            1. Let _pc_ be ! NewPromiseCapability(%Promise%).
-            1. Let _state_ be the GraphLoadingState Record { [[IsLoading]]: *true*, [[PendingModulesCount]]: 1, [[Visited]]: « », [[PromiseCapability]]: _pc_, [[HostDefined]]: _hostDefined_ }.
-            1. Perform InnerModuleLoading(_state_, _module_).
-            1. Return _pc_.[[Promise]].
-          </emu-alg>
-
-          <emu-note>
-            The _hostDefined_ parameter can be used to pass additional information necessary to fetch the imported modules. It is used, for example, by HTML to set the correct fetch destination for <code>&lt;link rel="preload" as="..."&gt;</code> tags.
-            <code>import()</code> expressions never set the _hostDefined_ parameter.
-          </emu-note>
-
-          <emu-clause id="sec-InnerModuleLoading" type="abstract operation">
+          <emu-clause id="sec-LoadRequestedModules" type="concrete method">
             <h1>
-              InnerModuleLoading (
-                _state_: a GraphLoadingState Record,
-                _module_: a Module Record,
-              ): ~unused~
+              LoadRequestedModules (
+                optional _hostDefined_: anything,
+              ): a Promise
             </h1>
             <dl class="header">
+              <dt>for</dt>
+              <dd>a Cyclic Module Record _module_</dd>
+
               <dt>description</dt>
-              <dd>It is used by LoadRequestedModules to recursively perform the actual loading process for _module_'s dependency graph.</dd>
+              <dd>It populates the [[LoadedModules]] of all the Module Records in the dependency graph of _module_ (most of the work is done by the auxiliary function InnerModuleLoading). It takes an optional _hostDefined_ parameter that is passed to the HostLoadImportedModule hook.</dd>
             </dl>
 
             <emu-alg>
-              1. Assert: _state_.[[IsLoading]] is *true*.
-              1. If _module_ is a Cyclic Module Record, _module_.[[Status]] is ~new~, and _state_.[[Visited]] does not contain _module_, then
-                1. Append _module_ to _state_.[[Visited]].
-                1. Let _requestedModulesCount_ be the number of elements in _module_.[[RequestedModules]].
-                1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] + _requestedModulesCount_.
-                1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
-                  1. If AllImportAttributesSupported(_request_.[[Attributes]]) is *false*, then
-                    1. Let _error_ be ThrowCompletion(a newly created *SyntaxError* object).
-                    1. Perform ContinueModuleLoading(_state_, _error_).
-                  1. Else if _module_.[[LoadedModules]] contains a LoadedModuleRequest Record _record_ such that ModuleRequestsEqual(_record_, _request_) is *true*, then
-                    1. Perform InnerModuleLoading(_state_, _record_.[[Module]]).
-                  1. Else,
-                    1. Perform HostLoadImportedModule(_module_, _request_, _state_.[[HostDefined]], _state_).
-                    1. NOTE: HostLoadImportedModule will call FinishLoadingImportedModule, which re-enters the graph loading process through ContinueModuleLoading.
-                  1. If _state_.[[IsLoading]] is *false*, return ~unused~.
-              1. Assert: _state_.[[PendingModulesCount]] ≥ 1.
-              1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] - 1.
-              1. If _state_.[[PendingModulesCount]] = 0, then
-                1. Set _state_.[[IsLoading]] to *false*.
-                1. For each Cyclic Module Record _loaded_ of _state_.[[Visited]], do
-                  1. If _loaded_.[[Status]] is ~new~, set _loaded_.[[Status]] to ~unlinked~.
-                1. Perform ! Call(_state_.[[PromiseCapability]].[[Resolve]], *undefined*, « *undefined* »).
-              1. Return ~unused~.
+              1. If _hostDefined_ is not present, let _hostDefined_ be ~empty~.
+              1. Let _pc_ be ! NewPromiseCapability(%Promise%).
+              1. Let _state_ be the GraphLoadingState Record { [[IsLoading]]: *true*, [[PendingModulesCount]]: 1, [[Visited]]: « », [[PromiseCapability]]: _pc_, [[HostDefined]]: _hostDefined_ }.
+              1. Perform InnerModuleLoading(_state_, _module_).
+              1. Return _pc_.[[Promise]].
             </emu-alg>
-          </emu-clause>
 
-          <emu-clause id="sec-ContinueModuleLoading" type="abstract operation">
-            <h1>
-              ContinueModuleLoading (
-                _state_: a GraphLoadingState Record,
-                _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
-              ): ~unused~
-            </h1>
-            <dl class="header">
-              <dt>description</dt>
-              <dd>It is used to re-enter the loading process after a call to HostLoadImportedModule.</dd>
-            </dl>
-
-            <emu-alg>
-              1. If _state_.[[IsLoading]] is *false*, return ~unused~.
-              1. If _moduleCompletion_ is a normal completion, then
-                1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]]).
-              1. Else,
-                1. Set _state_.[[IsLoading]] to *false*.
-                1. Perform ! Call(_state_.[[PromiseCapability]].[[Reject]], *undefined*, « _moduleCompletion_.[[Value]] »).
-              1. Return ~unused~.
-            </emu-alg>
-          </emu-clause>
-        </emu-clause>
-
-        <emu-clause id="sec-moduledeclarationlinking" type="concrete method" oldids="sec-moduledeclarationinstantiation">
-          <h1>Link ( ): either a normal completion containing ~unused~ or a throw completion</h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Cyclic Module Record _module_</dd>
-
-            <dt>description</dt>
-            <dd>On success, Link transitions this module's [[Status]] from ~unlinked~ to ~linked~. On failure, an exception is thrown and this module's [[Status]] remains ~unlinked~. (Most of the work is done by the auxiliary function InnerModuleLinking.)</dd>
-          </dl>
-
-          <emu-alg>
-            1. Assert: _module_.[[Status]] is one of ~unlinked~, ~linked~, ~evaluating-async~, or ~evaluated~.
-            1. Let _stack_ be a new empty List.
-            1. Let _result_ be Completion(InnerModuleLinking(_module_, _stack_, 0)).
-            1. If _result_ is an abrupt completion, then
-              1. For each Cyclic Module Record _m_ of _stack_, do
-                1. Assert: _m_.[[Status]] is ~linking~.
-                1. Set _m_.[[Status]] to ~unlinked~.
-              1. Assert: _module_.[[Status]] is ~unlinked~.
-              1. Return ? _result_.
-            1. Assert: _module_.[[Status]] is one of ~linked~, ~evaluating-async~, or ~evaluated~.
-            1. Assert: _stack_ is empty.
-            1. Return ~unused~.
-          </emu-alg>
-
-          <emu-clause id="sec-InnerModuleLinking" type="abstract operation" oldids="sec-innermoduleinstantiation">
-            <h1>
-              InnerModuleLinking (
-                _module_: a Module Record,
-                _stack_: a List of Cyclic Module Records,
-                _index_: a non-negative integer,
-              ): either a normal completion containing a non-negative integer or a throw completion
-            </h1>
-            <dl class="header">
-              <dt>description</dt>
-              <dd>It is used by Link to perform the actual linking process for _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as a module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, keep track of the depth-first search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly connected components (SCCs), such that all modules in an SCC transition to ~linked~ together.</dd>
-            </dl>
-
-            <emu-alg>
-              1. If _module_ is not a Cyclic Module Record, then
-                1. Perform ? _module_.Link().
-                1. Return _index_.
-              1. If _module_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~, then
-                1. Return _index_.
-              1. Assert: _module_.[[Status]] is ~unlinked~.
-              1. Set _module_.[[Status]] to ~linking~.
-              1. Set _module_.[[DFSIndex]] to _index_.
-              1. Set _module_.[[DFSAncestorIndex]] to _index_.
-              1. Set _index_ to _index_ + 1.
-              1. Append _module_ to _stack_.
-              1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
-                1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
-                1. Set _index_ to ? InnerModuleLinking(_requiredModule_, _stack_, _index_).
-                1. If _requiredModule_ is a Cyclic Module Record, then
-                  1. Assert: _requiredModule_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~.
-                  1. Assert: _requiredModule_.[[Status]] is ~linking~ if and only if _stack_ contains _requiredModule_.
-                  1. If _requiredModule_.[[Status]] is ~linking~, then
-                    1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-              1. Perform ? _module_.InitializeEnvironment().
-              1. Assert: _module_ occurs exactly once in _stack_.
-              1. Assert: _module_.[[DFSAncestorIndex]] ≤ _module_.[[DFSIndex]].
-              1. If _module_.[[DFSAncestorIndex]] = _module_.[[DFSIndex]], then
-                1. Let _done_ be *false*.
-                1. Repeat, while _done_ is *false*,
-                  1. Let _requiredModule_ be the last element of _stack_.
-                  1. Remove the last element of _stack_.
-                  1. Assert: _requiredModule_ is a Cyclic Module Record.
-                  1. Set _requiredModule_.[[Status]] to ~linked~.
-                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
-              1. Return _index_.
-            </emu-alg>
-          </emu-clause>
-        </emu-clause>
-
-        <emu-clause id="sec-moduleevaluation" type="concrete method">
-          <h1>Evaluate ( ): a Promise</h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Cyclic Module Record _module_</dd>
-
-            <dt>description</dt>
-            <dd>Evaluate transitions this module's [[Status]] from ~linked~ to either ~evaluating-async~ or ~evaluated~. The first time it is called on a module in a given strongly connected component, Evaluate creates and returns a Promise which resolves when the module has finished evaluating. This Promise is stored in the [[TopLevelCapability]] field of the [[CycleRoot]] for the component. Future invocations of Evaluate on any module in the component return the same Promise. (Most of the work is done by the auxiliary function InnerModuleEvaluation.)</dd>
-          </dl>
-
-          <emu-alg>
-            1. Assert: This call to Evaluate is not happening at the same time as another call to Evaluate within the surrounding agent.
-            1. Assert: _module_.[[Status]] is one of ~linked~, ~evaluating-async~, or ~evaluated~.
-            1. If _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~, set _module_ to _module_.[[CycleRoot]].
-            1. If _module_.[[TopLevelCapability]] is not ~empty~, then
-              1. Return _module_.[[TopLevelCapability]].[[Promise]].
-            1. Let _stack_ be a new empty List.
-            1. Let _capability_ be ! NewPromiseCapability(%Promise%).
-            1. Set _module_.[[TopLevelCapability]] to _capability_.
-            1. Let _result_ be Completion(InnerModuleEvaluation(_module_, _stack_, 0)).
-            1. If _result_ is an abrupt completion, then
-              1. For each Cyclic Module Record _m_ of _stack_, do
-                1. Assert: _m_.[[Status]] is ~evaluating~.
-                1. Assert: _m_.[[AsyncEvaluationOrder]] is ~unset~.
-                1. Set _m_.[[Status]] to ~evaluated~.
-                1. Set _m_.[[EvaluationError]] to _result_.
-              1. Assert: _module_.[[Status]] is ~evaluated~.
-              1. Assert: _module_.[[EvaluationError]] and _result_ are the same Completion Record.
-              1. Perform ! Call(_capability_.[[Reject]], *undefined*, « _result_.[[Value]] »).
-            1. Else,
-              1. Assert: _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
-              1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. If _module_.[[Status]] is ~evaluated~, then
-                1. NOTE: This implies that evaluation of _module_ completed synchronously.
-                1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~.
-                1. Perform ! Call(_capability_.[[Resolve]], *undefined*, « *undefined* »).
-              1. Assert: _stack_ is empty.
-            1. Return _capability_.[[Promise]].
-          </emu-alg>
-
-          <emu-clause id="sec-innermoduleevaluation" type="abstract operation">
-            <h1>
-              InnerModuleEvaluation (
-                _module_: a Module Record,
-                _stack_: a List of Cyclic Module Records,
-                _index_: a non-negative integer,
-              ): either a normal completion containing a non-negative integer or a throw completion
-            </h1>
-            <dl class="header">
-              <dt>description</dt>
-              <dd>It is used by Evaluate to perform the actual evaluation process for _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestorIndex]] fields, are used the same way as in InnerModuleLinking.</dd>
-            </dl>
-
-            <emu-alg>
-              1. If _module_ is not a Cyclic Module Record, then
-                1. Let _promise_ be ! _module_.Evaluate().
-                1. Assert: _promise_.[[PromiseState]] is not ~pending~.
-                1. If _promise_.[[PromiseState]] is ~rejected~, then
-                  1. Return ThrowCompletion(_promise_.[[PromiseResult]]).
-                1. Return _index_.
-              1. If _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~, then
-                1. If _module_.[[EvaluationError]] is ~empty~, return _index_.
-                1. Otherwise, return ? _module_.[[EvaluationError]].
-              1. If _module_.[[Status]] is ~evaluating~, return _index_.
-              1. Assert: _module_.[[Status]] is ~linked~.
-              1. Set _module_.[[Status]] to ~evaluating~.
-              1. Set _module_.[[DFSIndex]] to _index_.
-              1. Set _module_.[[DFSAncestorIndex]] to _index_.
-              1. Set _module_.[[PendingAsyncDependencies]] to 0.
-              1. Set _index_ to _index_ + 1.
-              1. Append _module_ to _stack_.
-              1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
-                1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
-                1. Set _index_ to ? InnerModuleEvaluation(_requiredModule_, _stack_, _index_).
-                1. If _requiredModule_ is a Cyclic Module Record, then
-                  1. Assert: _requiredModule_.[[Status]] is one of ~evaluating~, ~evaluating-async~, or ~evaluated~.
-                  1. Assert: _requiredModule_.[[Status]] is ~evaluating~ if and only if _stack_ contains _requiredModule_.
-                  1. If _requiredModule_.[[Status]] is ~evaluating~, then
-                    1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-                  1. Else,
-                    1. Set _requiredModule_ to _requiredModule_.[[CycleRoot]].
-                    1. Assert: _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
-                    1. If _requiredModule_.[[EvaluationError]] is not ~empty~, return ? _requiredModule_.[[EvaluationError]].
-                  1. If _requiredModule_.[[AsyncEvaluationOrder]] is an integer, then
-                    1. Set _module_.[[PendingAsyncDependencies]] to _module_.[[PendingAsyncDependencies]] + 1.
-                    1. Append _module_ to _requiredModule_.[[AsyncParentModules]].
-              1. If _module_.[[PendingAsyncDependencies]] > 0 or _module_.[[HasTLA]] is *true*, then
-                1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~.
-                1. Set _module_.[[AsyncEvaluationOrder]] to IncrementModuleAsyncEvaluationCount().
-                1. If _module_.[[PendingAsyncDependencies]] = 0, perform ExecuteAsyncModule(_module_).
-              1. Else,
-                1. Perform ? <emu-meta effects="user-code">_module_.ExecuteModule()</emu-meta>.
-              1. Assert: _module_ occurs exactly once in _stack_.
-              1. Assert: _module_.[[DFSAncestorIndex]] ≤ _module_.[[DFSIndex]].
-              1. If _module_.[[DFSAncestorIndex]] = _module_.[[DFSIndex]], then
-                1. Let _done_ be *false*.
-                1. Repeat, while _done_ is *false*,
-                  1. Let _requiredModule_ be the last element of _stack_.
-                  1. Remove the last element of _stack_.
-                  1. Assert: _requiredModule_ is a Cyclic Module Record.
-                  1. Assert: _requiredModule_.[[AsyncEvaluationOrder]] is either an integer or ~unset~.
-                  1. If _requiredModule_.[[AsyncEvaluationOrder]] is ~unset~, set _requiredModule_.[[Status]] to ~evaluated~.
-                  1. Otherwise, set _requiredModule_.[[Status]] to ~evaluating-async~.
-                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
-                  1. Set _requiredModule_.[[CycleRoot]] to _module_.
-              1. Return _index_.
-            </emu-alg>
             <emu-note>
-              <p>A module is ~evaluating~ while it is being traversed by InnerModuleEvaluation. A module is ~evaluated~ on execution completion or ~evaluating-async~ during execution if its [[HasTLA]] field is *true* or if it has asynchronous dependencies.</p>
+              The _hostDefined_ parameter can be used to pass additional information necessary to fetch the imported modules. It is used, for example, by HTML to set the correct fetch destination for <code>&lt;link rel="preload" as="..."&gt;</code> tags.
+              <code>import()</code> expressions never set the _hostDefined_ parameter.
             </emu-note>
-            <emu-note>
-              <p>Any modules depending on a module of an asynchronous cycle when that cycle is not ~evaluating~ will instead depend on the execution of the root of the cycle via [[CycleRoot]]. This ensures that the cycle state can be treated as a single strongly connected component through its root module state.</p>
-            </emu-note>
-          </emu-clause>
 
-          <emu-clause id="sec-execute-async-module" type="abstract operation">
-            <h1>
-              ExecuteAsyncModule (
-                _module_: a Cyclic Module Record,
-              ): ~unused~
-            </h1>
-            <dl class="header">
-            </dl>
+            <emu-clause id="sec-InnerModuleLoading" type="abstract operation">
+              <h1>
+                InnerModuleLoading (
+                  _state_: a GraphLoadingState Record,
+                  _module_: a Module Record,
+                ): ~unused~
+              </h1>
+              <dl class="header">
+                <dt>description</dt>
+                <dd>It is used by LoadRequestedModules to recursively perform the actual loading process for _module_'s dependency graph.</dd>
+              </dl>
 
-            <emu-alg>
-              1. Assert: _module_.[[Status]] is either ~evaluating~ or ~evaluating-async~.
-              1. Assert: _module_.[[HasTLA]] is *true*.
-              1. Let _capability_ be ! NewPromiseCapability(%Promise%).
-              1. Let _fulfilledClosure_ be a new Abstract Closure with no parameters that captures _module_ and performs the following steps when called:
-                1. Perform AsyncModuleExecutionFulfilled(_module_).
-                1. Return *undefined*.
-              1. Let _onFulfilled_ be CreateBuiltinFunction(_fulfilledClosure_, 0, *""*, « »).
-              1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_error_) that captures _module_ and performs the following steps when called:
-                1. Perform AsyncModuleExecutionRejected(_module_, _error_).
-                1. Return *undefined*.
-              1. Let _onRejected_ be CreateBuiltinFunction(_rejectedClosure_, 0, *""*, « »).
-              1. Perform PerformPromiseThen(_capability_.[[Promise]], _onFulfilled_, _onRejected_).
-              1. Perform ! <emu-meta effects="user-code">_module_.ExecuteModule</emu-meta>(_capability_).
-              1. Return ~unused~.
-            </emu-alg>
-          </emu-clause>
-
-          <emu-clause id="sec-gather-available-ancestors" type="abstract operation">
-            <h1>
-              GatherAvailableAncestors (
-                _module_: a Cyclic Module Record,
-                _execList_: a List of Cyclic Module Records,
-              ): ~unused~
-            </h1>
-            <dl class="header">
-            </dl>
-            <emu-alg>
-              1. For each Cyclic Module Record _m_ of _module_.[[AsyncParentModules]], do
-                1. If _execList_ does not contain _m_ and _m_.[[CycleRoot]].[[EvaluationError]] is ~empty~, then
-                  1. Assert: _m_.[[Status]] is ~evaluating-async~.
-                  1. Assert: _m_.[[EvaluationError]] is ~empty~.
-                  1. Assert: _m_.[[AsyncEvaluationOrder]] is an integer.
-                  1. Assert: _m_.[[PendingAsyncDependencies]] > 0.
-                  1. Set _m_.[[PendingAsyncDependencies]] to _m_.[[PendingAsyncDependencies]] - 1.
-                  1. If _m_.[[PendingAsyncDependencies]] = 0, then
-                    1. Append _m_ to _execList_.
-                    1. If _m_.[[HasTLA]] is *false*, perform GatherAvailableAncestors(_m_, _execList_).
-              1. Return ~unused~.
-            </emu-alg>
-            <emu-note>
-              <p>When an asynchronous execution for a root _module_ is fulfilled, this function determines the list of modules which are able to synchronously execute together on this completion, populating them in _execList_.</p>
-            </emu-note>
-          </emu-clause>
-
-          <emu-clause id="sec-async-module-execution-fulfilled" type="abstract operation">
-            <h1>
-              AsyncModuleExecutionFulfilled (
-                _module_: a Cyclic Module Record,
-              ): ~unused~
-            </h1>
-            <dl class="header">
-            </dl>
-            <emu-alg>
-              1. If _module_.[[Status]] is ~evaluated~, then
-                1. Assert: _module_.[[EvaluationError]] is not ~empty~.
+              <emu-alg>
+                1. Assert: _state_.[[IsLoading]] is *true*.
+                1. If _module_ is a Cyclic Module Record, _module_.[[Status]] is ~new~, and _state_.[[Visited]] does not contain _module_, then
+                  1. Append _module_ to _state_.[[Visited]].
+                  1. Let _requestedModulesCount_ be the number of elements in _module_.[[RequestedModules]].
+                  1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] + _requestedModulesCount_.
+                  1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
+                    1. If AllImportAttributesSupported(_request_.[[Attributes]]) is *false*, then
+                      1. Let _error_ be ThrowCompletion(a newly created *SyntaxError* object).
+                      1. Perform ContinueModuleLoading(_state_, _error_).
+                    1. Else if _module_.[[LoadedModules]] contains a LoadedModuleRequest Record _record_ such that ModuleRequestsEqual(_record_, _request_) is *true*, then
+                      1. Perform InnerModuleLoading(_state_, _record_.[[Module]]).
+                    1. Else,
+                      1. Perform HostLoadImportedModule(_module_, _request_, _state_.[[HostDefined]], _state_).
+                      1. NOTE: HostLoadImportedModule will call FinishLoadingImportedModule, which re-enters the graph loading process through ContinueModuleLoading.
+                    1. If _state_.[[IsLoading]] is *false*, return ~unused~.
+                1. Assert: _state_.[[PendingModulesCount]] ≥ 1.
+                1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] - 1.
+                1. If _state_.[[PendingModulesCount]] = 0, then
+                  1. Set _state_.[[IsLoading]] to *false*.
+                  1. For each Cyclic Module Record _loaded_ of _state_.[[Visited]], do
+                    1. If _loaded_.[[Status]] is ~new~, set _loaded_.[[Status]] to ~unlinked~.
+                  1. Perform ! Call(_state_.[[PromiseCapability]].[[Resolve]], *undefined*, « *undefined* »).
                 1. Return ~unused~.
-              1. Assert: _module_.[[Status]] is ~evaluating-async~.
-              1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
-              1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. Set _module_.[[AsyncEvaluationOrder]] to ~done~.
-              1. Set _module_.[[Status]] to ~evaluated~.
-              1. If _module_.[[TopLevelCapability]] is not ~empty~, then
-                1. Assert: _module_.[[CycleRoot]] and _module_ are the same Module Record.
-                1. Perform ! Call(_module_.[[TopLevelCapability]].[[Resolve]], *undefined*, « *undefined* »).
-              1. Let _execList_ be a new empty List.
-              1. Perform GatherAvailableAncestors(_module_, _execList_).
-              1. Assert: All elements of _execList_ have their [[AsyncEvaluationOrder]] field set to an integer, [[PendingAsyncDependencies]] field set to 0, and [[EvaluationError]] field set to ~empty~.
-              1. Let _sortedExecList_ be a List whose elements are the elements of _execList_, sorted by their [[AsyncEvaluationOrder]] field in ascending order.
-              1. For each Cyclic Module Record _m_ of _sortedExecList_, do
-                1. If _m_.[[Status]] is ~evaluated~, then
-                  1. Assert: _m_.[[EvaluationError]] is not ~empty~.
-                1. Else if _m_.[[HasTLA]] is *true*, then
-                  1. Perform ExecuteAsyncModule(_m_).
+              </emu-alg>
+            </emu-clause>
+
+            <emu-clause id="sec-ContinueModuleLoading" type="abstract operation">
+              <h1>
+                ContinueModuleLoading (
+                  _state_: a GraphLoadingState Record,
+                  _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
+                ): ~unused~
+              </h1>
+              <dl class="header">
+                <dt>description</dt>
+                <dd>It is used to re-enter the loading process after a call to HostLoadImportedModule.</dd>
+              </dl>
+
+              <emu-alg>
+                1. If _state_.[[IsLoading]] is *false*, return ~unused~.
+                1. If _moduleCompletion_ is a normal completion, then
+                  1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]]).
                 1. Else,
-                  1. Let _result_ be <emu-meta effects="user-code">_m_.ExecuteModule()</emu-meta>.
-                  1. If _result_ is an abrupt completion, then
-                    1. Perform AsyncModuleExecutionRejected(_m_, _result_.[[Value]]).
-                  1. Else,
-                    1. Set _m_.[[AsyncEvaluationOrder]] to ~done~.
-                    1. Set _m_.[[Status]] to ~evaluated~.
-                    1. If _m_.[[TopLevelCapability]] is not ~empty~, then
-                      1. Assert: _m_.[[CycleRoot]] and _m_ are the same Module Record.
-                      1. Perform ! Call(_m_.[[TopLevelCapability]].[[Resolve]], *undefined*, « *undefined* »).
-              1. Return ~unused~.
-            </emu-alg>
+                  1. Set _state_.[[IsLoading]] to *false*.
+                  1. Perform ! Call(_state_.[[PromiseCapability]].[[Reject]], *undefined*, « _moduleCompletion_.[[Value]] »).
+                1. Return ~unused~.
+              </emu-alg>
+            </emu-clause>
           </emu-clause>
 
-          <emu-clause id="sec-async-module-execution-rejected" type="abstract operation">
-            <h1>
-              AsyncModuleExecutionRejected (
-                _module_: a Cyclic Module Record,
-                _error_: an ECMAScript language value,
-              ): ~unused~
-            </h1>
+          <emu-clause id="sec-moduledeclarationlinking" type="concrete method" oldids="sec-moduledeclarationinstantiation">
+            <h1>Link ( ): either a normal completion containing ~unused~ or a throw completion</h1>
             <dl class="header">
+              <dt>for</dt>
+              <dd>a Cyclic Module Record _module_</dd>
+
+              <dt>description</dt>
+              <dd>On success, Link transitions this module's [[Status]] from ~unlinked~ to ~linked~. On failure, an exception is thrown and this module's [[Status]] remains ~unlinked~. (Most of the work is done by the auxiliary function InnerModuleLinking.)</dd>
             </dl>
+
             <emu-alg>
-              1. If _module_.[[Status]] is ~evaluated~, then
-                1. Assert: _module_.[[EvaluationError]] is not ~empty~.
-                1. Return ~unused~.
-              1. Assert: _module_.[[Status]] is ~evaluating-async~.
-              1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
-              1. Assert: _module_.[[EvaluationError]] is ~empty~.
-              1. Set _module_.[[EvaluationError]] to ThrowCompletion(_error_).
-              1. Set _module_.[[Status]] to ~evaluated~.
-              1. Set _module_.[[AsyncEvaluationOrder]] to ~done~.
-              1. NOTE: _module_.[[AsyncEvaluationOrder]] is set to ~done~ for symmetry with AsyncModuleExecutionFulfilled. In InnerModuleEvaluation, the value of a module's [[AsyncEvaluationOrder]] internal slot is unused when its [[EvaluationError]] internal slot is not ~empty~.
-              1. For each Cyclic Module Record _m_ of _module_.[[AsyncParentModules]], do
-                1. Perform AsyncModuleExecutionRejected(_m_, _error_).
-              1. If _module_.[[TopLevelCapability]] is not ~empty~, then
-                1. Assert: _module_.[[CycleRoot]] and _module_ are the same Module Record.
-                1. Perform ! Call(_module_.[[TopLevelCapability]].[[Reject]], *undefined*, « _error_ »).
+              1. Assert: _module_.[[Status]] is one of ~unlinked~, ~linked~, ~evaluating-async~, or ~evaluated~.
+              1. Let _stack_ be a new empty List.
+              1. Let _result_ be Completion(InnerModuleLinking(_module_, _stack_, 0)).
+              1. If _result_ is an abrupt completion, then
+                1. For each Cyclic Module Record _m_ of _stack_, do
+                  1. Assert: _m_.[[Status]] is ~linking~.
+                  1. Set _m_.[[Status]] to ~unlinked~.
+                1. Assert: _module_.[[Status]] is ~unlinked~.
+                1. Return ? _result_.
+              1. Assert: _module_.[[Status]] is one of ~linked~, ~evaluating-async~, or ~evaluated~.
+              1. Assert: _stack_ is empty.
               1. Return ~unused~.
             </emu-alg>
+
+            <emu-clause id="sec-InnerModuleLinking" type="abstract operation" oldids="sec-innermoduleinstantiation">
+              <h1>
+                InnerModuleLinking (
+                  _module_: a Module Record,
+                  _stack_: a List of Cyclic Module Records,
+                  _index_: a non-negative integer,
+                ): either a normal completion containing a non-negative integer or a throw completion
+              </h1>
+              <dl class="header">
+                <dt>description</dt>
+                <dd>It is used by Link to perform the actual linking process for _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as a module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, keep track of the depth-first search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly connected components (SCCs), such that all modules in an SCC transition to ~linked~ together.</dd>
+              </dl>
+
+              <emu-alg>
+                1. If _module_ is not a Cyclic Module Record, then
+                  1. Perform ? _module_.Link().
+                  1. Return _index_.
+                1. If _module_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~, then
+                  1. Return _index_.
+                1. Assert: _module_.[[Status]] is ~unlinked~.
+                1. Set _module_.[[Status]] to ~linking~.
+                1. Set _module_.[[DFSIndex]] to _index_.
+                1. Set _module_.[[DFSAncestorIndex]] to _index_.
+                1. Set _index_ to _index_ + 1.
+                1. Append _module_ to _stack_.
+                1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
+                  1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
+                  1. Set _index_ to ? InnerModuleLinking(_requiredModule_, _stack_, _index_).
+                  1. If _requiredModule_ is a Cyclic Module Record, then
+                    1. Assert: _requiredModule_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~.
+                    1. Assert: _requiredModule_.[[Status]] is ~linking~ if and only if _stack_ contains _requiredModule_.
+                    1. If _requiredModule_.[[Status]] is ~linking~, then
+                      1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+                1. Perform ? _module_.InitializeEnvironment().
+                1. Assert: _module_ occurs exactly once in _stack_.
+                1. Assert: _module_.[[DFSAncestorIndex]] ≤ _module_.[[DFSIndex]].
+                1. If _module_.[[DFSAncestorIndex]] = _module_.[[DFSIndex]], then
+                  1. Let _done_ be *false*.
+                  1. Repeat, while _done_ is *false*,
+                    1. Let _requiredModule_ be the last element of _stack_.
+                    1. Remove the last element of _stack_.
+                    1. Assert: _requiredModule_ is a Cyclic Module Record.
+                    1. Set _requiredModule_.[[Status]] to ~linked~.
+                    1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+                1. Return _index_.
+              </emu-alg>
+            </emu-clause>
+          </emu-clause>
+
+          <emu-clause id="sec-moduleevaluation" type="concrete method">
+            <h1>Evaluate ( ): a Promise</h1>
+            <dl class="header">
+              <dt>for</dt>
+              <dd>a Cyclic Module Record _module_</dd>
+
+              <dt>description</dt>
+              <dd>Evaluate transitions this module's [[Status]] from ~linked~ to either ~evaluating-async~ or ~evaluated~. The first time it is called on a module in a given strongly connected component, Evaluate creates and returns a Promise which resolves when the module has finished evaluating. This Promise is stored in the [[TopLevelCapability]] field of the [[CycleRoot]] for the component. Future invocations of Evaluate on any module in the component return the same Promise. (Most of the work is done by the auxiliary function InnerModuleEvaluation.)</dd>
+            </dl>
+
+            <emu-alg>
+              1. Assert: This call to Evaluate is not happening at the same time as another call to Evaluate within the surrounding agent.
+              1. Assert: _module_.[[Status]] is one of ~linked~, ~evaluating-async~, or ~evaluated~.
+              1. If _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~, set _module_ to _module_.[[CycleRoot]].
+              1. If _module_.[[TopLevelCapability]] is not ~empty~, then
+                1. Return _module_.[[TopLevelCapability]].[[Promise]].
+              1. Let _stack_ be a new empty List.
+              1. Let _capability_ be ! NewPromiseCapability(%Promise%).
+              1. Set _module_.[[TopLevelCapability]] to _capability_.
+              1. Let _result_ be Completion(InnerModuleEvaluation(_module_, _stack_, 0)).
+              1. If _result_ is an abrupt completion, then
+                1. For each Cyclic Module Record _m_ of _stack_, do
+                  1. Assert: _m_.[[Status]] is ~evaluating~.
+                  1. Assert: _m_.[[AsyncEvaluationOrder]] is ~unset~.
+                  1. Set _m_.[[Status]] to ~evaluated~.
+                  1. Set _m_.[[EvaluationError]] to _result_.
+                1. Assert: _module_.[[Status]] is ~evaluated~.
+                1. Assert: _module_.[[EvaluationError]] and _result_ are the same Completion Record.
+                1. Perform ! Call(_capability_.[[Reject]], *undefined*, « _result_.[[Value]] »).
+              1. Else,
+                1. Assert: _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
+                1. Assert: _module_.[[EvaluationError]] is ~empty~.
+                1. If _module_.[[Status]] is ~evaluated~, then
+                  1. NOTE: This implies that evaluation of _module_ completed synchronously.
+                  1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~.
+                  1. Perform ! Call(_capability_.[[Resolve]], *undefined*, « *undefined* »).
+                1. Assert: _stack_ is empty.
+              1. Return _capability_.[[Promise]].
+            </emu-alg>
+
+            <emu-clause id="sec-innermoduleevaluation" type="abstract operation">
+              <h1>
+                InnerModuleEvaluation (
+                  _module_: a Module Record,
+                  _stack_: a List of Cyclic Module Records,
+                  _index_: a non-negative integer,
+                ): either a normal completion containing a non-negative integer or a throw completion
+              </h1>
+              <dl class="header">
+                <dt>description</dt>
+                <dd>It is used by Evaluate to perform the actual evaluation process for _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestorIndex]] fields, are used the same way as in InnerModuleLinking.</dd>
+              </dl>
+
+              <emu-alg>
+                1. If _module_ is not a Cyclic Module Record, then
+                  1. Let _promise_ be ! _module_.Evaluate().
+                  1. Assert: _promise_.[[PromiseState]] is not ~pending~.
+                  1. If _promise_.[[PromiseState]] is ~rejected~, then
+                    1. Return ThrowCompletion(_promise_.[[PromiseResult]]).
+                  1. Return _index_.
+                1. If _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~, then
+                  1. If _module_.[[EvaluationError]] is ~empty~, return _index_.
+                  1. Otherwise, return ? _module_.[[EvaluationError]].
+                1. If _module_.[[Status]] is ~evaluating~, return _index_.
+                1. Assert: _module_.[[Status]] is ~linked~.
+                1. Set _module_.[[Status]] to ~evaluating~.
+                1. Set _module_.[[DFSIndex]] to _index_.
+                1. Set _module_.[[DFSAncestorIndex]] to _index_.
+                1. Set _module_.[[PendingAsyncDependencies]] to 0.
+                1. Set _index_ to _index_ + 1.
+                1. Append _module_ to _stack_.
+                1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
+                  1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
+                  1. Set _index_ to ? InnerModuleEvaluation(_requiredModule_, _stack_, _index_).
+                  1. If _requiredModule_ is a Cyclic Module Record, then
+                    1. Assert: _requiredModule_.[[Status]] is one of ~evaluating~, ~evaluating-async~, or ~evaluated~.
+                    1. Assert: _requiredModule_.[[Status]] is ~evaluating~ if and only if _stack_ contains _requiredModule_.
+                    1. If _requiredModule_.[[Status]] is ~evaluating~, then
+                      1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+                    1. Else,
+                      1. Set _requiredModule_ to _requiredModule_.[[CycleRoot]].
+                      1. Assert: _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
+                      1. If _requiredModule_.[[EvaluationError]] is not ~empty~, return ? _requiredModule_.[[EvaluationError]].
+                    1. If _requiredModule_.[[AsyncEvaluationOrder]] is an integer, then
+                      1. Set _module_.[[PendingAsyncDependencies]] to _module_.[[PendingAsyncDependencies]] + 1.
+                      1. Append _module_ to _requiredModule_.[[AsyncParentModules]].
+                1. If _module_.[[PendingAsyncDependencies]] > 0 or _module_.[[HasTLA]] is *true*, then
+                  1. Assert: _module_.[[AsyncEvaluationOrder]] is ~unset~.
+                  1. Set _module_.[[AsyncEvaluationOrder]] to IncrementModuleAsyncEvaluationCount().
+                  1. If _module_.[[PendingAsyncDependencies]] = 0, perform ExecuteAsyncModule(_module_).
+                1. Else,
+                  1. Perform ? <emu-meta effects="user-code">_module_.ExecuteModule()</emu-meta>.
+                1. Assert: _module_ occurs exactly once in _stack_.
+                1. Assert: _module_.[[DFSAncestorIndex]] ≤ _module_.[[DFSIndex]].
+                1. If _module_.[[DFSAncestorIndex]] = _module_.[[DFSIndex]], then
+                  1. Let _done_ be *false*.
+                  1. Repeat, while _done_ is *false*,
+                    1. Let _requiredModule_ be the last element of _stack_.
+                    1. Remove the last element of _stack_.
+                    1. Assert: _requiredModule_ is a Cyclic Module Record.
+                    1. Assert: _requiredModule_.[[AsyncEvaluationOrder]] is either an integer or ~unset~.
+                    1. If _requiredModule_.[[AsyncEvaluationOrder]] is ~unset~, set _requiredModule_.[[Status]] to ~evaluated~.
+                    1. Otherwise, set _requiredModule_.[[Status]] to ~evaluating-async~.
+                    1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+                    1. Set _requiredModule_.[[CycleRoot]] to _module_.
+                1. Return _index_.
+              </emu-alg>
+              <emu-note>
+                <p>A module is ~evaluating~ while it is being traversed by InnerModuleEvaluation. A module is ~evaluated~ on execution completion or ~evaluating-async~ during execution if its [[HasTLA]] field is *true* or if it has asynchronous dependencies.</p>
+              </emu-note>
+              <emu-note>
+                <p>Any modules depending on a module of an asynchronous cycle when that cycle is not ~evaluating~ will instead depend on the execution of the root of the cycle via [[CycleRoot]]. This ensures that the cycle state can be treated as a single strongly connected component through its root module state.</p>
+              </emu-note>
+            </emu-clause>
+
+            <emu-clause id="sec-execute-async-module" type="abstract operation">
+              <h1>
+                ExecuteAsyncModule (
+                  _module_: a Cyclic Module Record,
+                ): ~unused~
+              </h1>
+              <dl class="header">
+              </dl>
+
+              <emu-alg>
+                1. Assert: _module_.[[Status]] is either ~evaluating~ or ~evaluating-async~.
+                1. Assert: _module_.[[HasTLA]] is *true*.
+                1. Let _capability_ be ! NewPromiseCapability(%Promise%).
+                1. Let _fulfilledClosure_ be a new Abstract Closure with no parameters that captures _module_ and performs the following steps when called:
+                  1. Perform AsyncModuleExecutionFulfilled(_module_).
+                  1. Return *undefined*.
+                1. Let _onFulfilled_ be CreateBuiltinFunction(_fulfilledClosure_, 0, *""*, « »).
+                1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_error_) that captures _module_ and performs the following steps when called:
+                  1. Perform AsyncModuleExecutionRejected(_module_, _error_).
+                  1. Return *undefined*.
+                1. Let _onRejected_ be CreateBuiltinFunction(_rejectedClosure_, 0, *""*, « »).
+                1. Perform PerformPromiseThen(_capability_.[[Promise]], _onFulfilled_, _onRejected_).
+                1. Perform ! <emu-meta effects="user-code">_module_.ExecuteModule</emu-meta>(_capability_).
+                1. Return ~unused~.
+              </emu-alg>
+            </emu-clause>
+
+            <emu-clause id="sec-gather-available-ancestors" type="abstract operation">
+              <h1>
+                GatherAvailableAncestors (
+                  _module_: a Cyclic Module Record,
+                  _execList_: a List of Cyclic Module Records,
+                ): ~unused~
+              </h1>
+              <dl class="header">
+              </dl>
+              <emu-alg>
+                1. For each Cyclic Module Record _m_ of _module_.[[AsyncParentModules]], do
+                  1. If _execList_ does not contain _m_ and _m_.[[CycleRoot]].[[EvaluationError]] is ~empty~, then
+                    1. Assert: _m_.[[Status]] is ~evaluating-async~.
+                    1. Assert: _m_.[[EvaluationError]] is ~empty~.
+                    1. Assert: _m_.[[AsyncEvaluationOrder]] is an integer.
+                    1. Assert: _m_.[[PendingAsyncDependencies]] > 0.
+                    1. Set _m_.[[PendingAsyncDependencies]] to _m_.[[PendingAsyncDependencies]] - 1.
+                    1. If _m_.[[PendingAsyncDependencies]] = 0, then
+                      1. Append _m_ to _execList_.
+                      1. If _m_.[[HasTLA]] is *false*, perform GatherAvailableAncestors(_m_, _execList_).
+                1. Return ~unused~.
+              </emu-alg>
+              <emu-note>
+                <p>When an asynchronous execution for a root _module_ is fulfilled, this function determines the list of modules which are able to synchronously execute together on this completion, populating them in _execList_.</p>
+              </emu-note>
+            </emu-clause>
+
+            <emu-clause id="sec-async-module-execution-fulfilled" type="abstract operation">
+              <h1>
+                AsyncModuleExecutionFulfilled (
+                  _module_: a Cyclic Module Record,
+                ): ~unused~
+              </h1>
+              <dl class="header">
+              </dl>
+              <emu-alg>
+                1. If _module_.[[Status]] is ~evaluated~, then
+                  1. Assert: _module_.[[EvaluationError]] is not ~empty~.
+                  1. Return ~unused~.
+                1. Assert: _module_.[[Status]] is ~evaluating-async~.
+                1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
+                1. Assert: _module_.[[EvaluationError]] is ~empty~.
+                1. Set _module_.[[AsyncEvaluationOrder]] to ~done~.
+                1. Set _module_.[[Status]] to ~evaluated~.
+                1. If _module_.[[TopLevelCapability]] is not ~empty~, then
+                  1. Assert: _module_.[[CycleRoot]] and _module_ are the same Module Record.
+                  1. Perform ! Call(_module_.[[TopLevelCapability]].[[Resolve]], *undefined*, « *undefined* »).
+                1. Let _execList_ be a new empty List.
+                1. Perform GatherAvailableAncestors(_module_, _execList_).
+                1. Assert: All elements of _execList_ have their [[AsyncEvaluationOrder]] field set to an integer, [[PendingAsyncDependencies]] field set to 0, and [[EvaluationError]] field set to ~empty~.
+                1. Let _sortedExecList_ be a List whose elements are the elements of _execList_, sorted by their [[AsyncEvaluationOrder]] field in ascending order.
+                1. For each Cyclic Module Record _m_ of _sortedExecList_, do
+                  1. If _m_.[[Status]] is ~evaluated~, then
+                    1. Assert: _m_.[[EvaluationError]] is not ~empty~.
+                  1. Else if _m_.[[HasTLA]] is *true*, then
+                    1. Perform ExecuteAsyncModule(_m_).
+                  1. Else,
+                    1. Let _result_ be <emu-meta effects="user-code">_m_.ExecuteModule()</emu-meta>.
+                    1. If _result_ is an abrupt completion, then
+                      1. Perform AsyncModuleExecutionRejected(_m_, _result_.[[Value]]).
+                    1. Else,
+                      1. Set _m_.[[AsyncEvaluationOrder]] to ~done~.
+                      1. Set _m_.[[Status]] to ~evaluated~.
+                      1. If _m_.[[TopLevelCapability]] is not ~empty~, then
+                        1. Assert: _m_.[[CycleRoot]] and _m_ are the same Module Record.
+                        1. Perform ! Call(_m_.[[TopLevelCapability]].[[Resolve]], *undefined*, « *undefined* »).
+                1. Return ~unused~.
+              </emu-alg>
+            </emu-clause>
+
+            <emu-clause id="sec-async-module-execution-rejected" type="abstract operation">
+              <h1>
+                AsyncModuleExecutionRejected (
+                  _module_: a Cyclic Module Record,
+                  _error_: an ECMAScript language value,
+                ): ~unused~
+              </h1>
+              <dl class="header">
+              </dl>
+              <emu-alg>
+                1. If _module_.[[Status]] is ~evaluated~, then
+                  1. Assert: _module_.[[EvaluationError]] is not ~empty~.
+                  1. Return ~unused~.
+                1. Assert: _module_.[[Status]] is ~evaluating-async~.
+                1. Assert: _module_.[[AsyncEvaluationOrder]] is an integer.
+                1. Assert: _module_.[[EvaluationError]] is ~empty~.
+                1. Set _module_.[[EvaluationError]] to ThrowCompletion(_error_).
+                1. Set _module_.[[Status]] to ~evaluated~.
+                1. Set _module_.[[AsyncEvaluationOrder]] to ~done~.
+                1. NOTE: _module_.[[AsyncEvaluationOrder]] is set to ~done~ for symmetry with AsyncModuleExecutionFulfilled. In InnerModuleEvaluation, the value of a module's [[AsyncEvaluationOrder]] internal slot is unused when its [[EvaluationError]] internal slot is not ~empty~.
+                1. For each Cyclic Module Record _m_ of _module_.[[AsyncParentModules]], do
+                  1. Perform AsyncModuleExecutionRejected(_m_, _error_).
+                1. If _module_.[[TopLevelCapability]] is not ~empty~, then
+                  1. Assert: _module_.[[CycleRoot]] and _module_ are the same Module Record.
+                  1. Perform ! Call(_module_.[[TopLevelCapability]].[[Reject]], *undefined*, « _error_ »).
+                1. Return ~unused~.
+              </emu-alg>
+            </emu-clause>
           </emu-clause>
         </emu-clause>
 
@@ -28427,212 +28433,224 @@
           </emu-note>
         </emu-clause>
 
-        <emu-clause id="sec-getexportednames" type="concrete method">
-          <h1>
-            GetExportedNames (
-              optional _exportStarSet_: a List of Source Text Module Records,
-            ): a List of Strings
-          </h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Source Text Module Record _module_</dd>
-          </dl>
-          <emu-alg>
-            1. Assert: _module_.[[Status]] is not ~new~.
-            1. If _exportStarSet_ is not present, set _exportStarSet_ to a new empty List.
-            1. If _exportStarSet_ contains _module_, then
-              1. Assert: We've reached the starting point of an `export *` circularity.
-              1. Return a new empty List.
-            1. Append _module_ to _exportStarSet_.
-            1. Let _exportedNames_ be a new empty List.
-            1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
-              1. Assert: _module_ provides the direct binding for this export.
-              1. Assert: _e_.[[ExportName]] is not *null*.
-              1. Append _e_.[[ExportName]] to _exportedNames_.
-            1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
-              1. Assert: _module_ imports a specific binding for this export.
-              1. Assert: _e_.[[ExportName]] is not *null*.
-              1. Append _e_.[[ExportName]] to _exportedNames_.
-            1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
-              1. Assert: _e_.[[ModuleRequest]] is not *null*.
-              1. Let _requestedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
-              1. Let _starNames_ be _requestedModule_.GetExportedNames(_exportStarSet_).
-              1. For each element _n_ of _starNames_, do
-                1. If _n_ is not *"default"*, then
-                  1. If _exportedNames_ does not contain _n_, then
-                    1. Append _n_ to _exportedNames_.
-            1. Return _exportedNames_.
-          </emu-alg>
-          <emu-note>
-            <p>GetExportedNames does not filter out or throw an exception for names that have ambiguous star export bindings.</p>
-          </emu-note>
-        </emu-clause>
+        <emu-clause id="sec-source-text-module-record-module-record-methods">
+          <h1>Implementation of Module Record Abstract Methods</h1>
 
-        <emu-clause id="sec-resolveexport" type="concrete method">
-          <h1>
-            ResolveExport (
-              _exportName_: a String,
-              optional _resolveSet_: a List of Records with fields [[Module]] (a Module Record) and [[ExportName]] (a String),
-            ): a ResolvedBinding Record, *null*, or ~ambiguous~
-          </h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Source Text Module Record _module_</dd>
+          <p>The following are the concrete methods for Source Text Module Record that implement the corresponding Module Record abstract methods defined in <emu-xref href="#table-abstract-methods-of-module-records"></emu-xref>.</p>
 
-            <dt>description</dt>
-            <dd>
-              <p>ResolveExport attempts to resolve an imported binding to the actual defining module and local binding name. The defining module may be the module represented by the Module Record this method was invoked on or some other module that is imported by that module. The parameter _resolveSet_ is used to detect unresolved circular import/export paths. If a pair consisting of specific Module Record and _exportName_ is reached that is already in _resolveSet_, an import circularity has been encountered. Before recursively calling ResolveExport, a pair consisting of _module_ and _exportName_ is added to _resolveSet_.</p>
-              <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]] } is returned. This record identifies the resolved binding of the originally requested export, unless this is the export of a namespace with no local binding. In this case, [[BindingName]] will be set to ~namespace~. If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, ~ambiguous~ is returned.</p>
-            </dd>
-          </dl>
-
-          <emu-alg>
-            1. Assert: _module_.[[Status]] is not ~new~.
-            1. If _resolveSet_ is not present, set _resolveSet_ to a new empty List.
-            1. For each Record { [[Module]], [[ExportName]] } _r_ of _resolveSet_, do
-              1. If _module_ and _r_.[[Module]] are the same Module Record and _exportName_ is _r_.[[ExportName]], then
-                1. Assert: This is a circular import request.
-                1. Return *null*.
-            1. Append the Record { [[Module]]: _module_, [[ExportName]]: _exportName_ } to _resolveSet_.
-            1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
-              1. If _e_.[[ExportName]] is _exportName_, then
+          <emu-clause id="sec-getexportednames" type="concrete method">
+            <h1>
+              GetExportedNames (
+                optional _exportStarSet_: a List of Source Text Module Records,
+              ): a List of Strings
+            </h1>
+            <dl class="header">
+              <dt>for</dt>
+              <dd>a Source Text Module Record _module_</dd>
+            </dl>
+            <emu-alg>
+              1. Assert: _module_.[[Status]] is not ~new~.
+              1. If _exportStarSet_ is not present, set _exportStarSet_ to a new empty List.
+              1. If _exportStarSet_ contains _module_, then
+                1. Assert: We've reached the starting point of an `export *` circularity.
+                1. Return a new empty List.
+              1. Append _module_ to _exportStarSet_.
+              1. Let _exportedNames_ be a new empty List.
+              1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
                 1. Assert: _module_ provides the direct binding for this export.
-                1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }.
-            1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
-              1. If _e_.[[ExportName]] is _exportName_, then
+                1. Assert: _e_.[[ExportName]] is not *null*.
+                1. Append _e_.[[ExportName]] to _exportedNames_.
+              1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
+                1. Assert: _module_ imports a specific binding for this export.
+                1. Assert: _e_.[[ExportName]] is not *null*.
+                1. Append _e_.[[ExportName]] to _exportedNames_.
+              1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
+                1. Assert: _e_.[[ModuleRequest]] is not *null*.
+                1. Let _requestedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
+                1. Let _starNames_ be _requestedModule_.GetExportedNames(_exportStarSet_).
+                1. For each element _n_ of _starNames_, do
+                  1. If _n_ is not *"default"*, then
+                    1. If _exportedNames_ does not contain _n_, then
+                      1. Append _n_ to _exportedNames_.
+              1. Return _exportedNames_.
+            </emu-alg>
+            <emu-note>
+              <p>GetExportedNames does not filter out or throw an exception for names that have ambiguous star export bindings.</p>
+            </emu-note>
+          </emu-clause>
+
+          <emu-clause id="sec-resolveexport" type="concrete method">
+            <h1>
+              ResolveExport (
+                _exportName_: a String,
+                optional _resolveSet_: a List of Records with fields [[Module]] (a Module Record) and [[ExportName]] (a String),
+              ): a ResolvedBinding Record, *null*, or ~ambiguous~
+            </h1>
+            <dl class="header">
+              <dt>for</dt>
+              <dd>a Source Text Module Record _module_</dd>
+
+              <dt>description</dt>
+              <dd>
+                <p>ResolveExport attempts to resolve an imported binding to the actual defining module and local binding name. The defining module may be the module represented by the Module Record this method was invoked on or some other module that is imported by that module. The parameter _resolveSet_ is used to detect unresolved circular import/export paths. If a pair consisting of specific Module Record and _exportName_ is reached that is already in _resolveSet_, an import circularity has been encountered. Before recursively calling ResolveExport, a pair consisting of _module_ and _exportName_ is added to _resolveSet_.</p>
+                <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]] } is returned. This record identifies the resolved binding of the originally requested export, unless this is the export of a namespace with no local binding. In this case, [[BindingName]] will be set to ~namespace~. If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, ~ambiguous~ is returned.</p>
+              </dd>
+            </dl>
+
+            <emu-alg>
+              1. Assert: _module_.[[Status]] is not ~new~.
+              1. If _resolveSet_ is not present, set _resolveSet_ to a new empty List.
+              1. For each Record { [[Module]], [[ExportName]] } _r_ of _resolveSet_, do
+                1. If _module_ and _r_.[[Module]] are the same Module Record and _exportName_ is _r_.[[ExportName]], then
+                  1. Assert: This is a circular import request.
+                  1. Return *null*.
+              1. Append the Record { [[Module]]: _module_, [[ExportName]]: _exportName_ } to _resolveSet_.
+              1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
+                1. If _e_.[[ExportName]] is _exportName_, then
+                  1. Assert: _module_ provides the direct binding for this export.
+                  1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }.
+              1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
+                1. If _e_.[[ExportName]] is _exportName_, then
+                  1. Assert: _e_.[[ModuleRequest]] is not *null*.
+                  1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
+                  1. If _e_.[[ImportName]] is ~all~, then
+                    1. Assert: _module_ does not provide the direct binding for this export.
+                    1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
+                  1. Else,
+                    1. Assert: _module_ imports a specific binding for this export.
+                    1. Assert: _e_.[[ImportName]] is a String.
+                    1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
+              1. If _exportName_ is *"default"*, then
+                1. Assert: A `default` export was not explicitly defined by this module.
+                1. Return *null*.
+                1. NOTE: A `default` export cannot be provided by an `export * from "mod"` declaration.
+              1. Let _starResolution_ be *null*.
+              1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
                 1. Assert: _e_.[[ModuleRequest]] is not *null*.
                 1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
-                1. If _e_.[[ImportName]] is ~all~, then
-                  1. Assert: _module_ does not provide the direct binding for this export.
-                  1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
-                1. Else,
-                  1. Assert: _module_ imports a specific binding for this export.
-                  1. Assert: _e_.[[ImportName]] is a String.
-                  1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
-            1. If _exportName_ is *"default"*, then
-              1. Assert: A `default` export was not explicitly defined by this module.
-              1. Return *null*.
-              1. NOTE: A `default` export cannot be provided by an `export * from "mod"` declaration.
-            1. Let _starResolution_ be *null*.
-            1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
-              1. Assert: _e_.[[ModuleRequest]] is not *null*.
-              1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
-              1. Let _resolution_ be _importedModule_.ResolveExport(_exportName_, _resolveSet_).
-              1. If _resolution_ is ~ambiguous~, return ~ambiguous~.
-              1. If _resolution_ is not *null*, then
-                1. Assert: _resolution_ is a ResolvedBinding Record.
-                1. If _starResolution_ is *null*, then
-                  1. Set _starResolution_ to _resolution_.
-                1. Else,
-                  1. Assert: There is more than one `*` import that includes the requested name.
-                  1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record, return ~ambiguous~.
-                  1. If _resolution_.[[BindingName]] is not _starResolution_.[[BindingName]] and either _resolution_.[[BindingName]] or _starResolution_.[[BindingName]] is ~namespace~, return ~ambiguous~.
-                  1. If _resolution_.[[BindingName]] is a String, _starResolution_.[[BindingName]] is a String, and _resolution_.[[BindingName]] is not _starResolution_.[[BindingName]], return ~ambiguous~.
-            1. Return _starResolution_.
-          </emu-alg>
+                1. Let _resolution_ be _importedModule_.ResolveExport(_exportName_, _resolveSet_).
+                1. If _resolution_ is ~ambiguous~, return ~ambiguous~.
+                1. If _resolution_ is not *null*, then
+                  1. Assert: _resolution_ is a ResolvedBinding Record.
+                  1. If _starResolution_ is *null*, then
+                    1. Set _starResolution_ to _resolution_.
+                  1. Else,
+                    1. Assert: There is more than one `*` import that includes the requested name.
+                    1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record, return ~ambiguous~.
+                    1. If _resolution_.[[BindingName]] is not _starResolution_.[[BindingName]] and either _resolution_.[[BindingName]] or _starResolution_.[[BindingName]] is ~namespace~, return ~ambiguous~.
+                    1. If _resolution_.[[BindingName]] is a String, _starResolution_.[[BindingName]] is a String, and _resolution_.[[BindingName]] is not _starResolution_.[[BindingName]], return ~ambiguous~.
+              1. Return _starResolution_.
+            </emu-alg>
+          </emu-clause>
         </emu-clause>
 
-        <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
-          <h1>InitializeEnvironment ( ): either a normal completion containing ~unused~ or a throw completion</h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Source Text Module Record _module_</dd>
-          </dl>
+        <emu-clause id="sec-source-text-module-record-cyclic-module-record-methods">
+          <h1>Implementation of Cyclic Module Record Abstract Methods</h1>
 
-          <emu-alg>
-            1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
-              1. Assert: _e_.[[ExportName]] is not *null*.
-              1. Let _resolution_ be _module_.ResolveExport(_e_.[[ExportName]]).
-              1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
-              1. Assert: _resolution_ is a ResolvedBinding Record.
-            1. Assert: All named exports from _module_ are resolvable.
-            1. Let _realm_ be _module_.[[Realm]].
-            1. Assert: _realm_ is not *undefined*.
-            1. Let _env_ be NewModuleEnvironment(_realm_.[[GlobalEnv]]).
-            1. Set _module_.[[Environment]] to _env_.
-            1. For each ImportEntry Record _in_ of _module_.[[ImportEntries]], do
-              1. Let _importedModule_ be GetImportedModule(_module_, _in_.[[ModuleRequest]]).
-              1. If _in_.[[ImportName]] is ~namespace-object~, then
-                1. Let _namespace_ be GetModuleNamespace(_importedModule_).
-                1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
-                1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
-              1. Else,
-                1. Let _resolution_ be _importedModule_.ResolveExport(_in_.[[ImportName]]).
+          <p>The following are the concrete methods for Source Text Module Record that implement the corresponding Cyclic Module Record abstract methods defined in <emu-xref href="#table-cyclic-module-methods"></emu-xref>.</p>
+
+          <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method">
+            <h1>InitializeEnvironment ( ): either a normal completion containing ~unused~ or a throw completion</h1>
+            <dl class="header">
+              <dt>for</dt>
+              <dd>a Source Text Module Record _module_</dd>
+            </dl>
+
+            <emu-alg>
+              1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
+                1. Assert: _e_.[[ExportName]] is not *null*.
+                1. Let _resolution_ be _module_.ResolveExport(_e_.[[ExportName]]).
                 1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
-                1. If _resolution_.[[BindingName]] is ~namespace~, then
-                  1. Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]]).
+                1. Assert: _resolution_ is a ResolvedBinding Record.
+              1. Assert: All named exports from _module_ are resolvable.
+              1. Let _realm_ be _module_.[[Realm]].
+              1. Assert: _realm_ is not *undefined*.
+              1. Let _env_ be NewModuleEnvironment(_realm_.[[GlobalEnv]]).
+              1. Set _module_.[[Environment]] to _env_.
+              1. For each ImportEntry Record _in_ of _module_.[[ImportEntries]], do
+                1. Let _importedModule_ be GetImportedModule(_module_, _in_.[[ModuleRequest]]).
+                1. If _in_.[[ImportName]] is ~namespace-object~, then
+                  1. Let _namespace_ be GetModuleNamespace(_importedModule_).
                   1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                   1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
                 1. Else,
-                  1. Perform CreateImportBinding(_env_, _in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
-            1. Let _moduleContext_ be a new ECMAScript code execution context.
-            1. Set the Function of _moduleContext_ to *null*.
-            1. Assert: _module_.[[Realm]] is not *undefined*.
-            1. Set the Realm of _moduleContext_ to _module_.[[Realm]].
-            1. Set the ScriptOrModule of _moduleContext_ to _module_.
-            1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
-            1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
-            1. Set the PrivateEnvironment of _moduleContext_ to *null*.
-            1. Set _module_.[[Context]] to _moduleContext_.
-            1. Push _moduleContext_ onto the execution context stack; _moduleContext_ is now the running execution context.
-            1. Let _code_ be _module_.[[ECMAScriptCode]].
-            1. Let _varDeclarations_ be the VarScopedDeclarations of _code_.
-            1. Let _declaredVarNames_ be a new empty List.
-            1. For each element _d_ of _varDeclarations_, do
-              1. For each element _dn_ of the BoundNames of _d_, do
-                1. If _declaredVarNames_ does not contain _dn_, then
-                  1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
-                  1. Perform ! _env_.InitializeBinding(_dn_, *undefined*).
-                  1. Append _dn_ to _declaredVarNames_.
-            1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
-            1. Let _privateEnv_ be *null*.
-            1. For each element _d_ of _lexDeclarations_, do
-              1. For each element _dn_ of the BoundNames of _d_, do
-                1. If IsConstantDeclaration of _d_ is *true*, then
-                  1. Perform ! _env_.CreateImmutableBinding(_dn_, *true*).
-                1. Else,
-                  1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
-                1. If _d_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
-                  1. Let _fo_ be InstantiateFunctionObject of _d_ with arguments _env_ and _privateEnv_.
-                  1. Perform ! _env_.InitializeBinding(_dn_, _fo_).
-            1. Remove _moduleContext_ from the execution context stack.
-            1. Return ~unused~.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-source-text-module-record-execute-module" type="concrete method">
-          <h1>
-            ExecuteModule (
-              optional _capability_: a PromiseCapability Record,
-            ): either a normal completion containing ~unused~ or a throw completion
-          </h1>
-          <dl class="header">
-            <dt>for</dt>
-            <dd>a Source Text Module Record _module_</dd>
-          </dl>
-
-          <emu-alg>
-            1. Let _moduleContext_ be a new ECMAScript code execution context.
-            1. Set the Function of _moduleContext_ to *null*.
-            1. Set the Realm of _moduleContext_ to _module_.[[Realm]].
-            1. Set the ScriptOrModule of _moduleContext_ to _module_.
-            1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
-            1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
-            1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
-            1. Suspend the running execution context.
-            1. If _module_.[[HasTLA]] is *false*, then
-              1. Assert: _capability_ is not present.
+                  1. Let _resolution_ be _importedModule_.ResolveExport(_in_.[[ImportName]]).
+                  1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
+                  1. If _resolution_.[[BindingName]] is ~namespace~, then
+                    1. Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]]).
+                    1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
+                    1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+                  1. Else,
+                    1. Perform CreateImportBinding(_env_, _in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+              1. Let _moduleContext_ be a new ECMAScript code execution context.
+              1. Set the Function of _moduleContext_ to *null*.
+              1. Assert: _module_.[[Realm]] is not *undefined*.
+              1. Set the Realm of _moduleContext_ to _module_.[[Realm]].
+              1. Set the ScriptOrModule of _moduleContext_ to _module_.
+              1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
+              1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
+              1. Set the PrivateEnvironment of _moduleContext_ to *null*.
+              1. Set _module_.[[Context]] to _moduleContext_.
               1. Push _moduleContext_ onto the execution context stack; _moduleContext_ is now the running execution context.
-              1. Let _result_ be Completion(Evaluation of _module_.[[ECMAScriptCode]]).
-              1. Suspend _moduleContext_ and remove it from the execution context stack.
-              1. Resume the context that is now on the top of the execution context stack as the running execution context.
-              1. If _result_ is an abrupt completion, then
-                1. Return ? _result_.
-            1. Else,
-              1. Assert: _capability_ is a PromiseCapability Record.
-              1. Perform AsyncBlockStart(_capability_, _module_.[[ECMAScriptCode]], _moduleContext_).
-            1. Return ~unused~.
-          </emu-alg>
+              1. Let _code_ be _module_.[[ECMAScriptCode]].
+              1. Let _varDeclarations_ be the VarScopedDeclarations of _code_.
+              1. Let _declaredVarNames_ be a new empty List.
+              1. For each element _d_ of _varDeclarations_, do
+                1. For each element _dn_ of the BoundNames of _d_, do
+                  1. If _declaredVarNames_ does not contain _dn_, then
+                    1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
+                    1. Perform ! _env_.InitializeBinding(_dn_, *undefined*).
+                    1. Append _dn_ to _declaredVarNames_.
+              1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
+              1. Let _privateEnv_ be *null*.
+              1. For each element _d_ of _lexDeclarations_, do
+                1. For each element _dn_ of the BoundNames of _d_, do
+                  1. If IsConstantDeclaration of _d_ is *true*, then
+                    1. Perform ! _env_.CreateImmutableBinding(_dn_, *true*).
+                  1. Else,
+                    1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
+                  1. If _d_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
+                    1. Let _fo_ be InstantiateFunctionObject of _d_ with arguments _env_ and _privateEnv_.
+                    1. Perform ! _env_.InitializeBinding(_dn_, _fo_).
+              1. Remove _moduleContext_ from the execution context stack.
+              1. Return ~unused~.
+            </emu-alg>
+          </emu-clause>
+
+          <emu-clause id="sec-source-text-module-record-execute-module" type="concrete method">
+            <h1>
+              ExecuteModule (
+                optional _capability_: a PromiseCapability Record,
+              ): either a normal completion containing ~unused~ or a throw completion
+            </h1>
+            <dl class="header">
+              <dt>for</dt>
+              <dd>a Source Text Module Record _module_</dd>
+            </dl>
+
+            <emu-alg>
+              1. Let _moduleContext_ be a new ECMAScript code execution context.
+              1. Set the Function of _moduleContext_ to *null*.
+              1. Set the Realm of _moduleContext_ to _module_.[[Realm]].
+              1. Set the ScriptOrModule of _moduleContext_ to _module_.
+              1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
+              1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
+              1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
+              1. Suspend the running execution context.
+              1. If _module_.[[HasTLA]] is *false*, then
+                1. Assert: _capability_ is not present.
+                1. Push _moduleContext_ onto the execution context stack; _moduleContext_ is now the running execution context.
+                1. Let _result_ be Completion(Evaluation of _module_.[[ECMAScriptCode]]).
+                1. Suspend _moduleContext_ and remove it from the execution context stack.
+                1. Resume the context that is now on the top of the execution context stack as the running execution context.
+                1. If _result_ is an abrupt completion, then
+                  1. Return ? _result_.
+              1. Else,
+                1. Assert: _capability_ is a PromiseCapability Record.
+                1. Perform AsyncBlockStart(_capability_, _module_.[[ECMAScriptCode]], _moduleContext_).
+              1. Return ~unused~.
+            </emu-alg>
+          </emu-clause>
         </emu-clause>
       </emu-clause>
 
