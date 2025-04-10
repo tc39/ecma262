@@ -39557,32 +39557,25 @@ THH:mm:ss.sss
       <h1>RegExp String Iterator Objects</h1>
       <p>A <dfn variants="RegExp String Iterators,RegExp String Iterator object,RegExp String Iterator objects">RegExp String Iterator</dfn> is an object that represents a specific iteration over some specific String instance object, matching against some specific RegExp instance object. There is not a named constructor for RegExp String Iterator objects. Instead, RegExp String Iterator objects are created by calling certain methods of RegExp instance objects.</p>
 
-      <emu-clause id="sec-createregexpstringiterator" type="abstract operation" oldids="sec-properties-of-regexp-string-iterator-instances,table-regexp-string-iterator-instance-slots">
+      <emu-clause id="sec-createregexpstringiterator" type="abstract operation">
         <h1>
           CreateRegExpStringIterator (
             _R_: an Object,
             _S_: a String,
             _global_: a Boolean,
             _fullUnicode_: a Boolean,
-          ): a Generator
+          ): an Object
         </h1>
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _closure_ be a new Abstract Closure with no parameters that captures _R_, _S_, _global_, and _fullUnicode_ and performs the following steps when called:
-            1. Repeat,
-              1. Let _match_ be ? RegExpExec(_R_, _S_).
-              1. If _match_ is *null*, return *undefined*.
-              1. If _global_ is *false*, then
-                1. Perform ? GeneratorYield(CreateIteratorResultObject(_match_, *false*)).
-                1. Return *undefined*.
-              1. Let _matchStr_ be ? ToString(? Get(_match_, *"0"*)).
-              1. If _matchStr_ is the empty String, then
-                1. Let _thisIndex_ be ℝ(? ToLength(? Get(_R_, *"lastIndex"*))).
-                1. Let _nextIndex_ be AdvanceStringIndex(_S_, _thisIndex_, _fullUnicode_).
-                1. Perform ? Set(_R_, *"lastIndex"*, 𝔽(_nextIndex_), *true*).
-              1. Perform ? GeneratorYield(CreateIteratorResultObject(_match_, *false*)).
-          1. Return CreateIteratorFromClosure(_closure_, *"%RegExpStringIteratorPrototype%"*, %RegExpStringIteratorPrototype%).
+          1. Let _iterator_ be OrdinaryObjectCreate(%RegExpStringIteratorPrototype%, « [[IteratingRegExp]], [[IteratedString]], [[Global]], [[Unicode]], [[Done]] »).
+          1. Set _iterator_.[[IteratingRegExp]] to _R_.
+          1. Set _iterator_.[[IteratedString]] to _S_.
+          1. Set _iterator_.[[Global]] to _global_.
+          1. Set _iterator_.[[Unicode]] to _fullUnicode_.
+          1. Set _iterator_.[[Done]] to *false*.
+          1. Return _iterator_.
         </emu-alg>
       </emu-clause>
 
@@ -39599,7 +39592,28 @@ THH:mm:ss.sss
         <emu-clause id="sec-%regexpstringiteratorprototype%.next">
           <h1>%RegExpStringIteratorPrototype%.next ( )</h1>
           <emu-alg>
-            1. Return ? GeneratorResume(*this* value, ~empty~, *"%RegExpStringIteratorPrototype%"*).
+            1. Let _O_ be the *this* value.
+            1. If O is not an Object, throw a *TypeError* exception.
+            1. If _O_ does not have all of the internal slots of a RegExp String Iterator Object Instance (see <emu-xref href="#sec-properties-of-regexp-string-iterator-instances"></emu-xref>), throw a *TypeError* exception.
+            1. If _O_.[[Done]] is *true*, then
+              1. Return CreateIteratorResultObject(*undefined*, *true*).
+            1. Let _R_ be _O_.[[IteratingRegExp]].
+            1. Let _S_ be _O_.[[IteratedString]].
+            1. Let _global_ be _O_.[[Global]].
+            1. Let _fullUnicode_ be _O_.[[Unicode]].
+            1. Let _match_ be ? RegExpExec(_R_, _S_).
+            1. If _match_ is *null*, then
+              1. Set _O_.[[Done]] to *true*.
+              1. Return CreateIteratorResultObject(*undefined*, *true*).
+            1. If _global_ is *false*, then
+              1. Set _O_.[[Done]] to *true*.
+              1. Return CreateIteratorResultObject(_match_, *false*).
+            1. Let _matchStr_ be ? ToString(? Get(_match_, *"0"*)).
+            1. If _matchStr_ is the empty String, then
+              1. Let _thisIndex_ be ℝ(? ToLength(? Get(_R_, *"lastIndex"*))).
+              1. Let _nextIndex_ be AdvanceStringIndex(_S_, _thisIndex_, _fullUnicode_).
+              1. Perform ? Set(_R_, *"lastIndex"*, 𝔽(_nextIndex_), *true*).
+            1. Return CreateIteratorResultObject(_match_, *false*).
           </emu-alg>
         </emu-clause>
 
@@ -39607,6 +39621,39 @@ THH:mm:ss.sss
           <h1>%RegExpStringIteratorPrototype% [ %Symbol.toStringTag% ]</h1>
           <p>The initial value of the %Symbol.toStringTag% property is the String value *"RegExp String Iterator"*.</p>
           <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+        </emu-clause>
+
+        <emu-clause id="sec-properties-of-regexp-string-iterator-instances">
+          <h1>Properties of RegExp String Iterator Instances</h1>
+          <p>RegExp String Iterator instances are ordinary objects that inherit properties from the %RegExpStringIteratorPrototype% intrinsic object. RegExp String Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-regexp-string-iterator-instance-slots"></emu-xref>.</p>
+          <emu-table id="table-regexp-string-iterator-instance-slots" caption="Internal Slots of RegExp String Iterator Instances">
+            <table>
+              <tr>
+                <th>Internal Slot</th>
+                <th>Description</th>
+              </tr>
+              <tr>
+                <td>[[IteratingRegExp]]</td>
+                <td>The regular expression used for iteration. IsRegExp([[IteratingRegExp]]) is initially *true*.</td>
+              </tr>
+              <tr>
+                <td>[[IteratedString]]</td>
+                <td>The String value being iterated upon.</td>
+              </tr>
+              <tr>
+                <td>[[Global]]</td>
+                <td>A Boolean value to indicate whether the [[IteratingRegExp]] is global or not.</td>
+              </tr>
+              <tr>
+                <td>[[Unicode]]</td>
+                <td>A Boolean value to indicate whether the [[IteratingRegExp]] is in Unicode mode or not.</td>
+              </tr>
+              <tr>
+                <td>[[Done]]</td>
+                <td>A Boolean value to indicate whether the iteration is complete or not.</td>
+              </tr>
+            </table>
+          </emu-table>
         </emu-clause>
       </emu-clause>
     </emu-clause>
@@ -41126,42 +41173,23 @@ THH:mm:ss.sss
       <h1>Array Iterator Objects</h1>
       <p>An <dfn variants="Array Iterators,Array Iterator object,Array Iterator objects">Array Iterator</dfn> is an object that represents a specific iteration over some specific Array instance object. There is not a named constructor for Array Iterator objects. Instead, Array Iterator objects are created by calling certain methods of Array instance objects.</p>
 
-      <emu-clause id="sec-createarrayiterator" type="abstract operation" oldids="sec-properties-of-array-iterator-instances,table-48,table-internal-slots-of-array-iterator-instances">
+      <emu-clause id="sec-createarrayiterator" type="abstract operation">
         <h1>
           CreateArrayIterator (
             _array_: an Object,
             _kind_: ~key+value~, ~key~, or ~value~,
-          ): a Generator
+          ): an Object
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It is used to create iterator objects for Array methods that return such iterators.</dd>
         </dl>
         <emu-alg>
-          1. Let _closure_ be a new Abstract Closure with no parameters that captures _kind_ and _array_ and performs the following steps when called:
-            1. Let _index_ be 0.
-            1. Repeat,
-              1. If _array_ has a [[TypedArrayName]] internal slot, then
-                1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_array_, ~seq-cst~).
-                1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
-                1. Let _len_ be TypedArrayLength(_taRecord_).
-              1. Else,
-                1. Let _len_ be ? LengthOfArrayLike(_array_).
-              1. If _index_ ≥ _len_, return NormalCompletion(*undefined*).
-              1. Let _indexNumber_ be 𝔽(_index_).
-              1. If _kind_ is ~key~, then
-                1. Let _result_ be _indexNumber_.
-              1. Else,
-                1. Let _elementKey_ be ! ToString(_indexNumber_).
-                1. Let _elementValue_ be ? Get(_array_, _elementKey_).
-                1. If _kind_ is ~value~, then
-                  1. Let _result_ be _elementValue_.
-                1. Else,
-                  1. Assert: _kind_ is ~key+value~.
-                  1. Let _result_ be CreateArrayFromList(« _indexNumber_, _elementValue_ »).
-              1. Perform ? GeneratorYield(CreateIteratorResultObject(_result_, *false*)).
-              1. Set _index_ to _index_ + 1.
-          1. Return CreateIteratorFromClosure(_closure_, *"%ArrayIteratorPrototype%"*, %ArrayIteratorPrototype%).
+          1. Let _iterator_ be OrdinaryObjectCreate(%ArrayIteratorPrototype%, « [[IteratedArrayLike]], [[ArrayLikeNextIndex]], [[ArrayLikeIterationKind]] »).
+          1. Set _iterator_.[[IteratedArrayLike]] to _array_.
+          1. Set _iterator_.[[ArrayLikeNextIndex]] to 0.
+          1. Set _iterator_.[[ArrayLikeIterationKind]] to _kind_.
+          1. Return _iterator_.
         </emu-alg>
       </emu-clause>
 
@@ -41178,7 +41206,35 @@ THH:mm:ss.sss
         <emu-clause id="sec-%arrayiteratorprototype%.next">
           <h1>%ArrayIteratorPrototype%.next ( )</h1>
           <emu-alg>
-            1. Return ? GeneratorResume(*this* value, ~empty~, *"%ArrayIteratorPrototype%"*).
+            1. Let _O_ be the *this* value.
+            1. If _O_ is not an Object, throw a *TypeError* exception.
+            1. If _O_ does not have all of the internal slots of an Array Iterator Instance (<emu-xref href="#sec-properties-of-array-iterator-instances"></emu-xref>), throw a *TypeError* exception.
+            1. Let _array_ be _O_.[[IteratedArrayLike]].
+            1. If _array_ is *undefined*, return CreateIteratorResultObject(*undefined*, *true*).
+            1. Let _index_ be _O_.[[ArrayLikeNextIndex]].
+            1. Let _kind_ be _O_.[[ArrayLikeIterationKind]].
+            1. If _array_ has a [[TypedArrayName]] internal slot, then
+              1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_array_, ~seq-cst~).
+              1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+              1. Let _len_ be TypedArrayLength(_taRecord_).
+            1. Else,
+              1. Let _len_ be ? LengthOfArrayLike(_array_).
+            1. If _index_ ≥ _len_, then
+              1. Set _O_.[[IteratedArrayLike]] to *undefined*.
+              1. Return CreateIteratorResultObject(*undefined*, *true*).
+            1. Set _O_.[[ArrayLikeNextIndex]] to _index_ + 1.
+            1. Let _indexNumber_ be 𝔽(_index_).
+            1. If _kind_ is ~key~, then
+              1. Let _result_ be _indexNumber_.
+            1. Else,
+              1. Let _elementKey_ be ! ToString(_indexNumber_).
+              1. Let _elementValue_ be ? Get(_array_, _elementKey_).
+              1. If _kind_ is ~value~, then
+                1. Let _result_ be _elementValue_.
+              1. Else,
+                1. Assert: _kind_ is ~key+value~.
+                1. Let _result_ be CreateArrayFromList(« _indexNumber_, _elementValue_ »).
+            1. Return CreateIteratorResultObject(_result_, *false*).
           </emu-alg>
         </emu-clause>
 
@@ -41186,6 +41242,47 @@ THH:mm:ss.sss
           <h1>%ArrayIteratorPrototype% [ %Symbol.toStringTag% ]</h1>
           <p>The initial value of the %Symbol.toStringTag% property is the String value *"Array Iterator"*.</p>
           <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+        </emu-clause>
+
+        <emu-clause id="sec-properties-of-array-iterator-instances">
+          <h1>Properties of Array Iterator Instances</h1>
+          <p>Array Iterator instances are ordinary objects that inherit properties from the %ArrayIteratorPrototype% intrinsic object. Array Iterator instances are initially created with the internal slots listed in <emu-xref href="#table-internal-slots-of-array-iterator-instances"></emu-xref>.</p>
+          <emu-table id="table-internal-slots-of-array-iterator-instances" caption="Internal Slots of Array Iterator Instances" oldids="table-48">
+            <table>
+              <tr>
+                <th>
+                  Internal Slot
+                </th>
+                <th>
+                  Description
+                </th>
+              </tr>
+              <tr>
+                <td>
+                  [[IteratedArrayLike]]
+                </td>
+                <td>
+                  The array-like object that is being iterated.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[ArrayLikeNextIndex]]
+                </td>
+                <td>
+                  The integer index of the next element to be examined by this iterator.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  [[ArrayLikeIterationKind]]
+                </td>
+                <td>
+                  A String value that identifies what is returned for each element of the iteration. The possible values are: ~key~, ~value~, ~key+value~.
+                </td>
+              </tr>
+            </table>
+          </emu-table>
         </emu-clause>
       </emu-clause>
     </emu-clause>
