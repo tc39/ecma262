@@ -291,7 +291,7 @@
   <p>A conforming implementation of ECMAScript may support program and regular expression syntax not described in this specification. In particular, a conforming implementation of ECMAScript may support program syntax that makes use of any “future reserved words” noted in subclause <emu-xref href="#sec-keywords-and-reserved-words"></emu-xref> of this specification.</p>
   <p>A conforming implementation of ECMAScript must not implement any extension that is listed as a Forbidden Extension in subclause <emu-xref href="#sec-forbidden-extensions"></emu-xref>.</p>
   <p>A conforming implementation of ECMAScript must not redefine any facilities that are not implementation-defined, implementation-approximated, or host-defined.</p>
-  <p>A conforming implementation of ECMAScript may choose to implement or not implement <dfn>Normative Optional</dfn> subclauses. If any Normative Optional behaviour is implemented, all of the behaviour in the containing Normative Optional clause must be implemented. A Normative Optional clause is denoted in this specification with the words "Normative Optional" in a coloured box, as shown below.</p>
+  <p>A conforming implementation of ECMAScript may choose to implement or not implement <dfn>Normative Optional</dfn> subclauses, unless otherwise indicated. If any Normative Optional behaviour is implemented, all of the behaviour in the containing Normative Optional clause must be implemented. A Normative Optional clause is denoted in this specification with the words "Normative Optional" in a coloured box, as shown below.</p>
 
   <emu-clause id="sec-conformance-normative-optional" oldids="sec-conformance.normative-optional" example normative-optional>
     <h1>Example Normative Optional Clause Heading</h1>
@@ -5089,7 +5089,7 @@
       </emu-clause>
     </emu-clause>
 
-    <emu-clause id="sec-toboolean" oldids="table-toboolean-conversions" type="abstract operation">
+    <emu-clause id="sec-toboolean" oldids="table-toboolean-conversions,sec-IsHTMLDDA-internal-slot-to-boolean" type="abstract operation">
       <h1>
         ToBoolean (
           _argument_: an ECMAScript language value,
@@ -5102,7 +5102,8 @@
       <emu-alg>
         1. If _argument_ is a Boolean, return _argument_.
         1. If _argument_ is one of *undefined*, *null*, *+0*<sub>𝔽</sub>, *-0*<sub>𝔽</sub>, *NaN*, *0*<sub>ℤ</sub>, or the empty String, return *false*.
-        1. [id="step-to-boolean-web-compat-insertion-point"] NOTE: This step is replaced in section <emu-xref href="#sec-IsHTMLDDA-internal-slot-to-boolean"></emu-xref>.
+        1. [id="step-to-boolean-web-compat-insertion-point", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-IsHTMLDDA-internal-slot" title></emu-xref>, then
+          1. If _argument_ is an Object and _argument_ has an [[IsHTMLDDA]] internal slot, return *false*.
         1. Return *true*.
       </emu-alg>
     </emu-clause>
@@ -6214,7 +6215,7 @@
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-islooselyequal" type="abstract operation" oldids="sec-abstract-equality-comparison">
+    <emu-clause id="sec-islooselyequal" type="abstract operation" oldids="sec-abstract-equality-comparison,sec-IsHTMLDDA-internal-slot-aec">
       <h1>
         IsLooselyEqual (
           _x_: an ECMAScript language value,
@@ -6230,7 +6231,9 @@
           1. Return IsStrictlyEqual(_x_, _y_).
         1. If _x_ is *null* and _y_ is *undefined*, return *true*.
         1. If _x_ is *undefined* and _y_ is *null*, return *true*.
-        1. [id="step-abstract-equality-comparison-web-compat-insertion-point"] NOTE: This step is replaced in section <emu-xref href="#sec-IsHTMLDDA-internal-slot-aec"></emu-xref>.
+        1. [id="step-abstract-equality-comparison-web-compat-insertion-point", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-IsHTMLDDA-internal-slot" title></emu-xref>, then
+          1. If _x_ is an Object, _x_ has an [[IsHTMLDDA]] internal slot, and _y_ is either *undefined* or *null*, return *true*.
+          1. If _x_ is either *undefined* or *null*, _y_ is an Object, and _y_ has an [[IsHTMLDDA]] internal slot, return *true*.
         1. If _x_ is a Number and _y_ is a String, return ! IsLooselyEqual(_x_, ! ToNumber(_y_)).
         1. If _x_ is a String and _y_ is a Number, return ! IsLooselyEqual(! ToNumber(_x_), _y_).
         1. If _x_ is a BigInt and _y_ is a String, then
@@ -13843,7 +13846,7 @@
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-functiondeclarationinstantiation" type="abstract operation">
+    <emu-clause id="sec-functiondeclarationinstantiation" type="abstract operation" oldids="sec-web-compat-functiondeclarationinstantiation">
       <h1>
         FunctionDeclarationInstantiation (
           _func_: an ECMAScript function object,
@@ -13858,11 +13861,6 @@
         <p>When an execution context is established for evaluating an ECMAScript function a new Function Environment Record is created and bindings for each formal parameter are instantiated in that Environment Record. Each declaration in the function body is also instantiated. If the function's formal parameters do not include any default value initializers then the body declarations are instantiated in the same Environment Record as the parameters. If default value parameter initializers exist, a second Environment Record is created for the body declarations. Formal parameters and functions are initialized as part of FunctionDeclarationInstantiation. All other bindings are initialized during evaluation of the function body.</p>
       </emu-note>
       <p>It performs the following steps when called:</p>
-      <!--
-        WARNING: If you add, remove, rename, or repurpose any variable names
-                 within this algorithm, you may need to update
-                 #sec-web-compat-functiondeclarationinstantiation accordingly.
-      -->
       <emu-alg>
         1. Let _calleeContext_ be the running execution context.
         1. Let _code_ be _func_.[[ECMAScriptCode]].
@@ -13954,12 +13952,26 @@
                 1. Let _initialValue_ be ! _env_.GetBindingValue(_n_, *false*).
               1. Perform ! _varEnv_.InitializeBinding(_n_, _initialValue_).
               1. NOTE: A var with the same name as a formal parameter initially has the same value as the corresponding initialized parameter.
-        1. [id="step-functiondeclarationinstantiation-web-compat-insertion-point"] NOTE: Annex <emu-xref href="#sec-web-compat-functiondeclarationinstantiation"></emu-xref> adds additional steps at this point.
-        1. If _strict_ is *false*, then
+        1. If _strict_ is *true*, then
+          1. Let _lexEnv_ be _varEnv_.
+        1. Else,
+          1. [id="step-functiondeclarationinstantiation-web-compat-insertion-point", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
+            1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _code_ Contains _x_ is *true*, do
+              1. Let _F_ be the StringValue of the |BindingIdentifier| of _f_.
+              1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _func_ and _parameterNames_ does not contain _F_, then
+                1. NOTE: A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName, the name of a formal parameter, or another |FunctionDeclaration|.
+                1. If _instantiatedVarNames_ does not contain _F_ and _F_ is not *"arguments"*, then
+                  1. Perform ! _varEnv_.CreateMutableBinding(_F_, *false*).
+                  1. Perform ! _varEnv_.InitializeBinding(_F_, *undefined*).
+                  1. Append _F_ to _instantiatedVarNames_.
+                1. [id="step-functiondeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
+                  1. Let _fEnv_ be the running execution context's VariableEnvironment.
+                  1. Let _bEnv_ be the running execution context's LexicalEnvironment.
+                  1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
+                  1. Perform ! _fEnv_.SetMutableBinding(_F_, _fObj_, *false*).
+                  1. Return ~unused~.
           1. Let _lexEnv_ be NewDeclarativeEnvironment(_varEnv_).
           1. NOTE: Non-strict functions use a separate Environment Record for top-level lexical declarations so that a direct eval can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions because a strict direct eval always places all declarations into a new Environment Record.
-        1. Else,
-          1. Let _lexEnv_ be _varEnv_.
         1. Set the LexicalEnvironment of _calleeContext_ to _lexEnv_.
         1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
         1. For each element _d_ of _lexDeclarations_, do
@@ -13976,9 +13988,6 @@
           1. Perform ! _varEnv_.SetMutableBinding(_fn_, _fo_, *false*).
         1. Return ~unused~.
       </emu-alg>
-      <emu-note>
-        <p><emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics"></emu-xref> provides an extension to the above algorithm that is necessary for backwards compatibility with web browser implementations of ECMAScript that predate ECMAScript 2015.</p>
-      </emu-note>
     </emu-clause>
   </emu-clause>
 
@@ -20178,7 +20187,7 @@
     <emu-clause id="sec-typeof-operator">
       <h1>The `typeof` Operator</h1>
 
-      <emu-clause id="sec-typeof-operator-runtime-semantics-evaluation" oldids="table-typeof-operator-results" type="sdo">
+      <emu-clause id="sec-typeof-operator-runtime-semantics-evaluation" oldids="table-typeof-operator-results,sec-IsHTMLDDA-internal-slot-typeof" type="sdo">
         <h1>Runtime Semantics: Evaluation</h1>
         <emu-grammar>UnaryExpression : `typeof` UnaryExpression</emu-grammar>
         <emu-alg>
@@ -20194,7 +20203,8 @@
           1. If _val_ is a Number, return *"number"*.
           1. If _val_ is a BigInt, return *"bigint"*.
           1. Assert: _val_ is an Object.
-          1. [id="step-typeof-web-compat-insertion-point"] NOTE: This step is replaced in section <emu-xref href="#sec-IsHTMLDDA-internal-slot-typeof"></emu-xref>.
+          1. [id="step-typeof-web-compat-insertion-point", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-IsHTMLDDA-internal-slot" title></emu-xref>, then
+            1. If _val_ has an [[IsHTMLDDA]] internal slot, return *"undefined"*.
           1. If _val_ has a [[Call]] internal slot, return *"function"*.
           1. Return *"object"*.
         </emu-alg>
@@ -21441,12 +21451,12 @@
         Declaration[?Yield, ?Await]
     </emu-grammar>
 
-    <emu-clause id="sec-block-static-semantics-early-errors">
+    <emu-clause id="sec-block-static-semantics-early-errors" oldids="sec-block-duplicates-allowed-static-semantics">
       <h1>Static Semantics: Early Errors</h1>
       <emu-grammar>Block : `{` StatementList `}`</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if the LexicallyDeclaredNames of |StatementList| contains any duplicate entries.
+          It is a Syntax Error if the LexicallyDeclaredNames of |StatementList| contains any duplicate entries<span normative-optional>, unless IsStrict(this production) is *false*, the duplicate entries are only bound by FunctionDeclarations, and the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref></span>.
         </li>
         <li>
           It is a Syntax Error if any element of the LexicallyDeclaredNames of |StatementList| also occurs in the VarDeclaredNames of |StatementList|.
@@ -21489,7 +21499,7 @@
       </emu-note>
     </emu-clause>
 
-    <emu-clause id="sec-blockdeclarationinstantiation" type="abstract operation">
+    <emu-clause id="sec-blockdeclarationinstantiation" type="abstract operation" oldids="sec-web-compat-blockdeclarationinstantiation">
       <h1>
         BlockDeclarationInstantiation (
           _code_: a Parse Node,
@@ -21504,11 +21514,6 @@
         <p>When a |Block| or |CaseBlock| is evaluated a new Declarative Environment Record is created and bindings for each block scoped variable, constant, function, or class declared in the block are instantiated in the Environment Record.</p>
       </emu-note>
       <p>It performs the following steps when called:</p>
-      <!--
-        WARNING: If you add, remove, rename, or repurpose any variable names
-                 within this algorithm, you may need to update
-                 #sec-web-compat-blockdeclarationinstantiation accordingly.
-      -->
       <emu-alg>
         1. Let _declarations_ be the LexicallyScopedDeclarations of _code_.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
@@ -21517,11 +21522,22 @@
             1. If IsConstantDeclaration of _d_ is *true*, then
               1. Perform ! _env_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
-              1. [id="step-blockdeclarationinstantiation-createmutablebinding"] Perform ! _env_.CreateMutableBinding(_dn_, *false*). NOTE: This step is replaced in section <emu-xref href="#sec-web-compat-blockdeclarationinstantiation"></emu-xref>.
+              1. [id="step-blockdeclarationinstantiation-createmutablebinding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
+                1. If ! _env_.HasBinding(_dn_) is *false*, then
+                  1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
+              1. Else,
+                1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
           1. If _d_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
             1. Let _fn_ be the sole element of the BoundNames of _d_.
             1. Let _fo_ be InstantiateFunctionObject of _d_ with arguments _env_ and _privateEnv_.
-            1. [id="step-blockdeclarationinstantiation-initializebinding"] Perform ! _env_.InitializeBinding(_fn_, _fo_). NOTE: This step is replaced in section <emu-xref href="#sec-web-compat-blockdeclarationinstantiation"></emu-xref>.
+            1. [id="step-blockdeclarationinstantiation-initializebinding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
+              1. If the binding for _fn_ in _env_ is an uninitialized binding, then
+                1. Perform ! _env_.InitializeBinding(_fn_, _fo_).
+              1. Else,
+                1. Assert: _d_ is a |FunctionDeclaration|.
+                1. Perform ! _env_.SetMutableBinding(_fn_, _fo_, *false*).
+            1. Else,
+              1. Perform ! _env_.InitializeBinding(_fn_, _fo_).
         1. Return ~unused~.
       </emu-alg>
     </emu-clause>
@@ -22903,12 +22919,12 @@
         `default` `:` StatementList[?Yield, ?Await, ?Return]?
     </emu-grammar>
 
-    <emu-clause id="sec-switch-statement-static-semantics-early-errors">
+    <emu-clause id="sec-switch-statement-static-semantics-early-errors" oldids="sec-switch-duplicates-allowed-static-semantics">
       <h1>Static Semantics: Early Errors</h1>
       <emu-grammar>SwitchStatement : `switch` `(` Expression `)` CaseBlock</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if the LexicallyDeclaredNames of |CaseBlock| contains any duplicate entries.
+          It is a Syntax Error if the LexicallyDeclaredNames of |CaseBlock| contains any duplicate entries<span normative-optional>, unless IsStrict(this production) is *false*, the duplicate entries are only bound by FunctionDeclarations, and the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref></span>.
         </li>
         <li>
           It is a Syntax Error if any element of the LexicallyDeclaredNames of |CaseBlock| also occurs in the VarDeclaredNames of |CaseBlock|.
@@ -23061,12 +23077,9 @@
       <emu-grammar>LabelledItem : FunctionDeclaration</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if any source text is matched by this production.
+          It is a Syntax Error if any source text is matched by this production<span normative-optional>, unless that source text is non-strict code and the host is a web browser or otherwise supports <emu-xref href="#sec-labelled-function-declarations" title></emu-xref></span>.
         </li>
       </ul>
-      <emu-note>
-        <p>An alternative definition for this rule is provided in <emu-xref href="#sec-labelled-function-declarations"></emu-xref>.</p>
-      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-islabelledfunction" type="abstract operation">
@@ -23214,12 +23227,9 @@
           It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the LexicallyDeclaredNames of |Block|.
         </li>
         <li>
-          It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the VarDeclaredNames of |Block|.
+          It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the VarDeclaredNames of |Block|<span normative-optional>, unless |CatchParameter| is <emu-grammar>CatchParameter : BindingIdentifier</emu-grammar> and the host is a web browser or otherwise supports <emu-xref href="#sec-variablestatements-in-catch-blocks" title></emu-xref></span>.
         </li>
       </ul>
-      <emu-note>
-        <p>An alternative static semantics for this production is given in <emu-xref href="#sec-variablestatements-in-catch-blocks"></emu-xref>.</p>
-      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-runtime-semantics-catchclauseevaluation" type="sdo">
@@ -23791,7 +23801,7 @@
         1. Return ~empty~.
       </emu-alg>
       <emu-note>
-        <p>An alternative semantics is provided in <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics"></emu-xref>.</p>
+        <p>An alternative semantics is provided by <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref> at step <emu-xref href="#step-functiondeclarationinstantiation-alt-funcdecl-eval"></emu-xref> of FunctionDeclarationInstantiation, step <emu-xref href="#step-globaldeclarationinstantiation-alt-funcdecl-eval"></emu-xref> of GlobalDeclarationInstantiation, and step <emu-xref href="#step-evaldeclarationinstantiation-alt-funcdecl-eval"></emu-xref> of EvalDeclarationInstantiation.</p>
       </emu-note>
       <emu-grammar>FunctionDeclaration : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
@@ -26230,7 +26240,7 @@
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-globaldeclarationinstantiation" type="abstract operation">
+    <emu-clause id="sec-globaldeclarationinstantiation" type="abstract operation" oldids="sec-web-compat-globaldeclarationinstantiation">
       <h1>
         GlobalDeclarationInstantiation (
           _script_: a |Script| Parse Node,
@@ -26245,11 +26255,6 @@
         <p>When an execution context is established for evaluating scripts, declarations are instantiated in the current global environment. Each global binding declared in the code is instantiated.</p>
       </emu-note>
       <p>It performs the following steps when called:</p>
-      <!--
-        WARNING: If you add, remove, rename, or repurpose any variable names
-                 within this algorithm, you may need to update
-                 #sec-web-compat-globaldeclarationinstantiation accordingly.
-      -->
       <emu-alg>
         1. Let _lexNames_ be the LexicallyDeclaredNames of _script_.
         1. Let _varNames_ be the VarDeclaredNames of _script_.
@@ -26283,7 +26288,26 @@
                 1. If _declaredVarNames_ does not contain _vn_, then
                   1. Append _vn_ to _declaredVarNames_.
         1. NOTE: No abnormal terminations occur after this algorithm step if the global object is an ordinary object. However, if the global object is a Proxy exotic object it may exhibit behaviours that cause abnormal terminations in some of the following steps.
-        1. [id="step-globaldeclarationinstantiation-web-compat-insertion-point"] NOTE: Annex <emu-xref href="#sec-web-compat-globaldeclarationinstantiation"></emu-xref> adds additional steps at this point.
+        1. [id="step-globaldeclarationinstantiation-web-compat-insertion-point", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
+          1. Let _strict_ be ScriptIsStrict of _script_.
+          1. If _strict_ is *false*, then
+            1. Let _declaredFunctionOrVarNames_ be the list-concatenation of _declaredFunctionNames_ and _declaredVarNames_.
+            1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _script_ Contains _x_ is *true*, do
+              1. Let _F_ be the StringValue of the |BindingIdentifier| of _f_.
+              1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _script_, then
+                1. If HasLexicalDeclaration(_env_, _F_) is *false*, then
+                  1. Let _fnDefinable_ be ? CanDeclareGlobalVar(_env_, _F_).
+                  1. If _fnDefinable_ is *true*, then
+                    1. NOTE: A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName nor the name of another |FunctionDeclaration|.
+                    1. If _declaredFunctionOrVarNames_ does not contain _F_, then
+                      1. Perform ? CreateGlobalVarBinding(_env_, _F_, *false*).
+                      1. Append _F_ to _declaredFunctionOrVarNames_.
+                    1. [id="step-globaldeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
+                      1. Let _gEnv_ be the running execution context's VariableEnvironment.
+                      1. Let _bEnv_ be the running execution context's LexicalEnvironment.
+                      1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
+                      1. Perform ? <emu-meta effects="user-code">_gEnv_.SetMutableBinding</emu-meta>(_F_, _fObj_, *false*).
+                      1. Return ~unused~.
         1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _script_.
         1. Let _privateEnv_ be *null*.
         1. For each element _d_ of _lexDeclarations_, do
@@ -29917,7 +29941,7 @@
         <p>The default implementation of HostEnsureCanCompileStrings is to return NormalCompletion(~unused~).</p>
       </emu-clause>
 
-      <emu-clause id="sec-evaldeclarationinstantiation" type="abstract operation">
+      <emu-clause id="sec-evaldeclarationinstantiation" type="abstract operation" oldids="sec-web-compat-evaldeclarationinstantiation">
         <h1>
           EvalDeclarationInstantiation (
             _body_: a |ScriptBody| Parse Node,
@@ -29929,12 +29953,6 @@
         </h1>
         <dl class="header">
         </dl>
-        <!--
-          WARNING: If you add, remove, rename, or repurpose any variable names
-                   within this algorithm, you may need to update
-                   #sec-web-compat-evaldeclarationinstantiation and
-                   #sec-variablestatements-in-catch-blocks accordingly.
-        -->
         <emu-alg>
           1. Let _varNames_ be the VarDeclaredNames of _body_.
           1. Let _varDeclarations_ be the VarScopedDeclarations of _body_.
@@ -29950,8 +29968,10 @@
                 1. NOTE: The environment of with statements cannot contain any lexical declaration so it doesn't need to be checked for var/let hoisting conflicts.
                 1. For each element _name_ of _varNames_, do
                   1. If ! _thisEnv_.HasBinding(_name_) is *true*, then
-                    1. [id="step-evaldeclarationinstantiation-throw-duplicate-binding"] Throw a *SyntaxError* exception.
-                    1. NOTE: Annex <emu-xref href="#sec-variablestatements-in-catch-blocks"></emu-xref> defines alternate semantics for the above step.
+                    1. [id="step-evaldeclarationinstantiation-throw-duplicate-binding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-variablestatements-in-catch-blocks" title></emu-xref>, then
+                      1. If _thisEnv_ is not the Environment Record for a |Catch| clause, throw a *SyntaxError* exception.
+                    1. Else,
+                      1. Throw a *SyntaxError* exception.
                   1. NOTE: A direct eval will not hoist var declaration over a like-named lexical declaration.
               1. Set _thisEnv_ to _thisEnv_.[[OuterEnv]].
           1. Let _privateIdentifiers_ be a new empty List.
@@ -29984,7 +30004,45 @@
                     1. If _vnDefinable_ is *false*, throw a *TypeError* exception.
                   1. If _declaredVarNames_ does not contain _vn_, then
                     1. Append _vn_ to _declaredVarNames_.
-          1. [id="step-evaldeclarationinstantiation-web-compat-insertion-point"] NOTE: Annex <emu-xref href="#sec-web-compat-evaldeclarationinstantiation"></emu-xref> adds additional steps at this point.
+          1. [id="step-evaldeclarationinstantiation-web-compat-insertion-point", normative-optional] If _strict_ is *false* and the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
+            1. Let _declaredFunctionOrVarNames_ be the list-concatenation of _declaredFunctionNames_ and _declaredVarNames_.
+            1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _body_ Contains _x_ is *true*, do
+              1. Let _F_ be the StringValue of the |BindingIdentifier| of _f_.
+              1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _body_, then
+                1. Let _bindingExists_ be *false*.
+                1. Set _thisEnv_ to _lexEnv_.
+                1. Assert: The following loop will terminate.
+                1. Repeat, while _thisEnv_ is not _varEnv_,
+                  1. If _thisEnv_ is not an Object Environment Record, then
+                    1. If ! _thisEnv_.HasBinding(_F_) is *true*, then
+                      1. [id="step-evaldeclarationinstantiation-web-compat-bindingexists", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-variablestatements-in-catch-blocks" title></emu-xref>, then
+                        1. If _thisEnv_ is not the Environment Record for a |Catch| clause, set _bindingExists_ to *true*.
+                      1. Else,
+                        1. Set _bindingExists_ to *true*.
+                  1. Set _thisEnv_ to _thisEnv_.[[OuterEnv]].
+                1. If _bindingExists_ is *false* and _varEnv_ is a Global Environment Record, then
+                  1. If HasLexicalDeclaration(_varEnv_, _F_) is *false*, then
+                    1. Let _fnDefinable_ be ? CanDeclareGlobalVar(_varEnv_, _F_).
+                  1. Else,
+                    1. Let _fnDefinable_ be *false*.
+                1. Else,
+                  1. Let _fnDefinable_ be *true*.
+                1. If _bindingExists_ is *false* and _fnDefinable_ is *true*, then
+                  1. If _declaredFunctionOrVarNames_ does not contain _F_, then
+                    1. If _varEnv_ is a Global Environment Record, then
+                      1. Perform ? CreateGlobalVarBinding(_varEnv_, _F_, *true*).
+                    1. Else,
+                      1. Set _bindingExists_ to ! _varEnv_.HasBinding(_F_).
+                      1. If _bindingExists_ is *false*, then
+                        1. Perform ! _varEnv_.CreateMutableBinding(_F_, *true*).
+                        1. Perform ! _varEnv_.InitializeBinding(_F_, *undefined*).
+                    1. Append _F_ to _declaredFunctionOrVarNames_.
+                  1. [id="step-evaldeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
+                    1. Let _gEnv_ be the running execution context's VariableEnvironment.
+                    1. Let _bEnv_ be the running execution context's LexicalEnvironment.
+                    1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
+                    1. Perform ? <emu-meta effects="user-code">_gEnv_.SetMutableBinding</emu-meta>(_F_, _fObj_, *false*).
+                    1. Return ~unused~.
           1. [id="step-evaldeclarationinstantiation-post-validation"] NOTE: No abnormal terminations occur after this algorithm step unless _varEnv_ is a Global Environment Record and the global object is a Proxy exotic object.
           1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _body_.
           1. For each element _d_ of _lexDeclarations_, do
@@ -30018,9 +30076,6 @@
                 1. Perform ! _varEnv_.InitializeBinding(_vn_, *undefined*).
           1. Return ~unused~.
         </emu-alg>
-        <emu-note>
-          <p>An alternative version of this algorithm is described in <emu-xref href="#sec-variablestatements-in-catch-blocks"></emu-xref>.</p>
-        </emu-note>
       </emu-clause>
     </emu-clause>
 
@@ -51911,6 +51966,8 @@ THH:mm:ss.sss
 <emu-annex id="sec-additional-ecmascript-features-for-web-browsers" namespace="annexB" normative>
   <h1>Additional ECMAScript Features for Web Browsers</h1>
   <p>The ECMAScript language syntax and semantics defined in this annex are required when the ECMAScript host is a web browser. The content of this annex is normative but optional if the ECMAScript host is not a web browser.</p>
+  <p>Each of the features defined in this annex is specified as a set of modifications to the syntax, semantics, and/or built-in properties specified in the main body of this document. In some cases, those modifications appear in this annex, and in others, they appear (specially marked) in the main body.</p>
+  <p>When a modification to semantics appears in the main body (in an algorithm or early error rule), it is guarded by the condition that “<dfn variants="otherwise supports">the host supports</dfn>” the relevant feature. Web browsers are required to support all such features.</p>
   <emu-note>
     <p>This annex describes various legacy features and other characteristics of web browser ECMAScript hosts. All of the language features and behaviours specified in this annex have one or more undesirable characteristics and in the absence of legacy usage would be removed from this specification. However, the usage of these features by large numbers of existing web pages means that web browsers must continue to support them. The specifications in this annex define the requirements for interoperable implementations of these legacy features.</p>
     <p>These features are not considered part of the core ECMAScript language. Programmers should not use or assume the existence of these features and behaviours when writing new ECMAScript code. ECMAScript implementations are discouraged from implementing these features unless the implementation is part of a web browser or is required to run the same legacy ECMAScript code that web browsers encounter.</p>
@@ -52632,13 +52689,7 @@ THH:mm:ss.sss
 
     <emu-annex id="sec-labelled-function-declarations">
       <h1>Labelled Function Declarations</h1>
-      <p>Prior to ECMAScript 2015, the specification of |LabelledStatement| did not allow for the association of a statement label with a |FunctionDeclaration|. However, a labelled |FunctionDeclaration| was an allowable extension for non-strict code and most browser-hosted ECMAScript implementations supported that extension. In ECMAScript 2015 and later, the grammar production for |LabelledStatement| permits use of |FunctionDeclaration| as a |LabelledItem| but <emu-xref href="#sec-labelled-statements-static-semantics-early-errors"></emu-xref> includes an Early Error rule that produces a Syntax Error if that occurs. That rule is modified with the addition of the <ins>highlighted</ins> text:</p>
-      <emu-grammar>LabelledItem : FunctionDeclaration</emu-grammar>
-      <ul>
-        <li>
-          It is a Syntax Error if any source text <ins>that is strict mode code</ins> is matched by this production.
-        </li>
-      </ul>
+      <p>Prior to ECMAScript 2015, the specification of |LabelledStatement| did not allow for the association of a statement label with a |FunctionDeclaration|. However, a labelled |FunctionDeclaration| was an allowable extension for non-strict code and most browser-hosted ECMAScript implementations supported that extension. In ECMAScript 2015 and later, the grammar production for |LabelledStatement| permits use of |FunctionDeclaration| as a |LabelledItem| but <emu-xref href="#sec-labelled-statements-static-semantics-early-errors"></emu-xref> includes an Early Error rule that produces a Syntax Error if that occurs. That rule is then modified to suppress the Syntax Error in non-strict code if the host supports this feature.</p>
       <emu-note>
         <p>The early error rules for |WithStatement|, |IfStatement|, and |IterationStatement| prevent these statements from containing a labelled |FunctionDeclaration| in non-strict code.</p>
       </emu-note>
@@ -52703,144 +52754,16 @@ THH:mm:ss.sss
       <p>The first use case is interoperable with the semantics of |Block| level function declarations provided by ECMAScript 2015. Any pre-existing ECMAScript source text that employs that use case will operate using the Block level function declarations semantics defined by clauses <emu-xref href="#sec-ordinary-and-exotic-objects-behaviours"></emu-xref>, <emu-xref href="#sec-ecmascript-language-statements-and-declarations"></emu-xref>, and <emu-xref href="#sec-ecmascript-language-functions-and-classes"></emu-xref>.</p>
       <p>ECMAScript 2015 interoperability for the second and third use cases requires the following extensions to the clause <emu-xref href="#sec-ordinary-and-exotic-objects-behaviours"></emu-xref>, clause <emu-xref href="#sec-ecmascript-language-functions-and-classes"></emu-xref>, clause <emu-xref href="#sec-eval-x"></emu-xref> and clause <emu-xref href="#sec-globaldeclarationinstantiation"></emu-xref> semantics.</p>
       <p>If an ECMAScript implementation has a mechanism for reporting diagnostic warning messages, a warning should be produced when code contains a |FunctionDeclaration| for which these compatibility semantics are applied and introduce observable differences from non-compatibility semantics. For example, if a var binding is not introduced because its introduction would create an early error, a warning message should not be produced.</p>
-
-      <emu-annex id="sec-web-compat-functiondeclarationinstantiation">
-        <h1>Changes to FunctionDeclarationInstantiation</h1>
-        <p>During FunctionDeclarationInstantiation the following steps are performed in place of step <emu-xref href="#step-functiondeclarationinstantiation-web-compat-insertion-point"></emu-xref>:</p>
-        <emu-alg replaces-step="step-functiondeclarationinstantiation-web-compat-insertion-point">
-          1. If _strict_ is *false*, then
-            1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _code_ Contains _x_ is *true*, do
-              1. Let _F_ be the StringValue of the |BindingIdentifier| of _f_.
-              1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _func_ and _parameterNames_ does not contain _F_, then
-                1. NOTE: A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName, the name of a formal parameter, or another |FunctionDeclaration|.
-                1. If _instantiatedVarNames_ does not contain _F_ and _F_ is not *"arguments"*, then
-                  1. Perform ! _varEnv_.CreateMutableBinding(_F_, *false*).
-                  1. Perform ! _varEnv_.InitializeBinding(_F_, *undefined*).
-                  1. Append _F_ to _instantiatedVarNames_.
-                1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                  1. Let _fEnv_ be the running execution context's VariableEnvironment.
-                  1. Let _bEnv_ be the running execution context's LexicalEnvironment.
-                  1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
-                  1. Perform ! _fEnv_.SetMutableBinding(_F_, _fObj_, *false*).
-                  1. Return ~unused~.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-web-compat-globaldeclarationinstantiation">
-        <h1>Changes to GlobalDeclarationInstantiation</h1>
-        <p>During GlobalDeclarationInstantiation the following steps are performed in place of step <emu-xref href="#step-globaldeclarationinstantiation-web-compat-insertion-point"></emu-xref>:</p>
-        <emu-alg replaces-step="step-globaldeclarationinstantiation-web-compat-insertion-point">
-          1. Perform the following steps:
-            1. Let _strict_ be ScriptIsStrict of _script_.
-            1. If _strict_ is *false*, then
-              1. Let _declaredFunctionOrVarNames_ be the list-concatenation of _declaredFunctionNames_ and _declaredVarNames_.
-              1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _script_ Contains _x_ is *true*, do
-                1. Let _F_ be the StringValue of the |BindingIdentifier| of _f_.
-                1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _script_, then
-                  1. If HasLexicalDeclaration(_env_, _F_) is *false*, then
-                    1. Let _fnDefinable_ be ? CanDeclareGlobalVar(_env_, _F_).
-                    1. If _fnDefinable_ is *true*, then
-                      1. NOTE: A var binding for _F_ is only instantiated here if it is neither a VarDeclaredName nor the name of another |FunctionDeclaration|.
-                      1. If _declaredFunctionOrVarNames_ does not contain _F_, then
-                        1. Perform ? CreateGlobalVarBinding(_env_, _F_, *false*).
-                        1. Append _F_ to _declaredFunctionOrVarNames_.
-                      1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                        1. Let _gEnv_ be the running execution context's VariableEnvironment.
-                        1. Let _bEnv_ be the running execution context's LexicalEnvironment.
-                        1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
-                        1. Perform ? <emu-meta effects="user-code">_gEnv_.SetMutableBinding</emu-meta>(_F_, _fObj_, *false*).
-                        1. Return ~unused~.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-web-compat-evaldeclarationinstantiation">
-        <h1>Changes to EvalDeclarationInstantiation</h1>
-        <p>During EvalDeclarationInstantiation the following steps are performed in place of step <emu-xref href="#step-evaldeclarationinstantiation-web-compat-insertion-point"></emu-xref>:</p>
-        <emu-alg replaces-step="step-evaldeclarationinstantiation-web-compat-insertion-point">
-          1. If _strict_ is *false*, then
-            1. Let _declaredFunctionOrVarNames_ be the list-concatenation of _declaredFunctionNames_ and _declaredVarNames_.
-            1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _body_ Contains _x_ is *true*, do
-              1. Let _F_ be the StringValue of the |BindingIdentifier| of _f_.
-              1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _F_ as a |BindingIdentifier| would not produce any Early Errors for _body_, then
-                1. Let _bindingExists_ be *false*.
-                1. Let _thisEnv_ be _lexEnv_.
-                1. Assert: The following loop will terminate.
-                1. Repeat, while _thisEnv_ is not _varEnv_,
-                  1. If _thisEnv_ is not an Object Environment Record, then
-                    1. If ! _thisEnv_.HasBinding(_F_) is *true*, then
-                      1. [id="step-evaldeclarationinstantiation-web-compat-bindingexists"] Let _bindingExists_ be *true*.
-                  1. Set _thisEnv_ to _thisEnv_.[[OuterEnv]].
-                1. If _bindingExists_ is *false* and _varEnv_ is a Global Environment Record, then
-                  1. If HasLexicalDeclaration(_varEnv_, _F_) is *false*, then
-                    1. Let _fnDefinable_ be ? CanDeclareGlobalVar(_varEnv_, _F_).
-                  1. Else,
-                    1. Let _fnDefinable_ be *false*.
-                1. Else,
-                  1. Let _fnDefinable_ be *true*.
-                1. If _bindingExists_ is *false* and _fnDefinable_ is *true*, then
-                  1. If _declaredFunctionOrVarNames_ does not contain _F_, then
-                    1. If _varEnv_ is a Global Environment Record, then
-                      1. Perform ? CreateGlobalVarBinding(_varEnv_, _F_, *true*).
-                    1. Else,
-                      1. Let _bindingExists_ be ! _varEnv_.HasBinding(_F_).
-                      1. If _bindingExists_ is *false*, then
-                        1. Perform ! _varEnv_.CreateMutableBinding(_F_, *true*).
-                        1. Perform ! _varEnv_.InitializeBinding(_F_, *undefined*).
-                    1. Append _F_ to _declaredFunctionOrVarNames_.
-                  1. When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                    1. Let _gEnv_ be the running execution context's VariableEnvironment.
-                    1. Let _bEnv_ be the running execution context's LexicalEnvironment.
-                    1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
-                    1. Perform ? <emu-meta effects="user-code">_gEnv_.SetMutableBinding</emu-meta>(_F_, _fObj_, *false*).
-                    1. Return ~unused~.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-block-duplicates-allowed-static-semantics">
-        <h1>Changes to Block Static Semantics: Early Errors</h1>
-        <p>The rules for the following production in <emu-xref href="#sec-block-static-semantics-early-errors"></emu-xref> are modified with the addition of the <ins>highlighted</ins> text:</p>
-        <emu-grammar>Block : `{` StatementList `}`</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if the LexicallyDeclaredNames of |StatementList| contains any duplicate entries<ins>, unless IsStrict(this production) is *false* and the duplicate entries are only bound by FunctionDeclarations</ins>.
-          </li>
-          <li>
-            It is a Syntax Error if any element of the LexicallyDeclaredNames of |StatementList| also occurs in the VarDeclaredNames of |StatementList|.
-          </li>
-        </ul>
-      </emu-annex>
-
-      <emu-annex id="sec-switch-duplicates-allowed-static-semantics">
-        <h1>Changes to `switch` Statement Static Semantics: Early Errors</h1>
-        <p>The rules for the following production in <emu-xref href="#sec-switch-statement-static-semantics-early-errors"></emu-xref> are modified with the addition of the <ins>highlighted</ins> text:</p>
-        <emu-grammar>SwitchStatement : `switch` `(` Expression `)` CaseBlock</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if the LexicallyDeclaredNames of |CaseBlock| contains any duplicate entries<ins>, unless IsStrict(this production) is *false* and the duplicate entries are only bound by FunctionDeclarations</ins>.
-          </li>
-          <li>
-            It is a Syntax Error if any element of the LexicallyDeclaredNames of |CaseBlock| also occurs in the VarDeclaredNames of |CaseBlock|.
-          </li>
-        </ul>
-      </emu-annex>
-
-      <emu-annex id="sec-web-compat-blockdeclarationinstantiation">
-        <h1>Changes to BlockDeclarationInstantiation</h1>
-        <p>During BlockDeclarationInstantiation the following steps are performed in place of step <emu-xref href="#step-blockdeclarationinstantiation-createmutablebinding"></emu-xref>:</p>
-        <emu-alg replaces-step="step-blockdeclarationinstantiation-createmutablebinding">
-          1. If ! _env_.HasBinding(_dn_) is *false*, then
-            1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
-        </emu-alg>
-        <p>During BlockDeclarationInstantiation the following steps are performed in place of step <emu-xref href="#step-blockdeclarationinstantiation-initializebinding"></emu-xref>:</p>
-        <emu-alg replaces-step="step-blockdeclarationinstantiation-initializebinding">
-          1. Perform the following steps:
-            1. If the binding for _fn_ in _env_ is an uninitialized binding, then
-              1. Perform ! _env_.InitializeBinding(_fn_, _fo_).
-            1. Else,
-              1. Assert: _d_ is a |FunctionDeclaration|.
-              1. Perform ! _env_.SetMutableBinding(_fn_, _fo_, *false*).
-        </emu-alg>
-      </emu-annex>
+      <p>This feature involves special semantics at the following points:</p>
+      <ul>
+        <li>one of the early error rules for <emu-grammar>Block : `{` StatementList `}`</emu-grammar> in <emu-xref href="#sec-block-static-semantics-early-errors"></emu-xref></li>
+        <li>one of the early error rules for <emu-grammar>SwitchStatement : `switch` `(` Expression `)` CaseBlock</emu-grammar> in <emu-xref href="#sec-switch-statement-static-semantics-early-errors"></emu-xref></li>
+        <li>step <emu-xref href="#step-functiondeclarationinstantiation-web-compat-insertion-point"></emu-xref> in FunctionDeclarationInstantiation</li>
+        <li>step <emu-xref href="#step-blockdeclarationinstantiation-createmutablebinding"></emu-xref> in BlockDeclarationInstantiation</li>
+        <li>step <emu-xref href="#step-blockdeclarationinstantiation-initializebinding"></emu-xref> in BlockDeclarationInstantiation</li>
+        <li>step <emu-xref href="#step-globaldeclarationinstantiation-web-compat-insertion-point"></emu-xref> in GlobalDeclarationInstantiation</li>
+        <li>step <emu-xref href="#step-evaldeclarationinstantiation-web-compat-insertion-point"></emu-xref> in EvalDeclarationInstantiation</li>
+      </ul>
     </emu-annex>
 
     <emu-annex id="sec-functiondeclarations-in-ifstatement-statement-clauses">
@@ -52858,31 +52781,11 @@ THH:mm:ss.sss
 
     <emu-annex id="sec-variablestatements-in-catch-blocks">
       <h1>VariableStatements in Catch Blocks</h1>
-      <p>The content of subclause <emu-xref href="#sec-try-statement-static-semantics-early-errors"></emu-xref> is replaced with the following:</p>
-      <emu-grammar>Catch : `catch` `(` CatchParameter `)` Block</emu-grammar>
-      <ul>
-        <li>
-          It is a Syntax Error if the BoundNames of |CatchParameter| contains any duplicate elements.
-        </li>
-        <li>
-          It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the LexicallyDeclaredNames of |Block|.
-        </li>
-        <li>
-          It is a Syntax Error if any element of the BoundNames of |CatchParameter| also occurs in the VarDeclaredNames of |Block| unless |CatchParameter| is <emu-grammar>CatchParameter : BindingIdentifier</emu-grammar>.
-        </li>
-      </ul>
+      <p>In this feature, the |Block| of a |Catch| clause may contain `var` declarations that bind a name that is also bound by the |CatchParameter|. This is accomplished by modifying an early error rule for <emu-grammar>Catch : `catch` `(` CatchParameter `)` Block</emu-grammar> in <emu-xref href="#sec-try-statement-static-semantics-early-errors"></emu-xref>.</p>
       <emu-note>
-        <p>The |Block| of a |Catch| clause may contain `var` declarations that bind a name that is also bound by the |CatchParameter|. At runtime, such bindings are instantiated in the VariableDeclarationEnvironment. They do not shadow the same-named bindings introduced by the |CatchParameter| and hence the |Initializer| for such `var` declarations will assign to the corresponding catch parameter rather than the `var` binding.</p>
+        <p>At runtime, such bindings are instantiated in the VariableDeclarationEnvironment. They do not shadow the same-named bindings introduced by the |CatchParameter| and hence the |Initializer| for such `var` declarations will assign to the corresponding catch parameter rather than the `var` binding.</p>
       </emu-note>
-      <p>This modified behaviour also applies to `var` and `function` declarations introduced by direct eval calls contained within the |Block| of a |Catch| clause. This change is accomplished by modifying the algorithm of <emu-xref href="#sec-evaldeclarationinstantiation"></emu-xref> as follows:</p>
-      <p>Step <emu-xref href="#step-evaldeclarationinstantiation-throw-duplicate-binding"></emu-xref> is replaced by:</p>
-      <emu-alg replaces-step="step-evaldeclarationinstantiation-throw-duplicate-binding">
-        1. If _thisEnv_ is not the Environment Record for a |Catch| clause, throw a *SyntaxError* exception.
-      </emu-alg>
-      <p>Step <emu-xref href="#step-evaldeclarationinstantiation-web-compat-bindingexists"></emu-xref> is replaced by:</p>
-      <emu-alg replaces-step="step-evaldeclarationinstantiation-web-compat-bindingexists">
-        1. If _thisEnv_ is not the Environment Record for a |Catch| clause, let _bindingExists_ be *true*.
-      </emu-alg>
+      <p>This modified behaviour also applies to `var` and `function` declarations introduced by direct eval calls contained within the |Block| of a |Catch| clause. This change is accomplished by modifying steps <emu-xref href="#step-evaldeclarationinstantiation-throw-duplicate-binding"></emu-xref> and <emu-xref href="#step-evaldeclarationinstantiation-web-compat-bindingexists"></emu-xref> in EvalDeclarationInstantiation.</p>
     </emu-annex>
 
     <emu-annex id="sec-initializers-in-forin-statement-heads">
@@ -52954,32 +52857,12 @@ THH:mm:ss.sss
       <emu-note>
         <p>Objects with an [[IsHTMLDDA]] internal slot are never created by this specification. However, the <a href="https://html.spec.whatwg.org/multipage/obsolete.html#dom-document-all"><code>document.all</code> object</a> in web browsers is a host-defined exotic object with this slot that exists for web compatibility purposes. There are no other known examples of this type of object and implementations should not create any with the exception of `document.all`.</p>
       </emu-note>
-
-      <emu-annex id="sec-IsHTMLDDA-internal-slot-to-boolean">
-        <h1>Changes to ToBoolean</h1>
-        <p>The following step replaces step <emu-xref href="#step-to-boolean-web-compat-insertion-point"></emu-xref> of ToBoolean:</p>
-        <emu-alg replaces-step="step-to-boolean-web-compat-insertion-point">
-          1. If _argument_ is an Object and _argument_ has an [[IsHTMLDDA]] internal slot, return *false*.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-IsHTMLDDA-internal-slot-aec">
-        <h1>Changes to IsLooselyEqual</h1>
-        <p>The following steps replace step <emu-xref href="#step-abstract-equality-comparison-web-compat-insertion-point"></emu-xref> of IsLooselyEqual:</p>
-        <emu-alg replaces-step="step-abstract-equality-comparison-web-compat-insertion-point">
-          1. Perform the following steps:
-            1. If _x_ is an Object, _x_ has an [[IsHTMLDDA]] internal slot, and _y_ is either *undefined* or *null*, return *true*.
-            1. If _x_ is either *undefined* or *null*, _y_ is an Object, and _y_ has an [[IsHTMLDDA]] internal slot, return *true*.
-        </emu-alg>
-      </emu-annex>
-
-      <emu-annex id="sec-IsHTMLDDA-internal-slot-typeof">
-        <h1>Changes to the `typeof` Operator</h1>
-        <p>The following step replaces step <emu-xref href="#step-typeof-web-compat-insertion-point"></emu-xref> of <emu-xref href="#sec-typeof-operator-runtime-semantics-evaluation">the evaluation semantics for `typeof`</emu-xref>:</p>
-        <emu-alg replaces-step="step-typeof-web-compat-insertion-point">
-          1. If _val_ has an [[IsHTMLDDA]] internal slot, return *"undefined"*.
-        </emu-alg>
-      </emu-annex>
+      <p>This feature involves special semantics at the following points:</p>
+      <ul>
+        <li>step <emu-xref href="#step-to-boolean-web-compat-insertion-point"></emu-xref> in ToBoolean</li>
+        <li>step <emu-xref href="#step-abstract-equality-comparison-web-compat-insertion-point"></emu-xref> in IsLooselyEqual</li>
+        <li>step <emu-xref href="#step-typeof-web-compat-insertion-point"></emu-xref> in the evaluation semantics for `typeof`</li>
+      </ul>
     </emu-annex>
 
     <emu-annex id="sec-web-compat-host-make-job-callback">
