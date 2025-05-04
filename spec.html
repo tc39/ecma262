@@ -26758,6 +26758,29 @@
             </tr>
           </table>
         </emu-table>
+
+        <emu-clause id="sec-EvaluateModuleSync" type="abstract operation">
+          <h1>
+            EvaluateModuleSync (
+              _module_: a Module Record,
+            ): either a normal completion containing ~unused~ or a throw completion
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>It synchronously evaluates _module_, provided that the caller guarantees that _module_'s evaluation will return an already settled promise.</dd>
+          </dl>
+
+          <emu-alg>
+            1. Assert: _module_ is not a Cyclic Module Record.
+            1. Let _promise_ be _module_.Evaluate().
+            1. Assert: _promise_.[[PromiseState]] is either ~fulfilled~ or ~rejected~.
+            1. If _promise_.[[PromiseState]] is ~rejected~, then
+              1. If _promise_.[[PromiseIsHandled]] is *false*, perform HostPromiseRejectionTracker(_promise_, *"handle"*).
+              1. Set _promise_.[[PromiseIsHandled]] to *true*.
+              1. Return ThrowCompletion(_promise_.[[PromiseResult]]).
+            1. Return ~unused~.
+          </emu-alg>
+        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-cyclic-module-records">
@@ -27243,10 +27266,7 @@
 
               <emu-alg>
                 1. If _module_ is not a Cyclic Module Record, then
-                  1. Let _promise_ be _module_.Evaluate().
-                  1. Assert: _promise_.[[PromiseState]] is not ~pending~.
-                  1. If _promise_.[[PromiseState]] is ~rejected~, then
-                    1. Return ThrowCompletion(_promise_.[[PromiseResult]]).
+                  1. Perform ? EvaluateModuleSync(_module_).
                   1. Return _index_.
                 1. If _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~, then
                   1. If _module_.[[EvaluationError]] is ~empty~, return _index_.
