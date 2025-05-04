@@ -13991,8 +13991,8 @@
       <li>[[InitialName]], a String that is the initial name of the function. It is used by <emu-xref href="#sec-function.prototype.tostring"></emu-xref>.</li>
     </ul>
     <p>The initial value of a built-in function object's [[Prototype]] internal slot is %Function.prototype%, unless otherwise specified.</p>
-    <p>A built-in function object must have a [[Call]] internal method that conforms to the definition in <emu-xref href="#sec-built-in-function-objects-call-thisargument-argumentslist"></emu-xref>.</p>
-    <p>A built-in function object has a [[Construct]] internal method if and only if it is described as a “constructor”, or some algorithm in this specification explicitly sets its [[Construct]] internal method. Such a [[Construct]] internal method must conform to the definition in <emu-xref href="#sec-built-in-function-objects-construct-argumentslist-newtarget"></emu-xref>.</p>
+    <p>A built-in function object must have a [[Call]] internal method that, unless otherwise specified, conforms to the definition in <emu-xref href="#sec-built-in-function-objects-call-thisargument-argumentslist"></emu-xref>.</p>
+    <p>A built-in function object has a [[Construct]] internal method if and only if it is described as a “constructor”, or some algorithm in this specification explicitly sets its [[Construct]] internal method. Unless otherwise specified, such a [[Construct]] internal method must conform to the definition in <emu-xref href="#sec-built-in-function-objects-construct-argumentslist-newtarget"></emu-xref>.</p>
     <p>An implementation may provide additional built-in function objects that are not defined in this specification.</p>
 
     <emu-clause id="sec-built-in-function-objects-call-thisargument-argumentslist" type="internal method">
@@ -14081,7 +14081,10 @@
         1. If _prototype_ is not present, set _prototype_ to _realm_.[[Intrinsics]].[[%Function.prototype%]].
         1. Let _internalSlotsList_ be a List containing the names of all the internal slots that <emu-xref href="#sec-built-in-function-objects"></emu-xref> requires for the built-in function object that is about to be created.
         1. Append to _internalSlotsList_ the elements of _additionalInternalSlotsList_.
-        1. Let _func_ be a new built-in function object that, when called, performs the action described by _behaviour_ using the provided arguments as the values of the corresponding parameters specified by _behaviour_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
+        1. If _behaviour_ is described as async, then
+          1. Let _func_ be a new built-in async function object that, when called, performs the action described by _behaviour_ using the provided arguments as the values of the corresponding parameters specified by _behaviour_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
+        1. Else,
+          1. Let _func_ be a new built-in function object that, when called, performs the action described by _behaviour_ using the provided arguments as the values of the corresponding parameters specified by _behaviour_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
         1. Set _func_.[[Prototype]] to _prototype_.
         1. Set _func_.[[Extensible]] to *true*.
         1. Set _func_.[[Realm]] to _realm_.
@@ -14094,6 +14097,57 @@
         1. Return _func_.
       </emu-alg>
       <p>Each built-in function defined in this specification is created by calling the CreateBuiltinFunction abstract operation.</p>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-built-in-async-function-objects">
+    <h1>Built-in Async Function Objects</h1>
+    <p><dfn variants="built-in async function object,built-in async function objects">Built-in async function objects</dfn> are built-in function objects that provide [[Call]] and [[Construct]] internal methods that conform to the following definitions:</p>
+
+    <emu-clause id="sec-built-in-async-function-objects-call" type="internal method">
+      <h1>
+        [[Call]] (
+          _thisArgument_: an ECMAScript language value,
+          _argumentsList_: a List of ECMAScript language values,
+        ): a normal completion containing a Promise
+      </h1>
+      <dl class="header">
+        <dt>for</dt>
+        <dd>a built-in async function object _F_</dd>
+      </dl>
+      <emu-alg>
+        1. Let _callerContext_ be the running execution context.
+        1. If _callerContext_ is not already suspended, suspend _callerContext_.
+        1. Let _calleeContext_ be a new execution context.
+        1. Set the Function of _calleeContext_ to _F_.
+        1. Let _calleeRealm_ be _F_.[[Realm]].
+        1. Set the Realm of _calleeContext_ to _calleeRealm_.
+        1. Set the ScriptOrModule of _calleeContext_ to *null*.
+        1. Perform any necessary implementation-defined initialization of _calleeContext_.
+        1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
+        1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+        1. Let _resultsClosure_ be a new Abstract Closure with no parameters that captures _F_, _thisArgument_, and _argumentsList_ and performs the following steps when called:
+          1. Return the Completion Record that is the result of evaluating _F_ in a manner that conforms to the specification of _F_. _thisArgument_ is the *this* value, _argumentsList_ provides the named parameters, and the NewTarget value is *undefined*.
+        1. Perform AsyncFunctionStart(_promiseCapability_, _resultsClosure_).
+        1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+        1. Return _promiseCapability_.[[Promise]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-built-in-async-function-objects-construct" type="internal method">
+      <h1>
+        [[Construct]] (
+          _argumentsList_: a List of ECMAScript language values,
+          _newTarget_: a constructor,
+        ): either a normal completion containing an Object or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>for</dt>
+        <dd>a built-in async function object _F_</dd>
+      </dl>
+      <emu-alg>
+        1. Throw a *TypeError* exception.
+      </emu-alg>
     </emu-clause>
   </emu-clause>
 
