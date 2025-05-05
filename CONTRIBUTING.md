@@ -2,11 +2,13 @@
 
 Contributors to ECMAScript and TC39 are expected to follow our [Code of Conduct](https://tc39.es/code-of-conduct/).
 
+**Please do not open issues or pull requests in this repository to suggest new features.** See the [new feature proposals](#new-feature-proposals) section below for more details.
+
 If you are not an Ecma member, any non-trivial contributions require signing a legal agreement with Ecma. See the section "Required Legal Agreements" below for details.
 
 #### Issues and Pull Requests
 
-For small changes to ECMAScript, you can contribute by filing an issue or a pull request against the current text of ECMA-262 standard in this repository.
+Issues and PRs in the ecma262 repository are appropriate for minor modifications to the existing specification, for example to fix typos, clarify wording, or correct accidental changes introduced by earlier commits. New features use the feature request process described below. 
 
 To file an issue, go to the ecma262 [issues page](https://github.com/tc39/ecma262/issues). From there, [search](https://guides.github.com/features/issues/) in the existing issues to see if an issue already exists to track your problem. If so, add a comment to the existing issue; otherwise, [file a new issue](https://help.github.com/articles/creating-an-issue/) documenting the problem.
 
@@ -19,8 +21,6 @@ Commits in pull requests should have a first line which starts with a tag, follo
   * Meta: changes to documents about this repository (e.g. readme.md or contributing.md) and other supporting documents or scripts (e.g. `package.json`, design documents, etc.)
 
 If changes in the upstream `main` branch cause your PR to have conflicts, you should rebase your branch to `main` and force-push it to your repo (rather than doing a merge commit).
-
-Issues and PRs in the ecma262 repository are appropriate for minor modifications to the existing specification, for example to make behavior more consistent in an edge case, match what is implemented by the large majority of actual implementations, or to clarify wording. New features use the feature request process described below.
 
 ##### Downstream dependencies
 
