@@ -13449,7 +13449,7 @@
         1. Perform OrdinaryCallBindThis(_F_, _calleeContext_, _thisArgument_).
         1. Let _result_ be Completion(OrdinaryCallEvaluateBody(_F_, _argumentsList_)).
         1. [id="step-call-pop-context-stack"] Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
-        1. If _result_ is a return completion, return _result_.[[Value]].
+        1. If _result_ is a normal completion, return _result_.[[Value]].
         1. Assert: _result_ is a throw completion.
         1. Return ? _result_.
       </emu-alg>
@@ -13521,7 +13521,7 @@
           Runtime Semantics: EvaluateBody (
             _functionObject_: an ECMAScript function object,
             _argumentsList_: a List of ECMAScript language values,
-          ): a return completion or a throw completion
+          ): a normal completion or a throw completion
         </h1>
         <dl class="header">
         </dl>
@@ -13547,13 +13547,13 @@
           AsyncFunctionBody : FunctionBody
         </emu-grammar>
         <emu-alg>
-          1. Return ? EvaluateAsyncFunctionBody of |AsyncFunctionBody| with arguments _functionObject_ and _argumentsList_.
+          1. Return EvaluateAsyncFunctionBody of |AsyncFunctionBody| with arguments _functionObject_ and _argumentsList_.
         </emu-alg>
         <emu-grammar>
           AsyncConciseBody : ExpressionBody
         </emu-grammar>
         <emu-alg>
-          1. Return ? EvaluateAsyncConciseBody of |AsyncConciseBody| with arguments _functionObject_ and _argumentsList_.
+          1. Return EvaluateAsyncConciseBody of |AsyncConciseBody| with arguments _functionObject_ and _argumentsList_.
         </emu-alg>
         <emu-grammar>
           Initializer :
@@ -13563,11 +13563,10 @@
           1. Assert: _argumentsList_ is empty.
           1. Assert: _functionObject_.[[ClassFieldInitializerName]] is not ~empty~.
           1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true*, then
-            1. Let _value_ be ? NamedEvaluation of |Initializer| with argument _functionObject_.[[ClassFieldInitializerName]].
+            1. Return ? NamedEvaluation of |Initializer| with argument _functionObject_.[[ClassFieldInitializerName]].
           1. Else,
             1. Let _rhs_ be ? Evaluation of |AssignmentExpression|.
-            1. Let _value_ be ? GetValue(_rhs_).
-          1. Return ReturnCompletion(_value_).
+            1. Return ? GetValue(_rhs_).
         </emu-alg>
         <emu-note>
           <p>Even though field initializers constitute a function boundary, calling FunctionDeclarationInstantiation does not have any observable effect and so is omitted.</p>
@@ -13586,7 +13585,7 @@
           OrdinaryCallEvaluateBody (
             _F_: an ECMAScript function object,
             _argumentsList_: a List of ECMAScript language values,
-          ): a return completion or a throw completion
+          ): a normal completion or a throw completion
         </h1>
         <dl class="header">
         </dl>
@@ -13625,7 +13624,7 @@
         1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
         1. If _result_ is a throw completion, then
           1. Return ? _result_.
-        1. Assert: _result_ is a return completion.
+        1. Assert: _result_ is a normal completion.
         1. If _result_.[[Value]] is an Object, return _result_.[[Value]].
         1. If _kind_ is ~base~, return _thisArgument_.
         1. If _result_.[[Value]] is not *undefined*, throw a *TypeError* exception.
@@ -23704,16 +23703,22 @@
         Runtime Semantics: EvaluateFunctionBody (
           _functionObject_: an ECMAScript function object,
           _argumentsList_: a List of ECMAScript language values,
-        ): a return completion or a throw completion
+        ): a normal completion or a throw completion
       </h1>
       <dl class="header">
       </dl>
       <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
       <emu-alg>
         1. Perform ? FunctionDeclarationInstantiation(_functionObject_, _argumentsList_).
-        1. Perform ? Evaluation of |FunctionStatementList|.
+        1. Let _result_ be Completion(Evaluation of |FunctionStatementList|).
         1. NOTE: If the previous step resulted in a normal completion, then evaluation finished by proceeding past the end of the |FunctionStatementList|.
-        1. Return ReturnCompletion(*undefined*).
+        1. If _result_ is a normal completion, then
+          1. Return *undefined*.
+        1. Else if _result_ is a return completion, then
+          1. Return _result_.[[Value]].
+        1. Else,
+          1. Assert: _result_ is a throw completion.
+          1. Return ? _result_.
       </emu-alg>
     </emu-clause>
 
@@ -23889,7 +23894,7 @@
         Runtime Semantics: EvaluateConciseBody (
           _functionObject_: an ECMAScript function object,
           _argumentsList_: a List of ECMAScript language values,
-        ): a return completion or a throw completion
+        ): a normal completion or a throw completion
       </h1>
       <dl class="header">
       </dl>
@@ -23932,8 +23937,7 @@
       <emu-grammar>ExpressionBody : AssignmentExpression</emu-grammar>
       <emu-alg>
         1. Let _exprRef_ be ? Evaluation of |AssignmentExpression|.
-        1. Let _exprValue_ be ? GetValue(_exprRef_).
-        1. Return ReturnCompletion(_exprValue_).
+        1. Return ? GetValue(_exprRef_).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -24247,7 +24251,7 @@
         Runtime Semantics: EvaluateGeneratorBody (
           _functionObject_: an ECMAScript function object,
           _argumentsList_: a List of ECMAScript language values,
-        ): a throw completion or a return completion
+        ): a normal completion or a return completion
       </h1>
       <dl class="header">
       </dl>
@@ -24258,7 +24262,7 @@
         1. Set _G_.[[GeneratorBrand]] to ~empty~.
         1. Set _G_.[[GeneratorState]] to ~suspended-start~.
         1. Perform GeneratorStart(_G_, |FunctionBody|).
-        1. Return ReturnCompletion(_G_).
+        1. Return _G_.
       </emu-alg>
     </emu-clause>
 
@@ -24474,7 +24478,7 @@
         Runtime Semantics: EvaluateAsyncGeneratorBody (
           _functionObject_: an ECMAScript function object,
           _argumentsList_: a List of ECMAScript language values,
-        ): a throw completion or a return completion
+        ): a normal completion or a throw completion
       </h1>
       <dl class="header">
       </dl>
@@ -24487,7 +24491,7 @@
         1. Set _generator_.[[GeneratorBrand]] to ~empty~.
         1. Set _generator_.[[AsyncGeneratorState]] to ~suspended-start~.
         1. Perform AsyncGeneratorStart(_generator_, |FunctionBody|).
-        1. Return ReturnCompletion(_generator_).
+        1. Return _generator_.
       </emu-alg>
     </emu-clause>
 
@@ -25096,7 +25100,7 @@
       <h1>
         Runtime Semantics: EvaluateClassStaticBlockBody (
           _functionObject_: an ECMAScript function object,
-        ): a return completion or a throw completion
+        ): a normal completion or a throw completion
       </h1>
       <dl class="header">
       </dl>
@@ -25105,7 +25109,7 @@
         1. Assert: _functionObject_ is a synthetic function created by ClassStaticBlockDefinitionEvaluation step <emu-xref href="#step-synthetic-class-static-block-fn"></emu-xref>.
         1. Perform ! FunctionDeclarationInstantiation(_functionObject_, « »).
         1. Perform ? Evaluation of |ClassStaticBlockStatementList|.
-        1. Return ReturnCompletion(*undefined*).
+        1. Return *undefined*.
       </emu-alg>
     </emu-clause>
 
@@ -25490,7 +25494,7 @@
         Runtime Semantics: EvaluateAsyncFunctionBody (
           _functionObject_: an ECMAScript function object,
           _argumentsList_: a List of ECMAScript language values,
-        ): a return completion
+        ): a Promise
       </h1>
       <dl class="header">
       </dl>
@@ -25504,7 +25508,7 @@
           1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _completion_.[[Value]] »).
         1. Else,
           1. Perform AsyncFunctionStart(_promiseCapability_, |FunctionBody|).
-        1. Return ReturnCompletion(_promiseCapability_.[[Promise]]).
+        1. Return _promiseCapability_.[[Promise]].
       </emu-alg>
     </emu-clause>
 
@@ -25597,7 +25601,7 @@
         Runtime Semantics: EvaluateAsyncConciseBody (
           _functionObject_: an ECMAScript function object,
           _argumentsList_: a List of ECMAScript language values,
-        ): a return completion
+        ): a Promise
       </h1>
       <dl class="header">
       </dl>
@@ -25611,7 +25615,7 @@
           1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _completion_.[[Value]] »).
         1. Else,
           1. Perform AsyncFunctionStart(_promiseCapability_, |ExpressionBody|).
-        1. Return ReturnCompletion(_promiseCapability_.[[Promise]]).
+        1. Return _promiseCapability_.[[Promise]].
       </emu-alg>
     </emu-clause>
 
@@ -49806,16 +49810,22 @@ THH:mm:ss.sss
             1. Let _acGenerator_ be the Generator component of _acGenContext_.
             1. If _generatorBody_ is a Parse Node, then
               1. Let _result_ be Completion(Evaluation of _generatorBody_).
+              1. If _result_ is a normal completion, then
+                1. NOTE: This implies that evaluation finished without reaching an explicit |ReturnStatement|.
+                1. Set _result_ to NormalCompletion(*undefined*).
+              1. Else if _result_ is a return completion, then
+                1. Set _result_ to NormalCompletion(_result_.[[Value]]).
+              1. Else,
+                1. Assert: _result_ is a throw completion.
             1. Else,
               1. Assert: _generatorBody_ is an Abstract Closure with no parameters.
               1. Let _result_ be Completion(_generatorBody_()).
+              1. Assert: _result_ is a normal completion or a throw completion.
             1. Assert: If we return here, the generator either threw an exception or performed either an implicit or explicit return.
             1. Remove _acGenContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
             1. Set _acGenerator_.[[GeneratorState]] to ~completed~.
             1. NOTE: Once a generator enters the ~completed~ state it never leaves it and its associated execution context is never resumed. Any execution state associated with _acGenerator_ can be discarded at this point.
             1. If _result_ is a normal completion, then
-              1. Let _resultValue_ be *undefined*.
-            1. Else if _result_ is a return completion, then
               1. Let _resultValue_ be _result_.[[Value]].
             1. Else,
               1. Assert: _result_ is a throw completion.
@@ -50170,14 +50180,20 @@ THH:mm:ss.sss
             1. Let _acGenerator_ be the Generator component of _acGenContext_.
             1. If _generatorBody_ is a Parse Node, then
               1. Let _result_ be Completion(Evaluation of _generatorBody_).
+              1. If _result_ is a normal completion, then
+                1. NOTE: This implies that evaluation finished without reaching an explicit |ReturnStatement|.
+                1. Set _result_ to NormalCompletion(*undefined*).
+              1. Else if _result_ is a return completion, then
+                1. Set _result_ to NormalCompletion(_result_.[[Value]]).
+              1. Else,
+                1. Assert: _result_ is a throw completion.
             1. Else,
               1. Assert: _generatorBody_ is an Abstract Closure with no parameters.
               1. Let _result_ be Completion(_generatorBody_()).
+              1. Assert: _result_ is a normal completion or a throw completion.
             1. Assert: If we return here, the async generator either threw an exception or performed either an implicit or explicit return.
             1. Remove _acGenContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
             1. Set _acGenerator_.[[AsyncGeneratorState]] to ~draining-queue~.
-            1. If _result_ is a normal completion, set _result_ to NormalCompletion(*undefined*).
-            1. If _result_ is a return completion, set _result_ to NormalCompletion(_result_.[[Value]]).
             1. Perform AsyncGeneratorCompleteStep(_acGenerator_, _result_, *true*).
             1. Perform AsyncGeneratorDrainQueue(_acGenerator_).
             1. Return *undefined*.
@@ -50561,15 +50577,21 @@ THH:mm:ss.sss
             1. Let _acAsyncContext_ be the running execution context.
             1. If _asyncBody_ is a Parse Node, then
               1. Let _result_ be Completion(Evaluation of _asyncBody_).
+              1. If _result_ is a normal completion, then
+                1. NOTE: This implies that evaluation finished without reaching an explicit |ReturnStatement|.
+                1. Set _result_ to NormalCompletion(*undefined*).
+              1. Else if _result_ is a return completion, then
+                1. Set _result_ to NormalCompletion(_result_.[[Value]]).
+              1. Else,
+                1. Assert: _result_ is a return completion.
             1. Else,
               1. Assert: _asyncBody_ is an Abstract Closure with no parameters.
-              1. Let _result_ be _asyncBody_().
+              1. Let _result_ be Completion(_asyncBody_()).
+              1. Assert: _result_ is a normal completion or a throw completion.
             1. Assert: If we return here, the async function either threw an exception or performed an implicit or explicit return; all awaiting is done.
             1. Remove _acAsyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
             1. If _result_ is a normal completion, then
-              1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « *undefined* »).
-            1. Else if _result_ is a return completion, then
-              1. Perform ! <emu-meta effects="user-code">Call</emu-meta>(_promiseCapability_.[[Resolve]], *undefined*, « _result_.[[Value]] »).
+              1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « _result_.[[Value]] »).
             1. Else,
               1. Assert: _result_ is a throw completion.
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _result_.[[Value]] »).
