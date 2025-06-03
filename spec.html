@@ -43029,37 +43029,31 @@ THH:mm:ss.sss
             1. Let _sourceLength_ be TypedArrayLength(_sourceRecord_).
             1. If _sourceLength_ + _targetOffset_ > TypedArrayLength(_targetRecord_), throw a *RangeError* exception.
             1. If _target_.[[ContentType]] is not _source_.[[ContentType]], throw a *TypeError* exception.
-            1. Let _targetBuffer_ be _target_.[[ViewedArrayBuffer]].
-            1. Let _targetByteOffset_ be _target_.[[ByteOffset]].
-            1. Let _sourceBuffer_ be _source_.[[ViewedArrayBuffer]].
-            1. Let _sourceByteOffset_ be _source_.[[ByteOffset]].
-            1. If IsSharedArrayBuffer(_sourceBuffer_) is *true*, IsSharedArrayBuffer(_targetBuffer_) is *true*, and _sourceBuffer_.[[ArrayBufferData]] is _targetBuffer_.[[ArrayBufferData]], let _sameSharedArrayBuffer_ be *true*; else let _sameSharedArrayBuffer_ be *false*.
-            1. If SameValue(_sourceBuffer_, _targetBuffer_) is *true* or _sameSharedArrayBuffer_ is *true*, then
-              1. NOTE: Later steps require the original source data, even if it is being overwritten. But since their effects are not observable until this operation completes, implementations may perform them in-place rather than allocating a new ArrayBuffer.
-              1. Let _sourceByteLength_ be TypedArrayByteLength(_sourceRecord_).
-              1. Set _sourceBuffer_ to ? CloneArrayBuffer(_sourceBuffer_, _sourceByteOffset_, _sourceByteLength_).
-              1. Let _sourceByteIndex_ be 0.
-            1. Else,
-              1. Let _sourceByteIndex_ be _sourceByteOffset_.
-            1. Let _targetType_ be TypedArrayElementType(_target_).
             1. Let _targetElementSize_ be TypedArrayElementSize(_target_).
-            1. Let _sourceType_ be TypedArrayElementType(_source_).
             1. Let _sourceElementSize_ be TypedArrayElementSize(_source_).
-            1. Let _targetByteIndex_ be _targetByteOffset_ + (_targetElementSize_ × _targetOffset_).
-            1. Let _limit_ be _targetByteIndex_ + (_targetElementSize_ × _sourceLength_).
+            1. Let _targetType_ be TypedArrayElementType(_target_).
+            1. Let _sourceType_ be TypedArrayElementType(_source_).
+            1. NOTE: When _sourceType_ matches _targetType_, bit-level encoding of the source data must be preserved. Operating on byte-sized units ensures that guarantee, but an implementation that can satisfy it with larger chunks may do so.
             1. If _sourceType_ is _targetType_, then
-              1. NOTE: The transfer must be performed in a manner that preserves the bit-level encoding of the source data.
-              1. Repeat, while _targetByteIndex_ &lt; _limit_,
-                1. Let _value_ be GetValueFromBuffer(_sourceBuffer_, _sourceByteIndex_, ~uint8~, *true*, ~unordered~).
-                1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, ~uint8~, _value_, *true*, ~unordered~).
-                1. Set _sourceByteIndex_ to _sourceByteIndex_ + 1.
-                1. Set _targetByteIndex_ to _targetByteIndex_ + 1.
-            1. Else,
-              1. Repeat, while _targetByteIndex_ &lt; _limit_,
-                1. Let _value_ be GetValueFromBuffer(_sourceBuffer_, _sourceByteIndex_, _sourceType_, *true*, ~unordered~).
-                1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, _targetType_, _value_, *true*, ~unordered~).
-                1. Set _sourceByteIndex_ to _sourceByteIndex_ + _sourceElementSize_.
-                1. Set _targetByteIndex_ to _targetByteIndex_ + _targetElementSize_.
+              1. Set _targetType_ to ~uint8~.
+              1. Set _targetElementSize_ to 1.
+              1. Set _sourceType_ to ~uint8~.
+              1. Set _sourceElementSize_ to 1.
+            1. Let _targetBuffer_ be _target_.[[ViewedArrayBuffer]].
+            1. Let _sourceBuffer_ be _source_.[[ViewedArrayBuffer]].
+            1. Let _sourceByteIndex_ be _source_.[[ByteOffset]].
+            1. If _targetBuffer_.[[ArrayBufferData]] is _sourceBuffer_.[[ArrayBufferData]], then
+              1. NOTE: This operation must behave as if copying data into an overlapping range within the same Data Block is a single atomic step. But because the results of copying are not observable until it completes, implementations unable to perform such copying atomically may still avoid allocating a new ArrayBuffer by copying chunks in-place if they alter the direction of iteration as appropriate to avoid overwriting source data that has not yet been read.
+              1. Let _sourceByteLength_ be TypedArrayByteLength(_sourceRecord_).
+              1. Set _sourceBuffer_ to ? CloneArrayBuffer(_sourceBuffer_, _sourceByteIndex_, _sourceByteLength_).
+              1. Set _sourceByteIndex_ to 0.
+            1. Let _targetByteIndex_ be _target_.[[ByteOffset]] + (_targetElementSize_ × _targetOffset_).
+            1. Let _limit_ be _targetByteIndex_ + (_targetElementSize_ × _sourceLength_).
+            1. Repeat, while _targetByteIndex_ &lt; _limit_,
+              1. Let _value_ be GetValueFromBuffer(_sourceBuffer_, _sourceByteIndex_, _sourceType_, *true*, ~unordered~).
+              1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, _targetType_, _value_, *true*, ~unordered~).
+              1. Set _sourceByteIndex_ to _sourceByteIndex_ + _sourceElementSize_.
+              1. Set _targetByteIndex_ to _targetByteIndex_ + _targetElementSize_.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
