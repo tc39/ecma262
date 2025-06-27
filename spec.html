@@ -42181,6 +42181,37 @@ THH:mm:ss.sss
         </emu-alg>
         <p>This method is not generic. The *this* value must be an object with a [[TypedArrayName]] internal slot.</p>
 
+        <emu-clause id="sec-settypedarrayfromarraylike" type="abstract operation" oldids="sec-%typedarray%.prototype.set-array-offset">
+          <h1>
+            SetTypedArrayFromArrayLike (
+              _target_: a TypedArray,
+              _targetOffset_: a non-negative integer or +&infin;,
+              _source_: an ECMAScript language value, but not a TypedArray,
+            ): either a normal completion containing ~unused~ or a throw completion
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>It sets multiple values in _target_, starting at index _targetOffset_, reading the values from _source_.</dd>
+          </dl>
+          <emu-alg>
+            1. Let _targetRecord_ be MakeTypedArrayWithBufferWitnessRecord(_target_, ~seq-cst~).
+            1. If IsTypedArrayOutOfBounds(_targetRecord_) is *true*, throw a *TypeError* exception.
+            1. Let _targetLength_ be TypedArrayLength(_targetRecord_).
+            1. Let _src_ be ? ToObject(_source_).
+            1. Let _srcLength_ be ? LengthOfArrayLike(_src_).
+            1. If _targetOffset_ = +∞, throw a *RangeError* exception.
+            1. If _srcLength_ + _targetOffset_ > _targetLength_, throw a *RangeError* exception.
+            1. Let _k_ be 0.
+            1. Repeat, while _k_ &lt; _srcLength_,
+              1. Let _Pk_ be ! ToString(𝔽(_k_)).
+              1. Let _value_ be ? Get(_src_, _Pk_).
+              1. Let _targetIndex_ be 𝔽(_targetOffset_ + _k_).
+              1. Perform ? TypedArraySetElement(_target_, _targetIndex_, _value_).
+              1. Set _k_ to _k_ + 1.
+            1. Return ~unused~.
+          </emu-alg>
+        </emu-clause>
+
         <emu-clause id="sec-settypedarrayfromtypedarray" type="abstract operation" oldids="sec-%typedarray%.prototype.set-typedarray-offset">
           <h1>
             SetTypedArrayFromTypedArray (
@@ -42233,37 +42264,6 @@ THH:mm:ss.sss
                 1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, _targetType_, _value_, *true*, ~unordered~).
                 1. Set _srcByteIndex_ to _srcByteIndex_ + _srcElementSize_.
                 1. Set _targetByteIndex_ to _targetByteIndex_ + _targetElementSize_.
-            1. Return ~unused~.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-settypedarrayfromarraylike" type="abstract operation" oldids="sec-%typedarray%.prototype.set-array-offset">
-          <h1>
-            SetTypedArrayFromArrayLike (
-              _target_: a TypedArray,
-              _targetOffset_: a non-negative integer or +&infin;,
-              _source_: an ECMAScript language value, but not a TypedArray,
-            ): either a normal completion containing ~unused~ or a throw completion
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>It sets multiple values in _target_, starting at index _targetOffset_, reading the values from _source_.</dd>
-          </dl>
-          <emu-alg>
-            1. Let _targetRecord_ be MakeTypedArrayWithBufferWitnessRecord(_target_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_targetRecord_) is *true*, throw a *TypeError* exception.
-            1. Let _targetLength_ be TypedArrayLength(_targetRecord_).
-            1. Let _src_ be ? ToObject(_source_).
-            1. Let _srcLength_ be ? LengthOfArrayLike(_src_).
-            1. If _targetOffset_ = +∞, throw a *RangeError* exception.
-            1. If _srcLength_ + _targetOffset_ > _targetLength_, throw a *RangeError* exception.
-            1. Let _k_ be 0.
-            1. Repeat, while _k_ &lt; _srcLength_,
-              1. Let _Pk_ be ! ToString(𝔽(_k_)).
-              1. Let _value_ be ? Get(_src_, _Pk_).
-              1. Let _targetIndex_ be 𝔽(_targetOffset_ + _k_).
-              1. Perform ? TypedArraySetElement(_target_, _targetIndex_, _value_).
-              1. Set _k_ to _k_ + 1.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -42516,27 +42516,6 @@ THH:mm:ss.sss
     <emu-clause id="sec-abstract-operations-for-typedarray-objects">
       <h1>Abstract Operations for TypedArray Objects</h1>
 
-      <emu-clause id="typedarray-species-create" type="abstract operation">
-        <h1>
-          TypedArraySpeciesCreate (
-            _exemplar_: a TypedArray,
-            _argumentList_: a List of ECMAScript language values,
-          ): either a normal completion containing a TypedArray or a throw completion
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>It is used to specify the creation of a new TypedArray using a constructor function that is derived from _exemplar_. Unlike ArraySpeciesCreate, which can create non-Array objects through the use of %Symbol.species%, this operation enforces that the constructor function creates an actual TypedArray.</dd>
-        </dl>
-        <emu-alg>
-          1. Let _defaultConstructor_ be the intrinsic object associated with the constructor name _exemplar_.[[TypedArrayName]] in <emu-xref href="#table-the-typedarray-constructors"></emu-xref>.
-          1. Let _constructor_ be ? SpeciesConstructor(_exemplar_, _defaultConstructor_).
-          1. Let _result_ be ? TypedArrayCreateFromConstructor(_constructor_, _argumentList_).
-          1. Assert: _result_ has [[TypedArrayName]] and [[ContentType]] internal slots.
-          1. If _result_.[[ContentType]] is not _exemplar_.[[ContentType]], throw a *TypeError* exception.
-          1. Return _result_.
-        </emu-alg>
-      </emu-clause>
-
       <emu-clause id="sec-typedarraycreatefromconstructor" oldids="typedarray-create" type="abstract operation">
         <h1>
           TypedArrayCreateFromConstructor (
@@ -42550,6 +42529,7 @@ THH:mm:ss.sss
         </dl>
         <emu-alg>
           1. Let _newTypedArray_ be ? Construct(_constructor_, _argumentList_).
+          1. Assert: _newTypedArray_ has all the internal slots mentioned in <emu-xref href="#sec-properties-of-typedarray-instances" title></emu-xref>.
           1. Let _taRecord_ be ? ValidateTypedArray(_newTypedArray_, ~seq-cst~).
           1. If the number of elements in _argumentList_ is 1 and _argumentList_[0] is a Number, then
             1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
@@ -42573,8 +42553,27 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _constructor_ be the intrinsic object associated with the constructor name _exemplar_.[[TypedArrayName]] in <emu-xref href="#table-the-typedarray-constructors"></emu-xref>.
           1. Let _result_ be ? TypedArrayCreateFromConstructor(_constructor_, _argumentList_).
-          1. Assert: _result_ has [[TypedArrayName]] and [[ContentType]] internal slots.
           1. Assert: _result_.[[ContentType]] is _exemplar_.[[ContentType]].
+          1. Return _result_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="typedarray-species-create" type="abstract operation">
+        <h1>
+          TypedArraySpeciesCreate (
+            _exemplar_: a TypedArray,
+            _argumentList_: a List of ECMAScript language values,
+          ): either a normal completion containing a TypedArray or a throw completion
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It is used to specify the creation of a new TypedArray using a constructor function that is derived from _exemplar_. Unlike ArraySpeciesCreate, which can create non-Array objects through the use of %Symbol.species%, this operation enforces that the constructor function creates an actual TypedArray.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _defaultConstructor_ be the intrinsic object associated with the constructor name _exemplar_.[[TypedArrayName]] in <emu-xref href="#table-the-typedarray-constructors"></emu-xref>.
+          1. Let _constructor_ be ? SpeciesConstructor(_exemplar_, _defaultConstructor_).
+          1. Let _result_ be ? TypedArrayCreateFromConstructor(_constructor_, _argumentList_).
+          1. If _result_.[[ContentType]] is not _exemplar_.[[ContentType]], throw a *TypeError* exception.
           1. Return _result_.
         </emu-alg>
       </emu-clause>
