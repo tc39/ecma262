@@ -26766,7 +26766,7 @@
                 an integer or ~empty~
               </td>
               <td>
-                Auxiliary field used during Link and Evaluate only. If [[Status]] is either ~linking~ or ~evaluating~, this is either the module's depth-first traversal index or that of an "earlier" module in the same strongly connected component.
+                Auxiliary field used during ModuleGraphDFS only. If [[Status]] is either ~linking~ or ~evaluating~, this is either the module's depth-first traversal index or that of an "earlier" module in the same strongly connected component.
               </td>
             </tr>
             <tr>
@@ -26965,6 +26965,107 @@
           </table>
         </emu-table>
 
+        <emu-clause id="sec-ModuleGraphDFS" type="abstract operation">
+          <h1>
+            ModuleGraphDFS (
+              _root_: a Cyclic Module Record,
+              _initialStatus_: ~unlinked~ or ~linked~,
+              _pendingStatus_: ~linking~ or ~evaluating~,
+              _action_: an Abstract Closure,
+              _completeSCC_: an Abstract Closure,
+              _postErrorCleanup_: an Abstract Closure,
+            ): either a normal completion containing ~unused~ or a throw completion
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>It synchronously traverses the module graph starting from _root_, in depth-first order, handling strongly connected components and subgraphs that have already been handled by previous ModuleGraphDFS calls.</dd>
+          </dl>
+
+          <p>The _action_, _completeSCC_ and _postErrorCleanup_ are called on individual modules at different points during the graph traversal:</p>
+          <ul>
+            <li>_action_ is called to either perform the per-module operation (on non-Cyclic Module Records or on Cyclic Module Records whose [[Status]] just transitioned from _initialStatus_ to _pendingStatus_), such as the details of how linking and evaluation work. It's also called on already processed modules (i.e. already linked or evaluated modules) so that it can return previous processing errors.</li>
+            <li>_completeSCC_ is called every time the traversal algorithm finishes handling a strongly connected component (SCC), on each one of the modules that are part of it. It is used to mark the SCC's modules as "done" atomically, rather than as they are being processed one by one. Note that all modules are part of a SCC, whose size might be just 1.</li>
+            <li>_postErrorCleanup_ is called when the traversal algorithm aborts due to an error in _action_, on all the modules that have not been processed yet by _completeSCC_.</li>
+          </ul>
+
+          <p>_initialStatus_ and _pendingStatus_ are the possible values of Cyclic Module Records' [[Status]] field to mark them respectively as yet to be handled by this graph traversal, or currently being handled. If a module has a different [[Status]] value it is assumed to have already been handled, either by a previous ModuleGraphDFS call or by the current one.</p>
+
+          <p><span style="background:yellow">TODO: Add an example with a module graph that has some deps and a cycle, listing which of those "hooks" are called in which order.</span></p>
+
+          <p>It performs the following steps when called:</p>
+
+          <emu-alg>
+            1. Let _stack_ be a new empty List.
+            1. Let _result_ be Completion(InnerModuleGraphDFS(_root_, _stack_, 0, _initialStatus_, _pendingStatus_, _action_, _completeSCC_)).
+            1. If _result_ is an abrupt completion, then
+              1. For each Cyclic Module Record _module_ of _stack_, do
+                1. Assert: _module_.[[Status]] is _pendingStatus_.
+                1. Perform _postErrorCleanup_(_module_, _result_).
+                1. Assert: _module_.[[Status]] is not _pendingStatus_.
+              1. Assert: _root_.[[Status]] is not _pendingStatus_.
+              1. Return Completion(_result_).
+            1. Assert: _root_.[[Status]] is not _initialStatus_ or _pendingStatus_.
+            1. Assert: _stack_ is empty.
+            1. Return ~unused~.
+          </emu-alg>
+
+          <emu-clause id="sec-InnerModuleGraphDFS" type="abstract operation">
+            <h1>
+              InnerModuleGraphDFS (
+                _module_: a Module Record,
+                _stack_: a List of Cyclic Module Records,
+                _index_: a non-negative integer,
+                _initialStatus_: ~unlinked~ or ~linked~,
+                _pendingStatus_: ~linking~ or ~evaluating~,
+                _action_: an Abstract Closure,
+                _completeSCC_: an Abstract Closure,
+              ): either a normal completion containing a non-negative integer or a throw completion
+            </h1>
+            <dl class="header">
+              <dt>description</dt>
+              <dd></dd>
+            </dl>
+
+            <emu-alg>
+              1. If _module_ is not a Cyclic Module Record, then
+                1. Perform ? _action_(_module_).
+                1. Return _index_.
+              1. If _module_.[[Status]] is _pendingStatus_, return _index_.
+              1. If _module_.[[Status]] is not _initialStatus_, then
+                1. Perform ? _action_(_module_).
+                1. Return _index_.
+              1. Assert: _module_.[[Status]] is _initialStatus_.
+              1. Set _module_.[[Status]] to _pendingStatus_.
+              1. Let _moduleIndex_ be _index_.
+              1. Set _module_.[[DFSAncestorIndex]] to _index_.
+              1. Set _index_ to _index_ + 1.
+              1. Append _module_ to _stack_.
+              1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
+                1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
+                1. Set _index_ to ? InnerModuleGraphDFS(_requiredModule_, _stack_, _index_, _initialStatus_, _pendingStatus_, _action_, _completeSCC_).
+                1. If _requiredModule_ is a Cyclic Module Record, then
+                  1. Assert: _requiredModule_.[[Status]] is not _initialStatus_.
+                  1. Assert: _requiredModule_.[[Status]] is _pendingStatus_ if and only if _stack_ contains _requiredModule_.
+                  1. If _requiredModule_.[[Status]] is _pendingStatus_, then
+                    1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+              1. Perform ? _action_(_module_).
+              1. Assert: _module_ occurs exactly once in _stack_.
+              1. Assert: _module_.[[DFSAncestorIndex]] ≤ _moduleIndex_.
+              1. If _module_.[[DFSAncestorIndex]] = _moduleIndex_, then
+                1. Let _done_ be *false*.
+                1. Repeat, while _done_ is *false*,
+                  1. Let _requiredModule_ be the last element of _stack_.
+                  1. Remove the last element of _stack_.
+                  1. Assert: _requiredModule_ is a Cyclic Module Record.
+                  1. Assert: _requiredModule_.[[Status]] is _pendingStatus_.
+                  1. Perform _completeSCC_(_requiredModule_, _module_).
+                  1. Assert: _requiredModule_.[[Status]] is not _pendingStatus_.
+                  1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+              1. Return _index_.
+            </emu-alg>
+          </emu-clause>
+        </emu-clause>
+
         <emu-clause id="sec-cyclic-module-record-module-record-methods">
           <h1>Implementation of Module Record Abstract Methods</h1>
 
@@ -27067,71 +27168,23 @@
               <dd>a Cyclic Module Record _module_</dd>
 
               <dt>description</dt>
-              <dd>On success, Link transitions this module's [[Status]] from ~unlinked~ to ~linked~. On failure, an exception is thrown and this module's [[Status]] remains ~unlinked~. (Most of the work is done by the auxiliary function InnerModuleLinking.)</dd>
+              <dd>On success, Link transitions this module's [[Status]] from ~unlinked~ to ~linked~. On failure, an exception is thrown and this module's [[Status]] remains ~unlinked~.</dd>
             </dl>
 
             <emu-alg>
               1. Assert: _module_.[[Status]] is one of ~unlinked~, ~linked~, ~evaluating-async~, or ~evaluated~.
-              1. Let _stack_ be a new empty List.
-              1. Let _result_ be Completion(InnerModuleLinking(_module_, _stack_, 0)).
-              1. If _result_ is an abrupt completion, then
-                1. For each Cyclic Module Record _m_ of _stack_, do
-                  1. Assert: _m_.[[Status]] is ~linking~.
-                  1. Set _m_.[[Status]] to ~unlinked~.
-                1. Assert: _module_.[[Status]] is ~unlinked~.
-                1. Return ? _result_.
-              1. Assert: _module_.[[Status]] is one of ~linked~, ~evaluating-async~, or ~evaluated~.
-              1. Assert: _stack_ is empty.
+              1. Let _dfsInitialStatus_ be ~unlinked~.
+              1. Let _dfsPendingStatus_ be ~linking~.
+              1. Let _dfsAction_ be a new Abstract Closure with parameters (_m_) that performs the following steps when called:
+                1. If _m_ is not a Cyclic Module Record, perform ? _m_.Link().
+                1. Else if _m_.[[Status]] is ~linking~, perform ? _m_.InitializeEnvironment().
+              1. Let _dfsSCCcompletion_ be a new Abstract Closure with parameters (_m_, _sccRoot_) that performs the following steps when called:
+                1. Set _m_.[[Status]] to ~linked~.
+              1. Let _dfsPostErrorCleanup_ be a new Abstract Closure with parameters (_m_, _errorCompletion_) that performs the following steps when called:
+                1. Set _m_.[[Status]] to ~unlinked~.
+              1. Perform ? ModuleGraphDFS(_module_, _dfsInitialStatus_, _dfsPendingStatus_, _dfsAction_, _dfsSCCcompletion_, _dfsPostErrorCleanup_).
               1. Return ~unused~.
             </emu-alg>
-
-            <emu-clause id="sec-InnerModuleLinking" type="abstract operation" oldids="sec-innermoduleinstantiation">
-              <h1>
-                InnerModuleLinking (
-                  _module_: a Module Record,
-                  _stack_: a List of Cyclic Module Records,
-                  _index_: a non-negative integer,
-                ): either a normal completion containing a non-negative integer or a throw completion
-              </h1>
-              <dl class="header">
-                <dt>description</dt>
-                <dd>It is used by Link to perform the actual linking process for _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as a module's [[DFSAncestorIndex]] field, keep track of the depth-first search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly connected components (SCCs), such that all modules in an SCC transition to ~linked~ together.</dd>
-              </dl>
-
-              <emu-alg>
-                1. If _module_ is not a Cyclic Module Record, then
-                  1. Perform ? _module_.Link().
-                  1. Return _index_.
-                1. If _module_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~, then
-                  1. Return _index_.
-                1. Assert: _module_.[[Status]] is ~unlinked~.
-                1. Set _module_.[[Status]] to ~linking~.
-                1. Let _moduleIndex_ be _index_.
-                1. Set _module_.[[DFSAncestorIndex]] to _index_.
-                1. Set _index_ to _index_ + 1.
-                1. Append _module_ to _stack_.
-                1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
-                  1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
-                  1. Set _index_ to ? InnerModuleLinking(_requiredModule_, _stack_, _index_).
-                  1. If _requiredModule_ is a Cyclic Module Record, then
-                    1. Assert: _requiredModule_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~.
-                    1. Assert: _requiredModule_.[[Status]] is ~linking~ if and only if _stack_ contains _requiredModule_.
-                    1. If _requiredModule_.[[Status]] is ~linking~, then
-                      1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
-                1. Perform ? _module_.InitializeEnvironment().
-                1. Assert: _module_ occurs exactly once in _stack_.
-                1. Assert: _module_.[[DFSAncestorIndex]] ≤ _moduleIndex_.
-                1. If _module_.[[DFSAncestorIndex]] = _moduleIndex_, then
-                  1. Let _done_ be *false*.
-                  1. Repeat, while _done_ is *false*,
-                    1. Let _requiredModule_ be the last element of _stack_.
-                    1. Remove the last element of _stack_.
-                    1. Assert: _requiredModule_ is a Cyclic Module Record.
-                    1. Set _requiredModule_.[[Status]] to ~linked~.
-                    1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
-                1. Return _index_.
-              </emu-alg>
-            </emu-clause>
           </emu-clause>
 
           <emu-clause id="sec-moduleevaluation" type="concrete method">
@@ -27154,76 +27207,52 @@
                   1. Assert: _module_.[[Status]] is ~evaluated~ and _module_.[[EvaluationError]] is a throw completion.
               1. If _module_.[[TopLevelCapability]] is not ~empty~, then
                 1. Return _module_.[[TopLevelCapability]].[[Promise]].
-              1. Let _stack_ be a new empty List.
               1. Let _capability_ be ! NewPromiseCapability(%Promise%).
               1. Set _module_.[[TopLevelCapability]] to _capability_.
-              1. Let _result_ be Completion(InnerModuleEvaluation(_module_, _stack_, 0)).
-              1. If _result_ is an abrupt completion, then
-                1. For each Cyclic Module Record _m_ of _stack_, do
-                  1. Assert: _m_.[[Status]] is ~evaluating~.
-                  1. Assert: _m_.[[AsyncEvaluationOrder]] is ~unset~.
-                  1. Set _m_.[[Status]] to ~evaluated~.
-                  1. Set _m_.[[EvaluationError]] to _result_.
-                1. Assert: _module_.[[Status]] is ~evaluated~.
-                1. Assert: _module_.[[EvaluationError]] and _result_ are the same Completion Record.
-                1. Perform ! Call(_capability_.[[Reject]], *undefined*, « _result_.[[Value]] »).
-              1. Else,
-                1. Assert: _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
-                1. Assert: _module_.[[EvaluationError]] is ~empty~.
-                1. If _module_.[[Status]] is ~evaluated~, then
-                  1. Assert: _module_.[[AsyncEvaluationOrder]] is either ~unset~ or ~done~.
-                  1. NOTE: _module_.[[AsyncEvaluationOrder]] is ~done~ if and only if _module_ had already been evaluated and that evaluation was asynchronous.
-                  1. Perform ! Call(_capability_.[[Resolve]], *undefined*, « *undefined* »).
-                1. Assert: _stack_ is empty.
+              1. Let _result_ be Completion(ModuleGraphDFS(_module_, ~linked~, ~evaluating~, EvaluateDFSAction, EvaluateDFSCompleteSCC, EvaluateDFSPostErrorCleanup)).
+              1. IfAbruptRejectPromise(_result_, _capability_).
+              1. Assert: _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
+              1. Assert: _module_.[[EvaluationError]] is ~empty~.
+              1. If _module_.[[Status]] is ~evaluated~, then
+                1. Assert: _module_.[[AsyncEvaluationOrder]] is either ~unset~ or ~done~.
+                1. NOTE: _module_.[[AsyncEvaluationOrder]] is ~done~ if and only if _module_ had already been evaluated and that evaluation was asynchronous.
+                1. Perform ! Call(_capability_.[[Resolve]], *undefined*, « *undefined* »).
               1. Return _capability_.[[Promise]].
             </emu-alg>
 
-            <emu-clause id="sec-innermoduleevaluation" type="abstract operation">
-              <h1>
-                InnerModuleEvaluation (
-                  _module_: a Module Record,
-                  _stack_: a List of Cyclic Module Records,
-                  _index_: a non-negative integer,
-                ): either a normal completion containing a non-negative integer or a throw completion
-              </h1>
-              <dl class="header">
-                <dt>description</dt>
-                <dd>It is used by Evaluate to perform the actual evaluation process for _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSAncestorIndex]] field, are used the same way as in InnerModuleLinking.</dd>
-              </dl>
+            <emu-note>
+              <p>A module is ~evaluating~ while it is being traversed by ModuleGraphDFS. A module is ~evaluated~ on execution completion or ~evaluating-async~ during execution if its [[HasTLA]] field is *true* or if it has asynchronous dependencies.</p>
+            </emu-note>
+            <emu-note>
+              <p>Any modules depending on a module of an asynchronous cycle when that cycle is not ~evaluating~ will instead depend on the execution of the root of the cycle via [[CycleRoot]]. This ensures that the cycle state can be treated as a single strongly connected component through its root module state.</p>
+            </emu-note>
 
+            <emu-clause id="sec-EvaluateDFSAction" type="abstract operation">
+              <h1>
+                EvaluateDFSAction (
+                  _module_: a Module Record,
+                ): either a normal completion containing ~unused~ or a throw completion
+              </h1>
+              <dl class="header"></dl>
               <emu-alg>
                 1. If _module_ is not a Cyclic Module Record, then
                   1. Perform ? EvaluateModuleSync(_module_).
-                  1. Return _index_.
+                  1. Return ~unused~.
                 1. If _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~, then
                   1. Let _cycleRoot_ be to _module_.[[CycleRoot]].
                   1. Assert: _cycleRoot_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
                   1. NOTE: The assertion above holds because a module's [[CycleRoot]] is only set to the SCC root when the whole SCC transitions to ~evaluating-async~ or ~evaluated~.
-                  1. If _cycleRoot_.[[EvaluationError]] is ~empty~, return _index_.
-                  1. Otherwise, return ? _cycleRoot_.[[EvaluationError]].
-                1. If _module_.[[Status]] is ~evaluating~, return _index_.
-                1. Assert: _module_.[[Status]] is ~linked~.
-                1. Set _module_.[[Status]] to ~evaluating~.
-                1. Let _moduleIndex_ be _index_.
-                1. Set _module_.[[DFSAncestorIndex]] to _index_.
-                1. Set _index_ to _index_ + 1.
-                1. Append _module_ to _stack_.
-                1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
-                  1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
-                  1. Set _index_ to ? InnerModuleEvaluation(_requiredModule_, _stack_, _index_).
-                  1. If _requiredModule_ is a Cyclic Module Record, then
-                    1. Assert: _requiredModule_.[[Status]] is one of ~evaluating~, ~evaluating-async~, or ~evaluated~.
-                    1. Assert: _requiredModule_.[[Status]] is ~evaluating~ if and only if _stack_ contains _requiredModule_.
-                    1. If _requiredModule_.[[Status]] is ~evaluating~, then
-                      1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
+                  1. If _cycleRoot_.[[EvaluationError]] is an abrupt completion, return _cycleRoot_.[[EvaluationError]].
+                  1. Return ~unused~.
+                1. Assert: _module_.[[Status]] is ~evaluating~.
                 1. Set _module_.[[PendingAsyncDependencies]] to 0.
                 1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
                   1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
                   1. If _requiredModule_ is a Cyclic Module Record, then
-                    1. Assert: _requiredModule_.[[Status]] is ~evaluating~, ~evaluating-async~, or ~evaluated~.
+                    1. Assert: _requiredModule_.[[Status]] is one of ~evaluating~, ~evaluating-async~, or ~evaluated~.
                     1. If _requiredModule_.[[Status]] is ~evaluating-async~ or ~evaluated~, then
                       1. Set _requiredModule_ to _requiredModule_.[[CycleRoot]].
-                      1. Assert: _requiredModule_.[[Status]] is ~evaluating-async~ or ~evaluated~.
+                      1. Assert: _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
                       1. Assert: _requiredModule_.[[EvaluationError]] is ~empty~.
                     1. If _requiredModule_.[[AsyncEvaluationOrder]] is an integer, then
                       1. Set _module_.[[PendingAsyncDependencies]] to _module_.[[PendingAsyncDependencies]] + 1.
@@ -27233,28 +27262,42 @@
                   1. Set _module_.[[AsyncEvaluationOrder]] to IncrementModuleAsyncEvaluationCount().
                   1. If _module_.[[PendingAsyncDependencies]] = 0, perform ExecuteAsyncModule(_module_).
                 1. Else,
-                  1. Perform ? <emu-meta effects="user-code">_module_.ExecuteModule()</emu-meta>.
-                1. Assert: _module_ occurs exactly once in _stack_.
-                1. Assert: _module_.[[DFSAncestorIndex]] ≤ _moduleIndex_.
-                1. If _module_.[[DFSAncestorIndex]] = _moduleIndex_, then
-                  1. Let _done_ be *false*.
-                  1. Repeat, while _done_ is *false*,
-                    1. Let _requiredModule_ be the last element of _stack_.
-                    1. Remove the last element of _stack_.
-                    1. Assert: _requiredModule_ is a Cyclic Module Record.
-                    1. Assert: _requiredModule_.[[AsyncEvaluationOrder]] is either an integer or ~unset~.
-                    1. If _requiredModule_.[[AsyncEvaluationOrder]] is ~unset~, set _requiredModule_.[[Status]] to ~evaluated~.
-                    1. Otherwise, set _requiredModule_.[[Status]] to ~evaluating-async~.
-                    1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
-                    1. Set _requiredModule_.[[CycleRoot]] to _module_.
-                1. Return _index_.
+                  1. Perform ? _module_.ExecuteModule().
+                1. Return ~unused~.
               </emu-alg>
-              <emu-note>
-                <p>A module is ~evaluating~ while it is being traversed by InnerModuleEvaluation. A module is ~evaluated~ on execution completion or ~evaluating-async~ during execution if its [[HasTLA]] field is *true* or if it has asynchronous dependencies.</p>
-              </emu-note>
-              <emu-note>
-                <p>Any modules depending on a module of an asynchronous cycle when that cycle is not ~evaluating~ will instead depend on the execution of the root of the cycle via [[CycleRoot]]. This ensures that the cycle state can be treated as a single strongly connected component through its root module state.</p>
-              </emu-note>
+            </emu-clause>
+
+            <emu-clause id="sec-EvaluateDFSCompleteSCC" type="abstract operation">
+              <h1>
+                EvaluateDFSCompleteSCC (
+                  _m_: a Cyclic Module Record,
+                  _sccRoot_: a Cyclic Module Record,
+                ): ~unused~
+              </h1>
+              <dl class="header"></dl>
+              <emu-alg>
+                1. Assert: _m_.[[AsyncEvaluationOrder]] is either an integer or ~unset~.
+                1. If _m_.[[AsyncEvaluationOrder]] is ~unset~, set _m_.[[Status]] to ~evaluated~.
+                1. Otherwise, set _m_.[[Status]] to ~evaluating-async~.
+                1. Set _m_.[[CycleRoot]] to _sccRoot_.
+                1. Return ~unused~.
+              </emu-alg>
+            </emu-clause>
+
+            <emu-clause id="sec-EvaluateDFSPostErrorCleanup" type="abstract operation">
+              <h1>
+                EvaluateDFSPostErrorCleanup (
+                  _m_: a Cyclic Module Record,
+                  _errorCompletion_: a throw completion,
+                ): ~unused~
+              </h1>
+              <dl class="header"></dl>
+              <emu-alg>
+                1. Assert: _m_.[[AsyncEvaluationOrder]] is ~unset~.
+                1. Set _m_.[[Status]] to ~evaluated~.
+                1. Set _m_.[[EvaluationError]] to _errorCompletion_.
+                1. Return ~unused~.
+              </emu-alg>
             </emu-clause>
 
             <emu-clause id="sec-execute-async-module" type="abstract operation">
