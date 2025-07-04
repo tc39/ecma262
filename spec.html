@@ -27032,7 +27032,7 @@
                 InnerModuleLinking (
                   _module_: a Module Record,
                   _stack_: a List of Cyclic Module Records,
-                ): either a normal completion containing ~unused~, or a throw completion
+                ): either a normal completion containing a non-negative integer or a throw completion
               </h1>
               <dl class="header">
                 <dt>description</dt>
@@ -27040,25 +27040,27 @@
               </dl>
 
               <emu-alg>
+                1. Let _moduleIndex_ be the length of _stack_.
                 1. If _module_ is not a Cyclic Module Record, then
                   1. Perform ? _module_.Link().
-                  1. Return ~unused~.
-                1. If _module_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~, then
-                  1. Return ~unused~.
+                  1. Return _moduleIndex_.
+                1. If _module_.[[Status]] is one of ~linked~, ~evaluating-async~, or ~evaluated~, then
+                  1. Return _moduleIndex_.
+                1. If _module_.[[Status]] is ~linking~, then
+                  1. Assert: _module_ occurs exactly once in _stack_.
+                  1. Assert: _module_.[[DFSAncestorIndex]] is not ~empty~.
+                  1. Return _module_.[[DFSAncestorIndex]].
                 1. Assert: _module_.[[Status]] is ~unlinked~.
                 1. Set _module_.[[Status]] to ~linking~.
-                1. Let _moduleIndex_ be the length of _stack_.
                 1. Let _sccAncestorIndex_ be _moduleIndex_.
-                1. Set _module_.[[DFSAncestorIndex]] to _moduleIndex_.
+                1. Set _module_.[[DFSAncestorIndex]] to _sccAncestorIndex_.
                 1. Append _module_ to _stack_.
                 1. For each ModuleRequest Record _request_ of _module_.[[RequestedModules]], do
                   1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
-                  1. Perform ? InnerModuleLinking(_requiredModule_, _stack_).
-                  1. If _requiredModule_ is a Cyclic Module Record, then
-                    1. Assert: _requiredModule_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~.
-                    1. Assert: _requiredModule_.[[Status]] is ~linking~ if and only if _stack_ contains _requiredModule_.
-                    1. If _requiredModule_.[[Status]] is ~linking~, then
-                      1. Set _sccAncestorIndex_ to min(_sccAncestorIndex_, _requiredModule_.[[DFSAncestorIndex]]).
+                  1. Let _childSccAncestorIndex_ be ? InnerModuleLinking(_requiredModule_, _stack_).
+                  1. Set _sccAncestorIndex_ to min(_sccAncestorIndex_, _childSccAncestorIndex_).
+                  1. Assert: If _requiredModule_ is a Cyclic Module Record, _requiredModule_.[[Status]] is one of ~linking~, ~linked~, ~evaluating-async~, or ~evaluated~.
+                  1. Assert: If _requiredModule_ is a Cyclic Module Record, _requiredModule_.[[Status]] is ~linking~ if and only if _stack_ contains _requiredModule_.
                 1. Perform ? _module_.InitializeEnvironment().
                 1. Assert: _module_ occurs exactly once in _stack_.
                 1. Assert: _sccAncestorIndex_ ≤ _moduleIndex_.
@@ -27072,7 +27074,7 @@
                     1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
                 1. Else,
                   1. Set _module_.[[DFSAncestorIndex]] to _sccAncestorIndex_.
-                1. Return ~unused~.
+                1. Return _sccAncestorIndex_.
               </emu-alg>
             </emu-clause>
           </emu-clause>
