@@ -113,6 +113,7 @@ const legacyCommitsWithUnknownAuthors = new Set([
 	'0209d8571b41e1c7dd18befd2ba45312680d6fcd', // rbuckton, microsoft email detached
 	'51e28c71cea1c73e3f22a007a058ebbf5ebc06aa', // rbuckton, microsoft email detached
 	'aab1ea3bd4d03c85d6f4a91503b4169346ab7271', // rbuckton, microsoft email detached
+	'94c6c6be7e694083393ac8cf1ee8dc8189ce8005', // https://github.com/tc39/ecma262/pull/2331, user account deactivated
 
 ]);
 
