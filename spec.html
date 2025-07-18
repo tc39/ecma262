@@ -19482,7 +19482,7 @@
               1. If _argList_ has no elements, return *undefined*.
               1. Let _evalArg_ be the first element of _argList_.
               1. If IsStrict(this |CallExpression|) is *true*, let _strictCaller_ be *true*. Otherwise let _strictCaller_ be *false*.
-              1. [id="step-callexpression-evaluation-direct-eval"] Return ? PerformEval(_evalArg_, _strictCaller_, *true*).
+              1. [id="step-callexpression-evaluation-direct-eval"] Return ? PerformEval(_evalArg_, _strictCaller_, ~direct-eval~).
           1. Let _thisCall_ be this |CallExpression|.
           1. Let _tailCall_ be IsInTailPosition(_thisCall_).
           1. Return ? EvaluateCall(_func_, _ref_, _arguments_, _tailCall_).
@@ -29810,7 +29810,7 @@
       <p>This function is the <dfn>%eval%</dfn> intrinsic object.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
-        1. Return ? PerformEval(_x_, *false*, *false*).
+        1. Return ? PerformEval(_x_, *false*, ~indirect-eval~).
       </emu-alg>
 
       <emu-clause id="sec-performeval" type="abstract operation" oldids="sec-performeval-rules-outside-functions,sec-performeval-rules-outside-methods,sec-performeval-rules-outside-constructors">
@@ -29818,22 +29818,29 @@
           PerformEval (
             _x_: an ECMAScript language value,
             _strictCaller_: a Boolean,
-            _direct_: a Boolean,
+            _direct_: ~direct-eval~ or ~indirect-eval~,
           ): either a normal completion containing an ECMAScript language value or a throw completion
         </h1>
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Assert: If _direct_ is *false*, then _strictCaller_ is also *false*.
-          1. If _x_ is not a String, return _x_.
+          1. Assert: If _direct_ is ~indirect-eval~, then _strictCaller_ is *false*.
+          1. If _x_ is a String, then
+            1. Let _xStr_ be _x_.
+          1. Else if _x_ is an Object, then
+            1. Let _code_ be HostGetCodeForEval(_x_).
+            1. If _code_ is a String, let _xStr_ be _code_.
+            1. Else, return _x_.
+          1. Else,
+            1. Return _x_.
           1. Let _evalRealm_ be the current Realm Record.
           1. NOTE: In the case of a direct eval, _evalRealm_ is the realm of both the caller of `eval` and of the `eval` function itself.
-          1. Perform ? HostEnsureCanCompileStrings(_evalRealm_, « », _x_, _direct_).
+          1. Perform ? HostEnsureCanCompileStrings(_evalRealm_, « », _xStr_, _xStr_, _direct_, « », _x_).
           1. Let _inFunction_ be *false*.
           1. Let _inMethod_ be *false*.
           1. Let _inDerivedConstructor_ be *false*.
           1. Let _inClassFieldInitializer_ be *false*.
-          1. If _direct_ is *true*, then
+          1. If _direct_ is ~direct-eval~, then
             1. Let _thisEnvRec_ be GetThisEnvironment().
             1. If _thisEnvRec_ is a Function Environment Record, then
               1. Let _F_ be _thisEnvRec_.[[FunctionObject]].
@@ -29843,7 +29850,7 @@
               1. Let _classFieldInitializerName_ be _F_.[[ClassFieldInitializerName]].
               1. If _classFieldInitializerName_ is not ~empty~, set _inClassFieldInitializer_ to *true*.
           1. Perform the following substeps in an implementation-defined order, possibly interleaving parsing and error detection:
-            1. Let _script_ be ParseText(_x_, |Script|).
+            1. Let _script_ be ParseText(_xStr_, |Script|).
             1. If _script_ is a List of errors, throw a *SyntaxError* exception.
             1. If _script_ Contains |ScriptBody| is *false*, return *undefined*.
             1. Let _body_ be the |ScriptBody| of _script_.
@@ -29854,8 +29861,8 @@
           1. If _strictCaller_ is *true*, let _strictEval_ be *true*.
           1. Else, let _strictEval_ be ScriptIsStrict of _script_.
           1. Let _runningContext_ be the running execution context.
-          1. NOTE: If _direct_ is *true*, _runningContext_ will be the execution context that performed the direct eval. If _direct_ is *false*, _runningContext_ will be the execution context for the invocation of the `eval` function.
-          1. If _direct_ is *true*, then
+          1. NOTE: If _direct_ is ~direct-eval~, _runningContext_ will be the execution context that performed the direct eval. If _direct_ is ~indirect-eval~, _runningContext_ will be the execution context for the invocation of the `eval` function.
+          1. If _direct_ is ~direct-eval~, then
             1. Let _lexEnv_ be NewDeclarativeEnvironment(_runningContext_'s LexicalEnvironment).
             1. Let _varEnv_ be _runningContext_'s VariableEnvironment.
             1. Let _privateEnv_ be _runningContext_'s PrivateEnvironment.
@@ -29893,7 +29900,10 @@
             _calleeRealm_: a Realm Record,
             _parameterStrings_: a List of Strings,
             _bodyString_: a String,
-            _direct_: a Boolean,
+            _codeString_: a String,
+            _compilationType_: ~direct-eval~, ~indirect-eval~, or ~function~,
+            _parameterArgs_: a List of ECMAScript language values,
+            _bodyArg_: an ECMAScript language value,
           ): either a normal completion containing ~unused~ or a throw completion
         </h1>
         <dl class="header">
@@ -29902,9 +29912,26 @@
         </dl>
         <p>
           _parameterStrings_ represents the strings that, when using one of the function constructors, will be concatenated together to build the parameters list. _bodyString_ represents the function body or the string passed to an `eval` call.
-          _direct_ signifies whether the evaluation is a direct eval.
+          _codeString_ represents the compiled string for a Function or the string passed to an `eval` call.
+          _parameterArgs_ are the values passed as the leading parameters to one of the Function constructors. _bodyArg_ is either the final parameter passed to one of the Function constructors or the value passed to an `eval` call.
         </p>
         <p>The default implementation of HostEnsureCanCompileStrings is to return NormalCompletion(~unused~).</p>
+      </emu-clause>
+
+      <emu-clause id="sec-hostgetcodeforeval" type="host-defined abstract operation">
+        <h1>
+          HostGetCodeForEval (
+            _argument_: an Object,
+          ): a String or ~no-code~
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It allows host environments to return a String of code from _argument_ to be used by eval, rather than eval returning _argument_.</dd>
+        </dl>
+        <p>
+          _argument_ represents the Object to be checked for code.
+        </p>
+        <p>The default implementation of HostGetCodeForEval is to return ~no-code~.</p>
       </emu-clause>
 
       <emu-clause id="sec-evaldeclarationinstantiation" type="abstract operation">
@@ -31150,7 +31177,6 @@
               1. Append ? ToString(_arg_) to _parameterStrings_.
             1. Let _bodyString_ be ? ToString(_bodyArg_).
             1. Let _currentRealm_ be the current Realm Record.
-            1. Perform ? HostEnsureCanCompileStrings(_currentRealm_, _parameterStrings_, _bodyString_, *false*).
             1. Let _P_ be the empty String.
             1. If _argCount_ > 0, then
               1. Set _P_ to _parameterStrings_[0].
@@ -31161,6 +31187,7 @@
                 1. Set _k_ to _k_ + 1.
             1. Let _bodyParseString_ be the string-concatenation of 0x000A (LINE FEED), _bodyString_, and 0x000A (LINE FEED).
             1. Let _sourceString_ be the string-concatenation of _prefix_, *" anonymous("*, _P_, 0x000A (LINE FEED), *") {"*, _bodyParseString_, and *"}"*.
+            1. Perform ? HostEnsureCanCompileStrings(_currentRealm_, _parameterStrings_, _bodyString_, _sourceString_, ~function~, _parameterArgs_, _bodyArg_).
             1. Let _sourceText_ be StringToCodePoints(_sourceString_).
             1. Let _parameters_ be ParseText(_P_, _parameterSym_).
             1. If _parameters_ is a List of errors, throw a *SyntaxError* exception.
@@ -53091,6 +53118,7 @@ THH:mm:ss.sss
     <p><b>HostGetImportMetaProperties(...)</b></p>
     <p><b>HostGrowSharedArrayBuffer(...)</b></p>
     <p><b>HostHasSourceTextAvailable(...)</b></p>
+    <p><b>HostGetCodeForEval(...)</b></p>
     <p><b>HostLoadImportedModule(...)</b></p>
     <p><b>HostGetSupportedImportAttributes(...)</b></p>
     <p><b>HostMakeJobCallback(...)</b></p>
