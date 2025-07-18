@@ -15156,8 +15156,7 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. If _O_.[[ContentType]] is ~bigint~, let _numValue_ be ? ToBigInt(_value_).
-          1. Otherwise, let _numValue_ be ? ToNumber(_value_).
+          1. Let _numValue_ be ? ToNumericForTypedArray(_value_, TypedArrayElementType(_O_)).
           1. If IsValidIntegerIndex(_O_, _index_) is *true*, then
             1. Let _offset_ be _O_.[[ByteOffset]].
             1. Let _elementSize_ be TypedArrayElementSize(_O_).
@@ -41220,8 +41219,7 @@ THH:mm:ss.sss
             1. Let _index_ be _O_.[[ArrayLikeNextIndex]].
             1. Let _kind_ be _O_.[[ArrayLikeIterationKind]].
             1. If _array_ has a [[TypedArrayName]] internal slot, then
-              1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_array_, ~seq-cst~).
-              1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+              1. Let _taRecord_ be ? ValidateTypedArray(_array_, ~seq-cst~).
               1. Let _len_ be TypedArrayLength(_taRecord_).
             1. Else,
               1. Let _len_ be ? LengthOfArrayLike(_array_).
@@ -41755,8 +41753,7 @@ THH:mm:ss.sss
           1. If _count_ > 0, then
             1. NOTE: The copying must be performed in a manner that preserves the bit-level encoding of the source data.
             1. Let _buffer_ be _O_.[[ViewedArrayBuffer]].
-            1. Set _taRecord_ to MakeTypedArrayWithBufferWitnessRecord(_O_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+            1. Set _taRecord_ to ? ValidateTypedArray(_O_, ~seq-cst~).
             1. Set _len_ to TypedArrayLength(_taRecord_).
             1. Let _elementSize_ be TypedArrayElementSize(_O_).
             1. Let _byteOffset_ be _O_.[[ByteOffset]].
@@ -41822,8 +41819,7 @@ THH:mm:ss.sss
           1. Let _O_ be the *this* value.
           1. Let _taRecord_ be ? ValidateTypedArray(_O_, ~seq-cst~).
           1. Let _len_ be TypedArrayLength(_taRecord_).
-          1. If _O_.[[ContentType]] is ~bigint~, set _value_ to ? ToBigInt(_value_).
-          1. Otherwise, set _value_ to ? ToNumber(_value_).
+          1. Set _value_ to ? ToNumericForTypedArray(_value_, TypedArrayElementType(_O_)).
           1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
           1. If _relativeStart_ = -∞, let _startIndex_ be 0.
           1. Else if _relativeStart_ &lt; 0, let _startIndex_ be max(_len_ + _relativeStart_, 0).
@@ -41832,8 +41828,7 @@ THH:mm:ss.sss
           1. If _relativeEnd_ = -∞, let _endIndex_ be 0.
           1. Else if _relativeEnd_ &lt; 0, let _endIndex_ be max(_len_ + _relativeEnd_, 0).
           1. Else, let _endIndex_ be min(_relativeEnd_, _len_).
-          1. Set _taRecord_ to MakeTypedArrayWithBufferWitnessRecord(_O_, ~seq-cst~).
-          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+          1. Set _taRecord_ to ? ValidateTypedArray(_O_, ~seq-cst~).
           1. Set _len_ to TypedArrayLength(_taRecord_).
           1. Set _endIndex_ to min(_endIndex_, _len_).
           1. Let _k_ be _startIndex_.
@@ -42217,13 +42212,10 @@ THH:mm:ss.sss
             <dd>It sets multiple values in _target_, starting at index _targetOffset_, reading the values from _source_.</dd>
           </dl>
           <emu-alg>
-            1. Let _targetRecord_ be MakeTypedArrayWithBufferWitnessRecord(_target_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_targetRecord_) is *true*, throw a *TypeError* exception.
-            1. Let _targetLength_ be TypedArrayLength(_targetRecord_).
+            1. Let _targetRecord_ be ? ValidateTypedArray(_target_, ~seq-cst~).
             1. Let _src_ be ? ToObject(_source_).
             1. Let _srcLength_ be ? LengthOfArrayLike(_src_).
-            1. If _targetOffset_ = +∞, throw a *RangeError* exception.
-            1. If _srcLength_ + _targetOffset_ > _targetLength_, throw a *RangeError* exception.
+            1. If _srcLength_ + _targetOffset_ > TypedArrayLength(_targetRecord_), throw a *RangeError* exception.
             1. Let _k_ be 0.
             1. Repeat, while _k_ &lt; _srcLength_,
               1. Let _Pk_ be ! ToString(𝔽(_k_)).
@@ -42248,45 +42240,36 @@ THH:mm:ss.sss
             <dd>It sets multiple values in _target_, starting at index _targetOffset_, reading the values from _source_.</dd>
           </dl>
           <emu-alg>
-            1. Let _targetBuffer_ be _target_.[[ViewedArrayBuffer]].
-            1. Let _targetRecord_ be MakeTypedArrayWithBufferWitnessRecord(_target_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_targetRecord_) is *true*, throw a *TypeError* exception.
-            1. Let _targetLength_ be TypedArrayLength(_targetRecord_).
-            1. Let _srcBuffer_ be _source_.[[ViewedArrayBuffer]].
-            1. Let _srcRecord_ be MakeTypedArrayWithBufferWitnessRecord(_source_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_srcRecord_) is *true*, throw a *TypeError* exception.
+            1. Let _targetRecord_ be ? ValidateTypedArray(_target_, ~seq-cst~).
+            1. Let _srcRecord_ be ? ValidateTypedArray(_source_, ~seq-cst~).
             1. Let _srcLength_ be TypedArrayLength(_srcRecord_).
-            1. Let _targetType_ be TypedArrayElementType(_target_).
+            1. If _srcLength_ + _targetOffset_ > TypedArrayLength(_targetRecord_), throw a *RangeError* exception.
+            1. Perform ? ValidateTypedArrayCompatibility(_target_, _source_).
             1. Let _targetElementSize_ be TypedArrayElementSize(_target_).
-            1. Let _targetByteOffset_ be _target_.[[ByteOffset]].
-            1. Let _srcType_ be TypedArrayElementType(_source_).
             1. Let _srcElementSize_ be TypedArrayElementSize(_source_).
-            1. Let _srcByteOffset_ be _source_.[[ByteOffset]].
-            1. If _targetOffset_ = +∞, throw a *RangeError* exception.
-            1. If _srcLength_ + _targetOffset_ > _targetLength_, throw a *RangeError* exception.
-            1. If _target_.[[ContentType]] is not _source_.[[ContentType]], throw a *TypeError* exception.
-            1. If IsSharedArrayBuffer(_srcBuffer_) is *true*, IsSharedArrayBuffer(_targetBuffer_) is *true*, and _srcBuffer_.[[ArrayBufferData]] is _targetBuffer_.[[ArrayBufferData]], let _sameSharedArrayBuffer_ be *true*; otherwise, let _sameSharedArrayBuffer_ be *false*.
-            1. If SameValue(_srcBuffer_, _targetBuffer_) is *true* or _sameSharedArrayBuffer_ is *true*, then
-              1. Let _srcByteLength_ be TypedArrayByteLength(_srcRecord_).
-              1. Set _srcBuffer_ to ? CloneArrayBuffer(_srcBuffer_, _srcByteOffset_, _srcByteLength_).
-              1. Let _srcByteIndex_ be 0.
-            1. Else,
-              1. Let _srcByteIndex_ be _srcByteOffset_.
-            1. Let _targetByteIndex_ be (_targetOffset_ × _targetElementSize_) + _targetByteOffset_.
-            1. Let _limit_ be _targetByteIndex_ + (_targetElementSize_ × _srcLength_).
+            1. Let _targetType_ be TypedArrayElementType(_target_).
+            1. Let _srcType_ be TypedArrayElementType(_source_).
+            1. NOTE: When _srcType_ matches _targetType_, bit-level encoding of the source data must be preserved. Operating on byte-sized units ensures that guarantee, but an implementation that can satisfy it with larger chunks may do so.
             1. If _srcType_ is _targetType_, then
-              1. NOTE: The transfer must be performed in a manner that preserves the bit-level encoding of the source data.
-              1. Repeat, while _targetByteIndex_ &lt; _limit_,
-                1. Let _value_ be GetValueFromBuffer(_srcBuffer_, _srcByteIndex_, ~uint8~, *true*, ~unordered~).
-                1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, ~uint8~, _value_, *true*, ~unordered~).
-                1. Set _srcByteIndex_ to _srcByteIndex_ + 1.
-                1. Set _targetByteIndex_ to _targetByteIndex_ + 1.
-            1. Else,
-              1. Repeat, while _targetByteIndex_ &lt; _limit_,
-                1. Let _value_ be GetValueFromBuffer(_srcBuffer_, _srcByteIndex_, _srcType_, *true*, ~unordered~).
-                1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, _targetType_, _value_, *true*, ~unordered~).
-                1. Set _srcByteIndex_ to _srcByteIndex_ + _srcElementSize_.
-                1. Set _targetByteIndex_ to _targetByteIndex_ + _targetElementSize_.
+              1. Set _targetType_ to ~uint8~.
+              1. Set _targetElementSize_ to 1.
+              1. Set _srcType_ to ~uint8~.
+              1. Set _srcElementSize_ to 1.
+            1. Let _targetBuffer_ be _target_.[[ViewedArrayBuffer]].
+            1. Let _srcBuffer_ be _source_.[[ViewedArrayBuffer]].
+            1. Let _srcByteIndex_ be _source_.[[ByteOffset]].
+            1. If _targetBuffer_.[[ArrayBufferData]] is _srcBuffer_.[[ArrayBufferData]], then
+              1. NOTE: This operation must behave as if copying data into an overlapping range within the same Data Block is a single atomic step. But because the results of copying are not observable until it completes, implementations unable to perform such copying atomically may still avoid allocating a new ArrayBuffer by copying chunks in-place if they alter the direction of iteration as appropriate to avoid overwriting source data that has not yet been read.
+              1. Let _srcByteLength_ be TypedArrayByteLength(_srcRecord_).
+              1. Set _srcBuffer_ to ? CloneArrayBuffer(_srcBuffer_, _srcByteIndex_, _srcByteLength_).
+              1. Set _srcByteIndex_ to 0.
+            1. Let _targetByteIndex_ be _target_.[[ByteOffset]] + (_targetElementSize_ × _targetOffset_).
+            1. Let _limit_ be _targetByteIndex_ + (_targetElementSize_ × _srcLength_).
+            1. Repeat, while _targetByteIndex_ &lt; _limit_,
+              1. Let _value_ be GetValueFromBuffer(_srcBuffer_, _srcByteIndex_, _srcType_, *true*, ~unordered~).
+              1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, _targetType_, _value_, *true*, ~unordered~).
+              1. Set _srcByteIndex_ to _srcByteIndex_ + _srcElementSize_.
+              1. Set _targetByteIndex_ to _targetByteIndex_ + _targetElementSize_.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -42311,8 +42294,7 @@ THH:mm:ss.sss
           1. Let _countBytes_ be max(_endIndex_ - _startIndex_, 0).
           1. Let _A_ be ? TypedArraySpeciesCreate(_O_, « 𝔽(_countBytes_) »).
           1. If _countBytes_ > 0, then
-            1. Set _taRecord_ to MakeTypedArrayWithBufferWitnessRecord(_O_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+            1. Set _taRecord_ to ? ValidateTypedArray(_O_, ~seq-cst~).
             1. Set _endIndex_ to min(_endIndex_, TypedArrayLength(_taRecord_)).
             1. Set _countBytes_ to max(_endIndex_ - _startIndex_, 0).
             1. Let _srcType_ be TypedArrayElementType(_O_).
@@ -42500,8 +42482,7 @@ THH:mm:ss.sss
           1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
           1. If _relativeIndex_ ≥ 0, let _actualIndex_ be _relativeIndex_.
           1. Else, let _actualIndex_ be _len_ + _relativeIndex_.
-          1. If _O_.[[ContentType]] is ~bigint~, let _numericValue_ be ? ToBigInt(_value_).
-          1. Else, let _numericValue_ be ? ToNumber(_value_).
+          1. Let _numericValue_ be ? ToNumericForTypedArray(_value_, TypedArrayElementType(_O_)).
           1. If IsValidIntegerIndex(_O_, 𝔽(_actualIndex_)) is *false*, throw a *RangeError* exception.
           1. Let _A_ be ? TypedArrayCreateSameType(_O_, « 𝔽(_len_) »).
           1. Let _k_ be 0.
@@ -42576,7 +42557,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _constructor_ be the intrinsic object associated with the constructor name _exemplar_.[[TypedArrayName]] in <emu-xref href="#table-the-typedarray-constructors"></emu-xref>.
           1. Let _result_ be ? TypedArrayCreateFromConstructor(_constructor_, _argumentList_).
-          1. Assert: _result_.[[ContentType]] is _exemplar_.[[ContentType]].
+          1. Assert: _result_.[[TypedArrayName]] is _exemplar_.[[TypedArrayName]].
           1. Return _result_.
         </emu-alg>
       </emu-clause>
@@ -42596,7 +42577,7 @@ THH:mm:ss.sss
           1. Let _defaultConstructor_ be the intrinsic object associated with the constructor name _exemplar_.[[TypedArrayName]] in <emu-xref href="#table-the-typedarray-constructors"></emu-xref>.
           1. Let _constructor_ be ? SpeciesConstructor(_exemplar_, _defaultConstructor_).
           1. Let _result_ be ? TypedArrayCreateFromConstructor(_constructor_, _argumentList_).
-          1. If _result_.[[ContentType]] is not _exemplar_.[[ContentType]], throw a *TypeError* exception.
+          1. Perform ? ValidateTypedArrayCompatibility(_result_, _exemplar_).
           1. Return _result_.
         </emu-alg>
       </emu-clause>
@@ -42616,6 +42597,21 @@ THH:mm:ss.sss
           1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_O_, _order_).
           1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
           1. Return _taRecord_.
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-validatetypedarraycompatibility" type="abstract operation">
+        <h1>
+          ValidateTypedArrayCompatibility (
+            _a_: a TypedArray,
+            _b_: a TypedArray,
+          ): either a normal completion containing ~unused~ or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If _a_.[[ContentType]] is not _b_.[[ContentType]], throw a *TypeError* exception.
+          1. Return ~unused~.
         </emu-alg>
       </emu-clause>
 
@@ -42696,30 +42692,27 @@ THH:mm:ss.sss
           1. Let _numberOfArgs_ be the number of elements in _args_.
           1. If _numberOfArgs_ = 0, then
             1. Return ? AllocateTypedArray(_constructorName_, NewTarget, _proto_, 0).
+          1. Else if _args_[0] is not an Object, then
+            1. Let _elementCount_ be ? ToIndex(_args_[0]).
+            1. Return ? AllocateTypedArray(_constructorName_, NewTarget, _proto_, _elementCount_).
+          1. Let _firstArgument_ be _args_[0].
+          1. Assert: _firstArgument_ is an Object.
+          1. Let _O_ be ? AllocateTypedArray(_constructorName_, NewTarget, _proto_).
+          1. If _firstArgument_ has an [[ArrayBufferData]] internal slot, then
+            1. If _numberOfArgs_ > 1, let _byteOffset_ be _args_[1]; else let _byteOffset_ be *undefined*.
+            1. If _numberOfArgs_ > 2, let _elementCount_ be _args_[2]; else let _elementCount_ be *undefined*.
+            1. Perform ? InitializeTypedArrayFromArrayBuffer(_O_, _firstArgument_, _byteOffset_, _elementCount_).
+          1. Else if _firstArgument_ has a [[TypedArrayName]] internal slot, then
+            1. Perform ? InitializeTypedArrayFromTypedArray(_O_, _firstArgument_).
           1. Else,
-            1. Let _firstArgument_ be _args_[0].
-            1. If _firstArgument_ is an Object, then
-              1. Let _O_ be ? AllocateTypedArray(_constructorName_, NewTarget, _proto_).
-              1. If _firstArgument_ has a [[TypedArrayName]] internal slot, then
-                1. Perform ? InitializeTypedArrayFromTypedArray(_O_, _firstArgument_).
-              1. Else if _firstArgument_ has an [[ArrayBufferData]] internal slot, then
-                1. If _numberOfArgs_ > 1, let _byteOffset_ be _args_[1]; else let _byteOffset_ be *undefined*.
-                1. If _numberOfArgs_ > 2, let _length_ be _args_[2]; else let _length_ be *undefined*.
-                1. Perform ? InitializeTypedArrayFromArrayBuffer(_O_, _firstArgument_, _byteOffset_, _length_).
-              1. Else,
-                1. Assert: _firstArgument_ is an Object and _firstArgument_ does not have either a [[TypedArrayName]] or an [[ArrayBufferData]] internal slot.
-                1. Let _usingIterator_ be ? GetMethod(_firstArgument_, %Symbol.iterator%).
-                1. If _usingIterator_ is not *undefined*, then
-                  1. Let _values_ be ? IteratorToList(? GetIteratorFromMethod(_firstArgument_, _usingIterator_)).
-                  1. Perform ? InitializeTypedArrayFromList(_O_, _values_).
-                1. Else,
-                  1. NOTE: _firstArgument_ is not an iterable object, so assume it is already an array-like object.
-                  1. Perform ? InitializeTypedArrayFromArrayLike(_O_, _firstArgument_).
-              1. Return _O_.
+            1. Assert: _firstArgument_ does not have either an [[ArrayBufferData]] or a [[TypedArrayName]] internal slot.
+            1. Let _usingIterator_ be ? GetMethod(_firstArgument_, %Symbol.iterator%).
+            1. If _usingIterator_ is not *undefined*, then
+              1. Let _values_ be ? IteratorToList(? GetIteratorFromMethod(_firstArgument_, _usingIterator_)).
+              1. Perform ? InitializeTypedArrayFromList(_O_, _values_).
             1. Else,
-              1. Assert: _firstArgument_ is not an Object.
-              1. Let _elementLength_ be ? ToIndex(_firstArgument_).
-              1. Return ? AllocateTypedArray(_constructorName_, NewTarget, _proto_, _elementLength_).
+              1. Perform ? InitializeTypedArrayFromArrayLike(_O_, _firstArgument_).
+          1. Return _O_.
         </emu-alg>
 
         <emu-clause id="sec-allocatetypedarray" type="abstract operation">
@@ -42728,12 +42721,12 @@ THH:mm:ss.sss
               _constructorName_: a String which is the name of a TypedArray constructor in <emu-xref href="#table-the-typedarray-constructors"></emu-xref>,
               _newTarget_: a constructor,
               _defaultProto_: a String,
-              optional _length_: a non-negative integer,
+              optional _elementCount_: a non-negative integer,
             ): either a normal completion containing a TypedArray or a throw completion
           </h1>
           <dl class="header">
             <dt>description</dt>
-            <dd>It is used to validate and create an instance of a TypedArray constructor. If the _length_ argument is passed, an ArrayBuffer of that length is also allocated and associated with the new TypedArray instance. AllocateTypedArray provides common semantics that is used by _TypedArray_.</dd>
+            <dd>It is used to validate and create an instance of a TypedArray constructor. If the _elementCount_ argument is passed, an ArrayBuffer of that length is also allocated and associated with the new TypedArray instance. AllocateTypedArray provides common semantics that is used by _TypedArray_.</dd>
           </dl>
           <emu-alg>
             1. Let _proto_ be ? GetPrototypeFromConstructor(_newTarget_, _defaultProto_).
@@ -42742,13 +42735,50 @@ THH:mm:ss.sss
             1. Set _obj_.[[TypedArrayName]] to _constructorName_.
             1. If _constructorName_ is either *"BigInt64Array"* or *"BigUint64Array"*, set _obj_.[[ContentType]] to ~bigint~.
             1. Otherwise, set _obj_.[[ContentType]] to ~number~.
-            1. If _length_ is not present, then
+            1. If _elementCount_ is not present, then
               1. Set _obj_.[[ByteLength]] to 0.
               1. Set _obj_.[[ByteOffset]] to 0.
               1. Set _obj_.[[ArrayLength]] to 0.
             1. Else,
-              1. Perform ? AllocateTypedArrayBuffer(_obj_, _length_).
+              1. Perform ? AllocateTypedArrayBuffer(_obj_, _elementCount_).
             1. Return _obj_.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-initializetypedarrayfromarraybuffer" type="abstract operation" oldids="sec-typedarray-buffer-byteoffset-length">
+          <h1>
+            InitializeTypedArrayFromArrayBuffer (
+              _O_: a TypedArray,
+              _buffer_: an ArrayBuffer or a SharedArrayBuffer,
+              _byteOffset_: an ECMAScript language value,
+              _elementCount_: an ECMAScript language value,
+            ): either a normal completion containing ~unused~ or a throw completion
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Let _elementSize_ be TypedArrayElementSize(_O_).
+            1. Set _byteOffset_ to ? ToIndex(_byteOffset_).
+            1. If _byteOffset_ modulo _elementSize_ ≠ 0, throw a *RangeError* exception.
+            1. If _elementCount_ is not *undefined*, set _elementCount_ to ? ToIndex(_elementCount_).
+            1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
+            1. Let _bufferByteLength_ be ArrayBufferByteLength(_buffer_, ~seq-cst~).
+            1. If _byteOffset_ > _bufferByteLength_, throw a *RangeError* exception.
+            1. If _elementCount_ is *undefined* and IsFixedLengthArrayBuffer(_buffer_) is *false*, then
+              1. Set _O_.[[ByteLength]] to ~auto~.
+              1. Set _O_.[[ArrayLength]] to ~auto~.
+            1. Else,
+              1. If _elementCount_ is *undefined*, then
+                1. Let _byteLength_ be _bufferByteLength_ - _byteOffset_.
+                1. If _byteLength_ modulo _elementSize_ ≠ 0, throw a *RangeError* exception.
+              1. Else,
+                1. Let _byteLength_ be _elementSize_ × _elementCount_.
+                1. If _byteOffset_ + _byteLength_ > _bufferByteLength_, throw a *RangeError* exception.
+              1. Set _O_.[[ByteLength]] to _byteLength_.
+              1. Set _O_.[[ArrayLength]] to _byteLength_ / _elementSize_.
+            1. Set _O_.[[ViewedArrayBuffer]] to _buffer_.
+            1. Set _O_.[[ByteOffset]] to _byteOffset_.
+            1. Return ~unused~.
           </emu-alg>
         </emu-clause>
 
@@ -42762,74 +42792,30 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Let _srcData_ be _srcArray_.[[ViewedArrayBuffer]].
-            1. Let _elementType_ be TypedArrayElementType(_O_).
-            1. Let _elementSize_ be TypedArrayElementSize(_O_).
+            1. Let _srcRecord_ be ? ValidateTypedArray(_srcArray_, ~seq-cst~).
+            1. Let _srcBuffer_ be _srcArray_.[[ViewedArrayBuffer]].
+            1. Let _srcByteIndex_ be _srcArray_.[[ByteOffset]].
+            1. Let _elementCount_ be TypedArrayLength(_srcRecord_).
+            1. Let _targetElementSize_ be TypedArrayElementSize(_O_).
+            1. Let _byteLength_ be _targetElementSize_ × _elementCount_.
+            1. Let _targetType_ be TypedArrayElementType(_O_).
             1. Let _srcType_ be TypedArrayElementType(_srcArray_).
-            1. Let _srcElementSize_ be TypedArrayElementSize(_srcArray_).
-            1. Let _srcByteOffset_ be _srcArray_.[[ByteOffset]].
-            1. Let _srcRecord_ be MakeTypedArrayWithBufferWitnessRecord(_srcArray_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_srcRecord_) is *true*, throw a *TypeError* exception.
-            1. Let _elementLength_ be TypedArrayLength(_srcRecord_).
-            1. Let _byteLength_ be _elementSize_ × _elementLength_.
-            1. If _elementType_ is _srcType_, then
-              1. Let _data_ be ? CloneArrayBuffer(_srcData_, _srcByteOffset_, _byteLength_).
+            1. If _srcType_ is _targetType_, then
+              1. Let _targetBuffer_ be ? CloneArrayBuffer(_srcBuffer_, _srcByteIndex_, _byteLength_).
             1. Else,
-              1. Let _data_ be ? <emu-meta suppress-effects="user-code">AllocateArrayBuffer(%ArrayBuffer%, _byteLength_)</emu-meta>.
-              1. If _srcArray_.[[ContentType]] is not _O_.[[ContentType]], throw a *TypeError* exception.
-              1. Let _srcByteIndex_ be _srcByteOffset_.
+              1. Let _targetBuffer_ be ? <emu-meta suppress-effects="user-code">AllocateArrayBuffer(%ArrayBuffer%, _byteLength_)</emu-meta>.
+              1. Perform ? ValidateTypedArrayCompatibility(_O_, _srcArray_).
               1. Let _targetByteIndex_ be 0.
-              1. Let _count_ be _elementLength_.
-              1. Repeat, while _count_ > 0,
-                1. Let _value_ be GetValueFromBuffer(_srcData_, _srcByteIndex_, _srcType_, *true*, ~unordered~).
-                1. Perform SetValueInBuffer(_data_, _targetByteIndex_, _elementType_, _value_, *true*, ~unordered~).
+              1. Let _srcElementSize_ be TypedArrayElementSize(_srcArray_).
+              1. Repeat, while _targetByteIndex_ &lt; _byteLength_,
+                1. Let _value_ be GetValueFromBuffer(_srcBuffer_, _srcByteIndex_, _srcType_, *true*, ~unordered~).
+                1. Perform SetValueInBuffer(_targetBuffer_, _targetByteIndex_, _targetType_, _value_, *true*, ~unordered~).
                 1. Set _srcByteIndex_ to _srcByteIndex_ + _srcElementSize_.
-                1. Set _targetByteIndex_ to _targetByteIndex_ + _elementSize_.
-                1. Set _count_ to _count_ - 1.
-            1. Set _O_.[[ViewedArrayBuffer]] to _data_.
+                1. Set _targetByteIndex_ to _targetByteIndex_ + _targetElementSize_.
+            1. Set _O_.[[ViewedArrayBuffer]] to _targetBuffer_.
             1. Set _O_.[[ByteLength]] to _byteLength_.
             1. Set _O_.[[ByteOffset]] to 0.
-            1. Set _O_.[[ArrayLength]] to _elementLength_.
-            1. Return ~unused~.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-initializetypedarrayfromarraybuffer" type="abstract operation" oldids="sec-typedarray-buffer-byteoffset-length">
-          <h1>
-            InitializeTypedArrayFromArrayBuffer (
-              _O_: a TypedArray,
-              _buffer_: an ArrayBuffer or a SharedArrayBuffer,
-              _byteOffset_: an ECMAScript language value,
-              _length_: an ECMAScript language value,
-            ): either a normal completion containing ~unused~ or a throw completion
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Let _elementSize_ be TypedArrayElementSize(_O_).
-            1. Let _offset_ be ? ToIndex(_byteOffset_).
-            1. If _offset_ modulo _elementSize_ ≠ 0, throw a *RangeError* exception.
-            1. Let _bufferIsFixedLength_ be IsFixedLengthArrayBuffer(_buffer_).
-            1. If _length_ is not *undefined*, then
-              1. Let _newLength_ be ? ToIndex(_length_).
-            1. If IsDetachedBuffer(_buffer_) is *true*, throw a *TypeError* exception.
-            1. Let _bufferByteLength_ be ArrayBufferByteLength(_buffer_, ~seq-cst~).
-            1. If _length_ is *undefined* and _bufferIsFixedLength_ is *false*, then
-              1. If _offset_ > _bufferByteLength_, throw a *RangeError* exception.
-              1. Set _O_.[[ByteLength]] to ~auto~.
-              1. Set _O_.[[ArrayLength]] to ~auto~.
-            1. Else,
-              1. If _length_ is *undefined*, then
-                1. If _bufferByteLength_ modulo _elementSize_ ≠ 0, throw a *RangeError* exception.
-                1. Let _newByteLength_ be _bufferByteLength_ - _offset_.
-                1. If _newByteLength_ &lt; 0, throw a *RangeError* exception.
-              1. Else,
-                1. Let _newByteLength_ be _newLength_ × _elementSize_.
-                1. If _offset_ + _newByteLength_ > _bufferByteLength_, throw a *RangeError* exception.
-              1. Set _O_.[[ByteLength]] to _newByteLength_.
-              1. Set _O_.[[ArrayLength]] to _newByteLength_ / _elementSize_.
-            1. Set _O_.[[ViewedArrayBuffer]] to _buffer_.
-            1. Set _O_.[[ByteOffset]] to _offset_.
+            1. Set _O_.[[ArrayLength]] to _elementCount_.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -42884,7 +42870,7 @@ THH:mm:ss.sss
           <h1>
             AllocateTypedArrayBuffer (
               _O_: a TypedArray,
-              _length_: a non-negative integer,
+              _elementCount_: a non-negative integer,
             ): either a normal completion containing ~unused~ or a throw completion
           </h1>
           <dl class="header">
@@ -42894,12 +42880,12 @@ THH:mm:ss.sss
           <emu-alg>
             1. Assert: _O_.[[ViewedArrayBuffer]] is *undefined*.
             1. Let _elementSize_ be TypedArrayElementSize(_O_).
-            1. Let _byteLength_ be _elementSize_ × _length_.
+            1. Let _byteLength_ be _elementSize_ × _elementCount_.
             1. Let _data_ be ? <emu-meta suppress-effects="user-code">AllocateArrayBuffer(%ArrayBuffer%, _byteLength_)</emu-meta>.
             1. Set _O_.[[ViewedArrayBuffer]] to _data_.
             1. Set _O_.[[ByteLength]] to _byteLength_.
             1. Set _O_.[[ByteOffset]] to 0.
-            1. Set _O_.[[ArrayLength]] to _length_.
+            1. Set _O_.[[ArrayLength]] to _elementCount_.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -44526,7 +44512,7 @@ THH:mm:ss.sss
         </dl>
         <emu-alg>
           1. If IsUnclampedIntegerElementType(_type_) is *true*, return *true*.
-          1. If IsBigIntElementType(_type_) is *true* and _order_ is neither ~init~ nor ~unordered~, return *true*.
+          1. If IsBigIntElementType(_type_) is *true* and _order_ is ~seq-cst~, return *true*.
           1. Return *false*.
         </emu-alg>
       </emu-clause>
@@ -44718,6 +44704,21 @@ THH:mm:ss.sss
           1. Return RawBytesToNumeric(_type_, _rawBytesRead_, _isLittleEndian_).
         </emu-alg>
       </emu-clause>
+
+      <emu-clause id="sec-tonumericfortypedarray" type="abstract operation">
+        <h1>
+          ToNumericForTypedArray (
+            _value_: an ECMAScript language value,
+            _type_: a TypedArray element type,
+          ): either a normal completion containing either a Number or a BigInt, or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. If _type_ is either ~bigint64~ or ~biguint64~, return ? ToBigInt(_value_).
+          1. Return ? ToNumber(_value_).
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-arraybuffer-constructor">
@@ -44892,7 +44893,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_new_, [[ArrayBufferData]]).
           1. If IsSharedArrayBuffer(_new_) is *true*, throw a *TypeError* exception.
           1. If IsDetachedBuffer(_new_) is *true*, throw a *TypeError* exception.
-          1. If SameValue(_new_, _O_) is *true*, throw a *TypeError* exception.
+          1. If _new_.[[ArrayBufferData]] is _O_.[[ArrayBufferData]], throw a *TypeError* exception.
           1. If _new_.[[ArrayBufferByteLength]] &lt; _newLen_, throw a *TypeError* exception.
           1. NOTE: Side-effects of the above steps may have detached or resized _O_.
           1. If IsDetachedBuffer(_O_) is *true*, throw a *TypeError* exception.
@@ -45417,8 +45418,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_view_, [[DataView]]).
           1. Assert: _view_ has a [[ViewedArrayBuffer]] internal slot.
           1. Let _getIndex_ be ? ToIndex(_requestIndex_).
-          1. If IsBigIntElementType(_type_) is *true*, let _numberValue_ be ? ToBigInt(_value_).
-          1. Otherwise, let _numberValue_ be ? ToNumber(_value_).
+          1. Let _numberValue_ be ? ToNumericForTypedArray(_value_, _type_).
           1. Set _isLittleEndian_ to ToBoolean(_isLittleEndian_).
           1. Let _viewOffset_ be _view_.[[ByteOffset]].
           1. Let _viewRecord_ be MakeDataViewWithBufferWitnessRecord(_view_, ~unordered~).
@@ -45920,13 +45920,12 @@ THH:mm:ss.sss
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _taRecord_ be ? ValidateTypedArray(_typedArray_, ~unordered~).
           1. NOTE: Bounds checking is not a synchronizing operation when _typedArray_'s backing buffer is a growable SharedArrayBuffer.
+          1. Let _taRecord_ be ? ValidateTypedArray(_typedArray_, ~unordered~).
           1. If _waitable_ is *true*, then
             1. If _typedArray_.[[TypedArrayName]] is neither *"Int32Array"* nor *"BigInt64Array"*, throw a *TypeError* exception.
-          1. Else,
-            1. Let _type_ be TypedArrayElementType(_typedArray_).
-            1. If IsUnclampedIntegerElementType(_type_) is *false* and IsBigIntElementType(_type_) is *false*, throw a *TypeError* exception.
+          1. Let _type_ be TypedArrayElementType(_typedArray_).
+          1. If IsNoTearConfiguration(_type_, ~seq-cst~) is *false*, throw a *TypeError* exception.
           1. Return _taRecord_.
         </emu-alg>
       </emu-clause>
@@ -45979,9 +45978,8 @@ THH:mm:ss.sss
           <dd>This operation revalidates the index within the backing buffer for atomic operations after all argument coercions are performed in Atomics methods, as argument coercions can have arbitrary side effects, which could cause the buffer to become out of bounds. This operation does not throw when _typedArray_'s backing buffer is a SharedArrayBuffer.</dd>
         </dl>
         <emu-alg>
-          1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_typedArray_, ~unordered~).
           1. NOTE: Bounds checking is not a synchronizing operation when _typedArray_'s backing buffer is a growable SharedArrayBuffer.
-          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+          1. Let _taRecord_ be ? ValidateTypedArray(_typedArray_, ~unordered~).
           1. Assert: _byteIndexInBuffer_ ≥ _typedArray_.[[ByteOffset]].
           1. If _byteIndexInBuffer_ ≥ _taRecord_.[[CachedBufferByteLength]], throw a *RangeError* exception.
           1. Return ~unused~.
@@ -46186,9 +46184,8 @@ THH:mm:ss.sss
           1. Let _buffer_ be _taRecord_.[[Object]].[[ViewedArrayBuffer]].
           1. If IsSharedArrayBuffer(_buffer_) is *false*, throw a *TypeError* exception.
           1. Let _i_ be ? ValidateAtomicAccess(_taRecord_, _index_).
-          1. Let _arrayTypeName_ be _typedArray_.[[TypedArrayName]].
-          1. If _arrayTypeName_ is *"BigInt64Array"*, let _v_ be ? ToBigInt64(_value_).
-          1. Else, let _v_ be ? ToInt32(_value_).
+          1. Let _conversionOperation_ be the abstract operation named in the Conversion Operation column in <emu-xref href="#table-the-typedarray-constructors"></emu-xref> for Constructor Name _typedArray_.[[TypedArrayName]].
+          1. Let _v_ be ? _conversionOperation_(_value_).
           1. Let _q_ be ? ToNumber(_timeout_).
           1. If _q_ is either *NaN* or *+∞*<sub>𝔽</sub>, let _t_ be +∞; else if _q_ is *-∞*<sub>𝔽</sub>, let _t_ be 0; else let _t_ be max(ℝ(_q_), 0).
           1. If _mode_ is ~sync~ and AgentCanSuspend() is *false*, throw a *TypeError* exception.
@@ -46311,11 +46308,10 @@ THH:mm:ss.sss
         </dl>
         <emu-alg>
           1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
-          1. If _typedArray_.[[ContentType]] is ~bigint~, let _v_ be ? ToBigInt(_value_).
-          1. Otherwise, let _v_ be 𝔽(? ToIntegerOrInfinity(_value_)).
+          1. Let _elementType_ be TypedArrayElementType(_typedArray_).
+          1. Let _v_ be ? ToNumericForTypedArray(_value_, _elementType_).
           1. Perform ? RevalidateAtomicAccess(_typedArray_, _byteIndexInBuffer_).
           1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
-          1. Let _elementType_ be TypedArrayElementType(_typedArray_).
           1. Return GetModifySetValueInBuffer(_buffer_, _byteIndexInBuffer_, _elementType_, _v_, _op_).
         </emu-alg>
       </emu-clause>
@@ -46410,18 +46406,14 @@ THH:mm:ss.sss
         1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
         1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
         1. Let _block_ be _buffer_.[[ArrayBufferData]].
-        1. If _typedArray_.[[ContentType]] is ~bigint~, then
-          1. Let _expected_ be ? ToBigInt(_expectedValue_).
-          1. Let _replacement_ be ? ToBigInt(_replacementValue_).
-        1. Else,
-          1. Let _expected_ be 𝔽(? ToIntegerOrInfinity(_expectedValue_)).
-          1. Let _replacement_ be 𝔽(? ToIntegerOrInfinity(_replacementValue_)).
-        1. Perform ? RevalidateAtomicAccess(_typedArray_, _byteIndexInBuffer_).
         1. Let _elementType_ be TypedArrayElementType(_typedArray_).
-        1. Let _elementSize_ be TypedArrayElementSize(_typedArray_).
+        1. Let _expected_ be ? ToNumericForTypedArray(_expectedValue_, _elementType_).
+        1. Let _replacement_ be ? ToNumericForTypedArray(_replacementValue_, _elementType_).
+        1. Perform ? RevalidateAtomicAccess(_typedArray_, _byteIndexInBuffer_).
         1. Let _isLittleEndian_ be the value of the [[LittleEndian]] field of the surrounding agent's Agent Record.
         1. Let _expectedBytes_ be NumericToRawBytes(_elementType_, _expected_, _isLittleEndian_).
         1. Let _replacementBytes_ be NumericToRawBytes(_elementType_, _replacement_, _isLittleEndian_).
+        1. Let _elementSize_ be TypedArrayElementSize(_typedArray_).
         1. If IsSharedArrayBuffer(_buffer_) is *true*, then
           1. Let _rawBytesRead_ be AtomicCompareExchangeInSharedBlock(_block_, _byteIndexInBuffer_, _elementSize_, _expectedBytes_, _replacementBytes_).
         1. Else,
@@ -46488,12 +46480,12 @@ THH:mm:ss.sss
       <p>This function performs the following steps when called:</p>
       <emu-alg>
         1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccessOnIntegerTypedArray(_typedArray_, _index_).
-        1. If _typedArray_.[[ContentType]] is ~bigint~, let _v_ be ? ToBigInt(_value_).
-        1. Otherwise, let _v_ be 𝔽(? ToIntegerOrInfinity(_value_)).
+        1. Let _elementType_ be TypedArrayElementType(_typedArray_).
+        1. Let _v_ be ? ToNumericForTypedArray(_value_, _elementType_).
         1. Perform ? RevalidateAtomicAccess(_typedArray_, _byteIndexInBuffer_).
         1. Let _buffer_ be _typedArray_.[[ViewedArrayBuffer]].
-        1. Let _elementType_ be TypedArrayElementType(_typedArray_).
         1. Perform SetValueInBuffer(_buffer_, _byteIndexInBuffer_, _elementType_, _v_, *true*, ~seq-cst~).
+        1. If _v_ is a Number, return 𝔽(! ToIntegerOrInfinity(_v_)).
         1. Return _v_.
       </emu-alg>
     </emu-clause>
