@@ -10753,7 +10753,8 @@
           </dl>
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *false*.
-            1. Create a mutable binding in _envRecord_ for _name_ and record that it is uninitialized. If _deletable_ is *true*, record that the newly created binding may be deleted by a subsequent DeleteBinding call.
+            1. Let _binding_ be a mutable binding for _name_ and record that it is uninitialized. If _deletable_ is *true*, record that the newly created binding may be deleted by a subsequent DeleteBinding call.
+            1. Add _binding_ to _envRecord_.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -10774,7 +10775,8 @@
           </dl>
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *false*.
-            1. Create an immutable binding in _envRecord_ for _name_ and record that it is uninitialized. If _strict_ is *true*, record that the newly created binding is a strict binding.
+            1. Let _binding_ be an immutable binding for _name_ and record that it is uninitialized. If _strict_ is *true*, record that the newly created binding is a strict binding.
+            1. Add _binding_ to _envRecord_.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -10795,9 +10797,10 @@
           </dl>
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *true*.
-            1. Assert: the binding for _name_ in _envRecord_ is uninitialized.
-            1. Set the bound value for _name_ in _envRecord_ to _value_.
-            1. <emu-not-ref>Record</emu-not-ref> that the binding for _name_ in _envRecord_ has been initialized.
+            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. Assert: _binding_ is uninitialized.
+            1. Set the bound value of _binding_ to _value_.
+            1. <emu-not-ref>Record</emu-not-ref> that _binding_ has been initialized.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -10823,11 +10826,12 @@
               1. Perform ! _envRecord_.CreateMutableBinding(_name_, *true*).
               1. Perform ! _envRecord_.InitializeBinding(_name_, _value_).
               1. Return ~unused~.
-            1. If the binding for _name_ in _envRecord_ is a strict binding, set _strict_ to *true*.
-            1. If the binding for _name_ in _envRecord_ has not yet been initialized, then
+            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. If _binding_ is a strict binding, set _strict_ to *true*.
+            1. If _binding_ has not yet been initialized, then
               1. Throw a *ReferenceError* exception.
-            1. Else if the binding for _name_ in _envRecord_ is a mutable binding, then
-              1. Change its bound value to _value_.
+            1. Else if _binding_ is a mutable binding, then
+              1. Change the bound value of _binding_ to _value_.
             1. Else,
               1. Assert: This is an attempt to change the value of an immutable binding.
               1. If _strict_ is *true*, throw a *TypeError* exception.
@@ -10855,8 +10859,9 @@
           </dl>
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *true*.
-            1. If the binding for _name_ in _envRecord_ is an uninitialized binding, throw a *ReferenceError* exception.
-            1. Return the value currently bound to _name_ in _envRecord_.
+            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. If _binding_ is an uninitialized binding, throw a *ReferenceError* exception.
+            1. Return the value currently bound in _binding_.
           </emu-alg>
         </emu-clause>
 
@@ -10875,8 +10880,9 @@
           </dl>
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *true*.
-            1. If the binding for _name_ in _envRecord_ cannot be deleted, return *false*.
-            1. Remove the binding for _name_ from _envRecord_.
+            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. If _binding_ cannot be deleted, return *false*.
+            1. Remove _binding_ from _envRecord_.
             1. Return *true*.
           </emu-alg>
         </emu-clause>
@@ -11733,13 +11739,14 @@
           <emu-alg>
             1. Assert: _strict_ is *true*.
             1. Assert: ! _envRecord_.HasBinding(_name_) is *true*.
-            1. If the binding for _name_ is an indirect binding, then
+            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. If _binding_ is an indirect binding, then
               1. Let _module_ and _targetName_ be the indirection values provided when this binding for _name_ was created.
               1. Let _targetEnv_ be _module_.[[Environment]].
               1. If _targetEnv_ is ~empty~, throw a *ReferenceError* exception.
               1. Return ? <emu-meta effects="user-code">_targetEnv_.GetBindingValue(_targetName_, *true*)</emu-meta>.
-            1. If the binding for _name_ in _envRecord_ is an uninitialized binding, throw a *ReferenceError* exception.
-            1. Return the value currently bound to _name_ in _envRecord_.
+            1. If _binding_ is an uninitialized binding, throw a *ReferenceError* exception.
+            1. Return the value currently bound in _binding_.
           </emu-alg>
           <emu-note>
             <p>_strict_ will always be *true* because a |Module| is always strict mode code.</p>
@@ -11795,7 +11802,8 @@
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *false*.
             1. Assert: When _targetModule_.[[Environment]] is instantiated, it will have a direct binding for _targetName_.
-            1. Create an immutable indirect binding in _envRecord_ for _name_ that references _targetModule_ and _targetName_ as its target binding and record that the binding is initialized.
+            1. Let _binding_ be an immutable indirect binding for _name_ that references _targetModule_ and _targetName_ as its target binding and record that the binding is initialized.
+            1. Add _binding_ to _envRecord_.
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -21952,7 +21960,8 @@
             1. Let _funcName_ be the sole element of the BoundNames of _decl_.
             1. Let _funcObj_ be InstantiateFunctionObject of _decl_ with arguments _envRecord_ and _privateEnv_.
             1. [id="step-blockdeclarationinstantiation-initializebinding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
-              1. If the binding for _funcName_ in _envRecord_ is an uninitialized binding, then
+              1. Let _binding_ be the binding for _funcName_ in _envRecord_.
+              1. If _binding_ is an uninitialized binding, then
                 1. Perform ! _envRecord_.InitializeBinding(_funcName_, _funcObj_).
               1. Else,
                 1. Assert: _decl_ is a |FunctionDeclaration|.
