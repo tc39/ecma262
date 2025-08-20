@@ -10232,6 +10232,34 @@
       <emu-clause id="sec-declarative-environment-records">
         <h1>Declarative Environment Records</h1>
         <p>Each <dfn variants="Declarative Environment Records">Declarative Environment Record</dfn> is associated with an ECMAScript program scope containing variable, constant, let, class, module, import, and/or function declarations. A Declarative Environment Record binds the set of identifiers defined by the declarations contained within its scope.</p>
+        <p>Declarative Environment Records have the additional fields listed in <emu-xref href="#table-additional-fields-of-declarative-environment-records"></emu-xref>.</p>
+        <emu-table id="table-additional-fields-of-declarative-environment-records" caption="Additional Fields of Declarative Environment Records">
+          <table>
+            <tr>
+              <th>
+                Field Name
+              </th>
+              <th>
+                Value
+              </th>
+              <th>
+                Meaning
+              </th>
+            </tr>
+            <tr>
+              <td>
+                [[Bindings]]
+              </td>
+              <td>
+                a List of bindings
+              </td>
+              <td>
+                Satisfies the invariant that no two bindings in [[Bindings]] are bindings for the same name.
+              </td>
+            </tr>
+          </table>
+        </emu-table>
+        <p>The behaviour of the concrete specification methods for Declarative Environment Records is defined by the following algorithms.</p>
 
         <emu-clause id="sec-declarative-environment-records-hasbinding-n" type="concrete method">
           <h1>
@@ -10247,7 +10275,7 @@
             <dd>It determines if the argument identifier is one of the identifiers bound by the record.</dd>
           </dl>
           <emu-alg>
-            1. If _envRec_ has a binding for _N_, return *true*.
+            1. If _envRec_.[[Bindings]] contains a binding for _N_, return *true*.
             1. Return *false*.
           </emu-alg>
         </emu-clause>
@@ -10269,7 +10297,7 @@
           <emu-alg>
             1. Assert: _envRec_.HasBinding(_N_) is *false*.
             1. Let _binding_ be a mutable binding for _N_ and record that it is uninitialized. If _D_ is *true*, record that the newly created binding may be deleted by a subsequent DeleteBinding call.
-            1. Add _binding_ to _envRec_.
+            1. Append _binding_ to _envRec_.[[Bindings]].
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -10291,7 +10319,7 @@
           <emu-alg>
             1. Assert: _envRec_.HasBinding(_N_) is *false*.
             1. Let _binding_ be an immutable binding for _N_ and record that it is uninitialized. If _S_ is *true*, record that the newly created binding is a strict binding.
-            1. Add _binding_ to _envRec_.
+            1. Append _binding_ to _envRec_.[[Bindings]].
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -10312,7 +10340,7 @@
           </dl>
           <emu-alg>
             1. Assert: _envRec_.HasBinding(_N_) is *true*.
-            1. Let _binding_ be the binding for _N_ in _envRec_.
+            1. Let _binding_ be the binding for _N_ in _envRec_.[[Bindings]].
             1. Assert: _binding_ is uninitialized.
             1. Set the bound value of _binding_ to _V_.
             1. <emu-not-ref>Record</emu-not-ref> that _binding_ has been initialized.
@@ -10341,7 +10369,7 @@
               1. Perform ! _envRec_.CreateMutableBinding(_N_, *true*).
               1. Perform ! _envRec_.InitializeBinding(_N_, _V_).
               1. Return ~unused~.
-            1. Let _binding_ be the binding for _N_ in _envRec_.
+            1. Let _binding_ be the binding for _N_ in _envRec_.[[Bindings]].
             1. If _binding_ is a strict binding, set _S_ to *true*.
             1. If _binding_ has not yet been initialized, then
               1. Throw a *ReferenceError* exception.
@@ -10374,7 +10402,7 @@
           </dl>
           <emu-alg>
             1. Assert: _envRec_.HasBinding(_N_) is *true*.
-            1. Let _binding_ be the binding for _N_ in _envRec_.
+            1. Let _binding_ be the binding for _N_ in _envRec_.[[Bindings]].
             1. If _binding_ is an uninitialized binding, throw a *ReferenceError* exception.
             1. Return the value currently bound in _binding_.
           </emu-alg>
@@ -10395,9 +10423,9 @@
           </dl>
           <emu-alg>
             1. Assert: _envRec_.HasBinding(_N_) is *true*.
-            1. Let _binding_ be the binding for _N_ in _envRec_.
+            1. Let _binding_ be the binding for _N_ in _envRec_.[[Bindings]].
             1. If _binding_ cannot be deleted, return *false*.
-            1. Remove _binding_ from _envRec_.
+            1. Remove _binding_ from _envRec_.[[Bindings]].
             1. Return *true*.
           </emu-alg>
         </emu-clause>
@@ -11307,7 +11335,7 @@
           <emu-alg>
             1. Assert: _S_ is *true*.
             1. Assert: _envRec_.HasBinding(_N_) is *true*.
-            1. Let _binding_ be the binding for _N_ in _envRec_.
+            1. Let _binding_ be the binding for _N_ in _envRec_.[[Bindings]].
             1. If _binding_ is an indirect binding, then
               1. Let _M_ and _N2_ be the indirection values provided when this binding for _N_ was created.
               1. Let _targetEnv_ be _M_.[[Environment]].
@@ -11371,7 +11399,7 @@
             1. Assert: _envRec_.HasBinding(_N_) is *false*.
             1. Assert: When _M_.[[Environment]] is instantiated, it will have a direct binding for _N2_.
             1. Let _binding_ be an immutable indirect binding for _N_ that references _M_ and _N2_ as its target binding and record that the binding is initialized.
-            1. Add _binding_ to _envRec_.
+            1. Append _binding_ to _envRec_.[[Bindings]].
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -11413,7 +11441,8 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _env_ be a new Declarative Environment Record containing no bindings.
+          1. Let _env_ be a new Declarative Environment Record.
+          1. Set _env_.[[Bindings]] to « ».
           1. Set _env_.[[OuterEnv]] to _E_.
           1. Return _env_.
         </emu-alg>
@@ -11448,7 +11477,8 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _env_ be a new Function Environment Record containing no bindings.
+          1. Let _env_ be a new Function Environment Record.
+          1. Set _env_.[[Bindings]] to « ».
           1. Set _env_.[[FunctionObject]] to _F_.
           1. If _F_.[[ThisMode]] is ~lexical~, set _env_.[[ThisBindingStatus]] to ~lexical~.
           1. Else, set _env_.[[ThisBindingStatus]] to ~uninitialized~.
@@ -11488,7 +11518,8 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _env_ be a new Module Environment Record containing no bindings.
+          1. Let _env_ be a new Module Environment Record.
+          1. Set _env_.[[Bindings]] to « ».
           1. Set _env_.[[OuterEnv]] to _E_.
           1. Return _env_.
         </emu-alg>
@@ -21449,7 +21480,7 @@
             1. Let _fn_ be the sole element of the BoundNames of _d_.
             1. Let _fo_ be InstantiateFunctionObject of _d_ with arguments _env_ and _privateEnv_.
             1. [id="step-blockdeclarationinstantiation-initializebinding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
-              1. Let _binding_ be the binding for _fn_ in _env_.
+              1. Let _binding_ be the binding for _fn_ in _env_.[[Bindings]].
               1. If _binding_ is an uninitialized binding, then
                 1. Perform ! _env_.InitializeBinding(_fn_, _fo_).
               1. Else,
