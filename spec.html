@@ -10716,7 +10716,45 @@
       <emu-clause id="sec-declarative-environment-records">
         <h1>Declarative Environment Records</h1>
         <p>Each <dfn variants="Declarative Environment Records">Declarative Environment Record</dfn> is associated with an ECMAScript program scope containing variable, constant, let, class, module, import, and/or function declarations. A Declarative Environment Record binds the set of identifiers defined by the declarations contained within its scope.</p>
-        <p>Every Declarative Environment Record also has a [[DisposableResourceStack]] field, which contains a List of DisposableResource Records. The elements of this list are tracked by the `using` declarations and `await using` declarations that must be disposed when the Evaluation step that constructed the Environment Record has completed.</p>
+        <p>Declarative Environment Records have the additional fields listed in <emu-xref href="#table-additional-fields-of-declarative-environment-records"></emu-xref>.</p>
+        <emu-table id="table-additional-fields-of-declarative-environment-records" caption="Additional Fields of Declarative Environment Records">
+          <table>
+            <tr>
+              <th>
+                Field Name
+              </th>
+              <th>
+                Value
+              </th>
+              <th>
+                Meaning
+              </th>
+            </tr>
+            <tr>
+              <td>
+                [[Bindings]]
+              </td>
+              <td>
+                a List of bindings
+              </td>
+              <td>
+                The bindings in this Environment Record. Satisfies the invariant that no two records in [[Bindings]] have the same bound name.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[DisposableResourceStack]]
+              </td>
+              <td>
+                a List of DisposableResource Records
+              </td>
+              <td>
+                The elements of this list are tracked by the `using` declarations and `await using` declarations that must be disposed when the Evaluation step that constructed the Environment Record has completed.
+              </td>
+            </tr>
+          </table>
+        </emu-table>
+        <p>The behaviour of the concrete specification methods for Declarative Environment Records is defined by the following algorithms.</p>
 
         <emu-clause id="sec-declarative-environment-records-hasbinding-n" type="concrete method">
           <h1>
@@ -10754,7 +10792,7 @@
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *false*.
             1. Let _binding_ be a mutable binding for _name_ and record that it is uninitialized. If _deletable_ is *true*, record that the newly created binding may be deleted by a subsequent DeleteBinding call.
-            1. Add _binding_ to _envRecord_.
+            1. Append _binding_ to _envRecord_.[[Bindings]].
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -10776,7 +10814,7 @@
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *false*.
             1. Let _binding_ be an immutable binding for _name_ and record that it is uninitialized. If _strict_ is *true*, record that the newly created binding is a strict binding.
-            1. Add _binding_ to _envRecord_.
+            1. Append _binding_ to _envRecord_.[[Bindings]].
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -10797,7 +10835,7 @@
           </dl>
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *true*.
-            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. Let _binding_ be the binding for _name_ in _envRecord_.[[Bindings]].
             1. Assert: _binding_ is uninitialized.
             1. Set the bound value of _binding_ to _value_.
             1. <emu-not-ref>Record</emu-not-ref> that _binding_ has been initialized.
@@ -10826,7 +10864,7 @@
               1. Perform ! _envRecord_.CreateMutableBinding(_name_, *true*).
               1. Perform ! _envRecord_.InitializeBinding(_name_, _value_).
               1. Return ~unused~.
-            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. Let _binding_ be the binding for _name_ in _envRecord_.[[Bindings]].
             1. If _binding_ is a strict binding, set _strict_ to *true*.
             1. If _binding_ has not yet been initialized, then
               1. Throw a *ReferenceError* exception.
@@ -10859,7 +10897,7 @@
           </dl>
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *true*.
-            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. Let _binding_ be the binding for _name_ in _envRecord_.[[Bindings]].
             1. If _binding_ is an uninitialized binding, throw a *ReferenceError* exception.
             1. Return the value currently bound in _binding_.
           </emu-alg>
@@ -10880,9 +10918,9 @@
           </dl>
           <emu-alg>
             1. Assert: ! _envRecord_.HasBinding(_name_) is *true*.
-            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. Let _binding_ be the binding for _name_ in _envRecord_.[[Bindings]].
             1. If _binding_ cannot be deleted, return *false*.
-            1. Remove _binding_ from _envRecord_.
+            1. Remove _binding_ from _envRecord_.[[Bindings]].
             1. Return *true*.
           </emu-alg>
         </emu-clause>
@@ -11739,7 +11777,7 @@
           <emu-alg>
             1. Assert: _strict_ is *true*.
             1. Assert: ! _envRecord_.HasBinding(_name_) is *true*.
-            1. Let _binding_ be the binding for _name_ in _envRecord_.
+            1. Let _binding_ be the binding for _name_ in _envRecord_.[[Bindings]].
             1. If _binding_ is an indirect binding, then
               1. Let _module_ and _targetName_ be the indirection values provided when this binding for _name_ was created.
               1. Let _targetEnv_ be _module_.[[Environment]].
@@ -11803,7 +11841,7 @@
             1. Assert: ! _envRecord_.HasBinding(_name_) is *false*.
             1. Assert: When _targetModule_.[[Environment]] is instantiated, it will have a direct binding for _targetName_.
             1. Let _binding_ be an immutable indirect binding for _name_ that references _targetModule_ and _targetName_ as its target binding and record that the binding is initialized.
-            1. Add _binding_ to _envRecord_.
+            1. Append _binding_ to _envRecord_.[[Bindings]].
             1. Return ~unused~.
           </emu-alg>
         </emu-clause>
@@ -11844,7 +11882,8 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _envRecord_ be a new Declarative Environment Record containing no bindings.
+          1. Let _envRecord_ be a new Declarative Environment Record.
+          1. Set _envRecord_.[[Bindings]] to « ».
           1. Set _envRecord_.[[OuterEnv]] to _outerEnv_.
           1. Set _envRecord_.[[DisposableResourceStack]] to a new empty List.
           1. Return _envRecord_.
@@ -11880,7 +11919,8 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _envRecord_ be a new Function Environment Record containing no bindings.
+          1. Let _envRecord_ be a new Function Environment Record.
+          1. Set _envRecord_.[[Bindings]] to « ».
           1. Set _envRecord_.[[FunctionObject]] to _func_.
           1. If _func_.[[ThisMode]] is ~lexical~, set _envRecord_.[[ThisBindingStatus]] to ~lexical~.
           1. Else, set _envRecord_.[[ThisBindingStatus]] to ~uninitialized~.
@@ -11921,7 +11961,8 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _envRecord_ be a new Module Environment Record containing no bindings.
+          1. Let _envRecord_ be a new Module Environment Record.
+          1. Set _envRecord_.[[Bindings]] to « ».
           1. Set _envRecord_.[[OuterEnv]] to _outerEnv_.
           1. Set _envRecord_.[[DisposableResourceStack]] to a new empty List.
           1. Return _envRecord_.
@@ -21960,7 +22001,7 @@
             1. Let _funcName_ be the sole element of the BoundNames of _decl_.
             1. Let _funcObj_ be InstantiateFunctionObject of _decl_ with arguments _envRecord_ and _privateEnv_.
             1. [id="step-blockdeclarationinstantiation-initializebinding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
-              1. Let _binding_ be the binding for _funcName_ in _envRecord_.
+              1. Let _binding_ be the binding for _funcName_ in _envRecord_.[[Bindings]].
               1. If _binding_ is an uninitialized binding, then
                 1. Perform ! _envRecord_.InitializeBinding(_funcName_, _funcObj_).
               1. Else,
