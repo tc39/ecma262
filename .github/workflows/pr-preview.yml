@@ -1,0 +1,103 @@
+name: 'ecma262'
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
+
+jobs:
+  check-membership:
+    name: 'check membership'
+    runs-on: ubuntu-22.04
+    outputs:
+      result: ${{ steps.test-membership.outputs.result }}
+      should-run: ${{ steps.should-run.outputs.result }}
+    steps:
+      - uses: actions/github-script@v7
+        id: should-run
+        with:
+          result-encoding: string
+          script: |
+            const { action, label } = context.payload;
+
+            // Run on opened/synchronize for members, or when 'request preview' label is added
+            if (action === 'labeled' && label?.name === 'request preview') {
+              return 'yes';
+            } else if (action === 'opened' || action === 'synchronize' || action === 'reopened') {
+              return 'check-membership';
+            }
+            return 'no';
+
+      - uses: actions/github-script@v7
+        id: test-membership
+        if: steps.should-run.outputs.result == 'check-membership'
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        with:
+          result-encoding: string
+          script: |
+            const author = process.env.AUTHOR;
+            if (author === 'jmdyck') return 'yes';
+            try {
+              const result = await github.request('GET /orgs/{org}/members/{username}', {
+                org: 'tc39',
+                username: author,
+                headers: {
+                  'X-GitHub-Api-Version': '2022-11-28'
+                }
+              });
+              return 'yes';
+            } catch (e) {
+              console.log({ author }, e);
+              return 'no';
+            }
+      - run: echo "${{steps.test-membership.outputs.result}}"
+
+  build:
+    name: 'publish PR preview'
+    runs-on: ubuntu-22.04
+    needs: check-membership
+    if: needs.check-membership.outputs.should-run == 'yes' || (needs.check-membership.outputs.should-run == 'check-membership' && needs.check-membership.outputs.result == 'yes')
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Remove 'request preview' label
+        if: github.event.action == 'labeled' && github.event.label.name == 'request preview'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              name: 'request preview'
+            });
+
+      - uses: actions/checkout@v4
+      - uses: ljharb/actions/node/install@7f214d8efdbdcefc96ad9689663ef387a195deec
+        name: 'nvm install lts/* && npm ci --no-audit'
+        env:
+          NPM_CONFIG_AUDIT: false
+        with:
+          node-version: lts/*
+          use-npm-ci: true
+      - run: npm run build-only
+      - run: node scripts/insert_snapshot_warning
+      - run: ./scripts/auto-deploy.sh --pr ${{ github.event.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: get-preview-url
+        name: Get preview url
+        run: |
+          gh_pages_url="https://$(printf '%s' "$GITHUB_REPOSITORY" \
+            | sed 's#/#.github.io/#; s#^tc39.github.io/#tc39.es/#')"
+          echo "url=$gh_pages_url" >> $GITHUB_OUTPUT
+      - name: Post preview comment
+        uses: phulsechinmay/rewritable-pr-comment@v0.3.0
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_IDENTIFIER: tc39_pr_preview_comment
+          message: |
+            The rendered spec for this PR is available at ${{ steps.get-preview-url.outputs.url }}/pr/${{ github.event.number }}.
