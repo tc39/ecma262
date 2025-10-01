@@ -26971,9 +26971,9 @@
               _root_: a Cyclic Module Record,
               _initialStatus_: ~unlinked~ or ~linked~,
               _pendingStatus_: ~linking~ or ~evaluating~,
-              _action_: an Abstract Closure,
-              _completeSCC_: an Abstract Closure,
-              _postErrorCleanup_: an Abstract Closure,
+              _action_: an Abstract Closure that takes a Module Record and returns either a normal completion containing ~unused~ or a throw completion,
+              _completeSCC_: an Abstract Closure that takes a Cyclic Module Record and a Cyclic Module Record and returns ~unused~,
+              _postErrorCleanup_: an Abstract Closure that takes a Cyclic Module Record and a throw completion and returns ~unused~,
             ): either a normal completion containing ~unused~ or a throw completion
           </h1>
           <dl class="header">
@@ -27017,8 +27017,8 @@
                 _index_: a non-negative integer,
                 _initialStatus_: ~unlinked~ or ~linked~,
                 _pendingStatus_: ~linking~ or ~evaluating~,
-                _action_: an Abstract Closure,
-                _completeSCC_: an Abstract Closure,
+                _action_: an Abstract Closure that takes a Module Record and returns either a normal completion containing ~unused~ or a throw completion,
+                _completeSCC_: an Abstract Closure that takes a Cyclic Module Record and a Cyclic Module Record and returns ~unused~,
               ): either a normal completion containing a non-negative integer or a throw completion
             </h1>
             <dl class="header">
@@ -27175,13 +27175,16 @@
               1. Assert: _module_.[[Status]] is one of ~unlinked~, ~linked~, ~evaluating-async~, or ~evaluated~.
               1. Let _dfsInitialStatus_ be ~unlinked~.
               1. Let _dfsPendingStatus_ be ~linking~.
-              1. Let _dfsAction_ be a new Abstract Closure with parameters (_m_) that performs the following steps when called:
+              1. Let _dfsAction_ be a new Abstract Closure with parameters (_m_) that captures nothing and performs the following steps when called:
                 1. If _m_ is not a Cyclic Module Record, perform ? _m_.Link().
                 1. Else if _m_.[[Status]] is ~linking~, perform ? _m_.InitializeEnvironment().
-              1. Let _dfsSCCcompletion_ be a new Abstract Closure with parameters (_m_, _sccRoot_) that performs the following steps when called:
-                1. Set _m_.[[Status]] to ~linked~.
-              1. Let _dfsPostErrorCleanup_ be a new Abstract Closure with parameters (_m_, _errorCompletion_) that performs the following steps when called:
-                1. Set _m_.[[Status]] to ~unlinked~.
+                1. Return NormalCompletion(~unused~).
+              1. Let _dfsSCCcompletion_ be a new Abstract Closure with parameters (_cyclicModule_, _sccRoot_) that captures nothing and performs the following steps when called:
+                1. Set _cyclicModule_.[[Status]] to ~linked~.
+                1. Return ~unused~.
+              1. Let _dfsPostErrorCleanup_ be a new Abstract Closure with parameters (_cyclicModule_, _errorCompletion_) that captures nothing and performs the following steps when called:
+                1. Set _cyclicModule_.[[Status]] to ~unlinked~.
+                1. Return ~unused~.
               1. Perform ? ModuleGraphDFS(_module_, _dfsInitialStatus_, _dfsPendingStatus_, _dfsAction_, _dfsSCCcompletion_, _dfsPostErrorCleanup_).
               1. Return ~unused~.
             </emu-alg>
@@ -27239,7 +27242,7 @@
                   1. Perform ? EvaluateModuleSync(_module_).
                   1. Return ~unused~.
                 1. If _module_.[[Status]] is either ~evaluating-async~ or ~evaluated~, then
-                  1. Let _cycleRoot_ be to _module_.[[CycleRoot]].
+                  1. Let _cycleRoot_ be _module_.[[CycleRoot]].
                   1. Assert: _cycleRoot_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
                   1. NOTE: The assertion above holds because a module's [[CycleRoot]] is only set to the SCC root when the whole SCC transitions to ~evaluating-async~ or ~evaluated~.
                   1. If _cycleRoot_.[[EvaluationError]] is an abrupt completion, return _cycleRoot_.[[EvaluationError]].
@@ -27250,7 +27253,7 @@
                   1. Let _requiredModule_ be GetImportedModule(_module_, _request_).
                   1. If _requiredModule_ is a Cyclic Module Record, then
                     1. Assert: _requiredModule_.[[Status]] is one of ~evaluating~, ~evaluating-async~, or ~evaluated~.
-                    1. If _requiredModule_.[[Status]] is ~evaluating-async~ or ~evaluated~, then
+                    1. If _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~, then
                       1. Set _requiredModule_ to _requiredModule_.[[CycleRoot]].
                       1. Assert: _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
                       1. Assert: _requiredModule_.[[EvaluationError]] is ~empty~.
