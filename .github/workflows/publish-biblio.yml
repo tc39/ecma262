@@ -5,28 +5,34 @@ on:
     branches:
       - main
 
+permissions:
+  id-token: write # needed for trusted publishing
+  contents: read
+
 jobs:
   publish:
     name: 'publish ecma262-biblio'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: ${{ github.repository == 'tc39/ecma262' }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
+
+      # needed for trusted publishing
+      - name: Update npm
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: npm ci --no-audit
 
       - name: Publish biblio
         run: scripts/publish-biblio.sh
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_FOR_TC39_USER }}
