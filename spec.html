@@ -4535,7 +4535,7 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+          1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
           1. Assert: _privateEnv_ is not *null*.
           1. Let _privateName_ be ResolvePrivateIdentifier(_privateEnv_, _privateIdentifier_).
           1. Return the Reference Record { [[Base]]: _baseValue_, [[ReferencedName]]: _privateName_, [[Strict]]: *true*, [[ThisValue]]: ~empty~ }.
@@ -11652,10 +11652,10 @@
         1. Perform CreateIntrinsics(_realm_).
         1. Set _realm_.[[AgentSignifier]] to AgentSignifier().
         1. Set _realm_.[[TemplateMap]] to a new empty List.
-        1. Let _newContext_ be a new execution context.
-        1. Set the Function of _newContext_ to *null*.
-        1. Set the Realm of _newContext_ to _realm_.
-        1. Set the ScriptOrModule of _newContext_ to *null*.
+        1. Let _newContext_ be a new ExecutionContext Record.
+        1. Set _newContext_.[[Function]] to *null*.
+        1. Set _newContext_.[[Realm]] to _realm_.
+        1. Set _newContext_.[[ScriptOrModule]] to *null*.
         1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
         1. If the host requires use of a specific object to serve as _realm_'s global object, then
           1. Let _global_ be such an object created in a host-defined manner.
@@ -11712,22 +11712,28 @@
     <h1>Execution Contexts</h1>
     <p>An <dfn variants="execution contexts">execution context</dfn> is a specification device that is used to track the runtime evaluation of code by an ECMAScript implementation. At any point in time, there is at most one execution context per agent that is actually executing code. This is known as the agent's <dfn id="running-execution-context" variants="running execution contexts">running execution context</dfn>. All references to the running execution context in this specification denote the running execution context of the surrounding agent.</p>
     <p>The <dfn id="execution-context-stack" variants="execution context stacks">execution context stack</dfn> is used to track execution contexts. The running execution context is always the top element of this stack. A new execution context is created whenever control is transferred from the executable code associated with the currently running execution context to executable code that is not associated with that execution context. The newly created execution context is pushed onto the stack and becomes the running execution context.</p>
-    <p>An execution context contains whatever implementation specific state is necessary to track the execution progress of its associated code. Each execution context has at least the state components listed in <emu-xref href="#table-state-components-for-all-execution-contexts"></emu-xref>.</p>
-    <emu-table id="table-state-components-for-all-execution-contexts" caption="State Components for All Execution Contexts" oldids="table-22">
+    <p>Each execution context is represented as an ExecutionContext Record, with at least the fields listed in <emu-xref href="#table-state-components-for-all-execution-contexts"></emu-xref>.</p>
+    <emu-table id="table-state-components-for-all-execution-contexts" caption="ExecutionContext Record Fields" oldids="table-22">
       <table>
         <thead>
           <tr>
             <th>
-              Component
+              Field Name
             </th>
             <th>
-              Purpose
+              Value Type
+            </th>
+            <th>
+              Meaning
             </th>
           </tr>
         </thead>
         <tr>
           <td>
-            code evaluation state
+            [[CodeEvaluationState]]
+          </td>
+          <td>
+            implementation-specific
           </td>
           <td>
             Any state needed to perform, suspend, and resume evaluation of the code associated with this execution context.
@@ -11735,15 +11741,21 @@
         </tr>
         <tr>
           <td>
-            Function
+            [[Function]]
           </td>
           <td>
-            If this execution context is evaluating the code of a function object, then the value of this component is that function object. If the context is evaluating the code of a |Script| or |Module|, the value is *null*.
+            a function object or *null*
+          </td>
+          <td>
+            If this execution context is evaluating the code of a function object, then the value of this field is that function object. If the context is evaluating the code of a |Script| or |Module|, the value is *null*.
           </td>
         </tr>
         <tr>
           <td>
-            Realm
+            [[Realm]]
+          </td>
+          <td>
+            a Realm Record
           </td>
           <td>
             The Realm Record from which associated code accesses ECMAScript resources.
@@ -11751,32 +11763,41 @@
         </tr>
         <tr>
           <td>
-            ScriptOrModule
+            [[ScriptOrModule]]
           </td>
           <td>
-            The Module Record or Script Record from which associated code originates. If there is no originating script or module, as is the case for the original execution context created in InitializeHostDefinedRealm, the value is *null*.
+            a Module Record, a Script Record, or *null*
+          </td>
+          <td>
+            The Module Record or Script Record from which associated code originates. If there is no originating script or module, as is the case for the original ExecutionContext Record created in InitializeHostDefinedRealm, the value is *null*.
           </td>
         </tr>
       </table>
     </emu-table>
     <p>Evaluation of code by the running execution context may be suspended at various points defined within this specification. Once the running execution context has been suspended a different execution context may become the running execution context and commence evaluating its code. At some later time a suspended execution context may again become the running execution context and continue evaluating its code at the point where it had previously been suspended. Transition of the running execution context status among execution contexts usually occurs in stack-like last-in/first-out manner. However, some ECMAScript features require non-LIFO transitions of the running execution context.</p>
-    <p>The value of the Realm component of the running execution context is also called <dfn id="current-realm">the current Realm Record</dfn>. The value of the Function component of the running execution context is also called the <dfn id="active-function-object">active function object</dfn>.</p>
-    <p><dfn id="ecmascript-code-execution-context" variants="ECMAScript code execution context">ECMAScript code execution contexts</dfn> have the additional state components listed in <emu-xref href="#table-additional-state-components-for-ecmascript-code-execution-contexts"></emu-xref>.</p>
-    <emu-table id="table-additional-state-components-for-ecmascript-code-execution-contexts" caption="Additional State Components for ECMAScript Code Execution Contexts" oldids="table-23">
+    <p>The value of the running execution context's [[Realm]] field is also called <dfn id="current-realm">the current Realm Record</dfn>. The value of the running execution context's [[Function]] field is also called the <dfn id="active-function-object">active function object</dfn>.</p>
+    <p><dfn id="ecmascript-code-execution-context" variants="ECMAScript code ExecutionContext Record">ECMAScript code ExecutionContext Records</dfn> have the additional fields listed in <emu-xref href="#table-additional-state-components-for-ecmascript-code-execution-contexts"></emu-xref>.</p>
+    <emu-table id="table-additional-state-components-for-ecmascript-code-execution-contexts" caption="Additional Fields of ECMAScript Code ExecutionContext Records" oldids="table-23">
       <table>
         <thead>
           <tr>
             <th>
-              Component
+              Field Name
             </th>
             <th>
-              Purpose
+              Value Type
+            </th>
+            <th>
+              Meaning
             </th>
           </tr>
         </thead>
         <tr>
           <td>
-            LexicalEnvironment
+            [[LexicalEnvironment]]
+          </td>
+          <td>
+            an Environment Record
           </td>
           <td>
             Identifies the Environment Record used to resolve identifier references made by code within this execution context.
@@ -11784,7 +11805,10 @@
         </tr>
         <tr>
           <td>
-            VariableEnvironment
+            [[VariableEnvironment]]
+          </td>
+          <td>
+            an Environment Record
           </td>
           <td>
             Identifies the Environment Record that holds bindings created by |VariableStatement|s within this execution context.
@@ -11792,7 +11816,10 @@
         </tr>
         <tr>
           <td>
-            PrivateEnvironment
+            [[PrivateEnvironment]]
+          </td>
+          <td>
+            a PrivateEnvironment Record or *null*
           </td>
           <td>
             Identifies the PrivateEnvironment Record that holds Private Names created by |ClassElement|s in the nearest containing class. *null* if there is no containing class.
@@ -11800,23 +11827,28 @@
         </tr>
       </table>
     </emu-table>
-    <p>The LexicalEnvironment and VariableEnvironment components of an execution context are always Environment Records.</p>
-    <p>Execution contexts representing the evaluation of Generators have the additional state components listed in <emu-xref href="#table-additional-state-components-for-generator-execution-contexts"></emu-xref>.</p>
-    <emu-table id="table-additional-state-components-for-generator-execution-contexts" caption="Additional State Components for Generator Execution Contexts" oldids="table-24">
+    <p>ExecutionContext Records representing the evaluation of Generators have the additional fields listed in <emu-xref href="#table-additional-state-components-for-generator-execution-contexts"></emu-xref>.</p>
+    <emu-table id="table-additional-state-components-for-generator-execution-contexts" caption="Additional Fields of Generator ExecutionContext Records" oldids="table-24">
       <table>
         <thead>
           <tr>
             <th>
-              Component
+              Field Name
             </th>
             <th>
-              Purpose
+              Value Type
+            </th>
+            <th>
+              Meaning
             </th>
           </tr>
         </thead>
         <tr>
           <td>
-            Generator
+            [[Generator]]
+          </td>
+          <td>
+            an Object
           </td>
           <td>
             The Generator that this execution context is evaluating.
@@ -11824,7 +11856,7 @@
         </tr>
       </table>
     </emu-table>
-    <p>In most situations only the running execution context (the top of the execution context stack) is directly manipulated by algorithms within this specification. Hence when the terms “LexicalEnvironment”, and “VariableEnvironment” are used without qualification they are in reference to those components of the running execution context.</p>
+    <p>In most situations only the running execution context (the top of the execution context stack) is directly manipulated by algorithms within this specification.</p>
     <p>An execution context is purely a specification mechanism and need not correspond to any particular artefact of an ECMAScript implementation. It is impossible for ECMAScript code to directly access or observe an execution context.</p>
 
     <emu-clause id="sec-getactivescriptormodule" type="abstract operation">
@@ -11836,8 +11868,8 @@
 
       <emu-alg>
         1. If the execution context stack is empty, return *null*.
-        1. Let _ec_ be the topmost execution context on the execution context stack whose ScriptOrModule component is not *null*.
-        1. If no such execution context exists, return *null*; otherwise return _ec_'s ScriptOrModule.
+        1. Let _ec_ be the topmost ExecutionContext Record on the execution context stack whose [[ScriptOrModule]] field is not *null*.
+        1. If no such ExecutionContext Record exists, return *null*; otherwise return _ec_.[[ScriptOrModule]].
       </emu-alg>
     </emu-clause>
 
@@ -11854,7 +11886,7 @@
       </dl>
       <emu-alg>
         1. If _env_ is not present or _env_ is *undefined*, then
-          1. Set _env_ to the running execution context's LexicalEnvironment.
+          1. Set _env_ to the running execution context's [[LexicalEnvironment]].
         1. Assert: _env_ is an Environment Record.
         1. Let _strict_ be IsStrict(the syntactic production that is being evaluated).
         1. Return ? GetIdentifierReference(_env_, _name_, _strict_).
@@ -11871,7 +11903,7 @@
         <dd>It finds the Environment Record that currently supplies the binding of the keyword `this`.</dd>
       </dl>
       <emu-alg>
-        1. Let _env_ be the running execution context's LexicalEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
         1. [id="step-getthisenvironment-loop"] Repeat,
           1. Let _exists_ be _env_.HasThisBinding().
           1. If _exists_ is *true*, return _env_.
@@ -11888,7 +11920,7 @@
       <h1>ResolveThisBinding ( ): either a normal completion containing an ECMAScript language value or a throw completion</h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It determines the binding of the keyword `this` using the LexicalEnvironment of the running execution context.</dd>
+        <dd>It determines the binding of the keyword `this` using the running execution context's [[LexicalEnvironment]].</dd>
       </dl>
       <emu-alg>
         1. Let _envRec_ be GetThisEnvironment().
@@ -11900,7 +11932,7 @@
       <h1>GetNewTarget ( ): an Object or *undefined*</h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It determines the NewTarget value using the LexicalEnvironment of the running execution context.</dd>
+        <dd>It determines the NewTarget value using the running execution context's [[LexicalEnvironment]].</dd>
       </dl>
       <emu-alg>
         1. Let _envRec_ be GetThisEnvironment().
@@ -11947,18 +11979,18 @@
     <p>At any particular time, _scriptOrModule_ (a Script Record, a Module Record, or *null*) is the <dfn id="job-activescriptormodule">active script or module</dfn> if all of the following conditions are true:</p>
     <ul>
       <li>GetActiveScriptOrModule() is _scriptOrModule_.</li>
-      <li>If _scriptOrModule_ is a Script Record or Module Record, let _ec_ be the topmost execution context on the execution context stack whose ScriptOrModule component is _scriptOrModule_. The Realm component of _ec_ is _scriptOrModule_.[[Realm]].</li>
+      <li>If _scriptOrModule_ is a Script Record or Module Record, let _ec_ be the topmost ExecutionContext Record on the execution context stack whose [[ScriptOrModule]] field is _scriptOrModule_. _ec_.[[Realm]] is _scriptOrModule_.[[Realm]].</li>
     </ul>
 
     <p>At any particular time, an execution is <dfn id="job-preparedtoevaluatecode">prepared to evaluate ECMAScript code</dfn> if all of the following conditions are true:</p>
     <ul>
       <li>The execution context stack is not empty.</li>
-      <li>The Realm component of the topmost execution context on the execution context stack is a Realm Record.</li>
+      <li>The [[Realm]] field of the topmost ExecutionContext Record on the execution context stack is a Realm Record.</li>
     </ul>
 
     <emu-note>
-      <p>Host environments may prepare an execution to evaluate code by pushing execution contexts onto the execution context stack. The specific steps are implementation-defined.</p>
-      <p>The specific choice of Realm is up to the host environment. This initial execution context and Realm is only in use before any callback function is invoked. When a callback function related to a Job, like a Promise handler, is invoked, the invocation pushes its own execution context and Realm.</p>
+      <p>Host environments may prepare an execution to evaluate code by pushing ExecutionContext Records onto the execution context stack. The specific steps are implementation-defined.</p>
+      <p>The specific choice of Realm is up to the host environment. This initial ExecutionContext Record and Realm is only in use before any callback function is invoked. When a callback function related to a Job, like a Promise handler, is invoked, the invocation pushes its own ExecutionContext Record and Realm.</p>
     </emu-note>
 
     <p>Particular kinds of Jobs have additional conformance requirements.</p>
@@ -13302,21 +13334,21 @@
           PrepareForOrdinaryCall (
             _F_: an ECMAScript function object,
             _newTarget_: an Object or *undefined*,
-          ): an execution context
+          ): an ExecutionContext Record
         </h1>
         <dl class="header">
         </dl>
         <emu-alg>
           1. Let _callerContext_ be the running execution context.
-          1. Let _calleeContext_ be a new ECMAScript code execution context.
-          1. Set the Function of _calleeContext_ to _F_.
+          1. Let _calleeContext_ be a new ECMAScript code ExecutionContext Record.
+          1. Set _calleeContext_.[[Function]] to _F_.
           1. Let _calleeRealm_ be _F_.[[Realm]].
-          1. Set the Realm of _calleeContext_ to _calleeRealm_.
-          1. Set the ScriptOrModule of _calleeContext_ to _F_.[[ScriptOrModule]].
+          1. Set _calleeContext_.[[Realm]] to _calleeRealm_.
+          1. Set _calleeContext_.[[ScriptOrModule]] to _F_.[[ScriptOrModule]].
           1. Let _localEnv_ be NewFunctionEnvironment(_F_, _newTarget_).
-          1. Set the LexicalEnvironment of _calleeContext_ to _localEnv_.
-          1. Set the VariableEnvironment of _calleeContext_ to _localEnv_.
-          1. Set the PrivateEnvironment of _calleeContext_ to _F_.[[PrivateEnvironment]].
+          1. Set _calleeContext_.[[LexicalEnvironment]] to _localEnv_.
+          1. Set _calleeContext_.[[VariableEnvironment]] to _localEnv_.
+          1. Set _calleeContext_.[[PrivateEnvironment]] to _F_.[[PrivateEnvironment]].
           1. If _callerContext_ is not already suspended, suspend _callerContext_.
           1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
           1. NOTE: Any exception objects produced after this point are associated with _calleeRealm_.
@@ -13328,7 +13360,7 @@
         <h1>
           OrdinaryCallBindThis (
             _F_: an ECMAScript function object,
-            _calleeContext_: an execution context,
+            _calleeContext_: an ExecutionContext Record,
             _thisArgument_: an ECMAScript language value,
           ): ~unused~
         </h1>
@@ -13338,7 +13370,7 @@
           1. Let _thisMode_ be _F_.[[ThisMode]].
           1. If _thisMode_ is ~lexical~, return ~unused~.
           1. Let _calleeRealm_ be _F_.[[Realm]].
-          1. Let _localEnv_ be the LexicalEnvironment of _calleeContext_.
+          1. Let _localEnv_ be _calleeContext_.[[LexicalEnvironment]].
           1. If _thisMode_ is ~strict~, then
             1. Let _thisValue_ be _thisArgument_.
           1. Else,
@@ -13460,7 +13492,7 @@
           1. If _initializeResult_ is an abrupt completion, then
             1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
             1. Return ? _initializeResult_.
-        1. Let _constructorEnv_ be the LexicalEnvironment of _calleeContext_.
+        1. Let _constructorEnv_ be _calleeContext_.[[LexicalEnvironment]].
         1. Let _result_ be Completion(OrdinaryCallEvaluateBody(_F_, _argumentsList_)).
         1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
         1. If _result_ is a throw completion, then
@@ -13732,13 +13764,13 @@
             1. Set _argumentsObjectNeeded_ to *false*.
         1. If _strict_ is *true* or _hasParameterExpressions_ is *false*, then
           1. NOTE: Only a single Environment Record is needed for the parameters, since calls to `eval` in strict mode code cannot create new bindings which are visible outside of the `eval`.
-          1. Let _env_ be the LexicalEnvironment of _calleeContext_.
+          1. Let _env_ be _calleeContext_.[[LexicalEnvironment]].
         1. Else,
           1. NOTE: A separate Environment Record is needed to ensure that bindings created by direct eval calls in the formal parameter list are outside the environment where parameters are declared.
-          1. Let _calleeEnv_ be the LexicalEnvironment of _calleeContext_.
+          1. Let _calleeEnv_ be _calleeContext_.[[LexicalEnvironment]].
           1. Let _env_ be NewDeclarativeEnvironment(_calleeEnv_).
-          1. Assert: The VariableEnvironment of _calleeContext_ and _calleeEnv_ are the same Environment Record.
-          1. Set the LexicalEnvironment of _calleeContext_ to _env_.
+          1. Assert: _calleeContext_.[[VariableEnvironment]] and _calleeEnv_ are the same Environment Record.
+          1. Set _calleeContext_.[[LexicalEnvironment]] to _env_.
         1. For each String _paramName_ of _parameterNames_, do
           1. Let _alreadyDeclared_ be ! _env_.HasBinding(_paramName_).
           1. NOTE: Early errors ensure that duplicate parameter names can only occur in non-strict functions that do not have parameter default values or rest parameters.
@@ -13780,7 +13812,7 @@
         1. Else,
           1. NOTE: A separate Environment Record is needed to ensure that closures created by expressions in the formal parameter list do not have visibility of declarations in the function body.
           1. Let _varEnv_ be NewDeclarativeEnvironment(_env_).
-          1. Set the VariableEnvironment of _calleeContext_ to _varEnv_.
+          1. Set _calleeContext_.[[VariableEnvironment]] to _varEnv_.
           1. Let _instantiatedVarNames_ be a new empty List.
           1. For each element _n_ of _varNames_, do
             1. If _instantiatedVarNames_ does not contain _n_, then
@@ -13805,14 +13837,14 @@
                   1. Perform ! _varEnv_.InitializeBinding(_F_, *undefined*).
                   1. Append _F_ to _instantiatedVarNames_.
                 1. [id="step-functiondeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                  1. Let _fEnv_ be the running execution context's VariableEnvironment.
-                  1. Let _bEnv_ be the running execution context's LexicalEnvironment.
+                  1. Let _fEnv_ be the running execution context's [[VariableEnvironment]].
+                  1. Let _bEnv_ be the running execution context's [[LexicalEnvironment]].
                   1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
                   1. Perform ! _fEnv_.SetMutableBinding(_F_, _fObj_, *false*).
                   1. Return ~unused~.
           1. Let _lexEnv_ be NewDeclarativeEnvironment(_varEnv_).
           1. NOTE: Non-strict functions use a separate Environment Record for top-level lexical declarations so that a direct eval can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions because a strict direct eval always places all declarations into a new Environment Record.
-        1. Set the LexicalEnvironment of _calleeContext_ to _lexEnv_.
+        1. Set _calleeContext_.[[LexicalEnvironment]] to _lexEnv_.
         1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
         1. For each element _d_ of _lexDeclarations_, do
           1. NOTE: A lexically declared name cannot be the same as a function/generator declaration, formal parameter, or a var name. Lexically declared names are only instantiated here but not initialized.
@@ -13821,7 +13853,7 @@
               1. Perform ! _lexEnv_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
               1. Perform ! _lexEnv_.CreateMutableBinding(_dn_, *false*).
-        1. Let _privateEnv_ be the PrivateEnvironment of _calleeContext_.
+        1. Let _privateEnv_ be _calleeContext_.[[PrivateEnvironment]].
         1. For each Parse Node _f_ of _functionsToInitialize_, do
           1. Let _fn_ be the sole element of the BoundNames of _f_.
           1. Let _fo_ be InstantiateFunctionObject of _f_ with arguments _lexEnv_ and _privateEnv_.
@@ -13892,11 +13924,11 @@
       <emu-alg>
         1. Let _callerContext_ be the running execution context.
         1. If _callerContext_ is not already suspended, suspend _callerContext_.
-        1. Let _calleeContext_ be a new execution context.
-        1. Set the Function of _calleeContext_ to _F_.
+        1. Let _calleeContext_ be a new ExecutionContext Record.
+        1. Set _calleeContext_.[[Function]] to _F_.
         1. Let _calleeRealm_ be _F_.[[Realm]].
-        1. Set the Realm of _calleeContext_ to _calleeRealm_.
-        1. Set the ScriptOrModule of _calleeContext_ to *null*.
+        1. Set _calleeContext_.[[Realm]] to _calleeRealm_.
+        1. Set _calleeContext_.[[ScriptOrModule]] to *null*.
         1. Perform any necessary implementation-defined initialization of _calleeContext_.
         1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
         1. [id="step-call-builtin-function-result"] Let _result_ be the Completion Record that is <emu-meta effects="user-code">the result of evaluating</emu-meta> _F_ in a manner that conforms to the specification of _F_. If _thisArgument_ is ~uninitialized~, the *this* value is uninitialized; otherwise _thisArgument_ provides the *this* value. _argumentsList_ provides the named parameters. _newTarget_ provides the NewTarget value.
@@ -20362,7 +20394,7 @@
         1. Let _rRef_ be ? Evaluation of |ShiftExpression|.
         1. Let _rVal_ be ? GetValue(_rRef_).
         1. If _rVal_ is not an Object, throw a *TypeError* exception.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Assert: _privateEnv_ is not *null*.
         1. Let _privateName_ be ResolvePrivateIdentifier(_privateEnv_, _privateIdentifier_).
         1. If PrivateElementFind(_rVal_, _privateName_) is not ~empty~, return *true*.
@@ -21336,16 +21368,16 @@
       </emu-alg>
       <emu-grammar>Block : `{` StatementList `}`</emu-grammar>
       <emu-alg>
-        1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
+        1. Let _oldEnv_ be the running execution context's [[LexicalEnvironment]].
         1. Let _blockEnv_ be NewDeclarativeEnvironment(_oldEnv_).
         1. Perform BlockDeclarationInstantiation(|StatementList|, _blockEnv_).
-        1. Set the running execution context's LexicalEnvironment to _blockEnv_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _blockEnv_.
         1. Let _blockValue_ be Completion(Evaluation of |StatementList|).
-        1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
         1. Return ? _blockValue_.
       </emu-alg>
       <emu-note>
-        <p>No matter how control leaves the |Block| the LexicalEnvironment is always restored to its former state.</p>
+        <p>No matter how control leaves the |Block| the [[LexicalEnvironment]] is always restored to its former state.</p>
       </emu-note>
       <emu-grammar>StatementList : StatementList StatementListItem</emu-grammar>
       <emu-alg>
@@ -21380,7 +21412,7 @@
       <p>It performs the following steps when called:</p>
       <emu-alg>
         1. Let _declarations_ be the LexicallyScopedDeclarations of _code_.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. For each element _d_ of _declarations_, do
           1. For each element _dn_ of the BoundNames of _d_, do
             1. If IsConstantDeclaration of _d_ is *true*, then
@@ -21413,7 +21445,7 @@
     <emu-clause id="sec-let-and-const-declarations">
       <h1>Let and Const Declarations</h1>
       <emu-note>
-        <p>`let` and `const` declarations define variables that are scoped to the running execution context's LexicalEnvironment. The variables are created when their containing Environment Record is instantiated but may not be accessed in any way until the variable's |LexicalBinding| is evaluated. A variable defined by a |LexicalBinding| with an |Initializer| is assigned the value of its |Initializer|'s |AssignmentExpression| when the |LexicalBinding| is evaluated, not when the variable is created. If a |LexicalBinding| in a `let` declaration does not have an |Initializer| the variable is assigned the value *undefined* when the |LexicalBinding| is evaluated.</p>
+        <p>`let` and `const` declarations define variables that are scoped to the running execution context's [[LexicalEnvironment]]. The variables are created when their containing Environment Record is instantiated but may not be accessed in any way until the variable's |LexicalBinding| is evaluated. A variable defined by a |LexicalBinding| with an |Initializer| is assigned the value of its |Initializer|'s |AssignmentExpression| when the |LexicalBinding| is evaluated, not when the variable is created. If a |LexicalBinding| in a `let` declaration does not have an |Initializer| the variable is assigned the value *undefined* when the |LexicalBinding| is evaluated.</p>
       </emu-note>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
@@ -21489,7 +21521,7 @@
         <emu-alg>
           1. Let _rhs_ be ? Evaluation of |Initializer|.
           1. Let _value_ be ? GetValue(_rhs_).
-          1. Let _env_ be the running execution context's LexicalEnvironment.
+          1. Let _env_ be the running execution context's [[LexicalEnvironment]].
           1. Return ? BindingInitialization of |BindingPattern| with arguments _value_ and _env_.
         </emu-alg>
       </emu-clause>
@@ -21498,7 +21530,7 @@
     <emu-clause id="sec-variable-statement">
       <h1>Variable Statement</h1>
       <emu-note>
-        <p>A `var` statement declares variables that are scoped to the running execution context's VariableEnvironment. Var variables are created when their containing Environment Record is instantiated and are initialized to *undefined* when created. Within the scope of any VariableEnvironment a common |BindingIdentifier| may appear in more than one |VariableDeclaration| but those declarations collectively define only one variable. A variable defined by a |VariableDeclaration| with an |Initializer| is assigned the value of its |Initializer|'s |AssignmentExpression| when the |VariableDeclaration| is executed, not when the variable is created.</p>
+        <p>A `var` statement declares variables that are scoped to the running execution context's [[VariableEnvironment]]. Var variables are created when their containing Environment Record is instantiated and are initialized to *undefined* when created. Within the scope of any [[VariableEnvironment]] a common |BindingIdentifier| may appear in more than one |VariableDeclaration| but those declarations collectively define only one variable. A variable defined by a |VariableDeclaration| with an |Initializer| is assigned the value of its |Initializer|'s |AssignmentExpression| when the |VariableDeclaration| is executed, not when the variable is created.</p>
       </emu-note>
       <h2>Syntax</h2>
       <emu-grammar type="definition">
@@ -21543,7 +21575,7 @@
           1. Return ~empty~.
         </emu-alg>
         <emu-note>
-          <p>If a |VariableDeclaration| is nested within a with statement and the |BindingIdentifier| in the |VariableDeclaration| is the same as a property name of the binding object of the with statement's Object Environment Record, then step <emu-xref href="#step-vardecllist-evaluation-putvalue"></emu-xref> will assign _value_ to the property instead of assigning to the VariableEnvironment binding of the |Identifier|.</p>
+          <p>If a |VariableDeclaration| is nested within a with statement and the |BindingIdentifier| in the |VariableDeclaration| is the same as a property name of the binding object of the with statement's Object Environment Record, then step <emu-xref href="#step-vardecllist-evaluation-putvalue"></emu-xref> will assign _value_ to the property instead of assigning to the [[VariableEnvironment]] binding of the |Identifier|.</p>
         </emu-note>
         <emu-grammar>VariableDeclaration : BindingPattern Initializer</emu-grammar>
         <emu-alg>
@@ -21998,7 +22030,7 @@
         </emu-alg>
         <emu-grammar>ForStatement : `for` `(` LexicalDeclaration Expression? `;` Expression? `)` Statement</emu-grammar>
         <emu-alg>
-          1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
+          1. Let _oldEnv_ be the running execution context's [[LexicalEnvironment]].
           1. Let _loopEnv_ be NewDeclarativeEnvironment(_oldEnv_).
           1. Let _isConst_ be IsConstantDeclaration of |LexicalDeclaration|.
           1. Let _boundNames_ be the BoundNames of |LexicalDeclaration|.
@@ -22007,16 +22039,16 @@
               1. Perform ! _loopEnv_.CreateImmutableBinding(_dn_, *true*).
             1. Else,
               1. Perform ! _loopEnv_.CreateMutableBinding(_dn_, *false*).
-          1. Set the running execution context's LexicalEnvironment to _loopEnv_.
+          1. Set the running execution context's [[LexicalEnvironment]] to _loopEnv_.
           1. Let _forDcl_ be Completion(Evaluation of |LexicalDeclaration|).
           1. If _forDcl_ is an abrupt completion, then
-            1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+            1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
             1. Return ? _forDcl_.
           1. If _isConst_ is *false*, let _perIterationLets_ be _boundNames_; otherwise let _perIterationLets_ be a new empty List.
           1. If the first |Expression| is present, let _test_ be the first |Expression|; otherwise let _test_ be ~empty~.
           1. If the second |Expression| is present, let _increment_ be the second |Expression|; otherwise let _increment_ be ~empty~.
           1. Let _bodyResult_ be Completion(ForBodyEvaluation(_test_, _increment_, |Statement|, _perIterationLets_, _labelSet_)).
-          1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+          1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
           1. Return ? _bodyResult_.
         </emu-alg>
       </emu-clause>
@@ -22061,7 +22093,7 @@
         </dl>
         <emu-alg>
           1. If _perIterationBindings_ has any elements, then
-            1. Let _lastIterationEnv_ be the running execution context's LexicalEnvironment.
+            1. Let _lastIterationEnv_ be the running execution context's [[LexicalEnvironment]].
             1. Let _outer_ be _lastIterationEnv_.[[OuterEnv]].
             1. Assert: _outer_ is not *null*.
             1. Let _thisIterationEnv_ be NewDeclarativeEnvironment(_outer_).
@@ -22069,7 +22101,7 @@
               1. Perform ! _thisIterationEnv_.CreateMutableBinding(_bn_, *false*).
               1. Let _lastValue_ be ? _lastIterationEnv_.GetBindingValue(_bn_, *true*).
               1. Perform ! _thisIterationEnv_.InitializeBinding(_bn_, _lastValue_).
-            1. Set the running execution context's LexicalEnvironment to _thisIterationEnv_.
+            1. Set the running execution context's [[LexicalEnvironment]] to _thisIterationEnv_.
           1. Return ~unused~.
         </emu-alg>
       </emu-clause>
@@ -22314,15 +22346,15 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
+          1. Let _oldEnv_ be the running execution context's [[LexicalEnvironment]].
           1. If _uninitializedBoundNames_ is not empty, then
             1. Assert: _uninitializedBoundNames_ has no duplicate entries.
             1. Let _newEnv_ be NewDeclarativeEnvironment(_oldEnv_).
             1. For each String _name_ of _uninitializedBoundNames_, do
               1. Perform ! _newEnv_.CreateMutableBinding(_name_, *false*).
-            1. Set the running execution context's LexicalEnvironment to _newEnv_.
+            1. Set the running execution context's [[LexicalEnvironment]] to _newEnv_.
           1. Let _exprRef_ be Completion(Evaluation of _expr_).
-          1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+          1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
           1. Let _exprValue_ be ? GetValue(? _exprRef_).
           1. If _iterationKind_ is ~enumerate~, then
             1. If _exprValue_ is either *undefined* or *null*, then
@@ -22355,7 +22387,7 @@
         </dl>
         <emu-alg>
           1. If _iteratorKind_ is not present, set _iteratorKind_ to ~sync~.
-          1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
+          1. Let _oldEnv_ be the running execution context's [[LexicalEnvironment]].
           1. Let _V_ be *undefined*.
           1. Let _destructuring_ be IsDestructuring of _lhs_.
           1. If _destructuring_ is *true* and _lhsKind_ is ~assignment~, then
@@ -22388,7 +22420,7 @@
               1. Assert: _lhs_ is a |ForDeclaration|.
               1. Let _iterationEnv_ be NewDeclarativeEnvironment(_oldEnv_).
               1. Perform ForDeclarationBindingInstantiation of _lhs_ with argument _iterationEnv_.
-              1. Set the running execution context's LexicalEnvironment to _iterationEnv_.
+              1. Set the running execution context's [[LexicalEnvironment]] to _iterationEnv_.
               1. If _destructuring_ is *true*, then
                 1. Let _status_ be Completion(ForDeclarationBindingInitialization of _lhs_ with arguments _nextValue_ and _iterationEnv_).
               1. Else,
@@ -22397,7 +22429,7 @@
                 1. Let _lhsRef_ be ! ResolveBinding(_lhsName_).
                 1. Let _status_ be Completion(InitializeReferencedBinding(_lhsRef_, _nextValue_)).
             1. If _status_ is an abrupt completion, then
-              1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+              1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
               1. If _iterationKind_ is ~enumerate~, then
                 1. Return ? _status_.
               1. Else,
@@ -22405,7 +22437,7 @@
                 1. If _iteratorKind_ is ~async~, return ? AsyncIteratorClose(_iteratorRecord_, _status_).
                 1. Return ? IteratorClose(_iteratorRecord_, _status_).
             1. Let _result_ be Completion(Evaluation of _stmt_).
-            1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+            1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
             1. If LoopContinues(_result_, _labelSet_) is *false*, then
               1. Set _status_ to Completion(UpdateEmpty(_result_, _V_)).
               1. If _iterationKind_ is ~enumerate~, then
@@ -22749,15 +22781,15 @@
       <emu-alg>
         1. Let _val_ be ? Evaluation of |Expression|.
         1. Let _obj_ be ? ToObject(? GetValue(_val_)).
-        1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
+        1. Let _oldEnv_ be the running execution context's [[LexicalEnvironment]].
         1. Let _newEnv_ be NewObjectEnvironment(_obj_, *true*, _oldEnv_).
-        1. Set the running execution context's LexicalEnvironment to _newEnv_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _newEnv_.
         1. Let _C_ be Completion(Evaluation of |Statement|).
-        1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
         1. Return ? UpdateEmpty(_C_, *undefined*).
       </emu-alg>
       <emu-note>
-        <p>No matter how control leaves the embedded |Statement|, whether normally or by some form of abrupt completion or exception, the LexicalEnvironment is always restored to its former state.</p>
+        <p>No matter how control leaves the embedded |Statement|, whether normally or by some form of abrupt completion or exception, the [[LexicalEnvironment]] is always restored to its former state.</p>
       </emu-note>
     </emu-clause>
   </emu-clause>
@@ -22896,16 +22928,16 @@
       <emu-alg>
         1. Let _exprRef_ be ? Evaluation of |Expression|.
         1. Let _switchValue_ be ? GetValue(_exprRef_).
-        1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
+        1. Let _oldEnv_ be the running execution context's [[LexicalEnvironment]].
         1. Let _blockEnv_ be NewDeclarativeEnvironment(_oldEnv_).
         1. Perform BlockDeclarationInstantiation(|CaseBlock|, _blockEnv_).
-        1. Set the running execution context's LexicalEnvironment to _blockEnv_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _blockEnv_.
         1. Let _R_ be Completion(CaseBlockEvaluation of |CaseBlock| with argument _switchValue_).
-        1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
         1. Return _R_.
       </emu-alg>
       <emu-note>
-        <p>No matter how control leaves the |SwitchStatement| the LexicalEnvironment is always restored to its former state.</p>
+        <p>No matter how control leaves the |SwitchStatement| the [[LexicalEnvironment]] is always restored to its former state.</p>
       </emu-note>
       <emu-grammar>CaseClause : `case` Expression `:`</emu-grammar>
       <emu-alg>
@@ -23111,17 +23143,17 @@
       </dl>
       <emu-grammar>Catch : `catch` `(` CatchParameter `)` Block</emu-grammar>
       <emu-alg>
-        1. Let _oldEnv_ be the running execution context's LexicalEnvironment.
+        1. Let _oldEnv_ be the running execution context's [[LexicalEnvironment]].
         1. Let _catchEnv_ be NewDeclarativeEnvironment(_oldEnv_).
         1. For each element _argName_ of the BoundNames of |CatchParameter|, do
           1. Perform ! _catchEnv_.CreateMutableBinding(_argName_, *false*).
-        1. Set the running execution context's LexicalEnvironment to _catchEnv_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _catchEnv_.
         1. Let _status_ be Completion(BindingInitialization of |CatchParameter| with arguments _thrownValue_ and _catchEnv_).
         1. If _status_ is an abrupt completion, then
-          1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+          1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
           1. Return ? _status_.
         1. Let _B_ be Completion(Evaluation of |Block|).
-        1. Set the running execution context's LexicalEnvironment to _oldEnv_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _oldEnv_.
         1. Return ? _B_.
       </emu-alg>
       <emu-grammar>Catch : `catch` Block</emu-grammar>
@@ -23129,7 +23161,7 @@
         1. Return ? Evaluation of |Block|.
       </emu-alg>
       <emu-note>
-        <p>No matter how control leaves the |Block| the LexicalEnvironment is always restored to its former state.</p>
+        <p>No matter how control leaves the |Block| the [[LexicalEnvironment]] is always restored to its former state.</p>
       </emu-note>
     </emu-clause>
 
@@ -23635,8 +23667,8 @@
       <emu-grammar>FunctionExpression : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
         1. If _name_ is not present, set _name_ to *""*.
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |FunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -23647,10 +23679,10 @@
       <emu-alg>
         1. Assert: _name_ is not present.
         1. Set _name_ to the StringValue of |BindingIdentifier|.
-        1. Let _outerEnv_ be the running execution context's LexicalEnvironment.
+        1. Let _outerEnv_ be the running execution context's [[LexicalEnvironment]].
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outerEnv_).
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |FunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _funcEnv_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -23787,8 +23819,8 @@
       <emu-grammar>ArrowFunction : ArrowParameters `=>` ConciseBody</emu-grammar>
       <emu-alg>
         1. If _name_ is not present, set _name_ to *""*.
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |ArrowFunction|.
         1. [id="step-arrowfunction-evaluation-functioncreate"] Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |ArrowParameters|, |ConciseBody|, ~lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -23925,8 +23957,8 @@
       <emu-grammar>MethodDefinition : ClassElementName `(` UniqueFormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
-        1. Let _env_ be the running execution context's LexicalEnvironment.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. If _functionPrototype_ is present, then
           1. Let _prototype_ be _functionPrototype_.
         1. Else,
@@ -23956,8 +23988,8 @@
       <emu-grammar>MethodDefinition : `get` ClassElementName `(` `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
-        1. Let _env_ be the running execution context's LexicalEnvironment.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |MethodDefinition|.
         1. Let _formalParameterList_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, _formalParameterList_, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
@@ -23973,8 +24005,8 @@
       <emu-grammar>MethodDefinition : `set` ClassElementName `(` PropertySetParameterList `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
-        1. Let _env_ be the running execution context's LexicalEnvironment.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |MethodDefinition|.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |PropertySetParameterList|, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
@@ -23989,8 +24021,8 @@
       <emu-grammar>GeneratorMethod : `*` ClassElementName `(` UniqueFormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
-        1. Let _env_ be the running execution context's LexicalEnvironment.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |GeneratorMethod|.
         1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |GeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
@@ -24004,8 +24036,8 @@
       </emu-grammar>
       <emu-alg>
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
-        1. Let _env_ be the running execution context's LexicalEnvironment.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |AsyncGeneratorMethod|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
@@ -24019,8 +24051,8 @@
       </emu-grammar>
       <emu-alg>
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |AsyncMethod|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
@@ -24182,8 +24214,8 @@
       <emu-grammar>GeneratorExpression : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
         1. If _name_ is not present, set _name_ to *""*.
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |GeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -24195,10 +24227,10 @@
       <emu-alg>
         1. Assert: _name_ is not present.
         1. Set _name_ to the StringValue of |BindingIdentifier|.
-        1. Let _outerEnv_ be the running execution context's LexicalEnvironment.
+        1. Let _outerEnv_ be the running execution context's [[LexicalEnvironment]].
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outerEnv_).
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |GeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _funcEnv_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -24417,8 +24449,8 @@
       </emu-grammar>
       <emu-alg>
         1. If _name_ is not present, set _name_ to *""*.
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |AsyncGeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -24432,10 +24464,10 @@
       <emu-alg>
         1. Assert: _name_ is not present.
         1. Set _name_ to the StringValue of |BindingIdentifier|.
-        1. Let _outerEnv_ be the running execution context's LexicalEnvironment.
+        1. Let _outerEnv_ be the running execution context's [[LexicalEnvironment]].
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outerEnv_).
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |AsyncGeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _funcEnv_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -24932,8 +24964,8 @@
         1. Let _name_ be ? Evaluation of |ClassElementName|.
         1. If |Initializer| is present, then
           1. Let _formalParameterList_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
-          1. Let _env_ be the LexicalEnvironment of the running execution context.
-          1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+          1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+          1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
           1. Let _sourceText_ be the empty sequence of Unicode code points.
           1. Let _initializer_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, _formalParameterList_, |Initializer|, ~non-lexical-this~, _env_, _privateEnv_).
           1. Perform MakeMethod(_initializer_, _homeObject_).
@@ -24957,8 +24989,8 @@
       </dl>
       <emu-grammar>ClassStaticBlock : `static` `{` ClassStaticBlockBody `}`</emu-grammar>
       <emu-alg>
-        1. Let _lex_ be the running execution context's LexicalEnvironment.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _lex_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the empty sequence of Unicode code points.
         1. Let _formalParameters_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
         1. [id="step-synthetic-class-static-block-fn"] Let _bodyFunction_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, _formalParameters_, |ClassStaticBlockBody|, ~non-lexical-this~, _lex_, _privateEnv_).
@@ -25042,11 +25074,11 @@
       </emu-note>
       <emu-grammar>ClassTail : ClassHeritage? `{` ClassBody? `}`</emu-grammar>
       <emu-alg>
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
         1. Let _classEnv_ be NewDeclarativeEnvironment(_env_).
         1. If _classBinding_ is not *undefined*, then
           1. Perform ! _classEnv_.CreateImmutableBinding(_classBinding_, *true*).
-        1. Let _outerPrivateEnvironment_ be the running execution context's PrivateEnvironment.
+        1. Let _outerPrivateEnvironment_ be the running execution context's [[PrivateEnvironment]].
         1. Let _classPrivateEnvironment_ be NewPrivateEnvironment(_outerPrivateEnvironment_).
         1. If |ClassBody| is present, then
           1. For each String _dn_ of the PrivateBoundIdentifiers of |ClassBody|, do
@@ -25059,10 +25091,10 @@
           1. Let _protoParent_ be %Object.prototype%.
           1. Let _constructorParent_ be %Function.prototype%.
         1. Else,
-          1. Set the running execution context's LexicalEnvironment to _classEnv_.
-          1. NOTE: The running execution context's PrivateEnvironment is _outerPrivateEnvironment_ when evaluating |ClassHeritage|.
+          1. Set the running execution context's [[LexicalEnvironment]] to _classEnv_.
+          1. NOTE: The running execution context's [[PrivateEnvironment]] is _outerPrivateEnvironment_ when evaluating |ClassHeritage|.
           1. Let _superclassRef_ be Completion(Evaluation of |ClassHeritage|).
-          1. Set the running execution context's LexicalEnvironment to _env_.
+          1. Set the running execution context's [[LexicalEnvironment]] to _env_.
           1. Let _superclass_ be ? GetValue(? _superclassRef_).
           1. If _superclass_ is *null*, then
             1. Let _protoParent_ be *null*.
@@ -25076,8 +25108,8 @@
         1. Let _proto_ be OrdinaryObjectCreate(_protoParent_).
         1. If |ClassBody| is not present, let _constructor_ be ~empty~.
         1. Else, let _constructor_ be the ConstructorMethod of |ClassBody|.
-        1. Set the running execution context's LexicalEnvironment to _classEnv_.
-        1. Set the running execution context's PrivateEnvironment to _classPrivateEnvironment_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _classEnv_.
+        1. Set the running execution context's [[PrivateEnvironment]] to _classPrivateEnvironment_.
         1. If _constructor_ is ~empty~, then
           1. Let _defaultConstructor_ be a new Abstract Closure with no parameters that captures nothing and performs the following steps when called:
             1. Let _args_ be the List of arguments that was passed to this function by [[Call]] or [[Construct]].
@@ -25115,8 +25147,8 @@
           1. Else,
             1. Let _element_ be Completion(ClassElementEvaluation of _e_ with argument _F_).
           1. If _element_ is an abrupt completion, then
-            1. Set the running execution context's LexicalEnvironment to _env_.
-            1. Set the running execution context's PrivateEnvironment to _outerPrivateEnvironment_.
+            1. Set the running execution context's [[LexicalEnvironment]] to _env_.
+            1. Set the running execution context's [[PrivateEnvironment]] to _outerPrivateEnvironment_.
             1. Return ? _element_.
           1. Set _element_ to ! _element_.
           1. If _element_ is a PrivateElement, then
@@ -25137,7 +25169,7 @@
             1. Else, append _element_ to _staticElements_.
           1. Else if _element_ is a ClassStaticBlockDefinition Record, then
             1. Append _element_ to _staticElements_.
-        1. Set the running execution context's LexicalEnvironment to _env_.
+        1. Set the running execution context's [[LexicalEnvironment]] to _env_.
         1. If _classBinding_ is not *undefined*, then
           1. Perform ! _classEnv_.InitializeBinding(_classBinding_, _F_).
         1. Set _F_.[[PrivateMethods]] to _instancePrivateMethods_.
@@ -25151,9 +25183,9 @@
             1. Assert: _elementRecord_ is a ClassStaticBlockDefinition Record.
             1. Let _result_ be Completion(Call(_elementRecord_.[[BodyFunction]], _F_)).
           1. If _result_ is an abrupt completion, then
-            1. Set the running execution context's PrivateEnvironment to _outerPrivateEnvironment_.
+            1. Set the running execution context's [[PrivateEnvironment]] to _outerPrivateEnvironment_.
             1. Return ? _result_.
-        1. Set the running execution context's PrivateEnvironment to _outerPrivateEnvironment_.
+        1. Set the running execution context's [[PrivateEnvironment]] to _outerPrivateEnvironment_.
         1. Return _F_.
       </emu-alg>
     </emu-clause>
@@ -25167,7 +25199,7 @@
         1. Let _className_ be the StringValue of |BindingIdentifier|.
         1. Let _sourceText_ be the source text matched by |ClassDeclaration|.
         1. Let _value_ be ? ClassDefinitionEvaluation of |ClassTail| with arguments _className_, _className_, and _sourceText_.
-        1. Let _env_ be the running execution context's LexicalEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
         1. Perform ? InitializeBoundName(_className_, _value_, _env_).
         1. Return _value_.
       </emu-alg>
@@ -25205,7 +25237,7 @@
       <emu-grammar>ClassElementName : PrivateIdentifier</emu-grammar>
       <emu-alg>
         1. Let _privateIdentifier_ be the StringValue of |PrivateIdentifier|.
-        1. Let _privateEnvRec_ be the running execution context's PrivateEnvironment.
+        1. Let _privateEnvRec_ be the running execution context's [[PrivateEnvironment]].
         1. Let _names_ be _privateEnvRec_.[[Names]].
         1. Assert: Exactly one element of _names_ is a Private Name whose [[Description]] is _privateIdentifier_.
         1. Let _privateName_ be the Private Name in _names_ whose [[Description]] is _privateIdentifier_.
@@ -25332,8 +25364,8 @@
       </emu-grammar>
       <emu-alg>
         1. If _name_ is not present, set _name_ to *""*.
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |AsyncFunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -25345,10 +25377,10 @@
       <emu-alg>
         1. Assert: _name_ is not present.
         1. Set _name_ to the StringValue of |BindingIdentifier|.
-        1. Let _outerEnv_ be the LexicalEnvironment of the running execution context.
+        1. Let _outerEnv_ be the running execution context's [[LexicalEnvironment]].
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outerEnv_).
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |AsyncFunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _funcEnv_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -25503,8 +25535,8 @@
       </emu-grammar>
       <emu-alg>
         1. If _name_ is not present, set _name_ to *""*.
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |AsyncArrowFunction|.
         1. Let _parameters_ be |AsyncArrowBindingIdentifier|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, _parameters_, |AsyncConciseBody|, ~lexical-this~, _env_, _privateEnv_).
@@ -25516,8 +25548,8 @@
       </emu-grammar>
       <emu-alg>
         1. If _name_ is not present, set _name_ to *""*.
-        1. Let _env_ be the LexicalEnvironment of the running execution context.
-        1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
+        1. Let _env_ be the running execution context's [[LexicalEnvironment]].
+        1. Let _privateEnv_ be the running execution context's [[PrivateEnvironment]].
         1. Let _sourceText_ be the source text matched by |AsyncArrowFunction|.
         1. Let _head_ be the |AsyncArrowHead| that is covered by |CoverCallExpressionAndAsyncArrowHead|.
         1. Let _parameters_ be the |ArrowFormalParameters| of _head_.
@@ -25906,7 +25938,7 @@
       <dl class="header">
       </dl>
       <emu-alg>
-        1. Assert: The current execution context will not subsequently be used for the evaluation of any ECMAScript code or built-in functions. The invocation of Call subsequent to the invocation of this abstract operation will create and push a new execution context before performing any such evaluation.
+        1. Assert: The current execution context will not subsequently be used for the evaluation of any ECMAScript code or built-in functions. The invocation of Call subsequent to the invocation of this abstract operation will create and push a new ExecutionContext Record before performing any such evaluation.
         1. Discard all resources associated with the current execution context.
         1. Return ~unused~.
       </emu-alg>
@@ -26086,13 +26118,13 @@
 
       <emu-alg>
         1. Let _globalEnv_ be _scriptRecord_.[[Realm]].[[GlobalEnv]].
-        1. Let _scriptContext_ be a new ECMAScript code execution context.
-        1. Set the Function of _scriptContext_ to *null*.
-        1. Set the Realm of _scriptContext_ to _scriptRecord_.[[Realm]].
-        1. Set the ScriptOrModule of _scriptContext_ to _scriptRecord_.
-        1. Set the VariableEnvironment of _scriptContext_ to _globalEnv_.
-        1. Set the LexicalEnvironment of _scriptContext_ to _globalEnv_.
-        1. Set the PrivateEnvironment of _scriptContext_ to *null*.
+        1. Let _scriptContext_ be a new ECMAScript code ExecutionContext Record.
+        1. Set _scriptContext_.[[Function]] to *null*.
+        1. Set _scriptContext_.[[Realm]] to _scriptRecord_.[[Realm]].
+        1. Set _scriptContext_.[[ScriptOrModule]] to _scriptRecord_.
+        1. Set _scriptContext_.[[VariableEnvironment]] to _globalEnv_.
+        1. Set _scriptContext_.[[LexicalEnvironment]] to _globalEnv_.
+        1. Set _scriptContext_.[[PrivateEnvironment]] to *null*.
         1. Suspend the running execution context.
         1. Push _scriptContext_ onto the execution context stack; _scriptContext_ is now the running execution context.
         1. Let _script_ be _scriptRecord_.[[ECMAScriptCode]].
@@ -26171,8 +26203,8 @@
                       1. Perform ? CreateGlobalVarBinding(_env_, _F_, *false*).
                       1. Append _F_ to _declaredFunctionOrVarNames_.
                     1. [id="step-globaldeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                      1. Let _gEnv_ be the running execution context's VariableEnvironment.
-                      1. Let _bEnv_ be the running execution context's LexicalEnvironment.
+                      1. Let _gEnv_ be the running execution context's [[VariableEnvironment]].
+                      1. Let _bEnv_ be the running execution context's [[LexicalEnvironment]].
                       1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
                       1. Perform ? <emu-meta effects="user-code">_gEnv_.SetMutableBinding</emu-meta>(_F_, _fObj_, *false*).
                       1. Return ~unused~.
@@ -27851,10 +27883,10 @@
                 [[Context]]
               </td>
               <td>
-                an ECMAScript code execution context or ~empty~
+                an ECMAScript code ExecutionContext Record or ~empty~
               </td>
               <td>
-                The execution context associated with this module. It is ~empty~ until the module's environment has been initialized.
+                The ExecutionContext Record associated with this module. It is ~empty~ until the module's environment has been initialized.
               </td>
             </tr>
             <tr>
@@ -28507,14 +28539,14 @@
                     1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
                   1. Else,
                     1. Perform CreateImportBinding(_env_, _in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
-              1. Let _moduleContext_ be a new ECMAScript code execution context.
-              1. Set the Function of _moduleContext_ to *null*.
+              1. Let _moduleContext_ be a new ECMAScript code ExecutionContext Record.
+              1. Set _moduleContext_.[[Function]] to *null*.
               1. Assert: _module_.[[Realm]] is not *undefined*.
-              1. Set the Realm of _moduleContext_ to _module_.[[Realm]].
-              1. Set the ScriptOrModule of _moduleContext_ to _module_.
-              1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
-              1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
-              1. Set the PrivateEnvironment of _moduleContext_ to *null*.
+              1. Set _moduleContext_.[[Realm]] to _module_.[[Realm]].
+              1. Set _moduleContext_.[[ScriptOrModule]] to _module_.
+              1. Set _moduleContext_.[[VariableEnvironment]] to _module_.[[Environment]].
+              1. Set _moduleContext_.[[LexicalEnvironment]] to _module_.[[Environment]].
+              1. Set _moduleContext_.[[PrivateEnvironment]] to *null*.
               1. Set _module_.[[Context]] to _moduleContext_.
               1. Push _moduleContext_ onto the execution context stack; _moduleContext_ is now the running execution context.
               1. Let _code_ be _module_.[[ECMAScriptCode]].
@@ -28554,13 +28586,13 @@
             </dl>
 
             <emu-alg>
-              1. Let _moduleContext_ be a new ECMAScript code execution context.
-              1. Set the Function of _moduleContext_ to *null*.
-              1. Set the Realm of _moduleContext_ to _module_.[[Realm]].
-              1. Set the ScriptOrModule of _moduleContext_ to _module_.
+              1. Let _moduleContext_ be a new ECMAScript code ExecutionContext Record.
+              1. Set _moduleContext_.[[Function]] to *null*.
+              1. Set _moduleContext_.[[Realm]] to _module_.[[Realm]].
+              1. Set _moduleContext_.[[ScriptOrModule]] to _module_.
               1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
-              1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
-              1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
+              1. Set _moduleContext_.[[VariableEnvironment]] to _module_.[[Environment]].
+              1. Set _moduleContext_.[[LexicalEnvironment]] to _module_.[[Environment]].
               1. Suspend the running execution context.
               1. If _module_.[[HasTLA]] is *false*, then
                 1. Assert: _capability_ is not present.
@@ -28744,12 +28776,12 @@
             </dl>
 
             <emu-alg>
-              1. Let _moduleContext_ be a new ECMAScript code execution context.
-              1. Set the Function of _moduleContext_ to *null*.
-              1. Set the Realm of _moduleContext_ to _module_.[[Realm]].
-              1. Set the ScriptOrModule of _moduleContext_ to _module_.
-              1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
-              1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
+              1. Let _moduleContext_ be a new ECMAScript code ExecutionContext Record.
+              1. Set _moduleContext_.[[Function]] to *null*.
+              1. Set _moduleContext_.[[Realm]] to _module_.[[Realm]].
+              1. Set _moduleContext_.[[ScriptOrModule]] to _module_.
+              1. Set _moduleContext_.[[VariableEnvironment]] to _module_.[[Environment]].
+              1. Set _moduleContext_.[[LexicalEnvironment]] to _module_.[[Environment]].
               1. Suspend the running execution context.
               1. Push _moduleContext_ onto the execution context stack; _moduleContext_ is now the running execution context.
               1. Let _steps_ be _module_.[[EvaluationSteps]].
@@ -28804,7 +28836,7 @@
 
           <pre><code class="html">&lt;button type="button" onclick="import('./foo.mjs')"&gt;Click me&lt;/button&gt;</code></pre>
 
-          <p>there will be no active script or module at the time the <emu-xref href="#sec-import-calls">`import()`</emu-xref> expression runs. More generally, this can happen in any situation where the host pushes execution contexts with *null* ScriptOrModule components onto the execution context stack.</p>
+          <p>there will be no active script or module at the time the <emu-xref href="#sec-import-calls">`import()`</emu-xref> expression runs. More generally, this can happen in any situation where the host pushes an ExecutionContext Record with a *null* [[ScriptOrModule]] field onto the execution context stack.</p>
         </emu-note>
 
         <p>An implementation of HostLoadImportedModule must conform to the following requirements:</p>
@@ -29528,7 +29560,7 @@
           1. Let _value_ be ? BindingClassDeclarationEvaluation of |ClassDeclaration|.
           1. Let _className_ be the sole element of the BoundNames of |ClassDeclaration|.
           1. If _className_ is *"\*default\*"*, then
-            1. Let _env_ be the running execution context's LexicalEnvironment.
+            1. Let _env_ be the running execution context's [[LexicalEnvironment]].
             1. Perform ? InitializeBoundName(*"\*default\*"*, _value_, _env_).
           1. Return ~empty~.
         </emu-alg>
@@ -29539,7 +29571,7 @@
           1. Else,
             1. Let _rhs_ be ? Evaluation of |AssignmentExpression|.
             1. Let _value_ be ? GetValue(_rhs_).
-          1. Let _env_ be the running execution context's LexicalEnvironment.
+          1. Let _env_ be the running execution context's [[LexicalEnvironment]].
           1. Perform ? InitializeBoundName(*"\*default\*"*, _value_, _env_).
           1. Return ~empty~.
         </emu-alg>
@@ -29723,22 +29755,22 @@
           1. Let _runningContext_ be the running execution context.
           1. NOTE: If _direct_ is *true*, _runningContext_ will be the execution context that performed the direct eval. If _direct_ is *false*, _runningContext_ will be the execution context for the invocation of the `eval` function.
           1. If _direct_ is *true*, then
-            1. Let _lexEnv_ be NewDeclarativeEnvironment(_runningContext_'s LexicalEnvironment).
-            1. Let _varEnv_ be _runningContext_'s VariableEnvironment.
-            1. Let _privateEnv_ be _runningContext_'s PrivateEnvironment.
+            1. Let _lexEnv_ be NewDeclarativeEnvironment(_runningContext_.[[LexicalEnvironment]]).
+            1. Let _varEnv_ be _runningContext_.[[VariableEnvironment]].
+            1. Let _privateEnv_ be _runningContext_.[[PrivateEnvironment]].
           1. Else,
             1. Let _lexEnv_ be NewDeclarativeEnvironment(_evalRealm_.[[GlobalEnv]]).
             1. Let _varEnv_ be _evalRealm_.[[GlobalEnv]].
             1. Let _privateEnv_ be *null*.
           1. If _strictEval_ is *true*, set _varEnv_ to _lexEnv_.
           1. If _runningContext_ is not already suspended, suspend _runningContext_.
-          1. Let _evalContext_ be a new ECMAScript code execution context.
-          1. Set _evalContext_'s Function to *null*.
-          1. Set _evalContext_'s Realm to _evalRealm_.
-          1. Set _evalContext_'s ScriptOrModule to _runningContext_'s ScriptOrModule.
-          1. Set _evalContext_'s VariableEnvironment to _varEnv_.
-          1. Set _evalContext_'s LexicalEnvironment to _lexEnv_.
-          1. Set _evalContext_'s PrivateEnvironment to _privateEnv_.
+          1. Let _evalContext_ be a new ECMAScript code ExecutionContext Record.
+          1. Set _evalContext_.[[Function]] to *null*.
+          1. Set _evalContext_.[[Realm]] to _evalRealm_.
+          1. Set _evalContext_.[[ScriptOrModule]] to _runningContext_.[[ScriptOrModule]].
+          1. Set _evalContext_.[[VariableEnvironment]] to _varEnv_.
+          1. Set _evalContext_.[[LexicalEnvironment]] to _lexEnv_.
+          1. Set _evalContext_.[[PrivateEnvironment]] to _privateEnv_.
           1. Push _evalContext_ onto the execution context stack; _evalContext_ is now the running execution context.
           1. Let _result_ be Completion(EvalDeclarationInstantiation(_body_, _varEnv_, _lexEnv_, _privateEnv_, _strictEval_)).
           1. If _result_ is a normal completion, then
@@ -29750,7 +29782,7 @@
           1. Return ? _result_.
         </emu-alg>
         <emu-note>
-          <p>The eval code cannot instantiate variable or function bindings in the variable environment of the calling context that invoked the eval if either the code of the calling context or the eval code is strict mode code. Instead such bindings are instantiated in a new VariableEnvironment that is only accessible to the eval code. Bindings introduced by `let`, `const`, or `class` declarations are always instantiated in a new LexicalEnvironment.</p>
+          <p>The eval code cannot instantiate variable or function bindings in the variable environment of the calling context that invoked the eval if either the code of the calling context or the eval code is strict mode code. Instead such bindings are instantiated in a new [[VariableEnvironment]] that is only accessible to the eval code. Bindings introduced by `let`, `const`, or `class` declarations are always instantiated in a new [[LexicalEnvironment]].</p>
         </emu-note>
       </emu-clause>
 
@@ -29871,8 +29903,8 @@
                         1. Perform ! _varEnv_.InitializeBinding(_F_, *undefined*).
                     1. Append _F_ to _declaredFunctionOrVarNames_.
                   1. [id="step-evaldeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                    1. Let _gEnv_ be the running execution context's VariableEnvironment.
-                    1. Let _bEnv_ be the running execution context's LexicalEnvironment.
+                    1. Let _gEnv_ be the running execution context's [[VariableEnvironment]].
+                    1. Let _bEnv_ be the running execution context's [[LexicalEnvironment]].
                     1. Let _fObj_ be ! _bEnv_.GetBindingValue(_F_, *false*).
                     1. Perform ? <emu-meta effects="user-code">_gEnv_.SetMutableBinding</emu-meta>(_F_, _fObj_, *false*).
                     1. Return ~unused~.
@@ -50127,10 +50159,10 @@ THH:mm:ss.sss
               [[GeneratorContext]]
             </td>
             <td>
-              an execution context
+              an ExecutionContext Record
             </td>
             <td>
-              The execution context that is used when executing the code of this generator.
+              The ExecutionContext Record that is used when executing the code of this generator.
             </td>
           </tr>
           <tr>
@@ -50163,17 +50195,17 @@ THH:mm:ss.sss
         <emu-alg>
           1. Assert: _generator_.[[GeneratorState]] is ~suspended-start~.
           1. Let _genContext_ be the running execution context.
-          1. Set the Generator component of _genContext_ to _generator_.
+          1. Set _genContext_.[[Generator]] to _generator_.
           1. Let _closure_ be a new Abstract Closure with no parameters that captures _generatorBody_ and performs the following steps when called:
             1. Let _acGenContext_ be the running execution context.
-            1. Let _acGenerator_ be the Generator component of _acGenContext_.
+            1. Let _acGenerator_ be _acGenContext_.[[Generator]].
             1. If _generatorBody_ is a Parse Node, then
               1. Let _result_ be Completion(Evaluation of _generatorBody_).
             1. Else,
               1. Assert: _generatorBody_ is an Abstract Closure with no parameters.
               1. Let _result_ be Completion(_generatorBody_()).
             1. Assert: If we return here, the generator either threw an exception or performed either an implicit or explicit return.
-            1. Remove _acGenContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Remove _acGenContext_ from the execution context stack and restore the ExecutionContext Record that is at the top of the execution context stack as the running execution context.
             1. Set _acGenerator_.[[GeneratorState]] to ~completed~.
             1. NOTE: Once a generator enters the ~completed~ state it never leaves it and its associated execution context is never resumed. Any execution state associated with _acGenerator_ can be discarded at this point.
             1. If _result_ is a normal completion, then
@@ -50184,7 +50216,7 @@ THH:mm:ss.sss
               1. Assert: _result_ is a throw completion.
               1. Return ? _result_.
             1. Return NormalCompletion(CreateIteratorResultObject(_resultValue_, *true*)).
-          1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
+          1. Set _genContext_.[[CodeEvaluationState]] such that when evaluation is resumed for _genContext_, _closure_ will be called with no arguments.
           1. Set _generator_.[[GeneratorContext]] to _genContext_.
           1. Return ~unused~.
         </emu-alg>
@@ -50273,8 +50305,8 @@ THH:mm:ss.sss
         </dl>
         <emu-alg>
           1. Let _genContext_ be the running execution context.
-          1. If _genContext_ does not have a Generator component, return ~non-generator~.
-          1. Let _generator_ be the Generator component of _genContext_.
+          1. If _genContext_ does not have a [[Generator]] field, return ~non-generator~.
+          1. Let _generator_ be _genContext_.[[Generator]].
           1. If _generator_ has an [[AsyncGeneratorState]] internal slot, return ~async~.
           1. Else, return ~sync~.
         </emu-alg>
@@ -50293,10 +50325,10 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _genContext_ be the running execution context.
           1. Assert: _genContext_ is the execution context of a generator.
-          1. Let _generator_ be the value of the Generator component of _genContext_.
+          1. Let _generator_ be _genContext_.[[Generator]].
           1. Assert: GetGeneratorKind() is ~sync~.
           1. Set _generator_.[[GeneratorState]] to ~suspended-yield~.
-          1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+          1. Remove _genContext_ from the execution context stack and restore the ExecutionContext Record that is at the top of the execution context stack as the running execution context.
           1. Let _callerContext_ be the running execution context.
           1. Resume _callerContext_ passing NormalCompletion(_iteratorResult_). If _genContext_ is ever resumed again, let _resumptionValue_ be the Completion Record with which it is resumed.
           1. Assert: If control reaches here, then _genContext_ is the running execution context again.
@@ -50338,10 +50370,10 @@ THH:mm:ss.sss
           1. Set _generator_.[[GeneratorBrand]] to _generatorBrand_.
           1. Set _generator_.[[GeneratorState]] to ~suspended-start~.
           1. Let _callerContext_ be the running execution context.
-          1. Let _calleeContext_ be a new execution context.
-          1. Set the Function of _calleeContext_ to *null*.
-          1. Set the Realm of _calleeContext_ to the current Realm Record.
-          1. Set the ScriptOrModule of _calleeContext_ to _callerContext_'s ScriptOrModule.
+          1. Let _calleeContext_ be a new ExecutionContext Record.
+          1. Set _calleeContext_.[[Function]] to *null*.
+          1. Set _calleeContext_.[[Realm]] to the current Realm Record.
+          1. Set _calleeContext_.[[ScriptOrModule]] to _callerContext_.[[ScriptOrModule]].
           1. If _callerContext_ is not already suspended, suspend _callerContext_.
           1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
           1. Perform GeneratorStart(_generator_, _closure_).
@@ -50468,8 +50500,8 @@ THH:mm:ss.sss
           </tr>
           <tr>
             <td>[[AsyncGeneratorContext]]</td>
-            <td>an execution context</td>
-            <td>The execution context that is used when executing the code of this async generator.</td>
+            <td>an ExecutionContext Record</td>
+            <td>The ExecutionContext Record that is used when executing the code of this async generator.</td>
           </tr>
           <tr>
             <td>[[AsyncGeneratorQueue]]</td>
@@ -50527,24 +50559,24 @@ THH:mm:ss.sss
         <emu-alg>
           1. Assert: _generator_.[[AsyncGeneratorState]] is ~suspended-start~.
           1. Let _genContext_ be the running execution context.
-          1. Set the Generator component of _genContext_ to _generator_.
+          1. Set _genContext_.[[Generator]] to _generator_.
           1. Let _closure_ be a new Abstract Closure with no parameters that captures _generatorBody_ and performs the following steps when called:
             1. Let _acGenContext_ be the running execution context.
-            1. Let _acGenerator_ be the Generator component of _acGenContext_.
+            1. Let _acGenerator_ be _acGenContext_.[[Generator]].
             1. If _generatorBody_ is a Parse Node, then
               1. Let _result_ be Completion(Evaluation of _generatorBody_).
             1. Else,
               1. Assert: _generatorBody_ is an Abstract Closure with no parameters.
               1. Let _result_ be Completion(_generatorBody_()).
             1. Assert: If we return here, the async generator either threw an exception or performed either an implicit or explicit return.
-            1. Remove _acGenContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Remove _acGenContext_ from the execution context stack and restore the ExecutionContext Record that is at the top of the execution context stack as the running execution context.
             1. Set _acGenerator_.[[AsyncGeneratorState]] to ~draining-queue~.
             1. If _result_ is a normal completion, set _result_ to NormalCompletion(*undefined*).
             1. If _result_ is a return completion, set _result_ to NormalCompletion(_result_.[[Value]]).
             1. Perform AsyncGeneratorCompleteStep(_acGenerator_, _result_, *true*).
             1. Perform AsyncGeneratorDrainQueue(_acGenerator_).
             1. Return NormalCompletion(*undefined*).
-          1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
+          1. Set _genContext_.[[CodeEvaluationState]] such that when evaluation is resumed for _genContext_, _closure_ will be called with no arguments.
           1. Set _generator_.[[AsyncGeneratorContext]] to _genContext_.
           1. Set _generator_.[[AsyncGeneratorQueue]] to a new empty List.
           1. Return ~unused~.
@@ -50608,10 +50640,10 @@ THH:mm:ss.sss
           1. Else,
             1. Assert: _completion_ is a normal completion.
             1. If _realm_ is present, then
-              1. Let _oldRealm_ be the running execution context's Realm.
-              1. Set the running execution context's Realm to _realm_.
+              1. Let _oldRealm_ be the running execution context's [[Realm]].
+              1. Set the running execution context's [[Realm]] to _realm_.
               1. Let _iteratorResult_ be CreateIteratorResultObject(_value_, _done_).
-              1. Set the running execution context's Realm to _oldRealm_.
+              1. Set the running execution context's [[Realm]] to _oldRealm_.
             1. Else,
               1. Let _iteratorResult_ be CreateIteratorResultObject(_value_, _done_).
             1. Perform ! <emu-meta effects="user-code">Call</emu-meta>(_promiseCapability_.[[Resolve]], *undefined*, « _iteratorResult_ »).
@@ -50670,12 +50702,12 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _genContext_ be the running execution context.
           1. Assert: _genContext_ is the execution context of a generator.
-          1. Let _generator_ be the value of the Generator component of _genContext_.
+          1. Let _generator_ be _genContext_.[[Generator]].
           1. Assert: GetGeneratorKind() is ~async~.
           1. Let _completion_ be NormalCompletion(_value_).
           1. Assert: The execution context stack has at least two elements.
           1. Let _previousContext_ be the second to top element of the execution context stack.
-          1. Let _previousRealm_ be _previousContext_'s Realm.
+          1. Let _previousRealm_ be _previousContext_.[[Realm]].
           1. Perform AsyncGeneratorCompleteStep(_generator_, _completion_, *false*, _previousRealm_).
           1. Let _queue_ be _generator_.[[AsyncGeneratorQueue]].
           1. If _queue_ is not empty, then
@@ -50685,7 +50717,7 @@ THH:mm:ss.sss
             1. Return ? AsyncGeneratorUnwrapYieldResumption(_resumptionValue_).
           1. Else,
             1. Set _generator_.[[AsyncGeneratorState]] to ~suspended-yield~.
-            1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Remove _genContext_ from the execution context stack and restore the ExecutionContext Record that is at the top of the execution context stack as the running execution context.
             1. Let _callerContext_ be the running execution context.
             1. Resume _callerContext_ passing *undefined*. If _genContext_ is ever resumed again, let _resumptionValue_ be the Completion Record with which it is resumed.
             1. Assert: If control reaches here, then _genContext_ is the running execution context again.
@@ -50884,7 +50916,7 @@ THH:mm:ss.sss
           AsyncBlockStart (
             _promiseCapability_: a PromiseCapability Record,
             _asyncBody_: a Parse Node or an Abstract Closure with no parameters,
-            _asyncContext_: an execution context,
+            _asyncContext_: an ExecutionContext Record,
           ): ~unused~
         </h1>
         <dl class="header">
@@ -50899,7 +50931,7 @@ THH:mm:ss.sss
               1. Assert: _asyncBody_ is an Abstract Closure with no parameters.
               1. Let _result_ be Completion(_asyncBody_()).
             1. Assert: If we return here, the async function either threw an exception or performed an implicit or explicit return; all awaiting is done.
-            1. Remove _acAsyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Remove _acAsyncContext_ from the execution context stack and restore the ExecutionContext Record that is at the top of the execution context stack as the running execution context.
             1. If _result_ is a normal completion, then
               1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « *undefined* »).
             1. Else if _result_ is a return completion, then
@@ -50908,7 +50940,7 @@ THH:mm:ss.sss
               1. Assert: _result_ is a throw completion.
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _result_.[[Value]] »).
             1. [id="step-asyncblockstart-return-undefined"] Return NormalCompletion(~unused~).
-          1. Set the code evaluation state of _asyncContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
+          1. Set _asyncContext_.[[CodeEvaluationState]] such that when evaluation is resumed for _asyncContext_, _closure_ will be called with no arguments.
           1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
           1. <emu-meta effects="user-code">Resume the suspended evaluation of _asyncContext_</emu-meta>. Let _result_ be the value returned by the resumed computation.
           1. Assert: When we return here, _asyncContext_ has already been removed from the execution context stack and _runningContext_ is the currently running execution context.
@@ -50945,7 +50977,7 @@ THH:mm:ss.sss
             1. Return NormalCompletion(*undefined*).
           1. Let _onRejected_ be CreateBuiltinFunction(_rejectedClosure_, 1, *""*, « »).
           1. Perform PerformPromiseThen(_promise_, _onFulfilled_, _onRejected_).
-          1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+          1. Remove _asyncContext_ from the execution context stack and restore the ExecutionContext Record that is at the top of the execution context stack as the running execution context.
           1. Let _callerContext_ be the running execution context.
           1. Resume _callerContext_ passing ~empty~. If _asyncContext_ is ever resumed again, let _completion_ be the Completion Record with which it is resumed.
           1. Assert: If control reaches here, then _asyncContext_ is the running execution context again.
