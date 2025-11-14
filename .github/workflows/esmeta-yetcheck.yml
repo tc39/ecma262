@@ -5,43 +5,16 @@ on:
     types: [opened, synchronize]
 
 jobs:
-  esmeta-new-phrases:
-    runs-on: ubuntu-latest
-
-    env:
-      ESMETA_HOME: vendor/esmeta
-
+  esmeta-yetcheck:
+    name: 'esmeta yet phrases detection'
+    runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - name: Setup SBT
-        uses: sbt/setup-sbt@v1
-      - name: download esmeta
-        run: |
-          mkdir -p "${ESMETA_HOME}"
-          cd "${ESMETA_HOME}"
-          git init
-          git remote add origin https://github.com/es-meta/esmeta.git
-          git fetch --depth 1 origin bd58590ef6badabbe71afdefa02dc32274902621 ;# v0.7.1
-          git checkout FETCH_HEAD
-      - name: build esmeta
-        run: |
-          cd "${ESMETA_HOME}"
-          sbt assembly
-      - name: link
-        run: |
-          rmdir "${ESMETA_HOME}"/ecma262 \
-            && ln -s "$(pwd)" "${ESMETA_HOME}"/ecma262
-
-      - id: collect
-        name: List added line numbers
+      - name: list added line numbers
+        id: collect
         shell: bash
         env:
           FILE_PATH: spec.html
@@ -69,7 +42,8 @@ jobs:
 
           # Set it as an output value
           echo "added_lines=$added_lines_json" >> "$GITHUB_OUTPUT"
-
+      - name: install esmeta
+        uses: ./.github/workflows/esmeta-installer
       - name: check newly introduces phrases
         run: |
           "${ESMETA_HOME}"/bin/esmeta extract \
