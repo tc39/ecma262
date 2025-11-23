@@ -11662,8 +11662,32 @@
     </emu-table>
 
     <emu-clause id="sec-initializehostdefinedrealm" type="abstract operation" oldids="sec-createrealm,sec-setrealmglobalobject">
-      <h1>InitializeHostDefinedRealm ( ): either a normal completion containing ~unused~ or a throw completion</h1>
+      <h1>
+        InitializeHostDefinedRealm (
+          _customizations_: an Abstract Closure that takes a Realm Record and returns a List of 2 elements, each of which is either an Object or *undefined*,
+        ): either a normal completion containing ~unused~ or a throw completion
+      </h1>
       <dl class="header">
+        <dt>description</dt>
+        <dd>
+          <p>This operation invokes _customizations_, passing it the Realm Record that is being initialized. It must return a List of 2 elements:</p>
+          <ul>
+            <li>
+              <p>The first element is either:</p>
+              <ul>
+                <li>the object that is to serve as the Realm's global object, created in a host-defined manner, or</li>
+                <li>*undefined*, indicating that an ordinary object should be created as the global object.</li>
+              </ul>
+            </li>
+            <li>
+              <p>The second element is either:</p>
+              <ul>
+                <li>the object that is to serve as the `this` binding in the Realm's global scope, created in a host-defined manner, or</li>
+                <li>*undefined*, indicating that the global object should be used.</li>
+              </ul>
+            </li>
+          </ul>
+        </dd>
       </dl>
       <emu-alg>
         1. Let _realm_ be a new Realm Record.
@@ -11675,14 +11699,15 @@
         1. Set the Realm of _newContext_ to _realm_.
         1. Set the ScriptOrModule of _newContext_ to *null*.
         1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
-        1. If the host requires use of a specific object to serve as _realm_'s global object, then
-          1. Let _global_ be such an object created in a host-defined manner.
+        1. Let _global_ and _thisValue_ be the elements of _customizations_(_realm_).
+        1. If _global_ is *undefined*, then
+          1. Set _global_ to OrdinaryObjectCreate(_realm_.[[Intrinsics]].[[%Object.prototype%]]).
         1. Else,
-          1. Let _global_ be OrdinaryObjectCreate(_realm_.[[Intrinsics]].[[%Object.prototype%]]).
-        1. If the host requires that the `this` binding in _realm_'s global scope return an object other than the global object, then
-          1. Let _thisValue_ be such an object created in a host-defined manner.
+          1. Assert: _global_ is an Object.
+        1. If _thisValue_ is *undefined*, then
+          1. Set _thisValue_ to _global_.
         1. Else,
-          1. Let _thisValue_ be _global_.
+          1. Assert: _thisValue_ is an Object.
         1. Set _realm_.[[GlobalObject]] to _global_.
         1. Set _realm_.[[GlobalEnv]] to NewGlobalEnvironment(_global_, _thisValue_).
         1. Perform ? SetDefaultGlobalBindings(_realm_).
