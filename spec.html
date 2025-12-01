@@ -49264,7 +49264,7 @@ THH:mm:ss.sss
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-performpromiseall" type="abstract operation">
+        <emu-clause id="sec-performpromiseall" oldids="sec-promise.all-resolve-element-functions" type="abstract operation">
           <h1>
             PerformPromiseAll (
               _iteratorRecord_: an Iterator Record,
@@ -49277,6 +49277,7 @@ THH:mm:ss.sss
           </dl>
           <emu-alg>
             1. Let _values_ be a new empty List.
+            1. [declared="remainingElementsCount"] NOTE: _remainingElementsCount_ starts at 1 instead of 0 to ensure _resultCapability_.[[Resolve]] is only called once, even in the presence of a misbehaving *"then"* which calls the passed callback before the input iterator is exhausted.
             1. Let _remainingElementsCount_ be the Record { [[Value]]: 1 }.
             1. Let _index_ be 0.
             1. Repeat,
@@ -49289,40 +49290,24 @@ THH:mm:ss.sss
                 1. Return _resultCapability_.[[Promise]].
               1. Append *undefined* to _values_.
               1. Let _nextPromise_ be ? Call(_promiseResolve_, _constructor_, « _next_ »).
-              1. Let _steps_ be the algorithm steps defined in <emu-xref href="#sec-promise.all-resolve-element-functions" title></emu-xref>.
-              1. Let _length_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-promise.all-resolve-element-functions" title></emu-xref>.
-              1. Let _onFulfilled_ be CreateBuiltinFunction(_steps_, _length_, *""*, « [[AlreadyCalled]], [[Index]], [[Values]], [[Capability]], [[RemainingElements]] »).
+              1. Let _fulfilledSteps_ be a new Abstract Closure with parameters (_value_) that captures _values_, _resultCapability_, and _remainingElementsCount_ and performs the following steps when called:
+                1. Let _F_ be the active function object.
+                1. If _F_.[[AlreadyCalled]] is *true*, return *undefined*.
+                1. Set _F_.[[AlreadyCalled]] to *true*.
+                1. Let _index_ be _F_.[[Index]].
+                1. Set _values_[_index_] to _value_.
+                1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+                1. If _remainingElementsCount_.[[Value]] = 0, then
+                  1. Let _valuesArray_ be CreateArrayFromList(_values_).
+                  1. Return ? Call(_resultCapability_.[[Resolve]], *undefined*, « _valuesArray_ »).
+                1. Return *undefined*.
+              1. Let _onFulfilled_ be CreateBuiltinFunction(_fulfilledSteps_, 1, *""*, « [[AlreadyCalled]], [[Index]] »).
               1. Set _onFulfilled_.[[AlreadyCalled]] to *false*.
               1. Set _onFulfilled_.[[Index]] to _index_.
-              1. Set _onFulfilled_.[[Values]] to _values_.
-              1. Set _onFulfilled_.[[Capability]] to _resultCapability_.
-              1. Set _onFulfilled_.[[RemainingElements]] to _remainingElementsCount_.
+              1. Set _index_ to _index_ + 1.
               1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] + 1.
               1. Perform ? Invoke(_nextPromise_, *"then"*, « _onFulfilled_, _resultCapability_.[[Reject]] »).
-              1. Set _index_ to _index_ + 1.
           </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-promise.all-resolve-element-functions">
-          <h1>`Promise.all` Resolve Element Functions</h1>
-          <p>A `Promise.all` resolve element function is an anonymous built-in function that is used to resolve a specific `Promise.all` element. Each `Promise.all` resolve element function has [[Index]], [[Values]], [[Capability]], [[RemainingElements]], and [[AlreadyCalled]] internal slots.</p>
-          <p>When a `Promise.all` resolve element function is called with argument _x_, the following steps are taken:</p>
-          <emu-alg>
-            1. Let _F_ be the active function object.
-            1. If _F_.[[AlreadyCalled]] is *true*, return *undefined*.
-            1. Set _F_.[[AlreadyCalled]] to *true*.
-            1. Let _index_ be _F_.[[Index]].
-            1. Let _values_ be _F_.[[Values]].
-            1. Let _promiseCapability_ be _F_.[[Capability]].
-            1. Let _remainingElementsCount_ be _F_.[[RemainingElements]].
-            1. Set _values_[_index_] to _x_.
-            1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
-            1. If _remainingElementsCount_.[[Value]] = 0, then
-              1. Let _valuesArray_ be CreateArrayFromList(_values_).
-              1. Return ? Call(_promiseCapability_.[[Resolve]], *undefined*, « _valuesArray_ »).
-            1. Return *undefined*.
-          </emu-alg>
-          <p>The *"length"* property of a `Promise.all` resolve element function is *1*<sub>𝔽</sub>.</p>
         </emu-clause>
       </emu-clause>
 
