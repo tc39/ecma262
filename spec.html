@@ -49450,7 +49450,7 @@ THH:mm:ss.sss
           <p>This function requires its *this* value to be a constructor function that supports the parameter conventions of the `Promise` constructor.</p>
         </emu-note>
 
-        <emu-clause id="sec-performpromiseany" type="abstract operation">
+        <emu-clause id="sec-performpromiseany" oldids="sec-promise.any-reject-element-functions" type="abstract operation">
           <h1>
             PerformPromiseAny (
               _iteratorRecord_: an Iterator Record,
@@ -49463,6 +49463,7 @@ THH:mm:ss.sss
           </dl>
           <emu-alg>
             1. Let _errors_ be a new empty List.
+            1. [declared="remainingElementsCount"] NOTE: _remainingElementsCount_ starts at 1 instead of 0 to ensure _resultCapability_.[[Reject]] is only called once, even in the presence of a misbehaving *"then"* which calls the passed callback before the input iterator is exhausted.
             1. Let _remainingElementsCount_ be the Record { [[Value]]: 1 }.
             1. Let _index_ be 0.
             1. Repeat,
@@ -49470,47 +49471,30 @@ THH:mm:ss.sss
               1. If _next_ is ~done~, then
                 1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
                 1. If _remainingElementsCount_.[[Value]] = 0, then
-                  1. Let _error_ be a newly created *AggregateError* object.
-                  1. Perform ! DefinePropertyOrThrow(_error_, *"errors"*, PropertyDescriptor { [[Configurable]]: *true*, [[Enumerable]]: *false*, [[Writable]]: *true*, [[Value]]: CreateArrayFromList(_errors_) }).
-                  1. Return ThrowCompletion(_error_).
+                  1. Let _aggregateError_ be a newly created *AggregateError* object.
+                  1. Perform ! DefinePropertyOrThrow(_aggregateError_, *"errors"*, PropertyDescriptor { [[Configurable]]: *true*, [[Enumerable]]: *false*, [[Writable]]: *true*, [[Value]]: CreateArrayFromList(_errors_) }).
+                  1. Perform ? Call(_resultCapability_.[[Reject]], *undefined*, « _aggregateError_ »).
                 1. Return _resultCapability_.[[Promise]].
               1. Append *undefined* to _errors_.
               1. Let _nextPromise_ be ? Call(_promiseResolve_, _constructor_, « _next_ »).
-              1. Let _stepsRejected_ be the algorithm steps defined in <emu-xref href="#sec-promise.any-reject-element-functions" title></emu-xref>.
-              1. Let _lengthRejected_ be the number of non-optional parameters of the function definition in <emu-xref href="#sec-promise.any-reject-element-functions" title></emu-xref>.
-              1. Let _onRejected_ be CreateBuiltinFunction(_stepsRejected_, _lengthRejected_, *""*, « [[AlreadyCalled]], [[Index]], [[Errors]], [[Capability]], [[RemainingElements]] »).
+              1. Let _rejectedSteps_ be a new Abstract Closure with parameters (_error_) that captures _errors_, _resultCapability_, and _remainingElementsCount_ and performs the following steps when called:
+                1. Let _F_ be the active function object.
+                1. If _F_.[[AlreadyCalled]] is *true*, return *undefined*.
+                1. Set _F_.[[AlreadyCalled]] to *true*.
+                1. Set _errors_[_F_.[[Index]]] to _error_.
+                1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+                1. If _remainingElementsCount_.[[Value]] = 0, then
+                  1. Let _aggregateError_ be a newly created *AggregateError* object.
+                  1. Perform ! DefinePropertyOrThrow(_aggregateError_, *"errors"*, PropertyDescriptor { [[Configurable]]: *true*, [[Enumerable]]: *false*, [[Writable]]: *true*, [[Value]]: CreateArrayFromList(_errors_) }).
+                  1. Return ? Call(_resultCapability_.[[Reject]], *undefined*, « _aggregateError_ »).
+                1. Return *undefined*.
+              1. Let _onRejected_ be CreateBuiltinFunction(_rejectedSteps_, 1, *""*, « [[AlreadyCalled]], [[Index]] »).
               1. Set _onRejected_.[[AlreadyCalled]] to *false*.
               1. Set _onRejected_.[[Index]] to _index_.
-              1. Set _onRejected_.[[Errors]] to _errors_.
-              1. Set _onRejected_.[[Capability]] to _resultCapability_.
-              1. Set _onRejected_.[[RemainingElements]] to _remainingElementsCount_.
+              1. Set _index_ to _index_ + 1.
               1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] + 1.
               1. Perform ? Invoke(_nextPromise_, *"then"*, « _resultCapability_.[[Resolve]], _onRejected_ »).
-              1. Set _index_ to _index_ + 1.
           </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-promise.any-reject-element-functions">
-          <h1>`Promise.any` Reject Element Functions</h1>
-          <p>A `Promise.any` reject element function is an anonymous built-in function that is used to reject a specific `Promise.any` element. Each `Promise.any` reject element function has [[Index]], [[Errors]], [[Capability]], [[RemainingElements]], and [[AlreadyCalled]] internal slots.</p>
-          <p>When a `Promise.any` reject element function is called with argument _x_, the following steps are taken:</p>
-          <emu-alg>
-            1. Let _F_ be the active function object.
-            1. If _F_.[[AlreadyCalled]] is *true*, return *undefined*.
-            1. Set _F_.[[AlreadyCalled]] to *true*.
-            1. Let _index_ be _F_.[[Index]].
-            1. Let _errors_ be _F_.[[Errors]].
-            1. Let _promiseCapability_ be _F_.[[Capability]].
-            1. Let _remainingElementsCount_ be _F_.[[RemainingElements]].
-            1. Set _errors_[_index_] to _x_.
-            1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
-            1. If _remainingElementsCount_.[[Value]] = 0, then
-              1. Let _error_ be a newly created *AggregateError* object.
-              1. Perform ! DefinePropertyOrThrow(_error_, *"errors"*, PropertyDescriptor { [[Configurable]]: *true*, [[Enumerable]]: *false*, [[Writable]]: *true*, [[Value]]: CreateArrayFromList(_errors_) }).
-              1. Return ? Call(_promiseCapability_.[[Reject]], *undefined*, « _error_ »).
-            1. Return *undefined*.
-          </emu-alg>
-          <p>The *"length"* property of a `Promise.any` reject element function is *1*<sub>𝔽</sub>.</p>
         </emu-clause>
       </emu-clause>
 
