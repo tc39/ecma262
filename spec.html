@@ -11701,7 +11701,7 @@
       </dl>
       <emu-alg>
         1. Set _realmRec_.[[Intrinsics]] to a new Record.
-        1. [declared="steps,name,length,slots,prototype"] Set fields of _realmRec_.[[Intrinsics]] with the values listed in <emu-xref href="#table-well-known-intrinsic-objects"></emu-xref>. The field names are the names listed in column one of the table. The value of each field is a new object value fully and recursively populated with property values as defined by the specification of each object in clauses <emu-xref href="#sec-global-object"></emu-xref> through <emu-xref href="#sec-reflection"></emu-xref>. All object property values are newly created object values. All values that are built-in function objects are created by performing CreateBuiltinFunction(_steps_, _length_, _name_, _slots_, _realmRec_, _prototype_) where _steps_ is the definition of that function provided by this specification, _name_ is the initial value of the function's *"name"* property, _length_ is the initial value of the function's *"length"* property, _slots_ is a list of the names, if any, of the function's specified internal slots, and _prototype_ is the specified value of the function's [[Prototype]] internal slot. The creation of the intrinsics and their properties must be ordered to avoid any dependencies upon objects that have not yet been created.
+        1. [declared="steps,name,length,slots,prototype,async"] Set fields of _realmRec_.[[Intrinsics]] with the values listed in <emu-xref href="#table-well-known-intrinsic-objects"></emu-xref>. The field names are the names listed in column one of the table. The value of each field is a new object value fully and recursively populated with property values as defined by the specification of each object in clauses <emu-xref href="#sec-global-object"></emu-xref> through <emu-xref href="#sec-reflection"></emu-xref>. All object property values are newly created object values. All values that are built-in function objects are created by performing CreateBuiltinFunction(_steps_, _length_, _name_, _slots_, _realmRec_, _prototype_, _async_) where _steps_ is the definition of that function provided by this specification, _name_ is the initial value of the function's *"name"* property, _length_ is the initial value of the function's *"length"* property, _slots_ is a list of the names, if any, of the function's specified internal slots, _prototype_ is the specified value of the function's [[Prototype]] internal slot, and _async_ is *true* if the function is described as “async” and *false* otherwise. The creation of the intrinsics and their properties must be ordered to avoid any dependencies upon objects that have not yet been created.
         1. Perform AddRestrictedFunctionProperties(_realmRec_.[[Intrinsics]].[[%Function.prototype%]], _realmRec_).
         1. Return ~unused~.
       </emu-alg>
@@ -13856,6 +13856,7 @@
     <ul>
       <li>[[Realm]], a Realm Record that represents the realm in which the function was created.</li>
       <li>[[InitialName]], a String that is the initial name of the function. It is used by <emu-xref href="#sec-function.prototype.tostring"></emu-xref>.</li>
+      <li>[[Async]], a Boolean that indicates whether the function has async function call and construct behaviour in BuiltinCallOrConstruct.</li>
     </ul>
     <p>The initial value of a built-in function object's [[Prototype]] internal slot is %Function.prototype%, unless otherwise specified.</p>
     <p>A built-in function object must have a [[Call]] internal method that conforms to the definition in <emu-xref href="#sec-built-in-function-objects-call-thisargument-argumentslist"></emu-xref>.</p>
@@ -13917,10 +13918,20 @@
         1. Set the ScriptOrModule of _calleeContext_ to *null*.
         1. Perform any necessary implementation-defined initialization of _calleeContext_.
         1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
-        1. [id="step-call-builtin-function-result"] Let _result_ be the Completion Record that is <emu-meta effects="user-code">the result of evaluating</emu-meta> _F_ in a manner that conforms to the specification of _F_. If _thisArgument_ is ~uninitialized~, the *this* value is uninitialized; otherwise _thisArgument_ provides the *this* value. _argumentsList_ provides the named parameters. _newTarget_ provides the NewTarget value.
-        1. NOTE: If _F_ is defined in this document, “the specification of _F_” is the behaviour specified for it via algorithm steps or other means.
-        1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
-        1. Return ? _result_.
+        1. If _F_.[[Async]] is *true*, then
+          1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+          1. Let _resultsClosure_ be a new Abstract Closure with no parameters that captures _F_, _thisArgument_, _argumentsList_, and _newTarget_ and performs the following steps when called:
+            1. Let _result_ be the Completion Record that is <emu-meta effects="user-code">the result of evaluating</emu-meta> _F_ in a manner that conforms to the specification of _F_. If _thisArgument_ is ~uninitialized~, the *this* value is uninitialized; otherwise _thisArgument_ provides the *this* value. _argumentsList_ provides the named parameters. _newTarget_ provides the NewTarget value.
+            1. NOTE: If _F_ is defined in this document, “the specification of _F_” is the behaviour specified for it via algorithm steps or other means.
+            1. Return Completion(_result_).
+          1. Perform AsyncFunctionStart(_promiseCapability_, _resultsClosure_).
+          1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+          1. Return _promiseCapability_.[[Promise]].
+        1. Else,
+          1. [id="step-call-builtin-function-result"] Let _result_ be the Completion Record that is <emu-meta effects="user-code">the result of evaluating</emu-meta> _F_ in a manner that conforms to the specification of _F_. If _thisArgument_ is ~uninitialized~, the *this* value is uninitialized; otherwise _thisArgument_ provides the *this* value. _argumentsList_ provides the named parameters. _newTarget_ provides the NewTarget value.
+          1. NOTE: If _F_ is defined in this document, “the specification of _F_” is the behaviour specified for it via algorithm steps or other means.
+          1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+          1. Return ? _result_.
       </emu-alg>
       <emu-note>
         <p>When _calleeContext_ is removed from the execution context stack it must not be destroyed if it has been suspended and retained by an accessible Generator for later resumption.</p>
@@ -13937,6 +13948,7 @@
           optional _realm_: a Realm Record,
           optional _prototype_: an Object or *null*,
           optional _prefix_: a String,
+          optional _async_: a Boolean,
         ): a built-in function object
       </h1>
       <dl class="header">
@@ -13946,9 +13958,11 @@
       <emu-alg>
         1. If _realm_ is not present, set _realm_ to the current Realm Record.
         1. If _prototype_ is not present, set _prototype_ to _realm_.[[Intrinsics]].[[%Function.prototype%]].
+        1. If _async_ is not present, set _async_ to *false*.
         1. Let _internalSlotsList_ be a List containing the names of all the internal slots that <emu-xref href="#sec-built-in-function-objects"></emu-xref> requires for the built-in function object that is about to be created.
         1. Append to _internalSlotsList_ the elements of _additionalInternalSlotsList_.
         1. Let _func_ be a new built-in function object that, when called, performs the action described by _behaviour_ using the provided arguments as the values of the corresponding parameters specified by _behaviour_. The new function object has internal slots whose names are the elements of _internalSlotsList_, and an [[InitialName]] internal slot.
+        1. Set _func_.[[Async]] to _async_.
         1. Set _func_.[[Prototype]] to _prototype_.
         1. Set _func_.[[Extensible]] to *true*.
         1. Set _func_.[[Realm]] to _realm_.
