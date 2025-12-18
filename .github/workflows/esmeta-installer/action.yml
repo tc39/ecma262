@@ -1,0 +1,37 @@
+name: 'install esmeta'
+
+runs:
+  using: "composite"
+  steps:
+    - name: setup JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: temurin
+        java-version: 17
+    - name: setup SBT
+      uses: sbt/setup-sbt@v1
+    - name: set esmeta version and path
+      shell: bash
+      run: |
+        # v0.7.1
+        echo "ESMETA_VERSION=bd58590ef6badabbe71afdefa02dc32274902621" >> $GITHUB_ENV
+        echo "ESMETA_HOME=vendor/esmeta" >> $GITHUB_ENV
+    - name: clone esmeta
+      shell: bash
+      run: |
+        mkdir -p "${ESMETA_HOME}"
+        cd ${ESMETA_HOME}
+        git init
+        git remote add origin https://github.com/es-meta/esmeta.git
+        git fetch --depth 1 origin "$ESMETA_VERSION"
+        git checkout FETCH_HEAD
+    - name: build esmeta
+      shell: bash
+      run: |
+        cd "${ESMETA_HOME}"
+        sbt assembly
+    - name: link ecma262
+      shell: bash
+      run: |
+        rmdir "${ESMETA_HOME}"/ecma262 \
+          && ln -s "$(pwd)" "${ESMETA_HOME}"/ecma262
