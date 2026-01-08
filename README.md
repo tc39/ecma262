@@ -1,7 +1,7 @@
 
 ECMAScript
 ====
-
+ 
 ## This repo
 
 This repository contains the source for the current draft of ECMA-262,
