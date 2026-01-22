@@ -11742,9 +11742,8 @@
 
   <emu-clause id="sec-execution-contexts">
     <h1>Execution Contexts</h1>
-    <p>An <dfn variants="execution contexts">execution context</dfn> is a specification device that is used to track the runtime evaluation of code by an ECMAScript implementation. At any point in time, there is at most one execution context per agent that is actually executing code. This is known as the agent's <dfn id="running-execution-context" variants="running execution contexts">running execution context</dfn>. All references to the running execution context in this specification denote the running execution context of the surrounding agent.</p>
-    <p>The <dfn id="execution-context-stack" variants="execution context stacks">execution context stack</dfn> is used to track execution contexts. The running execution context is always the top element of this stack. A new execution context is created whenever control is transferred from the executable code associated with the currently running execution context to executable code that is not associated with that execution context. The newly created execution context is pushed onto the stack and becomes the running execution context.</p>
-    <p>An execution context contains whatever implementation specific state is necessary to track the execution progress of its associated code. Each execution context has at least the state components listed in <emu-xref href="#table-state-components-for-all-execution-contexts"></emu-xref>.</p>
+    <p>An <dfn variants="execution contexts">execution context</dfn> brings together information that is relevant for the runtime evaluation of some unit of code (e.g., a script, a module, or a function object). At any point in time, there is at most one execution context per agent whose associated code is being evaluated. This is known as the agent's <dfn id="running-execution-context">running execution context</dfn>. All references to the running execution context in this specification denote the running execution context of the surrounding agent.</p>
+    <p>Each execution context has at least the state components listed in <emu-xref href="#table-state-components-for-all-execution-contexts"></emu-xref>.</p>
     <emu-table id="table-state-components-for-all-execution-contexts" caption="State Components for All Execution Contexts" oldids="table-22">
       <table>
         <thead>
@@ -11762,7 +11761,7 @@
             code evaluation state
           </td>
           <td>
-            Any state needed to perform, suspend, and resume evaluation of the code associated with this execution context.
+            Determines what happens the next time there is a transfer of control to the execution context.
           </td>
         </tr>
         <tr>
@@ -11770,7 +11769,7 @@
             Function
           </td>
           <td>
-            If this execution context is evaluating the code of a function object, then the value of this component is that function object. If the context is evaluating the code of a |Script| or |Module|, the value is *null*.
+            If this execution context is established for evaluating a call to a function object, then the value of this component is that function object. If the execution context is established for evaluating a |Script| or |Module|, the value is *null*.
           </td>
         </tr>
         <tr>
@@ -11791,7 +11790,6 @@
         </tr>
       </table>
     </emu-table>
-    <p>Evaluation of code by the running execution context may be suspended at various points defined within this specification. Once the running execution context has been suspended a different execution context may become the running execution context and commence evaluating its code. At some later time a suspended execution context may again become the running execution context and continue evaluating its code at the point where it had previously been suspended. Transition of the running execution context status among execution contexts usually occurs in stack-like last-in/first-out manner. However, some ECMAScript features require non-LIFO transitions of the running execution context.</p>
     <p>The value of the Realm component of the running execution context is also called <dfn id="current-realm">the current Realm Record</dfn>. The value of the Function component of the running execution context is also called the <dfn id="active-function-object">active function object</dfn>.</p>
     <p><dfn id="ecmascript-code-execution-context" variants="ECMAScript code execution context">ECMAScript code execution contexts</dfn> have the additional state components listed in <emu-xref href="#table-additional-state-components-for-ecmascript-code-execution-contexts"></emu-xref>.</p>
     <emu-table id="table-additional-state-components-for-ecmascript-code-execution-contexts" caption="Additional State Components for ECMAScript Code Execution Contexts" oldids="table-23">
@@ -11811,7 +11809,7 @@
             LexicalEnvironment
           </td>
           <td>
-            Identifies the Environment Record used to resolve identifier references made by code within this execution context.
+            Identifies the Environment Record used to resolve identifier references made by code associated with this execution context.
           </td>
         </tr>
         <tr>
@@ -11819,7 +11817,7 @@
             VariableEnvironment
           </td>
           <td>
-            Identifies the Environment Record that holds bindings created by |VariableStatement|s within this execution context.
+            Identifies the Environment Record that holds bindings created by |VariableStatement|s in the code associated with this execution context.
           </td>
         </tr>
         <tr>
@@ -11833,6 +11831,8 @@
       </table>
     </emu-table>
     <p>The LexicalEnvironment and VariableEnvironment components of an execution context are always Environment Records.</p>
+    <p>In most situations only the running execution context is directly manipulated by algorithms within this specification. Hence when the terms “LexicalEnvironment”, and “VariableEnvironment” are used without qualification they are in reference to those components of the running execution context.</p>
+
     <p>Execution contexts representing the evaluation of Generators have the additional state components listed in <emu-xref href="#table-additional-state-components-for-generator-execution-contexts"></emu-xref>.</p>
     <emu-table id="table-additional-state-components-for-generator-execution-contexts" caption="Additional State Components for Generator Execution Contexts" oldids="table-24">
       <table>
@@ -11851,13 +11851,28 @@
             Generator
           </td>
           <td>
-            The Generator that this execution context is evaluating.
+            The Generator that is associated with this execution context.
           </td>
         </tr>
       </table>
     </emu-table>
-    <p>In most situations only the running execution context (the top of the execution context stack) is directly manipulated by algorithms within this specification. Hence when the terms “LexicalEnvironment”, and “VariableEnvironment” are used without qualification they are in reference to those components of the running execution context.</p>
+    <p>To express the semantics of generators, this document uses steps of the form “<dfn id="transfer-control" variants="transfers control,transfer of control">Transfer control</dfn> from _aContext_ to _bContext_, passing _completion_”, where _aContext_ and _bContext_ are execution contexts and _completion_ is a Completion Record. This means:</p>
+    <ul>
+      <li>Execution of the current algorithm (the one with the “Transfer control” step) is suspended, and a representation of that suspended execution is saved in the code evaluation state of _aContext_.</li>
+      <li>The code evaluation state of _bContext_ is typically a representation of an execution that was suspended in another “Transfer control” step; that execution is resumed, and _completion_ is provided as “the Completion Record passed when control was transferred back to _bContext_”. Alternatively, _bContext_'s code evaluation state is an Abstract Closure; in that case, the Abstract Closure is called with no arguments, and _completion_ is ignored.</li>
+    </ul>
+    <p>The suspended execution associated with _aContext_ will stay suspended until some step transfers control back to _aContext_, which might never happen.</p>
+    <emu-note>This is analogous to the concept of coroutines in programming languages.</emu-note>
+    <emu-note>In practice, _aContext_ was the running execution context until just before the “Transfer control” step, and _bContext_ is the new running execution context. However, the “Transfer control” step itself doesn't manipulate the execution context stack.</emu-note>
+
     <p>An execution context is purely a specification mechanism and need not correspond to any particular artefact of an ECMAScript implementation. It is impossible for ECMAScript code to directly access or observe an execution context.</p>
+
+    <emu-clause id="sec-execution-context-stack">
+      <h1>Execution Context Stack</h1>
+      <p>An agent's <dfn id="execution-context-stack" variants="execution context stacks">execution context stack</dfn> is used to organize some or all of the agent's execution contexts. The running execution context is always the top element of this stack.</p>
+      <p>Adding and removing always happens at the “top” of the execution context stack. When an execution context is added, it becomes the topmost (i.e., the running execution context), and when it is later removed, the execution context “below” it becomes topmost again.</p>
+      <emu-note>In the absence of generators and async functions, every execution context that is pushed onto the stack is new, and when it's removed from the stack it can be discarded. With generators and async functions, some execution contexts outlive their time on the stack, exist for a while outside the stack, and then later are pushed onto the stack again.</emu-note>
+    </emu-clause>
 
     <emu-clause id="sec-getactivescriptormodule" type="abstract operation">
       <h1>GetActiveScriptOrModule ( ): a Script Record, a Module Record, or *null*</h1>
@@ -11945,7 +11960,7 @@
       <h1>GetGlobalObject ( ): an Object</h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It returns the global object used by the currently running execution context.</dd>
+        <dd>It returns the global object used by the running execution context.</dd>
       </dl>
       <emu-alg>
         1. Let _currentRealm_ be the current Realm Record.
@@ -12328,7 +12343,7 @@
   <emu-clause id="sec-forward-progress">
     <h1>Forward Progress</h1>
     <p>For an agent to <em>make forward progress</em> is for it to perform an evaluation step according to this specification.</p>
-    <p>An agent becomes <em>blocked</em> when its running execution context waits synchronously and indefinitely for an external event. Only agents whose Agent Record's [[CanBlock]] field is *true* can become blocked in this sense. An <em>unblocked</em> agent is one that is not blocked.</p>
+    <p>An agent becomes <em>blocked</em> when it waits synchronously and indefinitely for an external event. Only agents whose Agent Record's [[CanBlock]] field is *true* can become blocked in this sense. An <em>unblocked</em> agent is one that is not blocked.</p>
 
     <p>Implementations must ensure that:</p>
     <ul>
@@ -13316,17 +13331,19 @@
         1. If _F_.[[IsClassConstructor]] is *true*, then
           1. Let _error_ be a newly created *TypeError* object.
           1. NOTE: _error_ is created in _calleeContext_ with _F_'s associated Realm Record.
-          1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+          1. Remove _calleeContext_ from the execution context stack.
+          1. Assert: _callerContext_ is the running execution context again.
           1. Return ThrowCompletion(_error_).
         1. Perform OrdinaryCallBindThis(_F_, _calleeContext_, _thisArgument_).
         1. Let _result_ be Completion(OrdinaryCallEvaluateBody(_F_, _argumentsList_)).
-        1. [id="step-call-pop-context-stack"] Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+        1. [id="step-call-pop-context-stack"] Remove _calleeContext_ from the execution context stack.
+        1. Assert: _callerContext_ is the running execution context again.
         1. If _result_ is a return completion, return _result_.[[Value]].
         1. Assert: _result_ is a throw completion.
         1. Return ? _result_.
       </emu-alg>
       <emu-note>
-        <p>When _calleeContext_ is removed from the execution context stack in step <emu-xref href="#step-call-pop-context-stack"></emu-xref> it must not be destroyed if it is suspended and retained for later resumption by an accessible Generator.</p>
+        <p>When _calleeContext_ is removed from the execution context stack in step <emu-xref href="#step-call-pop-context-stack"></emu-xref> it must not be destroyed if it is retained for later resumption by an accessible Generator.</p>
       </emu-note>
 
       <emu-clause id="sec-prepareforordinarycall" type="abstract operation">
@@ -13339,7 +13356,6 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _callerContext_ be the running execution context.
           1. Let _calleeContext_ be a new ECMAScript code execution context.
           1. Set the Function of _calleeContext_ to _F_.
           1. Let _calleeRealm_ be _F_.[[Realm]].
@@ -13349,7 +13365,6 @@
           1. Set the LexicalEnvironment of _calleeContext_ to _localEnv_.
           1. Set the VariableEnvironment of _calleeContext_ to _localEnv_.
           1. Set the PrivateEnvironment of _calleeContext_ to _F_.[[PrivateEnvironment]].
-          1. If _callerContext_ is not already suspended, suspend _callerContext_.
           1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
           1. NOTE: Any exception objects produced after this point are associated with _calleeRealm_.
           1. Return _calleeContext_.
@@ -13490,11 +13505,13 @@
           1. Perform OrdinaryCallBindThis(_F_, _calleeContext_, _thisArgument_).
           1. Let _initializeResult_ be Completion(InitializeInstanceElements(_thisArgument_, _F_)).
           1. If _initializeResult_ is an abrupt completion, then
-            1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+            1. Remove _calleeContext_ from the execution context stack.
+            1. Assert: _callerContext_ is the running execution context again.
             1. Return ? _initializeResult_.
         1. Let _constructorEnv_ be the LexicalEnvironment of _calleeContext_.
         1. Let _result_ be Completion(OrdinaryCallEvaluateBody(_F_, _argumentsList_)).
-        1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+        1. Remove _calleeContext_ from the execution context stack.
+        1. Assert: _callerContext_ is the running execution context again.
         1. If _result_ is a throw completion, then
           1. Return ? _result_.
         1. Assert: _result_ is a return completion.
@@ -13924,7 +13941,6 @@
       </dl>
       <emu-alg>
         1. Let _callerContext_ be the running execution context.
-        1. If _callerContext_ is not already suspended, suspend _callerContext_.
         1. Let _calleeContext_ be a new execution context.
         1. Set the Function of _calleeContext_ to _F_.
         1. Let _calleeRealm_ be _F_.[[Realm]].
@@ -13939,16 +13955,18 @@
             1. NOTE: If _F_ is defined in this document, “the specification of _F_” is the behaviour specified for it via algorithm steps or other means.
             1. Return Completion(_result_).
           1. Perform AsyncFunctionStart(_promiseCapability_, _resultsClosure_).
-          1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+          1. Remove _calleeContext_ from the execution context stack.
+          1. Assert: _callerContext_ is the running execution context again.
           1. Return _promiseCapability_.[[Promise]].
         1. Else,
           1. [id="step-call-builtin-function-result"] Let _result_ be the Completion Record that is <emu-meta effects="user-code">the result of evaluating</emu-meta> _F_ in a manner that conforms to the specification of _F_. If _thisArgument_ is ~uninitialized~, the *this* value is uninitialized; otherwise _thisArgument_ provides the *this* value. _argumentsList_ provides the named parameters. _newTarget_ provides the NewTarget value.
           1. NOTE: If _F_ is defined in this document, “the specification of _F_” is the behaviour specified for it via algorithm steps or other means.
-          1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+          1. Remove _calleeContext_ from the execution context stack.
+          1. Assert: _callerContext_ is the running execution context again.
           1. Return ? _result_.
       </emu-alg>
       <emu-note>
-        <p>When _calleeContext_ is removed from the execution context stack it must not be destroyed if it has been suspended and retained by an accessible Generator for later resumption.</p>
+        <p>When _calleeContext_ is removed from the execution context stack it must not be destroyed if it has been retained by an accessible Generator for later resumption.</p>
       </emu-note>
     </emu-clause>
 
@@ -25956,7 +25974,7 @@
         1. Discard all resources associated with the current execution context.
         1. Return ~unused~.
       </emu-alg>
-      <p>A tail position call must either release any transient internal resources associated with the currently executing function execution context before invoking the target function or reuse those resources in support of the target function.</p>
+      <p>A tail position call must either release any transient internal resources associated with the currently executing function's execution context before invoking the target function or reuse those resources in support of the target function.</p>
       <emu-note>
         <p>For example, a tail position call should only grow an implementation's activation record stack by the amount that the size of the target function's activation record exceeds the size of the calling function's activation record. If the target function's activation record is smaller, then the total size of the stack should decrease.</p>
       </emu-note>
@@ -26139,7 +26157,6 @@
         1. Set the VariableEnvironment of _scriptContext_ to _globalEnv_.
         1. Set the LexicalEnvironment of _scriptContext_ to _globalEnv_.
         1. Set the PrivateEnvironment of _scriptContext_ to *null*.
-        1. Suspend the running execution context.
         1. Push _scriptContext_ onto the execution context stack; _scriptContext_ is now the running execution context.
         1. Let _script_ be _scriptRecord_.[[ECMAScriptCode]].
         1. Let _result_ be Completion(GlobalDeclarationInstantiation(_script_, _globalEnv_)).
@@ -26147,9 +26164,8 @@
           1. Set _result_ to Completion(Evaluation of _script_).
           1. If _result_ is a normal completion and _result_.[[Value]] is ~empty~, then
             1. Set _result_ to NormalCompletion(*undefined*).
-        1. Suspend _scriptContext_ and remove it from the execution context stack.
+        1. Remove _scriptContext_ from the execution context stack.
         1. Assert: The execution context stack is not empty.
-        1. Resume the context that is now on the top of the execution context stack as the running execution context.
         1. Return ? _result_.
       </emu-alg>
     </emu-clause>
@@ -26886,7 +26902,7 @@
                 ExecuteModule([_promiseCapability_])
               </td>
               <td>
-                Evaluate the module's code within its execution context. If this module has *true* in [[HasTLA]], then a PromiseCapability Record is passed as an argument, and the method is expected to resolve or reject the given capability. In this case, the method must not throw an exception, but instead reject the PromiseCapability Record if necessary.
+                Evaluate the module's code using its execution context. If this module has *true* in [[HasTLA]], then a PromiseCapability Record is passed as an argument, and the method is expected to resolve or reject the given capability. In this case, the method must not throw an exception, but instead reject the PromiseCapability Record if necessary.
               </td>
             </tr>
           </table>
@@ -28607,13 +28623,11 @@
               1. Assert: _module_ has been linked and declarations in its module environment have been instantiated.
               1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
               1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
-              1. Suspend the running execution context.
               1. If _module_.[[HasTLA]] is *false*, then
                 1. Assert: _capability_ is not present.
                 1. Push _moduleContext_ onto the execution context stack; _moduleContext_ is now the running execution context.
                 1. Let _result_ be Completion(Evaluation of _module_.[[ECMAScriptCode]]).
-                1. Suspend _moduleContext_ and remove it from the execution context stack.
-                1. Resume the context that is now on the top of the execution context stack as the running execution context.
+                1. Remove _moduleContext_ from the execution context stack.
                 1. If _result_ is an abrupt completion, then
                   1. Return ? _result_.
               1. Else,
@@ -28796,12 +28810,10 @@
               1. Set the ScriptOrModule of _moduleContext_ to _module_.
               1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
               1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
-              1. Suspend the running execution context.
               1. Push _moduleContext_ onto the execution context stack; _moduleContext_ is now the running execution context.
               1. Let _steps_ be _module_.[[EvaluationSteps]].
               1. Let _result_ be Completion(_steps_(_module_)).
-              1. Suspend _moduleContext_ and remove it from the execution context stack.
-              1. Resume the context that is now on the top of the execution context stack as the running execution context.
+              1. Remove _moduleContext_ from the execution context stack.
               1. Let _pc_ be ! NewPromiseCapability(%Promise%).
               1. IfAbruptRejectPromise(_result_, _pc_).
               1. Perform ! Call(_pc_.[[Resolve]], *undefined*, « *undefined* »).
@@ -29683,7 +29695,7 @@
   <h1>The Global Object</h1>
   <p>The <dfn variants="global objects">global object</dfn>:</p>
   <ul>
-    <li>is created before control enters any execution context.</li>
+    <li>is created in InitializeHostDefinedRealm.</li>
     <li>does not have a [[Construct]] internal method; it cannot be used as a constructor with the `new` operator.</li>
     <li>does not have a [[Call]] internal method; it cannot be invoked as a function.</li>
     <li>has a [[Prototype]] internal slot whose value is host-defined.</li>
@@ -29777,7 +29789,6 @@
             1. Let _varEnv_ be _evalRealm_.[[GlobalEnv]].
             1. Let _privateEnv_ be *null*.
           1. If _strictEval_ is *true*, set _varEnv_ to _lexEnv_.
-          1. If _runningContext_ is not already suspended, suspend _runningContext_.
           1. Let _evalContext_ be a new ECMAScript code execution context.
           1. Set _evalContext_'s Function to *null*.
           1. Set _evalContext_'s Realm to _evalRealm_.
@@ -29791,8 +29802,7 @@
             1. Set _result_ to Completion(Evaluation of _body_).
           1. If _result_ is a normal completion and _result_.[[Value]] is ~empty~, then
             1. Set _result_ to NormalCompletion(*undefined*).
-          1. Suspend _evalContext_ and remove it from the execution context stack.
-          1. Resume the context that is now on the top of the execution context stack as the running execution context.
+          1. Remove _evalContext_ from the execution context stack.
           1. Return ? _result_.
         </emu-alg>
         <emu-note>
@@ -48214,7 +48224,7 @@ THH:mm:ss.sss
             1. Assert: _O_ has a [[GeneratorState]] internal slot.
             1. If _O_.[[GeneratorState]] is ~suspended-start~, then
               1. Set _O_.[[GeneratorState]] to ~completed~.
-              1. NOTE: Once a generator enters the completed state it never leaves it and its associated execution context is never resumed. Any execution state associated with _O_ can be discarded at this point.
+              1. NOTE: Once a generator enters the completed state it never leaves it and there is never again a transfer of control to its associated execution context. Any execution state associated with _O_ can be discarded at this point.
               1. Perform ? IteratorCloseAll(_O_.[[UnderlyingIterators]], NormalCompletion(~unused~)).
               1. Return CreateIteratorResultObject(*undefined*, *true*).
             1. Let _C_ be ReturnCompletion(*undefined*).
@@ -50300,18 +50310,21 @@ THH:mm:ss.sss
               1. Assert: _generatorBody_ is an Abstract Closure with no parameters.
               1. Let _result_ be Completion(_generatorBody_()).
             1. Assert: If we return here, the generator either threw an exception or performed either an implicit or explicit return.
-            1. Remove _acGenContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Remove _acGenContext_ from the execution context stack.
             1. Set _acGenerator_.[[GeneratorState]] to ~completed~.
-            1. NOTE: Once a generator enters the ~completed~ state it never leaves it and its associated execution context is never resumed. Any execution state associated with _acGenerator_ can be discarded at this point.
+            1. NOTE: Once a generator enters the ~completed~ state it never leaves it and there is never again a transfer of control to its associated execution context. Any execution state associated with _acGenerator_ can be discarded at this point.
             1. If _result_ is a normal completion, then
-              1. Let _resultValue_ be *undefined*.
+              1. Let _finalCompletion_ be NormalCompletion(CreateIteratorResultObject(*undefined*, *true*)).
             1. Else if _result_ is a return completion, then
-              1. Let _resultValue_ be _result_.[[Value]].
+              1. Let _finalCompletion_ be NormalCompletion(CreateIteratorResultObject(_result_.[[Value]], *true*)).
             1. Else,
               1. Assert: _result_ is a throw completion.
-              1. Return ? _result_.
-            1. Return NormalCompletion(CreateIteratorResultObject(_resultValue_, *true*)).
-          1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
+              1. Let _finalCompletion_ be _result_.
+            1. Let _callerContext_ be the running execution context.
+            1. Transfer control from _acGenContext_ to _callerContext_, passing _finalCompletion_.
+            1. NOTE: This step is never reached, because control is never transferred back to _acGenContext_.
+          1. Set _genContext_'s code evaluation state to _closure_.
+          1. NOTE: The next time there is a transfer of control to _genContext_, _closure_ will be called with no arguments.
           1. Set _generator_.[[GeneratorContext]] to _genContext_.
           1. Return ~unused~.
         </emu-alg>
@@ -50353,11 +50366,12 @@ THH:mm:ss.sss
           1. Assert: _state_ is either ~suspended-start~ or ~suspended-yield~.
           1. Let _genContext_ be _generator_.[[GeneratorContext]].
           1. Let _methodContext_ be the running execution context.
-          1. Suspend _methodContext_.
           1. Set _generator_.[[GeneratorState]] to ~executing~.
           1. Push _genContext_ onto the execution context stack; _genContext_ is now the running execution context.
-          1. <emu-meta effects="user-code">Resume the suspended evaluation of _genContext_</emu-meta> using NormalCompletion(_value_) as the result of the operation that suspended it. Let _result_ be the value returned by the resumed computation.
-          1. Assert: When we return here, _genContext_ has already been removed from the execution context stack and _methodContext_ is the currently running execution context.
+          1. Transfer control from _methodContext_ to _genContext_, passing NormalCompletion(_value_).
+          1. NOTE: This step is reached only when control is transferred back to _methodContext_, which might not happen.
+          1. Let _result_ be the Completion Record passed when control was transferred back to _methodContext_.
+          1. Assert: _genContext_ has already been removed from the execution context stack and _methodContext_ is the running execution context.
           1. Return ? _result_.
         </emu-alg>
       </emu-clause>
@@ -50376,7 +50390,7 @@ THH:mm:ss.sss
           1. Let _state_ be ? GeneratorValidate(_generator_, _generatorBrand_).
           1. If _state_ is ~suspended-start~, then
             1. Set _generator_.[[GeneratorState]] to ~completed~.
-            1. NOTE: Once a generator enters the ~completed~ state it never leaves it and its associated execution context is never resumed. Any execution state associated with _generator_ can be discarded at this point.
+            1. NOTE: Once a generator enters the ~completed~ state it never leaves it and there is never again a transfer of control to its associated execution context. Any execution state associated with _generator_ can be discarded at this point.
             1. Set _state_ to ~completed~.
           1. If _state_ is ~completed~, then
             1. If _abruptCompletion_ is a return completion, then
@@ -50385,11 +50399,12 @@ THH:mm:ss.sss
           1. Assert: _state_ is ~suspended-yield~.
           1. Let _genContext_ be _generator_.[[GeneratorContext]].
           1. Let _methodContext_ be the running execution context.
-          1. Suspend _methodContext_.
           1. Set _generator_.[[GeneratorState]] to ~executing~.
           1. Push _genContext_ onto the execution context stack; _genContext_ is now the running execution context.
-          1. <emu-meta effects="user-code">Resume the suspended evaluation of _genContext_</emu-meta> using _abruptCompletion_ as the result of the operation that suspended it. Let _result_ be the Completion Record returned by the resumed computation.
-          1. Assert: When we return here, _genContext_ has already been removed from the execution context stack and _methodContext_ is the currently running execution context.
+          1. Transfer control from _methodContext_ to _genContext_, passing _abruptCompletion_.
+          1. NOTE: This step is reached only when control is transferred back to _methodContext_, which might not happen.
+          1. Let _result_ be the Completion Record passed when control was transferred back to _methodContext_.
+          1. Assert: _genContext_ has already been removed from the execution context stack and _methodContext_ is the running execution context.
           1. Return ? _result_.
         </emu-alg>
       </emu-clause>
@@ -50423,10 +50438,12 @@ THH:mm:ss.sss
           1. Let _generator_ be the value of the Generator component of _genContext_.
           1. Assert: GetGeneratorKind() is ~sync~.
           1. Set _generator_.[[GeneratorState]] to ~suspended-yield~.
-          1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+          1. Remove _genContext_ from the execution context stack.
           1. Let _callerContext_ be the running execution context.
-          1. Resume _callerContext_ passing NormalCompletion(_iteratorResult_). If _genContext_ is ever resumed again, let _resumptionValue_ be the Completion Record with which it is resumed.
-          1. Assert: If control reaches here, then _genContext_ is the running execution context again.
+          1. Transfer control from _genContext_ to _callerContext_, passing NormalCompletion(_iteratorResult_).
+          1. NOTE: This step is reached only when control is transferred back to _genContext_, which might not happen.
+          1. Let _resumptionValue_ be the Completion Record passed when control was transferred back to _genContext_.
+          1. Assert: _genContext_ is the running execution context again.
           1. Return _resumptionValue_.
         </emu-alg>
       </emu-clause>
@@ -50469,10 +50486,10 @@ THH:mm:ss.sss
           1. Set the Function of _calleeContext_ to *null*.
           1. Set the Realm of _calleeContext_ to the current Realm Record.
           1. Set the ScriptOrModule of _calleeContext_ to _callerContext_'s ScriptOrModule.
-          1. If _callerContext_ is not already suspended, suspend _callerContext_.
           1. Push _calleeContext_ onto the execution context stack; _calleeContext_ is now the running execution context.
           1. Perform GeneratorStart(_generator_, _closure_).
-          1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+          1. Remove _calleeContext_ from the execution context stack.
+          1. Assert: _callerContext_ is the running execution context again.
           1. Return _generator_.
         </emu-alg>
       </emu-clause>
@@ -50664,14 +50681,17 @@ THH:mm:ss.sss
               1. Assert: _generatorBody_ is an Abstract Closure with no parameters.
               1. Let _result_ be Completion(_generatorBody_()).
             1. Assert: If we return here, the async generator either threw an exception or performed either an implicit or explicit return.
-            1. Remove _acGenContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Remove _acGenContext_ from the execution context stack.
             1. Set _acGenerator_.[[AsyncGeneratorState]] to ~draining-queue~.
             1. If _result_ is a normal completion, set _result_ to NormalCompletion(*undefined*).
             1. If _result_ is a return completion, set _result_ to NormalCompletion(_result_.[[Value]]).
             1. Perform AsyncGeneratorCompleteStep(_acGenerator_, _result_, *true*).
             1. Perform AsyncGeneratorDrainQueue(_acGenerator_).
-            1. Return NormalCompletion(*undefined*).
-          1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
+            1. Let _callerContext_ be the running execution context.
+            1. Transfer control from _acGenContext_ to _callerContext_, passing NormalCompletion(*undefined*).
+            1. NOTE: This step is never reached, because control is never transferred back to _acGenContext_.
+          1. Set _genContext_'s code evaluation state to _closure_.
+          1. NOTE: The next time there is a transfer of control to _genContext_, _closure_ will be called with no arguments.
           1. Set _generator_.[[AsyncGeneratorContext]] to _genContext_.
           1. Set _generator_.[[AsyncGeneratorQueue]] to a new empty List.
           1. Return ~unused~.
@@ -50759,12 +50779,13 @@ THH:mm:ss.sss
           1. Assert: _generator_.[[AsyncGeneratorState]] is either ~suspended-start~ or ~suspended-yield~.
           1. Let _genContext_ be _generator_.[[AsyncGeneratorContext]].
           1. Let _callerContext_ be the running execution context.
-          1. Suspend _callerContext_.
           1. Set _generator_.[[AsyncGeneratorState]] to ~executing~.
           1. Push _genContext_ onto the execution context stack; _genContext_ is now the running execution context.
-          1. <emu-meta effects="user-code">Resume the suspended evaluation of _genContext_</emu-meta> using _completion_ as the result of the operation that suspended it. Let _result_ be the Completion Record returned by the resumed computation.
+          1. Transfer control from _callerContext_ to _genContext_, passing _completion_.
+          1. NOTE: This step is reached only when control is transferred back to _callerContext_, which might not happen.
+          1. Let _result_ be the Completion Record passed when control was transferred back to _callerContext_.
           1. Assert: _result_ is never an abrupt completion.
-          1. Assert: When we return here, _genContext_ has already been removed from the execution context stack and _callerContext_ is the currently running execution context.
+          1. Assert: _genContext_ has already been removed from the execution context stack and _callerContext_ is the running execution context.
           1. Return ~unused~.
         </emu-alg>
       </emu-clause>
@@ -50812,10 +50833,12 @@ THH:mm:ss.sss
             1. Return ? AsyncGeneratorUnwrapYieldResumption(_resumptionValue_).
           1. Else,
             1. Set _generator_.[[AsyncGeneratorState]] to ~suspended-yield~.
-            1. Remove _genContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Remove _genContext_ from the execution context stack.
             1. Let _callerContext_ be the running execution context.
-            1. Resume _callerContext_ passing *undefined*. If _genContext_ is ever resumed again, let _resumptionValue_ be the Completion Record with which it is resumed.
-            1. Assert: If control reaches here, then _genContext_ is the running execution context again.
+            1. Transfer control from _genContext_ to _callerContext_, passing NormalCompletion(*undefined*).
+            1. NOTE: This step is reached only when control is transferred back to _genContext_, which might not happen.
+            1. Let _resumptionValue_ be the Completion Record passed when control was transferred back to _genContext_.
+            1. Assert: _genContext_ is the running execution context again.
             1. Return ? AsyncGeneratorUnwrapYieldResumption(_resumptionValue_).
         </emu-alg>
       </emu-clause>
@@ -51000,7 +51023,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _runningContext_ be the running execution context.
           1. Let _asyncContext_ be a copy of _runningContext_.
-          1. NOTE: Copying the execution state is required for AsyncBlockStart to resume its execution. It is ill-defined to resume a currently executing context.
+          1. NOTE: Copying is required because AsyncFunctionStart has different roles for _asyncContext_ and _runningContext_ that cannot (easily) be filled by a single execution context.
           1. Perform AsyncBlockStart(_promiseCapability_, _asyncFunctionBody_, _asyncContext_).
           1. Return ~unused~.
         </emu-alg>
@@ -51026,7 +51049,7 @@ THH:mm:ss.sss
               1. Assert: _asyncBody_ is an Abstract Closure with no parameters.
               1. Let _result_ be Completion(_asyncBody_()).
             1. Assert: If we return here, the async function either threw an exception or performed an implicit or explicit return; all awaiting is done.
-            1. Remove _acAsyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+            1. Remove _acAsyncContext_ from the execution context stack.
             1. If _result_ is a normal completion, then
               1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « *undefined* »).
             1. Else if _result_ is a return completion, then
@@ -51034,11 +51057,16 @@ THH:mm:ss.sss
             1. Else,
               1. Assert: _result_ is a throw completion.
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _result_.[[Value]] »).
-            1. [id="step-asyncblockstart-return-undefined"] Return NormalCompletion(~unused~).
-          1. Set the code evaluation state of _asyncContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
+            1. Let _callerContext_ be the running execution context.
+            1. [id="step-asyncblockstart-return-undefined"] Transfer control from _acAsyncContext_ to _callerContext_, passing NormalCompletion(~unused~).
+            1. NOTE: This step is never reached, because control is never transferred back to _acAsyncContext_.
+          1. Set _asyncContext_'s code evaluation state to _closure_.
+          1. NOTE: The next time there is a transfer of control to _asyncContext_, _closure_ will be called with no arguments.
           1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
-          1. <emu-meta effects="user-code">Resume the suspended evaluation of _asyncContext_</emu-meta>. Let _result_ be the value returned by the resumed computation.
-          1. Assert: When we return here, _asyncContext_ has already been removed from the execution context stack and _runningContext_ is the currently running execution context.
+          1. Transfer control from _runningContext_ to _asyncContext_, passing NormalCompletion(~unused~).
+          1. NOTE: This step is reached only when control is transferred back to _runningContext_, which might not happen.
+          1. Let _result_ be the Completion Record passed when control was transferred back to _runningContext_.
+          1. Assert: _asyncContext_ has already been removed from the execution context stack and _runningContext_ is the running execution context.
           1. Assert: _result_ is a normal completion with a value of ~unused~. The possible sources of this value are Await or, if the async function doesn't await anything, step <emu-xref href="#step-asyncblockstart-return-undefined"></emu-xref> above.
           1. Return ~unused~.
         </emu-alg>
@@ -51057,25 +51085,27 @@ THH:mm:ss.sss
           1. Let _promise_ be ? PromiseResolve(%Promise%, _value_).
           1. Let _fulfilledClosure_ be a new Abstract Closure with parameters (_v_) that captures _asyncContext_ and performs the following steps when called:
             1. Let _prevContext_ be the running execution context.
-            1. Suspend _prevContext_.
             1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
-            1. <emu-meta effects="user-code">Resume the suspended evaluation of _asyncContext_</emu-meta> using NormalCompletion(_v_) as the result of the operation that suspended it.
-            1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
+            1. Transfer control from _prevContext_ to _asyncContext_, passing NormalCompletion(_v_).
+            1. NOTE: This step is reached only when control is transferred back to _prevContext_, which might not happen.
+            1. Assert: _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the running execution context.
             1. Return NormalCompletion(*undefined*).
           1. Let _onFulfilled_ be CreateBuiltinFunction(_fulfilledClosure_, 1, *""*, « »).
           1. Let _rejectedClosure_ be a new Abstract Closure with parameters (_reason_) that captures _asyncContext_ and performs the following steps when called:
             1. Let _prevContext_ be the running execution context.
-            1. Suspend _prevContext_.
             1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
-            1. <emu-meta effects="user-code">Resume the suspended evaluation of _asyncContext_</emu-meta> using ThrowCompletion(_reason_) as the result of the operation that suspended it.
-            1. Assert: When we reach this step, _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the currently running execution context.
+            1. Transfer control from _prevContext_ to _asyncContext_, passing ThrowCompletion(_reason_).
+            1. NOTE: This step is reached only when control is transferred back to _prevContext_, which might not happen.
+            1. Assert: _asyncContext_ has already been removed from the execution context stack and _prevContext_ is the running execution context.
             1. Return NormalCompletion(*undefined*).
           1. Let _onRejected_ be CreateBuiltinFunction(_rejectedClosure_, 1, *""*, « »).
           1. Perform PerformPromiseThen(_promise_, _onFulfilled_, _onRejected_).
-          1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
+          1. Remove _asyncContext_ from the execution context stack.
           1. Let _callerContext_ be the running execution context.
-          1. Resume _callerContext_ passing ~empty~. If _asyncContext_ is ever resumed again, let _completion_ be the Completion Record with which it is resumed.
-          1. Assert: If control reaches here, then _asyncContext_ is the running execution context again.
+          1. Transfer control from _asyncContext_ to _callerContext_, passing NormalCompletion(~empty~).
+          1. NOTE: This step is reached only when control is transferred back to _asyncContext_, which might not happen.
+          1. Let _completion_ be the Completion Record passed when control was transferred back to _asyncContext_.
+          1. Assert: _asyncContext_ is the running execution context again.
           1. Return _completion_.
         </emu-alg>
       </emu-clause>
