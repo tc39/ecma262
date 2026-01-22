@@ -671,6 +671,7 @@
       <p>The <em>syntactic grammar</em> for ECMAScript is given in clauses <emu-xref href="#sec-ecmascript-language-expressions"></emu-xref> through <emu-xref href="#sec-ecmascript-language-scripts-and-modules"></emu-xref>. This grammar has ECMAScript tokens defined by the lexical grammar as its terminal symbols (<emu-xref href="#sec-lexical-and-regexp-grammars"></emu-xref>). It defines a set of productions, starting from two alternative goal symbols |Script| and |Module|, that describe how sequences of tokens form syntactically correct independent components of ECMAScript programs.</p>
       <p>When a stream of code points is to be parsed as an ECMAScript |Script| or |Module|, it is first converted to a stream of input elements by repeated application of the lexical grammar; this stream of input elements is then parsed by a single application of the syntactic grammar. The input stream is syntactically in error if the tokens in the stream of input elements cannot be parsed as a single instance of the goal nonterminal (|Script| or |Module|), with no tokens left over.</p>
       <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn variants="Parse Nodes">Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol.</p>
+      <p>The <dfn oldids="sec-static-semantics-sourcetext">source text matched by</dfn> a Parse Node is the portion of the source text that starts at the beginning of the first terminal that participated in the match and ends at the end of the last terminal that participated in the match.</p>
       <p>New Parse Nodes are instantiated for each invocation of the parser and never reused between parses even of identical source text. Parse Nodes are considered <dfn>the same Parse Node</dfn> if and only if they represent the same span of source text, are instances of the same grammar symbol, and resulted from the same parser invocation.</p>
       <emu-note>
         <p>Parsing the same String multiple times will lead to different Parse Nodes. For example, consider:</p>
@@ -1022,26 +1023,51 @@
 
     <emu-clause id="sec-algorithm-conventions-syntax-directed-operations">
       <h1>Syntax-Directed Operations</h1>
-      <p>A <dfn variants="syntax-directed operations">syntax-directed operation</dfn> is a named operation whose definition consists of algorithms, each of which is associated with one or more productions from one of the ECMAScript grammars. A production that has multiple alternative definitions will typically have a distinct algorithm for each alternative. When an algorithm is associated with a grammar production, it may reference the terminal and nonterminal symbols of the production alternative as if they were parameters of the algorithm. When used in this manner, nonterminal symbols refer to the actual alternative definition that is matched when parsing the source text. The <dfn oldids="sec-static-semantics-sourcetext">source text matched by</dfn> a grammar production or Parse Node derived from it is the portion of the source text that starts at the beginning of the first terminal that participated in the match and ends at the end of the last terminal that participated in the match.</p>
+      <p>A <dfn variants="syntax-directed operations">syntax-directed operation</dfn> is a named operation whose definition consists of algorithms, each of which is associated with one or more productions from one of the ECMAScript grammars. A production that has multiple alternative definitions will typically have a distinct algorithm for each alternative.</p>
       <p>When an algorithm is associated with a production alternative, the alternative is typically shown without any “[ ]” grammar annotations. Such annotations should only affect the syntactic recognition of the alternative and have no effect on the associated semantics for the alternative.</p>
-      <p>Syntax-directed operations are invoked with a parse node and, optionally, other parameters by using the conventions on steps <emu-xref href="#step-sdo-invocation-example-1"></emu-xref>, <emu-xref href="#step-sdo-invocation-example-2"></emu-xref>, and <emu-xref href="#step-sdo-invocation-example-3"></emu-xref> in the following algorithm:</p>
-      <emu-alg example>
-        1. [id="step-sdo-invocation-example-1"] Let _status_ be SyntaxDirectedOperation of |SomeNonTerminal|.
-        1. Let _someParseNode_ be the parse of some source text.
-        1. [id="step-sdo-invocation-example-2"] Perform SyntaxDirectedOperation of _someParseNode_.
-        1. [id="step-sdo-invocation-example-3"] Perform SyntaxDirectedOperation of _someParseNode_ with argument *"value"*.
-      </emu-alg>
-      <p>Unless explicitly specified otherwise, all chain productions have an implicit definition for every operation that might be applied to that production's left-hand side nonterminal. The implicit definition simply reapplies the same operation with the same parameters, if any, to the chain production's sole right-hand side nonterminal and then returns the result. For example, assume that some algorithm has a step of the form: “Return Evaluation of |Block|” and that there is a production:</p>
-      <emu-grammar example>
-        Block :
-          `{` StatementList `}`
-      </emu-grammar>
-      <p>but the Evaluation operation does not associate an algorithm with that production. In that case, the Evaluation operation implicitly includes an association of the form:</p>
-      <p><b>Runtime Semantics: Evaluation</b></p>
-      <emu-grammar example>Block : `{` StatementList `}`</emu-grammar>
-      <emu-alg example>
-        1. Return Evaluation of |StatementList|.
-      </emu-alg>
+
+      <emu-clause id="sec-invoking-syntax-directed-operations">
+        <h1>Invoking Syntax-Directed Operations</h1>
+        <p>Syntax-directed operations are invoked with a Parse Node (referred to below as “the subject Parse Node”) and, optionally, other parameters. Invocations use the conventions on steps <emu-xref href="#step-sdo-invocation-example-1"></emu-xref>, <emu-xref href="#step-sdo-invocation-example-2"></emu-xref>, and <emu-xref href="#step-sdo-invocation-example-3"></emu-xref> in the following algorithm:</p>
+        <emu-alg example>
+          1. [id="step-sdo-invocation-example-1"] Let _status_ be SyntaxDirectedOperation of |SomeNonTerminal|.
+          1. Let _someParseNode_ be the parse of some source text.
+          1. [id="step-sdo-invocation-example-2"] Perform SyntaxDirectedOperation of _someParseNode_.
+          1. [id="step-sdo-invocation-example-3"] Perform SyntaxDirectedOperation of _someParseNode_ with argument *"value"*.
+        </emu-alg>
+        <p>Regardless of the convention, the invocation causes the execution of the algorithm that the syntax-directed operation associates (either explicitly or implicitly, see <emu-xref href="#sec-implicit-definitions-for-chain-productions"></emu-xref>) with the subject Parse Node's production. Thus, within any algorithm of the syntax-directed operation, the subject Parse Node is necessarily an instance of one of the production(s) associated with that algorithm.</p>
+      </emu-clause>
+
+      <emu-clause id="sec-referring-to-parse-nodes">
+        <h1>Referring to Parse Nodes</h1>
+        <p>Although a syntax-directed operation is always invoked with a Parse Node, the heading for a syntax-directed operation does not declare a parameter to receive it. Instead, each definition uses various phrases to refer to the subject Parse Node and its children, depending on the production(s) associated with that definition. The general idea is that the algorithm refers to nonterminals in the associated production(s), and thereby refers to the Parse Nodes that correspond to those nonterminals for a particular invocation.</p>
+        <p>To refer to the subject Parse Node:</p>
+        <ul>
+          <li>If all of the associated productions have the same left-hand side nonterminal, then that nonterminal is used with “this” (e.g., “this |ExportDeclaration|”).</li>
+          <li>Otherwise, “this Parse Node” is used.</li>
+        </ul>
+        <p>To refer to the children of the subject Parse Node: In practice, algorithms only reference children that are instances of nonterminals.</p>
+        <ul>
+          <li>If each associated production has exactly one right-hand occurrence of the nonterminal, then the algorithm can refer to it with “the” or without a prefix (e.g., “the |StatementList|” or “|StatementList|”). If the same nonterminal also appears on the LHS of the production, the algorithm can also use “the derived” (e.g., “the derived |UnaryExpression|”) to emphasize a reference to the right-hand nonterminal.</li>
+          <li>If a production has multiple right-hand occurrences of the nonterminal, they are distinguished by ordinals (e.g., “the first |DecimalDigits|” or “the fourth |HexDigit|”).</li>
+          <li>If a production has an optional nonterminal (e.g., “|StatementList?|”), the algorithm must check if the corresponding Parse Node is present before using it (e.g., “If the |StatementList| is present, return VarDeclaredNames of |StatementList|.”)</li>
+        </ul>
+      </emu-clause>
+
+      <emu-clause id="sec-implicit-definitions-for-chain-productions">
+        <h1>Implicit Definitions for Chain Productions</h1>
+        <p>Unless explicitly specified otherwise, all chain productions have an implicit definition for every operation that might be applied to that production's left-hand side nonterminal. The implicit definition simply reapplies the same operation with the same parameters, if any, to the chain production's sole right-hand side nonterminal and then returns the result. For example, assume that some algorithm has a step of the form: “Return Evaluation of |Block|” and that there is a production:</p>
+        <emu-grammar example>
+          Block :
+            `{` StatementList `}`
+        </emu-grammar>
+        <p>but the Evaluation operation does not associate an algorithm with that production. In that case, the Evaluation operation implicitly includes an association of the form:</p>
+        <p><b>Runtime Semantics: Evaluation</b></p>
+        <emu-grammar example>Block : `{` StatementList `}`</emu-grammar>
+        <emu-alg example>
+          1. Return Evaluation of |StatementList|.
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-runtime-semantics">
@@ -1160,6 +1186,7 @@
       <p>Context-free grammars are not sufficiently powerful to express all the rules that define whether a stream of input elements form a valid ECMAScript |Script| or |Module| that may be evaluated. In some situations additional rules are needed that may be expressed using either ECMAScript algorithm conventions or prose requirements. Such rules are always associated with a production of a grammar and are called the <dfn>static semantics</dfn> of the production.</p>
       <p>Static Semantic Rules have names and typically are defined using an algorithm. Named Static Semantic Rules are associated with grammar productions and a production that has multiple alternative definitions will typically have for each alternative a distinct algorithm for each applicable named static semantic rule.</p>
       <p>A special kind of static semantic rule is an <dfn id="early-error-rule">Early Error Rule</dfn>. Early error rules define early error conditions (see clause <emu-xref href="#sec-error-handling-and-language-extensions"></emu-xref>) that are associated with specific grammar productions. Evaluation of most early error rules are not explicitly invoked within the algorithms of this specification. A conforming implementation must, prior to the first evaluation of a |Script| or |Module|, validate all of the early error rules of the productions used to parse that |Script| or |Module|. If any of the early error rules are violated the |Script| or |Module| is invalid and cannot be evaluated.</p>
+      <p>Each early error rule is associated with one or more productions, similar to the definitions of a syntax-directed operation. It can refer to the subject Parse Node and its children using the phrases outlined in <emu-xref href="#sec-referring-to-parse-nodes"></emu-xref>.</p>
     </emu-clause>
 
     <emu-clause id="sec-mathematical-operations">
@@ -7518,7 +7545,7 @@
         CoverCallExpressionAndAsyncArrowHead : MemberExpression Arguments
       </emu-grammar>
       <emu-alg>
-        1. Let _head_ be the |AsyncArrowHead| that is covered by |CoverCallExpressionAndAsyncArrowHead|.
+        1. Let _head_ be the |AsyncArrowHead| that is covered by this |CoverCallExpressionAndAsyncArrowHead|.
         1. Return the BoundNames of _head_.
       </emu-alg>
       <emu-grammar>ImportDeclaration : `import` ImportClause FromClause WithClause? `;`</emu-grammar>
@@ -9324,27 +9351,27 @@
       </emu-alg>
       <emu-grammar>FunctionExpression : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
-        1. Return InstantiateOrdinaryFunctionExpression of |FunctionExpression| with argument _name_.
+        1. Return InstantiateOrdinaryFunctionExpression of this |FunctionExpression| with argument _name_.
       </emu-alg>
       <emu-grammar>GeneratorExpression : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
-        1. Return InstantiateGeneratorFunctionExpression of |GeneratorExpression| with argument _name_.
+        1. Return InstantiateGeneratorFunctionExpression of this |GeneratorExpression| with argument _name_.
       </emu-alg>
       <emu-grammar>
         AsyncGeneratorExpression : `async` `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateAsyncGeneratorFunctionExpression of |AsyncGeneratorExpression| with argument _name_.
+        1. Return InstantiateAsyncGeneratorFunctionExpression of this |AsyncGeneratorExpression| with argument _name_.
       </emu-alg>
       <emu-grammar>
         AsyncFunctionExpression : `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateAsyncFunctionExpression of |AsyncFunctionExpression| with argument _name_.
+        1. Return InstantiateAsyncFunctionExpression of this |AsyncFunctionExpression| with argument _name_.
       </emu-alg>
       <emu-grammar>ArrowFunction : ArrowParameters `=>` ConciseBody</emu-grammar>
       <emu-alg>
-        1. Return InstantiateArrowFunctionExpression of |ArrowFunction| with argument _name_.
+        1. Return InstantiateArrowFunctionExpression of this |ArrowFunction| with argument _name_.
       </emu-alg>
       <emu-grammar>
         AsyncArrowFunction :
@@ -9352,11 +9379,11 @@
           CoverCallExpressionAndAsyncArrowHead `=>` AsyncConciseBody
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateAsyncArrowFunctionExpression of |AsyncArrowFunction| with argument _name_.
+        1. Return InstantiateAsyncArrowFunctionExpression of this |AsyncArrowFunction| with argument _name_.
       </emu-alg>
       <emu-grammar>ClassExpression : `class` ClassTail</emu-grammar>
       <emu-alg>
-        1. Let _sourceText_ be the source text matched by |ClassExpression|.
+        1. Let _sourceText_ be the source text matched by this |ClassExpression|.
         1. Return ? ClassDefinitionEvaluation of |ClassTail| with arguments *undefined*, _name_, and _sourceText_.
       </emu-alg>
     </emu-clause>
@@ -9586,7 +9613,7 @@
           `function` `(` FormalParameters `)` `{` FunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateOrdinaryFunctionObject of |FunctionDeclaration| with arguments _env_ and _privateEnv_.
+        1. Return InstantiateOrdinaryFunctionObject of this |FunctionDeclaration| with arguments _env_ and _privateEnv_.
       </emu-alg>
       <emu-grammar>
         GeneratorDeclaration :
@@ -9594,7 +9621,7 @@
           `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateGeneratorFunctionObject of |GeneratorDeclaration| with arguments _env_ and _privateEnv_.
+        1. Return InstantiateGeneratorFunctionObject of this |GeneratorDeclaration| with arguments _env_ and _privateEnv_.
       </emu-alg>
       <emu-grammar>
         AsyncGeneratorDeclaration :
@@ -9602,7 +9629,7 @@
           `async` `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateAsyncGeneratorFunctionObject of |AsyncGeneratorDeclaration| with arguments _env_ and _privateEnv_.
+        1. Return InstantiateAsyncGeneratorFunctionObject of this |AsyncGeneratorDeclaration| with arguments _env_ and _privateEnv_.
       </emu-alg>
       <emu-grammar>
         AsyncFunctionDeclaration :
@@ -9610,7 +9637,7 @@
           `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateAsyncFunctionObject of |AsyncFunctionDeclaration| with arguments _env_ and _privateEnv_.
+        1. Return InstantiateAsyncFunctionObject of this |AsyncFunctionDeclaration| with arguments _env_ and _privateEnv_.
       </emu-alg>
     </emu-clause>
 
@@ -13399,33 +13426,33 @@
         </dl>
         <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
         <emu-alg>
-          1. Return ? EvaluateFunctionBody of |FunctionBody| with arguments _functionObject_ and _argumentsList_.
+          1. Return ? EvaluateFunctionBody of this |FunctionBody| with arguments _functionObject_ and _argumentsList_.
         </emu-alg>
         <emu-grammar>ConciseBody : ExpressionBody</emu-grammar>
         <emu-alg>
-          1. Return ? EvaluateConciseBody of |ConciseBody| with arguments _functionObject_ and _argumentsList_.
+          1. Return ? EvaluateConciseBody of this |ConciseBody| with arguments _functionObject_ and _argumentsList_.
         </emu-alg>
         <emu-grammar>GeneratorBody : FunctionBody</emu-grammar>
         <emu-alg>
-          1. Return ? EvaluateGeneratorBody of |GeneratorBody| with arguments _functionObject_ and _argumentsList_.
+          1. Return ? EvaluateGeneratorBody of this |GeneratorBody| with arguments _functionObject_ and _argumentsList_.
         </emu-alg>
         <emu-grammar>
           AsyncGeneratorBody : FunctionBody
         </emu-grammar>
         <emu-alg>
-          1. Return ? EvaluateAsyncGeneratorBody of |AsyncGeneratorBody| with arguments _functionObject_ and _argumentsList_.
+          1. Return ? EvaluateAsyncGeneratorBody of this |AsyncGeneratorBody| with arguments _functionObject_ and _argumentsList_.
         </emu-alg>
         <emu-grammar>
           AsyncFunctionBody : FunctionBody
         </emu-grammar>
         <emu-alg>
-          1. Return ? EvaluateAsyncFunctionBody of |AsyncFunctionBody| with arguments _functionObject_ and _argumentsList_.
+          1. Return ? EvaluateAsyncFunctionBody of this |AsyncFunctionBody| with arguments _functionObject_ and _argumentsList_.
         </emu-alg>
         <emu-grammar>
           AsyncConciseBody : ExpressionBody
         </emu-grammar>
         <emu-alg>
-          1. Return ? EvaluateAsyncConciseBody of |AsyncConciseBody| with arguments _functionObject_ and _argumentsList_.
+          1. Return ? EvaluateAsyncConciseBody of this |AsyncConciseBody| with arguments _functionObject_ and _argumentsList_.
         </emu-alg>
         <emu-grammar>
           Initializer :
@@ -13435,7 +13462,7 @@
           1. Assert: _argumentsList_ is empty.
           1. Assert: _functionObject_.[[ClassFieldInitializerName]] is not ~empty~.
           1. If IsAnonymousFunctionDefinition(|AssignmentExpression|) is *true*, then
-            1. Let _value_ be ? NamedEvaluation of |Initializer| with argument _functionObject_.[[ClassFieldInitializerName]].
+            1. Let _value_ be ? NamedEvaluation of this |Initializer| with argument _functionObject_.[[ClassFieldInitializerName]].
           1. Else,
             1. Let _rhs_ be ? Evaluation of |AssignmentExpression|.
             1. Let _value_ be ? GetValue(_rhs_).
@@ -13449,7 +13476,7 @@
         </emu-grammar>
         <emu-alg>
           1. Assert: _argumentsList_ is empty.
-          1. Return ? EvaluateClassStaticBlockBody of |ClassStaticBlockBody| with argument _functionObject_.
+          1. Return ? EvaluateClassStaticBlockBody of this |ClassStaticBlockBody| with argument _functionObject_.
         </emu-alg>
       </emu-clause>
 
@@ -17019,7 +17046,7 @@
           DecimalIntegerLiteral :: NonOctalDecimalIntegerLiteral
         </emu-grammar>
         <ul>
-          <li>It is a Syntax Error if IsStrict(this production) is *true*.</li>
+          <li>It is a Syntax Error if IsStrict(this Parse Node) is *true*.</li>
         </ul>
         <emu-note>In non-strict code, this syntax is Legacy.</emu-note>
       </emu-clause>
@@ -17286,7 +17313,7 @@
             NonOctalDecimalEscapeSequence
         </emu-grammar>
         <ul>
-          <li>It is a Syntax Error if IsStrict(this production) is *true*.</li>
+          <li>It is a Syntax Error if IsStrict(this |EscapeSequence|) is *true*.</li>
         </ul>
         <emu-note>In non-strict code, this syntax is Legacy.</emu-note>
         <emu-note>
@@ -17509,10 +17536,10 @@
             The SV of <emu-grammar>NonOctalDecimalEscapeSequence :: `9`</emu-grammar> is the String value consisting of the code unit 0x0039 (DIGIT NINE).
           </li>
           <li>
-            The SV of <emu-grammar>HexEscapeSequence :: `x` HexDigit HexDigit</emu-grammar> is the String value consisting of the code unit whose numeric value is the MV of |HexEscapeSequence|.
+            The SV of <emu-grammar>HexEscapeSequence :: `x` HexDigit HexDigit</emu-grammar> is the String value consisting of the code unit whose numeric value is the MV of this |HexEscapeSequence|.
           </li>
           <li>
-            The SV of <emu-grammar>Hex4Digits :: HexDigit HexDigit HexDigit HexDigit</emu-grammar> is the String value consisting of the code unit whose numeric value is the MV of |Hex4Digits|.
+            The SV of <emu-grammar>Hex4Digits :: HexDigit HexDigit HexDigit HexDigit</emu-grammar> is the String value consisting of the code unit whose numeric value is the MV of this |Hex4Digits|.
           </li>
           <li>
             The SV of <emu-grammar>UnicodeEscapeSequence :: `u{` CodePoint `}`</emu-grammar> is the result of performing UTF16EncodeCodePoint on the MV of |CodePoint|.
@@ -18145,7 +18172,7 @@
       <emu-grammar>BindingIdentifier : Identifier</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if IsStrict(this production) is *true* and the StringValue of |Identifier| is either *"arguments"* or *"eval"*.
+          It is a Syntax Error if IsStrict(this |BindingIdentifier|) is *true* and the StringValue of |Identifier| is either *"arguments"* or *"eval"*.
         </li>
       </ul>
       <emu-grammar>
@@ -18157,7 +18184,7 @@
       </emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if IsStrict(this production) is *true*.
+          It is a Syntax Error if IsStrict(this Parse Node) is *true*.
         </li>
       </ul>
       <emu-grammar>
@@ -18206,7 +18233,7 @@
       <emu-grammar>Identifier : IdentifierName but not ReservedWord</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if IsStrict(this phrase) is *true* and the StringValue of |IdentifierName| is one of *"implements"*, *"interface"*, *"let"*, *"package"*, *"private"*, *"protected"*, *"public"*, *"static"*, or *"yield"*.
+          It is a Syntax Error if IsStrict(this |Identifier|) is *true* and the StringValue of |IdentifierName| is one of *"implements"*, *"interface"*, *"let"*, *"package"*, *"private"*, *"protected"*, *"public"*, *"static"*, or *"yield"*.
         </li>
         <li>
           It is a Syntax Error if the goal symbol of the syntactic grammar is |Module| and the StringValue of |IdentifierName| is *"await"*.
@@ -18230,7 +18257,7 @@
           IdentifierName IdentifierPart
       </emu-grammar>
       <emu-alg>
-        1. Let _idTextUnescaped_ be the IdentifierCodePoints of |IdentifierName|.
+        1. Let _idTextUnescaped_ be the IdentifierCodePoints of this |IdentifierName|.
         1. Return CodePointsToString(_idTextUnescaped_).
       </emu-alg>
       <emu-grammar>
@@ -18815,7 +18842,7 @@
         </emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the number of elements in the TemplateStrings of |TemplateLiteral| with argument *false* is greater than or equal to 2<sup>32</sup>.
+            It is a Syntax Error if the number of elements in the TemplateStrings of this |TemplateLiteral| with argument *false* is greater than or equal to 2<sup>32</sup>.
           </li>
         </ul>
 
@@ -20016,7 +20043,7 @@
         <emu-grammar>UnaryExpression : `delete` UnaryExpression</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if IsStrict(the |UnaryExpression|) is *true* and the derived |UnaryExpression| is <emu-grammar>PrimaryExpression : IdentifierReference</emu-grammar>, <emu-grammar>MemberExpression : MemberExpression `.` PrivateIdentifier</emu-grammar>, <emu-grammar>CallExpression : CallExpression `.` PrivateIdentifier</emu-grammar>, <emu-grammar>OptionalChain : `?.` PrivateIdentifier</emu-grammar>, or <emu-grammar>OptionalChain : OptionalChain `.` PrivateIdentifier</emu-grammar>.
+            It is a Syntax Error if IsStrict(this |UnaryExpression|) is *true* and the derived |UnaryExpression| is <emu-grammar>PrimaryExpression : IdentifierReference</emu-grammar>, <emu-grammar>MemberExpression : MemberExpression `.` PrivateIdentifier</emu-grammar>, <emu-grammar>CallExpression : CallExpression `.` PrivateIdentifier</emu-grammar>, <emu-grammar>OptionalChain : `?.` PrivateIdentifier</emu-grammar>, or <emu-grammar>OptionalChain : OptionalChain `.` PrivateIdentifier</emu-grammar>.
           </li>
           <li>
             <p>
@@ -21364,7 +21391,7 @@
         <li>
           <p>It is a Syntax Error if the LexicallyDeclaredNames of |StatementList| contains any duplicate entries<span normative-optional>, unless the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, and both of the following conditions are true:</span></p>
           <ul normative-optional>
-            <li>IsStrict(this production) is *false*.</li>
+            <li>IsStrict(this |Block|) is *false*.</li>
             <li>The duplicate entries are only bound by FunctionDeclarations.</li>
           </ul>
         </li>
@@ -22473,7 +22500,7 @@
             `await`
         </emu-grammar>
         <emu-alg>
-          1. Let _bindingId_ be the StringValue of |BindingIdentifier|.
+          1. Let _bindingId_ be the StringValue of this |BindingIdentifier|.
           1. Return ? ResolveBinding(_bindingId_).
         </emu-alg>
       </emu-clause>
@@ -22778,7 +22805,7 @@
       <emu-grammar>WithStatement : `with` `(` Expression `)` Statement</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if IsStrict(this production) is *true*.
+          It is a Syntax Error if IsStrict(this |WithStatement|) is *true*.
         </li>
         <li>
           It is a Syntax Error if IsLabelledFunction(|Statement|) is *true*.
@@ -22837,7 +22864,7 @@
         <li>
           <p>It is a Syntax Error if the LexicallyDeclaredNames of |CaseBlock| contains any duplicate entries<span normative-optional>, unless the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, and both of the following conditions are true:</span></p>
           <ul normative-optional>
-            <li>IsStrict(this production) is *false*.</li>
+            <li>IsStrict(this |SwitchStatement|) is *false*.</li>
             <li>The duplicate entries are only bound by FunctionDeclarations.</li>
           </ul>
         </li>
@@ -23080,7 +23107,7 @@
           DebuggerStatement
       </emu-grammar>
       <emu-alg>
-        1. Return ? Evaluation of |Statement|.
+        1. Return ? Evaluation of this |Statement|.
       </emu-alg>
       <emu-note>
         <p>The only two productions of |Statement| which have special semantics for LabelledEvaluation are |BreakableStatement| and |LabelledStatement|.</p>
@@ -23449,7 +23476,7 @@
         CoverCallExpressionAndAsyncArrowHead : MemberExpression Arguments
       </emu-grammar>
       <emu-alg>
-        1. Let _head_ be the |AsyncArrowHead| that is covered by |CoverCallExpressionAndAsyncArrowHead|.
+        1. Let _head_ be the |AsyncArrowHead| that is covered by this |CoverCallExpressionAndAsyncArrowHead|.
         1. Return IsSimpleParameterList of _head_.
       </emu-alg>
     </emu-clause>
@@ -23617,7 +23644,7 @@
       </dl>
       <emu-grammar>FunctionBody : FunctionStatementList</emu-grammar>
       <emu-alg>
-        1. If the Directive Prologue of |FunctionBody| contains a Use Strict Directive, return *true*; otherwise return *false*.
+        1. If the Directive Prologue of this |FunctionBody| contains a Use Strict Directive, return *true*; otherwise return *false*.
       </emu-alg>
     </emu-clause>
 
@@ -23651,7 +23678,7 @@
       <emu-grammar>FunctionDeclaration : `function` BindingIdentifier `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
         1. Let _name_ be the StringValue of |BindingIdentifier|.
-        1. Let _sourceText_ be the source text matched by |FunctionDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |FunctionDeclaration|.
         1. Let _F_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_F_, _name_).
         1. Perform MakeConstructor(_F_).
@@ -23659,7 +23686,7 @@
       </emu-alg>
       <emu-grammar>FunctionDeclaration : `function` `(` FormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
-        1. Let _sourceText_ be the source text matched by |FunctionDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |FunctionDeclaration|.
         1. Let _F_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_F_, *"default"*).
         1. Perform MakeConstructor(_F_).
@@ -23683,7 +23710,7 @@
         1. If _name_ is not present, set _name_ to *""*.
         1. Let _env_ be the LexicalEnvironment of the running execution context.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |FunctionExpression|.
+        1. Let _sourceText_ be the source text matched by this |FunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Perform MakeConstructor(_closure_).
@@ -23697,7 +23724,7 @@
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outerEnv_).
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |FunctionExpression|.
+        1. Let _sourceText_ be the source text matched by this |FunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |FormalParameters|, |FunctionBody|, ~non-lexical-this~, _funcEnv_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Perform MakeConstructor(_closure_).
@@ -23726,7 +23753,7 @@
         FunctionExpression : `function` BindingIdentifier? `(` FormalParameters `)` `{` FunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateOrdinaryFunctionExpression of |FunctionExpression|.
+        1. Return InstantiateOrdinaryFunctionExpression of this |FunctionExpression|.
       </emu-alg>
       <emu-note>
         <p>A *"prototype"* property is automatically created for every function defined using a |FunctionDeclaration| or |FunctionExpression|, to allow for the possibility that the function will be used as a constructor.</p>
@@ -23835,7 +23862,7 @@
         1. If _name_ is not present, set _name_ to *""*.
         1. Let _env_ be the LexicalEnvironment of the running execution context.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |ArrowFunction|.
+        1. Let _sourceText_ be the source text matched by this |ArrowFunction|.
         1. [id="step-arrowfunction-evaluation-functioncreate"] Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |ArrowParameters|, |ConciseBody|, ~lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Return _closure_.
@@ -23849,7 +23876,7 @@
       <h1>Runtime Semantics: Evaluation</h1>
       <emu-grammar>ArrowFunction : ArrowParameters `=>` ConciseBody</emu-grammar>
       <emu-alg>
-        1. Return InstantiateArrowFunctionExpression of |ArrowFunction|.
+        1. Return InstantiateArrowFunctionExpression of this |ArrowFunction|.
       </emu-alg>
       <emu-grammar>ExpressionBody : AssignmentExpression</emu-grammar>
       <emu-alg>
@@ -23977,7 +24004,7 @@
           1. Let _prototype_ be _functionPrototype_.
         1. Else,
           1. Let _prototype_ be %Function.prototype%.
-        1. Let _sourceText_ be the source text matched by |MethodDefinition|.
+        1. Let _sourceText_ be the source text matched by this |MethodDefinition|.
         1. Let _closure_ be OrdinaryFunctionCreate(_prototype_, _sourceText_, |UniqueFormalParameters|, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Return the Record { [[Key]]: _propKey_, [[Closure]]: _closure_ }.
@@ -23995,7 +24022,7 @@
       </dl>
       <emu-grammar>MethodDefinition : ClassElementName `(` UniqueFormalParameters `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
-        1. Let _methodDef_ be ? DefineMethod of |MethodDefinition| with argument _object_.
+        1. Let _methodDef_ be ? DefineMethod of this |MethodDefinition| with argument _object_.
         1. Perform SetFunctionName(_methodDef_.[[Closure]], _methodDef_.[[Key]]).
         1. Return ? DefineMethodProperty(_object_, _methodDef_.[[Key]], _methodDef_.[[Closure]], _enumerable_).
       </emu-alg>
@@ -24004,7 +24031,7 @@
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
         1. Let _env_ be the running execution context's LexicalEnvironment.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |MethodDefinition|.
+        1. Let _sourceText_ be the source text matched by this |MethodDefinition|.
         1. Let _formalParameterList_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, _formalParameterList_, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
@@ -24021,7 +24048,7 @@
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
         1. Let _env_ be the running execution context's LexicalEnvironment.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |MethodDefinition|.
+        1. Let _sourceText_ be the source text matched by this |MethodDefinition|.
         1. Let _closure_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, |PropertySetParameterList|, |FunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_, *"set"*).
@@ -24037,7 +24064,7 @@
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
         1. Let _env_ be the running execution context's LexicalEnvironment.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |GeneratorMethod|.
+        1. Let _sourceText_ be the source text matched by this |GeneratorMethod|.
         1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |GeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_).
@@ -24052,7 +24079,7 @@
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
         1. Let _env_ be the running execution context's LexicalEnvironment.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncGeneratorMethod|.
+        1. Let _sourceText_ be the source text matched by this |AsyncGeneratorMethod|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_).
@@ -24067,7 +24094,7 @@
         1. Let _propKey_ be ? Evaluation of |ClassElementName|.
         1. Let _env_ be the LexicalEnvironment of the running execution context.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncMethod|.
+        1. Let _sourceText_ be the source text matched by this |AsyncMethod|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |UniqueFormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform MakeMethod(_closure_, _object_).
         1. Perform SetFunctionName(_closure_, _propKey_).
@@ -24113,7 +24140,7 @@
       <emu-grammar>GeneratorMethod : `*` ClassElementName `(` UniqueFormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <ul>
         <li>
-          It is a Syntax Error if HasDirectSuper of |GeneratorMethod| is *true*.
+          It is a Syntax Error if HasDirectSuper of this |GeneratorMethod| is *true*.
         </li>
         <li>
           It is a Syntax Error if |UniqueFormalParameters| Contains |YieldExpression| is *true*.
@@ -24196,7 +24223,7 @@
       <emu-grammar>GeneratorDeclaration : `function` `*` BindingIdentifier `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
         1. Let _name_ be the StringValue of |BindingIdentifier|.
-        1. Let _sourceText_ be the source text matched by |GeneratorDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |GeneratorDeclaration|.
         1. Let _F_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_F_, _name_).
         1. Let _prototype_ be OrdinaryObjectCreate(%GeneratorPrototype%).
@@ -24205,7 +24232,7 @@
       </emu-alg>
       <emu-grammar>GeneratorDeclaration : `function` `*` `(` FormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
-        1. Let _sourceText_ be the source text matched by |GeneratorDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |GeneratorDeclaration|.
         1. Let _F_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_F_, *"default"*).
         1. Let _prototype_ be OrdinaryObjectCreate(%GeneratorPrototype%).
@@ -24230,7 +24257,7 @@
         1. If _name_ is not present, set _name_ to *""*.
         1. Let _env_ be the LexicalEnvironment of the running execution context.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |GeneratorExpression|.
+        1. Let _sourceText_ be the source text matched by this |GeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Let _prototype_ be OrdinaryObjectCreate(%GeneratorPrototype%).
@@ -24245,7 +24272,7 @@
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outerEnv_).
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |GeneratorExpression|.
+        1. Let _sourceText_ be the source text matched by this |GeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%GeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |GeneratorBody|, ~non-lexical-this~, _funcEnv_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Let _prototype_ be OrdinaryObjectCreate(%GeneratorPrototype%).
@@ -24264,7 +24291,7 @@
         GeneratorExpression : `function` `*` BindingIdentifier? `(` FormalParameters `)` `{` GeneratorBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateGeneratorFunctionExpression of |GeneratorExpression|.
+        1. Return InstantiateGeneratorFunctionExpression of this |GeneratorExpression|.
       </emu-alg>
       <emu-grammar>YieldExpression : `yield`</emu-grammar>
       <emu-alg>
@@ -24363,7 +24390,7 @@
       <h1>Static Semantics: Early Errors</h1>
       <emu-grammar>AsyncGeneratorMethod : `async` `*` ClassElementName `(` UniqueFormalParameters `)` `{` AsyncGeneratorBody `}`</emu-grammar>
       <ul>
-        <li>It is a Syntax Error if HasDirectSuper of |AsyncGeneratorMethod| is *true*.</li>
+        <li>It is a Syntax Error if HasDirectSuper of this |AsyncGeneratorMethod| is *true*.</li>
         <li>It is a Syntax Error if |UniqueFormalParameters| Contains |YieldExpression| is *true*.</li>
         <li>It is a Syntax Error if |UniqueFormalParameters| Contains |AwaitExpression| is *true*.</li>
         <li>It is a Syntax Error if FunctionBodyContainsUseStrict of |AsyncGeneratorBody| is *true* and IsSimpleParameterList of |UniqueFormalParameters| is *false*.</li>
@@ -24427,7 +24454,7 @@
       </emu-grammar>
       <emu-alg>
         1. Let _name_ be the StringValue of |BindingIdentifier|.
-        1. Let _sourceText_ be the source text matched by |AsyncGeneratorDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |AsyncGeneratorDeclaration|.
         1. Let _F_ be OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_F_, _name_).
         1. Let _prototype_ be OrdinaryObjectCreate(%AsyncGeneratorPrototype%).
@@ -24438,7 +24465,7 @@
         AsyncGeneratorDeclaration : `async` `function` `*` `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Let _sourceText_ be the source text matched by |AsyncGeneratorDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |AsyncGeneratorDeclaration|.
         1. Let _F_ be OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_F_, *"default"*).
         1. Let _prototype_ be OrdinaryObjectCreate(%AsyncGeneratorPrototype%).
@@ -24465,7 +24492,7 @@
         1. If _name_ is not present, set _name_ to *""*.
         1. Let _env_ be the LexicalEnvironment of the running execution context.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncGeneratorExpression|.
+        1. Let _sourceText_ be the source text matched by this |AsyncGeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Let _prototype_ be OrdinaryObjectCreate(%AsyncGeneratorPrototype%).
@@ -24482,7 +24509,7 @@
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outerEnv_).
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncGeneratorExpression|.
+        1. Let _sourceText_ be the source text matched by this |AsyncGeneratorExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncGeneratorFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncGeneratorBody|, ~non-lexical-this~, _funcEnv_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Let _prototype_ be OrdinaryObjectCreate(%AsyncGeneratorPrototype%).
@@ -24501,7 +24528,7 @@
         AsyncGeneratorExpression : `async` `function` `*` BindingIdentifier? `(` FormalParameters `)` `{` AsyncGeneratorBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateAsyncGeneratorFunctionExpression of |AsyncGeneratorExpression|.
+        1. Return InstantiateAsyncGeneratorFunctionExpression of this |AsyncGeneratorExpression|.
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -24818,7 +24845,7 @@
 
       <emu-grammar>ClassBody : ClassElementList</emu-grammar>
       <emu-alg>
-        1. Let _newNames_ be the list-concatenation of _names_ and the PrivateBoundIdentifiers of |ClassBody|.
+        1. Let _newNames_ be the list-concatenation of _names_ and the PrivateBoundIdentifiers of this |ClassBody|.
         1. Return AllPrivateIdentifiersValid of |ClassElementList| with argument _newNames_.
       </emu-alg>
 
@@ -25211,7 +25238,7 @@
       <emu-grammar>ClassDeclaration : `class` BindingIdentifier ClassTail</emu-grammar>
       <emu-alg>
         1. Let _className_ be the StringValue of |BindingIdentifier|.
-        1. Let _sourceText_ be the source text matched by |ClassDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |ClassDeclaration|.
         1. Let _value_ be ? ClassDefinitionEvaluation of |ClassTail| with arguments _className_, _className_, and _sourceText_.
         1. Let _env_ be the running execution context's LexicalEnvironment.
         1. Perform ? InitializeBoundName(_className_, _value_, _env_).
@@ -25219,7 +25246,7 @@
       </emu-alg>
       <emu-grammar>ClassDeclaration : `class` ClassTail</emu-grammar>
       <emu-alg>
-        1. Let _sourceText_ be the source text matched by |ClassDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |ClassDeclaration|.
         1. Return ? ClassDefinitionEvaluation of |ClassTail| with arguments *undefined*, *"default"*, and _sourceText_.
       </emu-alg>
       <emu-note>
@@ -25239,13 +25266,13 @@
       </emu-note>
       <emu-grammar>ClassExpression : `class` ClassTail</emu-grammar>
       <emu-alg>
-        1. Let _sourceText_ be the source text matched by |ClassExpression|.
+        1. Let _sourceText_ be the source text matched by this |ClassExpression|.
         1. Return ? ClassDefinitionEvaluation of |ClassTail| with arguments *undefined*, *""*, and _sourceText_.
       </emu-alg>
       <emu-grammar>ClassExpression : `class` BindingIdentifier ClassTail</emu-grammar>
       <emu-alg>
         1. Let _className_ be the StringValue of |BindingIdentifier|.
-        1. Let _sourceText_ be the source text matched by |ClassExpression|.
+        1. Let _sourceText_ be the source text matched by this |ClassExpression|.
         1. Return ? ClassDefinitionEvaluation of |ClassTail| with arguments _className_, _className_, and _sourceText_.
       </emu-alg>
       <emu-grammar>ClassElementName : PrivateIdentifier</emu-grammar>
@@ -25310,7 +25337,7 @@
       </emu-grammar>
       <ul>
         <li>It is a Syntax Error if FunctionBodyContainsUseStrict of |AsyncFunctionBody| is *true* and IsSimpleParameterList of |UniqueFormalParameters| is *false*.</li>
-        <li>It is a Syntax Error if HasDirectSuper of |AsyncMethod| is *true*.</li>
+        <li>It is a Syntax Error if HasDirectSuper of this |AsyncMethod| is *true*.</li>
         <li>It is a Syntax Error if |UniqueFormalParameters| Contains |AwaitExpression| is *true*.</li>
         <li>It is a Syntax Error if any element of the BoundNames of |UniqueFormalParameters| also occurs in the LexicallyDeclaredNames of |AsyncFunctionBody|.</li>
       </ul>
@@ -25349,7 +25376,7 @@
       </emu-grammar>
       <emu-alg>
         1. Let _name_ be the StringValue of |BindingIdentifier|.
-        1. Let _sourceText_ be the source text matched by |AsyncFunctionDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |AsyncFunctionDeclaration|.
         1. Let _F_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_F_, _name_).
         1. Return _F_.
@@ -25358,7 +25385,7 @@
         AsyncFunctionDeclaration : `async` `function` `(` FormalParameters `)` `{` AsyncFunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Let _sourceText_ be the source text matched by |AsyncFunctionDeclaration|.
+        1. Let _sourceText_ be the source text matched by this |AsyncFunctionDeclaration|.
         1. Let _F_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_F_, *"default"*).
         1. Return _F_.
@@ -25380,7 +25407,7 @@
         1. If _name_ is not present, set _name_ to *""*.
         1. Let _env_ be the LexicalEnvironment of the running execution context.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncFunctionExpression|.
+        1. Let _sourceText_ be the source text matched by this |AsyncFunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Return _closure_.
@@ -25395,7 +25422,7 @@
         1. Let _funcEnv_ be NewDeclarativeEnvironment(_outerEnv_).
         1. Perform ! _funcEnv_.CreateImmutableBinding(_name_, *false*).
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncFunctionExpression|.
+        1. Let _sourceText_ be the source text matched by this |AsyncFunctionExpression|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, |FormalParameters|, |AsyncFunctionBody|, ~non-lexical-this~, _funcEnv_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
         1. Perform ! _funcEnv_.InitializeBinding(_name_, _closure_).
@@ -25436,7 +25463,7 @@
           `async` `function` BindingIdentifier? `(` FormalParameters `)` `{` AsyncFunctionBody `}`
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateAsyncFunctionExpression of |AsyncFunctionExpression|.
+        1. Return InstantiateAsyncFunctionExpression of this |AsyncFunctionExpression|.
       </emu-alg>
       <emu-grammar>
         AwaitExpression : `await` UnaryExpression
@@ -25551,7 +25578,7 @@
         1. If _name_ is not present, set _name_ to *""*.
         1. Let _env_ be the LexicalEnvironment of the running execution context.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncArrowFunction|.
+        1. Let _sourceText_ be the source text matched by this |AsyncArrowFunction|.
         1. Let _parameters_ be |AsyncArrowBindingIdentifier|.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, _parameters_, |AsyncConciseBody|, ~lexical-this~, _env_, _privateEnv_).
         1. Perform SetFunctionName(_closure_, _name_).
@@ -25564,7 +25591,7 @@
         1. If _name_ is not present, set _name_ to *""*.
         1. Let _env_ be the LexicalEnvironment of the running execution context.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
-        1. Let _sourceText_ be the source text matched by |AsyncArrowFunction|.
+        1. Let _sourceText_ be the source text matched by this |AsyncArrowFunction|.
         1. Let _head_ be the |AsyncArrowHead| that is covered by |CoverCallExpressionAndAsyncArrowHead|.
         1. Let _parameters_ be the |ArrowFormalParameters| of _head_.
         1. Let _closure_ be OrdinaryFunctionCreate(%AsyncFunction.prototype%, _sourceText_, _parameters_, |AsyncConciseBody|, ~lexical-this~, _env_, _privateEnv_).
@@ -25581,7 +25608,7 @@
           CoverCallExpressionAndAsyncArrowHead `=>` AsyncConciseBody
       </emu-grammar>
       <emu-alg>
-        1. Return InstantiateAsyncArrowFunctionExpression of |AsyncArrowFunction|.
+        1. Return InstantiateAsyncArrowFunctionExpression of this |AsyncArrowFunction|.
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -29071,7 +29098,7 @@
         <emu-grammar>WithClause : `with` `{` WithEntries `,`? `}`</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if WithClauseToAttributes of |WithClause| has two different entries _a_ and _b_ such that _a_.[[Key]] is _b_.[[Key]].
+            It is a Syntax Error if WithClauseToAttributes of this |WithClause| has two different entries _a_ and _b_ such that _a_.[[Key]] is _b_.[[Key]].
           </li>
         </ul>
       </emu-clause>
@@ -29100,7 +29127,7 @@
         </emu-alg>
         <emu-grammar>ImportDeclaration : `import` ImportClause FromClause WithClause? `;`</emu-grammar>
         <emu-alg>
-          1. Let _module_ be the sole element of the ModuleRequests of |ImportDeclaration|.
+          1. Let _module_ be the sole element of the ModuleRequests of this |ImportDeclaration|.
           1. Return the ImportEntriesForModule of |ImportClause| with argument _module_.
         </emu-alg>
         <emu-grammar>ImportDeclaration : `import` ModuleSpecifier WithClause? `;`</emu-grammar>
@@ -29420,7 +29447,7 @@
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` ExportFromClause FromClause WithClause? `;`</emu-grammar>
         <emu-alg>
-          1. Let _module_ be the sole element of the ModuleRequests of |ExportDeclaration|.
+          1. Let _module_ be the sole element of the ModuleRequests of this |ExportDeclaration|.
           1. Return the ExportEntriesForModule of |ExportFromClause| with argument _module_.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` NamedExports `;`</emu-grammar>
@@ -36702,10 +36729,10 @@ THH:mm:ss.sss
         <emu-grammar>Pattern :: Disjunction</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if CountLeftCapturingParensWithin(|Pattern|) ≥ 2<sup>32</sup> - 1.
+            It is a Syntax Error if CountLeftCapturingParensWithin(this |Pattern|) ≥ 2<sup>32</sup> - 1.
           </li>
           <li>
-            It is a Syntax Error if |Pattern| contains two distinct |GroupSpecifier|s _x_ and _y_ such that the CapturingGroupName of _x_ is the CapturingGroupName of _y_ and such that MightBothParticipate(_x_, _y_) is *true*.
+            It is a Syntax Error if this |Pattern| contains two distinct |GroupSpecifier|s _x_ and _y_ such that the CapturingGroupName of _x_ is the CapturingGroupName of _y_ and such that MightBothParticipate(_x_, _y_) is *true*.
           </li>
         </ul>
         <emu-grammar>QuantifierPrefix :: `{` DecimalDigits `,` DecimalDigits `}`</emu-grammar>
@@ -36744,7 +36771,7 @@ THH:mm:ss.sss
         <emu-grammar>AtomEscape :: DecimalEscape</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the CapturingGroupNumber of |DecimalEscape| is strictly greater than CountLeftCapturingParensWithin(the |Pattern| containing |AtomEscape|).
+            It is a Syntax Error if the CapturingGroupNumber of |DecimalEscape| is strictly greater than CountLeftCapturingParensWithin(the |Pattern| containing this |AtomEscape|).
           </li>
         </ul>
         <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassContents</emu-grammar>
@@ -36774,7 +36801,7 @@ THH:mm:ss.sss
         <emu-grammar>RegExpIdentifierStart :: UnicodeLeadSurrogate UnicodeTrailSurrogate</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the RegExpIdentifierCodePoint of |RegExpIdentifierStart| is not matched by the |UnicodeIDStart| lexical grammar production.
+            It is a Syntax Error if the RegExpIdentifierCodePoint of this |RegExpIdentifierStart| is not matched by the |UnicodeIDStart| lexical grammar production.
           </li>
         </ul>
         <emu-grammar>RegExpIdentifierPart :: `\` RegExpUnicodeEscapeSequence</emu-grammar>
@@ -36786,7 +36813,7 @@ THH:mm:ss.sss
         <emu-grammar>RegExpIdentifierPart :: UnicodeLeadSurrogate UnicodeTrailSurrogate</emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the RegExpIdentifierCodePoint of |RegExpIdentifierPart| is not matched by the |UnicodeIDContinue| lexical grammar production.
+            It is a Syntax Error if the RegExpIdentifierCodePoint of this |RegExpIdentifierPart| is not matched by the |UnicodeIDContinue| lexical grammar production.
           </li>
         </ul>
         <emu-grammar>UnicodePropertyValueExpression :: UnicodePropertyName `=` UnicodePropertyValue</emu-grammar>
@@ -37491,7 +37518,7 @@ THH:mm:ss.sss
           1. Let _m_ be CompileAtom of |Atom| with arguments _rer_ and _direction_.
           1. Let _q_ be CompileQuantifier of |Quantifier|.
           1. Assert: _q_.[[Min]] ≤ _q_.[[Max]].
-          1. Let _parenIndex_ be CountLeftCapturingParensBefore(|Term|).
+          1. Let _parenIndex_ be CountLeftCapturingParensBefore(this |Term|).
           1. Let _parenCount_ be CountLeftCapturingParensWithin(|Atom|).
           1. Return a new Matcher with parameters (_x_, _c_) that captures _m_, _q_, _parenIndex_, and _parenCount_ and performs the following steps when called:
             1. Assert: _x_ is a MatchState.
@@ -37907,7 +37934,7 @@ THH:mm:ss.sss
         <emu-grammar>Atom :: `(` GroupSpecifier? Disjunction `)`</emu-grammar>
         <emu-alg>
           1. Let _m_ be CompileSubpattern of |Disjunction| with arguments _rer_ and _direction_.
-          1. Let _parenIndex_ be CountLeftCapturingParensBefore(|Atom|).
+          1. Let _parenIndex_ be CountLeftCapturingParensBefore(this |Atom|).
           1. Return a new Matcher with parameters (_x_, _c_) that captures _direction_, _m_, and _parenIndex_ and performs the following steps when called:
             1. Assert: _x_ is a MatchState.
             1. Assert: _c_ is a MatcherContinuation.
