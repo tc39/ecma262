@@ -12030,6 +12030,17 @@
           </tr>
           <tr>
             <td>
+              [[ScriptOrModule]]
+            </td>
+            <td>
+              a Script Record or a Module Record
+            </td>
+            <td>
+              The script or module in which the Job was created.
+            </td>
+          </tr>
+          <tr>
+            <td>
               [[HostDefined]]
             </td>
             <td>
@@ -12053,11 +12064,12 @@
       </dl>
       <p>An implementation of HostMakeJobCallback must conform to the following requirements:</p>
       <ul>
-        <li>It must return a JobCallback Record whose [[Callback]] field is _callback_.</li>
+        <li>It must return a JobCallback Record whose [[Callback]] field is _callback_, and [[ScriptOrModule]] field is the result of GetActiveScriptOrModule().</li>
       </ul>
       <p>The default implementation of HostMakeJobCallback performs the following steps when called:</p>
       <emu-alg>
-        1. Return the JobCallback Record { [[Callback]]: _callback_, [[HostDefined]]: ~empty~ }.
+        1. Let _scriptOrModule_ be GetActiveScriptOrModule().
+        1. Return the JobCallback Record { [[Callback]]: _callback_, [[ScriptOrModule]]: _scriptOrModule_, [[HostDefined]]: ~empty~ }.
       </emu-alg>
       <p>ECMAScript hosts that are not web browsers must use the default implementation of HostMakeJobCallback.</p>
       <emu-note>
@@ -12077,6 +12089,7 @@
       </dl>
       <p>An implementation of HostCallJobCallback must conform to the following requirements:</p>
       <ul>
+        <li>It must perform implementation-defined steps such that _jobCallback_.[[ScriptOrModule]] is the <emu-xref href="#job-activescriptormodule">active script or module</emu-xref> at the time of _job_'s invocation.</li>
         <li>It must perform and return the result of Call(_jobCallback_.[[Callback]], _V_, _argumentsList_).</li>
       </ul>
       <emu-note>
@@ -12085,7 +12098,17 @@
       <p>The default implementation of HostCallJobCallback performs the following steps when called:</p>
       <emu-alg>
         1. Assert: IsCallable(_jobCallback_.[[Callback]]) is *true*.
-        1. Return ? Call(_jobCallback_.[[Callback]], _V_, _argumentsList_).
+        1. Let _callerContext_ be the running execution context.
+        1. If _callerContext_ is not already suspended, suspend _callerContext_.
+        1. Let _jobContext_ be a new execution context.
+        1. Let _scriptOrModule_ be _jobCallback_.[[ScriptOrModule]].
+        1. If _scriptOrModule_ is not *null*, then
+          1. Set the Realm of _jobContext_ to _scriptOrModule_.[[Realm]].
+        1. Set the ScriptOrModule of _jobContext_ to _scriptOrModule_.
+        1. Perform any necessary implementation-defined initialization of _jobContext_.
+        1. Let _result_ be Completion(Call(_jobCallback_.[[Callback]], _V_, _argumentsList_)).
+        1. Remove _jobContext_ from the execution context stack and restore _callerContext_ as the running execution context.
+        1. Return ? _result_.
       </emu-alg>
       <p>ECMAScript hosts that are not web browsers must use the default implementation of HostCallJobCallback.</p>
     </emu-clause>
@@ -12119,7 +12142,6 @@
       <p>An implementation of HostEnqueuePromiseJob must conform to the requirements in <emu-xref href="#sec-jobs"></emu-xref> as well as the following:</p>
       <ul>
         <li>If _realm_ is not *null*, each time _job_ is invoked the implementation must perform implementation-defined steps such that execution is prepared to evaluate ECMAScript code at the time of _job_'s invocation.</li>
-        <li>Let _scriptOrModule_ be GetActiveScriptOrModule() at the time HostEnqueuePromiseJob is invoked. If _realm_ is not *null*, each time _job_ is invoked the implementation must perform implementation-defined steps such that _scriptOrModule_ is the active script or module at the time of _job_'s invocation.</li>
         <li>Jobs must run in the same order as the HostEnqueuePromiseJob invocations that scheduled them.</li>
       </ul>
 
