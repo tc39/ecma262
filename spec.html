@@ -11675,33 +11675,58 @@
       </table>
     </emu-table>
 
-    <emu-clause id="sec-initializehostdefinedrealm" type="abstract operation" oldids="sec-createrealm,sec-setrealmglobalobject">
-      <h1>InitializeHostDefinedRealm ( ): either a normal completion containing ~unused~ or a throw completion</h1>
+    <emu-clause id="sec-makerealm" type="abstract operation" oldids="sec-initializehostdefinedrealm,sec-createrealm,sec-setrealmglobalobject">
+      <h1>
+        MakeRealm (
+          _customizations_: an Abstract Closure that takes a Realm Record and returns a List of 2 elements, each of which is either an Object or *undefined*,
+        ): an execution context
+      </h1>
       <dl class="header">
+        <dt>description</dt>
+        <dd>
+          <p>This operation invokes _customizations_, passing it the Realm Record that is being initialized. It must return a List of 2 elements:</p>
+          <ul>
+            <li>
+              <p>The first element is either:</p>
+              <ul>
+                <li>the object that is to serve as the Realm's global object, created in a host-defined manner, or</li>
+                <li>*undefined*, indicating that an ordinary object should be created as the global object.</li>
+              </ul>
+              <p>If the former, then the supplied object must satisfy SetDefaultGlobalBindings' constraint.</p>
+            </li>
+            <li>
+              <p>The second element is either:</p>
+              <ul>
+                <li>the object that is to serve as the `this` binding in the Realm's global scope, created in a host-defined manner, or</li>
+                <li>*undefined*, indicating that the global object should be used.</li>
+              </ul>
+            </li>
+          </ul>
+        </dd>
       </dl>
       <emu-alg>
         1. Let _realm_ be a new Realm Record.
         1. Perform CreateIntrinsics(_realm_).
         1. Set _realm_.[[AgentSignifier]] to AgentSignifier().
         1. Set _realm_.[[TemplateMap]] to a new empty List.
+        1. Let _global_ and _thisValue_ be the elements of _customizations_(_realm_).
+        1. If _global_ is *undefined*, then
+          1. Set _global_ to OrdinaryObjectCreate(_realm_.[[Intrinsics]].[[%Object.prototype%]]).
+        1. Else,
+          1. Assert: _global_ is an Object.
+        1. If _thisValue_ is *undefined*, then
+          1. Set _thisValue_ to _global_.
+        1. Else,
+          1. Assert: _thisValue_ is an Object.
+        1. Set _realm_.[[GlobalObject]] to _global_.
+        1. Set _realm_.[[GlobalEnv]] to NewGlobalEnvironment(_global_, _thisValue_).
+        1. Perform SetDefaultGlobalBindings(_realm_).
+        1. Create any host-defined global object properties on _global_.
         1. Let _newContext_ be a new execution context.
         1. Set the Function of _newContext_ to *null*.
         1. Set the Realm of _newContext_ to _realm_.
         1. Set the ScriptOrModule of _newContext_ to *null*.
-        1. Push _newContext_ onto the execution context stack; _newContext_ is now the running execution context.
-        1. If the host requires use of a specific object to serve as _realm_'s global object, then
-          1. Let _global_ be such an object created in a host-defined manner.
-        1. Else,
-          1. Let _global_ be OrdinaryObjectCreate(_realm_.[[Intrinsics]].[[%Object.prototype%]]).
-        1. If the host requires that the `this` binding in _realm_'s global scope return an object other than the global object, then
-          1. Let _thisValue_ be such an object created in a host-defined manner.
-        1. Else,
-          1. Let _thisValue_ be _global_.
-        1. Set _realm_.[[GlobalObject]] to _global_.
-        1. Set _realm_.[[GlobalEnv]] to NewGlobalEnvironment(_global_, _thisValue_).
-        1. Perform ? SetDefaultGlobalBindings(_realm_).
-        1. Create any host-defined global object properties on _global_.
-        1. Return ~unused~.
+        1. Return _newContext_.
       </emu-alg>
     </emu-clause>
 
@@ -11725,16 +11750,18 @@
       <h1>
         SetDefaultGlobalBindings (
           _realmRec_: a Realm Record,
-        ): either a normal completion containing ~unused~ or a throw completion
+        ): ~unused~
       </h1>
       <dl class="header">
+        <dt>description</dt>
+        <dd>_realmRec_.[[GlobalObject]] must be an object such that all of this operation's invocations of DefinePropertyOrThrow return a normal completion.</dd>
       </dl>
       <emu-alg>
         1. Let _global_ be _realmRec_.[[GlobalObject]].
         1. For each property of the Global Object specified in clause <emu-xref href="#sec-global-object"></emu-xref>, do
           1. Let _name_ be the String value of the property name.
           1. Let _desc_ be the fully populated data Property Descriptor for the property, containing the specified attributes for the property. For properties listed in <emu-xref href="#sec-function-properties-of-the-global-object"></emu-xref>, <emu-xref href="#sec-constructor-properties-of-the-global-object"></emu-xref>, or <emu-xref href="#sec-other-properties-of-the-global-object"></emu-xref> the value of the [[Value]] attribute is the corresponding intrinsic object from _realmRec_.
-          1. Perform ? DefinePropertyOrThrow(_global_, _name_, _desc_).
+          1. Perform ! DefinePropertyOrThrow(_global_, _name_, _desc_).
         1. Return ~unused~.
       </emu-alg>
     </emu-clause>
@@ -11786,7 +11813,7 @@
             ScriptOrModule
           </td>
           <td>
-            The Module Record or Script Record from which associated code originates. If there is no originating script or module, as is the case for the original execution context created in InitializeHostDefinedRealm, the value is *null*.
+            The Module Record or Script Record from which associated code originates. If there is no originating script or module, as is the case for the original execution context created in MakeRealm, the value is *null*.
           </td>
         </tr>
       </table>
@@ -53407,7 +53434,6 @@ THH:mm:ss.sss
     <p><b>HostMakeJobCallback(...)</b></p>
     <p><b>HostPromiseRejectionTracker(...)</b></p>
     <p><b>HostResizeArrayBuffer(...)</b></p>
-    <p><b>InitializeHostDefinedRealm(...)</b></p>
   </emu-annex>
 
   <emu-annex id="sec-host-defined-fields-summary">
