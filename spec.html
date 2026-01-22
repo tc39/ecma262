@@ -670,7 +670,7 @@
       <h1>The Syntactic Grammar</h1>
       <p>The <em>syntactic grammar</em> for ECMAScript is given in clauses <emu-xref href="#sec-ecmascript-language-expressions"></emu-xref> through <emu-xref href="#sec-ecmascript-language-scripts-and-modules"></emu-xref>. This grammar has ECMAScript tokens defined by the lexical grammar as its terminal symbols (<emu-xref href="#sec-lexical-and-regexp-grammars"></emu-xref>). It defines a set of productions, starting from two alternative goal symbols |Script| and |Module|, that describe how sequences of tokens form syntactically correct independent components of ECMAScript programs.</p>
       <p>When a stream of code points is to be parsed as an ECMAScript |Script| or |Module|, it is first converted to a stream of input elements by repeated application of the lexical grammar; this stream of input elements is then parsed by a single application of the syntactic grammar. The input stream is syntactically in error if the tokens in the stream of input elements cannot be parsed as a single instance of the goal nonterminal (|Script| or |Module|), with no tokens left over.</p>
-      <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn variants="Parse Nodes">Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol.</p>
+      <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn variants="Parse Nodes">Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol. A Parse Node's <em>descendants</em> are its children, and their children, and so on.</p>
       <p>New Parse Nodes are instantiated for each invocation of the parser and never reused between parses even of identical source text. Parse Nodes are considered <dfn>the same Parse Node</dfn> if and only if they represent the same span of source text, are instances of the same grammar symbol, and resulted from the same parser invocation.</p>
       <emu-note>
         <p>Parsing the same String multiple times will lead to different Parse Nodes. For example, consider:</p>
@@ -686,11 +686,12 @@
       <p>The syntactic grammar as presented in clauses <emu-xref href="#sec-ecmascript-language-expressions"></emu-xref> through <emu-xref href="#sec-ecmascript-language-scripts-and-modules"></emu-xref> is not a complete account of which token sequences are accepted as a correct ECMAScript |Script| or |Module|. Certain additional token sequences are also accepted, namely, those that would be described by the grammar if only semicolons were added to the sequence in certain places (such as before line terminator characters). Furthermore, certain token sequences that are described by the grammar are not considered acceptable if a line terminator character appears in certain “awkward” places.</p>
       <p>In certain cases, in order to avoid ambiguities, the syntactic grammar uses generalized productions that permit token sequences that do not form a valid ECMAScript |Script| or |Module|. For example, this technique is used for object literals and object destructuring patterns. In such cases a more restrictive <em>supplemental grammar</em> is provided that further restricts the acceptable token sequences. Typically, an early error rule will then state that, in certain contexts, "_P_ <dfn id="must-cover">must cover</dfn> an _N_", where _P_ is a Parse Node (an instance of the generalized production) and _N_ is a nonterminal from the supplemental grammar. This means:</p>
       <ol>
+        <li>No early error rules are applied to _P_ or any of its descendants.</li>
         <li>The sequence of tokens originally matched by _P_ is parsed again using _N_ as the goal symbol. If _N_ takes grammatical parameters, then they are set to the same values used when _P_ was originally parsed.</li>
         <li>If the sequence of tokens can be parsed as a single instance of _N_, with no tokens left over, then:
           <ol>
             <li>We refer to that instance of _N_ (a Parse Node, unique for a given _P_) as "the _N_ that is <dfn>covered</dfn> by _P_".</li>
-            <li>All Early Error rules for _N_ and its derived productions also apply to the _N_ that is covered by _P_.</li>
+            <li>Early error rules are applied to the _N_ that is covered by _P_ and to its descendants, as modified by further cases of "must cover".</li>
           </ol>
         </li>
         <li>Otherwise (if the parse fails), it is an early Syntax Error.</li>
@@ -18550,30 +18551,11 @@
         <p>|MethodDefinition| is defined in <emu-xref href="#sec-method-definitions"></emu-xref>.</p>
       </emu-note>
       <emu-note>
-        <p>In certain contexts, |ObjectLiteral| is used as a cover grammar for a more restricted secondary grammar. The |CoverInitializedName| production is necessary to fully cover these secondary grammars. However, use of this production results in an early Syntax Error in normal contexts where an actual |ObjectLiteral| is expected.</p>
+        <p>See the next section for the significance of |CoverInitializedName|.</p>
       </emu-note>
 
       <emu-clause id="sec-object-initializer-static-semantics-early-errors" oldids="sec-__proto__-property-names-in-object-initializers">
         <h1>Static Semantics: Early Errors</h1>
-        <emu-grammar>PropertyDefinition : MethodDefinition</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if HasDirectSuper of |MethodDefinition| is *true*.
-          </li>
-          <li>
-            It is a Syntax Error if the PrivateBoundIdentifiers of |MethodDefinition| is not empty.
-          </li>
-        </ul>
-        <p>In addition to describing an actual object initializer the |ObjectLiteral| productions are also used as a cover grammar for |ObjectAssignmentPattern| and may be recognized as part of a |CoverParenthesizedExpressionAndArrowParameterList|. When |ObjectLiteral| appears in a context where |ObjectAssignmentPattern| is required the following Early Error rules are <b>not</b> applied. In addition, they are not applied when initially parsing a |CoverParenthesizedExpressionAndArrowParameterList| or |CoverCallExpressionAndAsyncArrowHead|.</p>
-        <emu-grammar>PropertyDefinition : CoverInitializedName</emu-grammar>
-        <ul>
-          <li>
-            It is a Syntax Error if any source text is matched by this production.
-          </li>
-        </ul>
-        <emu-note>
-          <p>This production exists so that |ObjectLiteral| can serve as a cover grammar for |ObjectAssignmentPattern|. It cannot occur in an actual object initializer.</p>
-        </emu-note>
         <emu-grammar>
           ObjectLiteral :
             `{` PropertyDefinitionList `}`
@@ -18586,6 +18568,35 @@
         </ul>
         <emu-note>
           <p>The List returned by PropertyNameList does not include property names defined using a |ComputedPropertyName|.</p>
+        </emu-note>
+        <emu-grammar>PropertyDefinition : MethodDefinition</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if HasDirectSuper of |MethodDefinition| is *true*.
+          </li>
+          <li>
+            It is a Syntax Error if the PrivateBoundIdentifiers of |MethodDefinition| is not empty.
+          </li>
+        </ul>
+        <emu-grammar>PropertyDefinition : CoverInitializedName</emu-grammar>
+        <ul>
+          <li>
+            It is a Syntax Error if any source text is matched by this production.
+          </li>
+        </ul>
+        <emu-note>
+          <p>Elsewhere in this specification, there are early error rules that, under certain circumstances, require that a |LeftHandSideExpression| must cover an |AssignmentPattern|. Consequently, |ObjectLiteral| serves as a cover grammar for |ObjectAssignmentPattern|. The |CoverInitializedName| production is necessary to fully cover |AssignmentProperty|, but is not valid within an actual object initializer.</p>
+          <p>Specifically, in a context where an actual |ObjectLiteral| is expected, the above early error rule prevents the use of |CoverInitializedName|. But in cases where |ObjectLiteral| is used as a cover grammar, the semantics of "must cover" state that the Parse Nodes within the |ObjectLiteral| are not subject to early error rules, and so |CoverInitializedName| is allowed.</p>
+          <p>For example, consider:</p>
+          <pre><code class="javascript">
+            let o = {f = 1};
+          </code></pre>
+          <p>`{f = 1}` is parsed as an |ObjectLiteral| with a |CoverInitializedName|, which results in a Syntax Error via this early error rule.</p>
+          <p>In contrast, consider:</p>
+          <pre><code class="javascript">
+            ({f = 1} = {f: 2});
+          </code></pre>
+          <p>Here, `{f = 1}` is again initially parsed as an |ObjectLiteral| with a |CoverInitializedName|, but since it's the |LeftHandSideExpression| of an |AssignmentExpression|, it must cover an |AssignmentPattern|, so the |ObjectLiteral| and |CoverInitializedName| are not subject to early error rules. Instead, `{f = 1}` is reparsed as an |ObjectAssignmentPattern| with an |AssignmentProperty|, and there is no Syntax Error.</p>
         </emu-note>
       </emu-clause>
 
