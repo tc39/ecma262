@@ -331,6 +331,8 @@ function getKey(item) {
       return item.caption;
     case 'step':
       return item.id;
+    case 'concrete method':
+      return item.abstractAoid;
     default:
       throw new Error("Can't get key for " + item.type);
   }
