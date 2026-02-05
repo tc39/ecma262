@@ -2,4 +2,5 @@
 
 Stage 0 proposals have been presented to the committee and not rejected definitively, but have not yet achieved any of the criteria to get into stage 1.
 
-This list has moved [here](https://github.com/tc39/proposals/blob/HEAD/stage-0-proposals.md).
+This list has moved to the [TC39 proposals repository](https://github.com/tc39/proposals/blob/HEAD/stage-0-proposals.md).
+

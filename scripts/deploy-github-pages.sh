@@ -11,6 +11,7 @@ fi
 
 declare -r GH_USER_EMAIL="bot@tc39"
 declare -r GH_USER_NAME="Bot"
+declare -r DEST_DIR
 declare -r COMMIT_MESSAGE
 
 
@@ -30,3 +31,4 @@ git config user.name "${GH_USER_NAME}"
 git add -A
 git commit --allow-empty --message "${COMMIT_MESSAGE}"
 git push origin gh-pages
+
