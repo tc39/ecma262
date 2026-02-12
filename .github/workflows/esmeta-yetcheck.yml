@@ -13,37 +13,13 @@ jobs:
           fetch-depth: 0
       - name: install esmeta
         uses: ./.github/workflows/esmeta-installer
-      - name: list added line numbers
-        id: collect
-        shell: bash
+      - name: check for newly-introduced phrases
         env:
           FILE_PATH: spec.html
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.sha }}
         run: |
-          # zero-context diff, limited to the file we care about
-          added_lines=$(git diff -U0 --no-color "${BASE_SHA}" "${HEAD_SHA}" -- "${FILE_PATH}" |
-          # keep only the hunk headers (the @@ lines)
-          awk '
-            # Example header: @@ -158,0 +159,2 @@
-            /^@@/ {
-              # Extract “+<start>[,<count>]” part
-              match($0, /\+([0-9]+)(,([0-9]+))?/, a)
-              start = a[1]
-              count = (a[3] == "" ? 1 : a[3])
-              # Print every line number in the added range
-              for (i = 0; i < count; i++) print start + i
-            }
-          ')
-
-          # Join line numbers with comma or space (whichever format you need)
-          added_joined=$(echo "$added_lines" | paste -sd "," -)
-          added_lines_json="[$added_joined]"
-
-          # Set it as an output value
-          echo "added_lines=$added_lines_json" >> "$GITHUB_OUTPUT"
-      - name: check for newly-introduced phrases
-        run: |
-          "${ESMETA_HOME}"/bin/esmeta extract \
-            -status \
-            -extract:warn-action <<< ${{ steps.collect.outputs.added_lines }}
+          "${ESMETA_HOME}"/bin/esmeta yet-check \
+            -status -yet-check:github-alert -yet-check:log \
+            "${BASE_SHA}" "${HEAD_SHA}"
+          cat "${ESMETA_HOME}"/logs/yet-check/summary.md >> $GITHUB_STEP_SUMMARY
