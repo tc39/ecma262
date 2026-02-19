@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<meta charset="utf8">
+
+<emu-clause id="sec-rfc9557-formatting">
+  <h1>Formatting RFC 9557 Strings</h1>
+
+  <p>This section contains abstract operations used for serializing data into various partial RFC 9557 string formats.</p>
+
+  <emu-clause id="sec-formatcalendarannotation" type="abstract operation">
+    <h1>
+      FormatCalendarAnnotation (
+        _id_: a calendar type,
+        _showCalendar_: one of ~auto~, ~always~, ~never~, or ~critical~,
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It returns a string with a calendar annotation suitable for concatenating to the end of an ISO 8601 / RFC 9557 string.
+        Depending on the given _id_ and value of _showCalendar_, the string may be empty if no calendar annotation need be included.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _showCalendar_ is ~never~, return the empty String.
+      1. If _showCalendar_ is ~auto~ and _id_ is *"iso8601"*, return the empty String.
+      1. If _showCalendar_ is ~critical~, let _flag_ be *"!"*; else, let flag be the empty String.
+      1. Return the string-concatenation of *"["*, _flag_, *"u-ca="*, _id_, and *"]"*.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-formatdatetimeutcoffsetrounded" type="abstract operation">
+    <h1>
+      FormatDateTimeUTCOffsetRounded (
+        _offsetNanoseconds_: an integer in the interval from -86400 × 10<sup>9</sup> (exclusive) to 86400 × 10<sup>9</sup> (exclusive),
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It rounds _offsetNanoseconds_ to the nearest minute boundary and formats the rounded value into a ±HH:MM format, to support available named time zones that may have sub-minute offsets.</dd>
+    </dl>
+    <emu-alg>
+      1. Set _offsetNanoseconds_ to RoundNumberToIncrement(_offsetNanoseconds_, 60 × 10<sup>9</sup>, ~half-expand~).
+      1. Let _offsetMinutes_ be _offsetNanoseconds_ / (60 × 10<sup>9</sup>).
+      1. Return FormatOffsetTimeZoneIdentifier(_offsetMinutes_).
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-formatfractionalseconds" type="abstract operation">
+    <h1>
+      FormatFractionalSeconds (
+        _subSecondNanoseconds_: an integer in the inclusive interval from 0 to 999999999,
+        _precision_: either an integer in the inclusive interval from 0 to 9 or ~auto~,
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        If _precision_ = 0, or _precision_ is ~auto~ and _subSecondNanoseconds_ = 0, then an empty String will be returned.
+        Otherwise, the output will be a decimal point followed by a sequence of fractional seconds digits, truncated to _precision_ digits or (if _precision_ is ~auto~) to the last non-zero digit.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _precision_ is ~auto~, then
+        1. If _subSecondNanoseconds_ = 0, return the empty String.
+        1. Let _fractionString_ be ToZeroPaddedDecimalString(_subSecondNanoseconds_, 9).
+        1. Set _fractionString_ to the longest prefix of _fractionString_ ending with a code unit other than 0x0030 (DIGIT ZERO).
+      1. Else,
+        1. If _precision_ = 0, return the empty String.
+        1. Let _fractionString_ be ToZeroPaddedDecimalString(_subSecondNanoseconds_, 9).
+        1. Set _fractionString_ to the substring of _fractionString_ from 0 to _precision_.
+      1. Return the string-concatenation of the code unit 0x002E (FULL STOP) and _fractionString_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-formatisodatetime" type="abstract operation">
+    <h1>
+      FormatISODateTime (
+        _isoDateTime_: an ISO Date-Time Record,
+        _calendar_: a calendar type,
+        _precision_: either an integer in the inclusive interval from 0 to 9, ~minute~, or ~auto~,
+        _showCalendar_: one of ~auto~, ~always~, ~never~, or ~critical~,
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It formats an ISO Date-Time Record into an ISO 8601 / RFC 9557 string, to the precision specified by _precision_.</dd>
+    </dl>
+    <emu-alg>
+      1. Let _yearString_ be PadISOYear(_isoDateTime_.[[ISODate]].[[Year]]).
+      1. Let _monthString_ be ToZeroPaddedDecimalString(_isoDateTime_.[[ISODate]].[[Month]], 2).
+      1. Let _dayString_ be ToZeroPaddedDecimalString(_isoDateTime_.[[ISODate]].[[Day]], 2).
+      1. Let _subSecondNanoseconds_ be _isoDateTime_.[[Time]].[[Millisecond]] × 10<sup>6</sup> + _isoDateTime_.[[Time]].[[Microsecond]] × 10<sup>3</sup> + _isoDateTime_.[[Time]].[[Nanosecond]].
+      1. Let _timeString_ be FormatTimeString(_isoDateTime_.[[Time]].[[Hour]], _isoDateTime_.[[Time]].[[Minute]], _isoDateTime_.[[Time]].[[Second]], _subSecondNanoseconds_, _precision_).
+      1. Let _calendarString_ be FormatCalendarAnnotation(_calendar_, _showCalendar_).
+      1. Return the string-concatenation of _yearString_, the code unit 0x002D (HYPHEN-MINUS), _monthString_, the code unit 0x002D (HYPHEN-MINUS), _dayString_, 0x0054 (LATIN CAPITAL LETTER T), _timeString_, and _calendarString_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-formatoffsettimezoneidentifier" type="abstract operation">
+    <h1>
+      FormatOffsetTimeZoneIdentifier (
+        _offsetMinutes_: an integer in the inclusive interval from -1439 to 1439,
+        optional _style_: either ~separated~ or ~unseparated~,
+      ): an offset time zone identifier
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It formats a UTC offset, in minutes, into a UTC offset string.
+        If _style_ is ~separated~ or not present, then the output will be formatted like ±HH:MM.
+        If _style_ is ~unseparated~, then the output will be formatted like ±HHMM.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _offsetMinutes_ ≥ 0, let _sign_ be the code unit 0x002B (PLUS SIGN); else let _sign_ be the code unit 0x002D (HYPHEN-MINUS).
+      1. Let _absoluteMinutes_ be abs(_offsetMinutes_).
+      1. Let _hour_ be floor(_absoluteMinutes_ / 60).
+      1. Let _minute_ be _absoluteMinutes_ modulo 60.
+      1. Let _timeString_ be FormatTimeString(_hour_, _minute_, 0, 0, ~minute~, _style_).
+      1. Return the string-concatenation of _sign_ and _timeString_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-formattimestring" type="abstract operation">
+    <h1>
+      FormatTimeString (
+        _hour_: an integer in the inclusive interval from 0 to 23,
+        _minute_: an integer in the inclusive interval from 0 to 59,
+        _second_: an integer in the inclusive interval from 0 to 59,
+        _subSecondNanoseconds_: an integer in the inclusive interval from 0 to 999999999,
+        _precision_: either an integer in the inclusive interval from 0 to 9, ~minute~, or ~auto~,
+        optional _style_: either ~separated~ or ~unseparated~,
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It formats a collection of unsigned time components into a string, truncating units as necessary, and separating hours, minutes, and seconds with colons unless _style_ is ~unseparated~.
+        The output will be formatted like HH:MM or HHMM if _precision_ is ~minute~.
+        Otherwise, the output will be formatted like HH:MM:SS or HHMMSS if _precision_ = 0, or _subSecondNanoseconds_ = 0 and _precision_ is ~auto~.
+        Otherwise, the output will be formatted like HH:MM:SS.fff or HHMMSS.fff where "fff" is a sequence of fractional seconds digits, truncated to _precision_ digits or (if _precision_ is ~auto~) to the last non-zero digit.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _style_ is present and _style_ is ~unseparated~, let _separator_ be the empty String; else let _separator_ be *":"*.
+      1. Let _hh_ be ToZeroPaddedDecimalString(_hour_, 2).
+      1. Let _mm_ be ToZeroPaddedDecimalString(_minute_, 2).
+      1. If _precision_ is ~minute~, return the string-concatenation of _hh_, _separator_, and _mm_.
+      1. Let _ss_ be ToZeroPaddedDecimalString(_second_, 2).
+      1. Let _subSecondsPart_ be FormatFractionalSeconds(_subSecondNanoseconds_, _precision_).
+      1. Return the string-concatenation of _hh_, _separator_, _mm_, _separator_, _ss_, and _subSecondsPart_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-formatutcoffsetnanoseconds" type="abstract operation">
+    <h1>
+      FormatUTCOffsetNanoseconds (
+        _offsetNanoseconds_: an integer in the interval from -86400 × 10<sup>9</sup> (exclusive) to 86400 × 10<sup>9</sup> (exclusive),
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        If the offset represents an integer number of minutes, then the output will be formatted like ±HH:MM.
+        Otherwise, the output will be formatted like ±HH:MM:SS or (if the offset does not evenly divide into seconds) ±HH:MM:SS.fff… where the "fff" part is a sequence of at least 1 and at most 9 fractional seconds digits with no trailing zeroes.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _offsetNanoseconds_ ≥ 0, let _sign_ be the code unit 0x002B (PLUS SIGN); else let _sign_ be the code unit 0x002D (HYPHEN-MINUS).
+      1. Let _absoluteNanoseconds_ be abs(_offsetNanoseconds_).
+      1. Let _hour_ be floor(_absoluteNanoseconds_ / (3600 × 10<sup>9</sup>)).
+      1. Let _minute_ be floor(_absoluteNanoseconds_ / (60 × 10<sup>9</sup>)) modulo 60.
+      1. Let _second_ be floor(_absoluteNanoseconds_ / 10<sup>9</sup>) modulo 60.
+      1. Let _subSecondNanoseconds_ be _absoluteNanoseconds_ modulo 10<sup>9</sup>.
+      1. If _second_ = 0 and _subSecondNanoseconds_ = 0, let _precision_ be ~minute~; else let _precision_ be ~auto~.
+      1. Let _timeString_ be FormatTimeString(_hour_, _minute_, _second_, _subSecondNanoseconds_, _precision_).
+      1. Return the string-concatenation of _sign_ and _timeString_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-padisoyear" type="abstract operation">
+    <h1>
+      PadISOYear (
+        _y_: an integer,
+      ): a String
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It returns a String representation of _y_ suitable for inclusion in an ISO 8601 string, either in 4-digit format or 6-digit format with sign.</dd>
+    </dl>
+    <emu-alg>
+      1. If _y_ ≥ 0 and _y_ ≤ 9999, return ToZeroPaddedDecimalString(_y_, 4).
+      1. If _y_ > 0, let _yearSign_ be *"+"*; else let _yearSign_ be *"-"*.
+      1. Let _year_ be ToZeroPaddedDecimalString(abs(_y_), 6).
+      1. Return the string-concatenation of _yearSign_ and _year_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-tosecondsstringprecisionrecord" type="abstract operation">
+    <h1>
+      ToSecondsStringPrecisionRecord (
+        _smallestUnit_: one of ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~, or ~unset~,
+        _fractionalDigitCount_: either an integer in the inclusive interval from 0 to 9 or ~auto~,
+      ): a Record with fields [[Precision]] (either an integer in the inclusive interval from 0 to 9, ~minute~, or ~auto~), [[Unit]] (one of ~minute~, ~second~, ~millisecond~, ~microsecond~, or ~nanosecond~), and [[Increment]] (one of 1, 10, or 100)
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        The returned Record represents details for serializing minutes and seconds to a string subject to the specified _smallestUnit_ or (when _smallestUnit_ is ~unset~) _fractionalDigitCount_ digits after the decimal point in the seconds.
+        Its [[Precision]] field is either that count of digits, the value ~auto~ signifying that there should be no insignificant trailing zeroes, or the value ~minute~ signifying that seconds should not be included at all.
+        Its [[Unit]] field is the most precise unit that can contribute to the string, and its [[Increment]] field indicates the rounding increment that should be applied to that unit.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. If _smallestUnit_ is ~minute~, return the Record {
+          [[Precision]]: ~minute~,
+          [[Unit]]: ~minute~,
+          [[Increment]]: 1
+        }.
+      1. If _smallestUnit_ is ~second~, return the Record {
+          [[Precision]]: 0,
+          [[Unit]]: ~second~,
+          [[Increment]]: 1
+        }.
+      1. If _smallestUnit_ is ~millisecond~, return the Record {
+          [[Precision]]: 3,
+          [[Unit]]: ~millisecond~,
+          [[Increment]]: 1
+        }.
+      1. If _smallestUnit_ is ~microsecond~, return the Record {
+          [[Precision]]: 6,
+          [[Unit]]: ~microsecond~,
+          [[Increment]]: 1
+        }.
+      1. If _smallestUnit_ is ~nanosecond~, return the Record {
+          [[Precision]]: 9,
+          [[Unit]]: ~nanosecond~,
+          [[Increment]]: 1
+        }.
+      1. Assert: _smallestUnit_ is ~unset~.
+      1. If _fractionalDigitCount_ is ~auto~, return the Record {
+          [[Precision]]: ~auto~,
+          [[Unit]]: ~nanosecond~,
+          [[Increment]]: 1
+        }.
+      1. If _fractionalDigitCount_ = 0, return the Record {
+          [[Precision]]: 0,
+          [[Unit]]: ~second~,
+          [[Increment]]: 1
+        }.
+      1. If _fractionalDigitCount_ is in the inclusive interval from 1 to 3, return the Record {
+          [[Precision]]: _fractionalDigitCount_,
+          [[Unit]]: ~millisecond~,
+          [[Increment]]: 10<sup>3 - _fractionalDigitCount_</sup>
+        }.
+      1. If _fractionalDigitCount_ is in the inclusive interval from 4 to 6, return the Record {
+          [[Precision]]: _fractionalDigitCount_,
+          [[Unit]]: ~microsecond~,
+          [[Increment]]: 10<sup>6 - _fractionalDigitCount_</sup>
+        }.
+      1. Assert: _fractionalDigitCount_ is in the inclusive interval from 7 to 9.
+      1. Return the Record {
+        [[Precision]]: _fractionalDigitCount_,
+        [[Unit]]: ~nanosecond~,
+        [[Increment]]: 10<sup>9 - _fractionalDigitCount_</sup>
+        }.
+    </emu-alg>
+  </emu-clause>
+</emu-clause>

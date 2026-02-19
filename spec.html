@@ -661,9 +661,13 @@
     </emu-clause>
 
     <emu-clause id="sec-numeric-string-grammar">
-      <h1>The Numeric String Grammar</h1>
+      <h1>The Numeric String and ISO 8601 / RFC 9557 Grammars</h1>
       <p>A <em>numeric string grammar</em> appears in <emu-xref href="#sec-tonumber-applied-to-the-string-type"></emu-xref>. It has as its terminal symbols |SourceCharacter|, and is used for translating Strings into numeric values starting from the goal symbol |StringNumericLiteral| (which is similar to but distinct from the <emu-xref href="#sec-literals-numeric-literals">lexical grammar for numeric literals</emu-xref>).</p>
-      <p>Productions of the numeric string grammar are distinguished by having three colons “<b>:::</b>” as punctuation, and are never used for parsing source text.</p>
+      <p>
+        A grammar for parsing strings representing dates, times, and durations, according to the formats specified in ISO 8601 and RFC 9557, is given in <emu-xref href="#sec-rfc9557-grammar"></emu-xref>.
+        This grammar has as its terminal symbols Unicode code points that conform to the rules for |SourceCharacter| defined in <emu-xref href="#sec-source-text"></emu-xref>. It is used for parsing Strings in the context of various date, time, or duration-related functions, starting from one of the goal symbols |TemporalDateTimeString|, |TemporalDurationString|, |TemporalInstantString|, |TemporalMonthDayString|, |TemporalTimeString|, |TemporalYearMonthString|, |NormalizedUTCOffset|, or |TimeZoneIANAName|.
+      </p>
+      <p>Productions of the numeric string and ISO 8601 / RFC 9557 grammars are distinguished by having three colons “<b>:::</b>” as punctuation, and are never used for parsing source text.</p>
     </emu-clause>
 
     <emu-clause id="sec-syntactic-grammar">
@@ -4027,6 +4031,17 @@
             </tr>
             <tr>
               <td>
+                %Temporal%
+              </td>
+              <td>
+                `Temporal`
+              </td>
+              <td>
+                The Temporal object (<emu-xref href="#sec-temporal-object"></emu-xref>)
+              </td>
+            </tr>
+            <tr>
+              <td>
                 %ThrowTypeError%
               </td>
               <td>
@@ -5278,6 +5293,57 @@
       <emu-note>
         𝔽(ToIntegerOrInfinity(_x_)) never returns *-0*<sub>𝔽</sub> for any value of _x_. The truncation of the fractional part is performed after converting _x_ to a mathematical value.
       </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-tointegerifintegral" type="abstract operation">
+      <h1>
+        ToIntegerIfIntegral (
+          _argument_: an ECMAScript language value,
+        ): either a normal completion containing an integer or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _argument_ to an integer representing its Number value, or throws a *RangeError* when that value is not <emu-xref href="#integral-number">integral</emu-xref>.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _number_ be ? ToNumber(_argument_).
+        1. If _number_ is not an integral Number, throw a *RangeError* exception.
+        1. Return ℝ(_number_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-tointegerwithtruncation" type="abstract operation">
+      <h1>
+        ToIntegerWithTruncation (
+          _argument_: an ECMAScript language value,
+        ): either a normal completion containing an integer or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _argument_ to an integer representing its Number value with fractional part truncated, or throws a *RangeError* when that value is not finite.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _number_ be ? ToNumber(_argument_).
+        1. If _number_ is one of *NaN*, *+∞*<sub>𝔽</sub>, or *-∞*<sub>𝔽</sub>, throw a *RangeError* exception.
+        1. Return truncate(ℝ(_number_)).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-topositiveintegerwithtruncation" type="abstract operation">
+      <h1>
+        ToPositiveIntegerWithTruncation (
+          _argument_: an ECMAScript language value,
+        ): either a normal completion containing a positive integer or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _argument_ to an integer representing its Number value with fractional part truncated, or throws a *RangeError* when that value is not finite or not positive.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _integer_ be ? ToIntegerWithTruncation(_argument_).
+        1. If _integer_ ≤ 0, throw a *RangeError* exception.
+        1. Return _integer_.
+      </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-toint32" type="abstract operation">
@@ -33355,9 +33421,6 @@
           <p>In the proleptic Gregorian calendar, leap years are precisely those which are both divisible by 4 and either divisible by 400 or not divisible by 100.</p>
           <p>The 400 year cycle of the proleptic Gregorian calendar contains 97 leap years. This yields an average of 365.2425 days per year, which is 31,556,952,000 milliseconds. Therefore, the maximum range a Number could represent exactly with millisecond precision is approximately -285,426 to 285,426 years relative to 1970. The smaller range supported by a time value as specified in this section is approximately -273,790 to 273,790 years relative to 1970.</p>
         </emu-note>
-
-        <p>An instant in time to nanosecond precision is represented by a BigInt value. It supports a range of exactly -100,000,000 to 100,000,000 days relative to midnight at the beginning of 1 January 1970 UTC, the same range as a time value. There is no nanosecond equivalent of the time value *NaN*; there is no representation for no specific instant.</p>
-        <p>The exact moment of midnight at the beginning of 1 January 1970 UTC is represented by the value *0*<sub>ℤ</sub>. The maximum value is ℤ(nsMaxInstant), and the minimum value is ℤ(nsMinInstant).</p>
       </emu-clause>
 
       <emu-clause id="sec-time-related-constants">
@@ -33371,8 +33434,8 @@
         <emu-eqn id="eqn-msPerHour" aoid="msPerHour">msPerHour = *3600000*<sub>𝔽</sub> = msPerMinute × 𝔽(MinutesPerHour)</emu-eqn>
         <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = *86400000*<sub>𝔽</sub> = msPerHour × 𝔽(HoursPerDay)</emu-eqn>
         <emu-eqn id="eqn-nsPerDay" aoid="nsPerDay">nsPerDay = 10<sup>6</sup> × ℝ(msPerDay) = 8.64 × 10<sup>13</sup></emu-eqn>
-        <emu-eqn id="eqn-nsMaxInstant" aoid="nsMaxInstant">nsMaxInstant = 10<sup>8</sup> × nsPerDay = 8.64 × 10<sup>21</sup></emu-eqn>
-        <emu-eqn id="eqn-nsMinInstant" aoid="nsMinInstant">nsMinInstant = -nsMaxInstant = -8.64 × 10<sup>21</sup></emu-eqn>
+        <emu-eqn id="eqn-maxEpochNanoseconds" aoid="maxEpochNanoseconds">maxEpochNanoseconds = 10<sup>8</sup> × nsPerDay = 8.64 × 10<sup>21</sup></emu-eqn>
+        <emu-eqn id="eqn-minEpochNanoseconds" aoid="minEpochNanoseconds">minEpochNanoseconds = -maxEpochNanoseconds = -8.64 × 10<sup>21</sup></emu-eqn>
       </emu-clause>
 
       <emu-clause id="sec-day" type="abstract operation" oldids="eqn-Day,sec-day-number-and-time-within-day">
@@ -33653,233 +33716,6 @@
           1. Let _ms_ be MakeDate(_date_, _time_).
           1. Assert: _ms_ is an integral Number.
           1. Return ℤ(ℝ(_ms_) × 10<sup>6</sup> + _isoDateTime_.[[Time]].[[Microsecond]] × 10<sup>3</sup> + _isoDateTime_.[[Time]].[[Nanosecond]]).
-        </emu-alg>
-      </emu-clause>
-
-      <emu-clause id="sec-time-zone-identifiers">
-        <h1>Time Zone Identifiers</h1>
-
-        <p>
-          Time zones in ECMAScript are represented by <dfn variants="time zone identifier">time zone identifiers</dfn>, which are Strings composed entirely of code units in the inclusive interval from 0x0021 to 0x007E, described by |TimeZoneIdentifier| in the grammar below.
-          Time zones supported by an ECMAScript implementation may be <dfn variants="available named time zone">available named time zones</dfn>, represented by the [[Identifier]] field of the Time Zone Identifier Records returned by AvailableNamedTimeZoneIdentifiers, or <dfn variants="offset time zone">offset time zones</dfn>, represented by Strings for which IsOffsetTimeZoneIdentifer returns *true*.
-        </p>
-        <p>
-          A <dfn variants="primary time zone identifiers">primary time zone identifier</dfn> is the preferred identifier for an available named time zone.
-          A <dfn variants="non-primary time zone identifiers">non-primary time zone identifier</dfn> is an identifier for an available named time zone that is not a primary time zone identifier.
-          An <dfn variants="available named time zone identifiers">available named time zone identifier</dfn> is either a primary time zone identifier or a non-primary time zone identifier.
-          Each available named time zone identifier is associated with exactly one available named time zone.
-          Each available named time zone is associated with exactly one primary time zone identifier and zero or more non-primary time zone identifiers.
-        </p>
-        <p>An <dfn>available time zone identifier</dfn> is either an available named time zone identifier or an offset time zone identifier.</p>
-        <p>
-          Time zone identifiers are compared using ASCII-case-insensitive comparisons, and are accepted as input in any variation of letter case.
-          Offset time zone identifiers are compared using the number of minutes represented (not as a String), and are accepted as input in any the formats specified by |UTCOffset[~SubMinutePrecision]|.
-          However, ECMAScript built-in objects will only output the <dfn variants="time zone identifier in normalized format,normalized time zone identifier">normalized format of a time zone identifier</dfn>.
-          The normalized format of an available named time zone identifier is the preferred letter case for that identifier.
-          The normalized format of an offset time zone identifier is specified by |NormalizedUTCOffset| in the grammar below, and produced by FormatOffsetTimeZoneIdentifier with _style_ either not present or set to ~separated~.
-        </p>
-        <p>
-          ECMAScript implementations must support an available named time zone with the identifier *"UTC"*, which must be the primary time zone identifier for the UTC time zone.
-          In addition, implementations may support any number of other available named time zones.
-        </p>
-        <p>
-          Implementations that follow the requirements for time zones as described in the ECMA-402 Internationalization API specification are called <dfn>time zone aware</dfn>.
-          Time zone aware implementations must support available named time zones corresponding to the Zone and Link names of the IANA Time Zone Database, and only such names.
-          In time zone aware implementations, a primary time zone identifier is a Zone name, and a non-primary time zone identifier is a Link name, respectively, in the IANA Time Zone Database except as specifically overridden by AvailableNamedTimeZoneIdentifiers as specified in the ECMA-402 specification.
-          Implementations that do not support the entire IANA Time Zone Database are still recommended to use IANA Time Zone Database names as identifiers to represent time zones.
-        </p>
-        <p>These identifiers are described by the following grammar.</p>
-
-        <emu-grammar type="definition">
-          NormalizedUTCOffset :::
-            ASCIISign Hour TimeSeparator[+Extended] MinuteSecond
-
-          TimeZoneIdentifier :::
-            UTCOffset[~SubMinutePrecision]
-            TimeZoneIANAName
-
-          TimeZoneIANAName :::
-            TimeZoneIANANameComponent
-            TimeZoneIANAName `/` TimeZoneIANANameComponent
-
-          TimeZoneIANANameComponent :::
-            TZLeadingChar
-            TimeZoneIANANameComponent TZChar
-
-          TZLeadingChar :::
-            AsciiLetter
-            `.`
-            `_`
-
-          TZChar :::
-            TZLeadingChar
-            DecimalDigit
-            `-`
-            `+`
-        </emu-grammar>
-      </emu-clause>
-
-      <emu-clause id="sec-getnamedtimezoneepochnanoseconds" type="implementation-defined abstract operation">
-        <h1>
-          GetNamedTimeZoneEpochNanoseconds (
-            _timeZoneIdentifier_: an available named time zone identifier,
-            _isoDateTime_: an ISO Date-Time Record,
-          ): a List of BigInts
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>
-            Each value in the returned List represents a number of nanoseconds since the epoch that corresponds to the given ISO 8601 calendar date and wall-clock time in the named time zone identified by _timeZoneIdentifier_.
-          </dd>
-        </dl>
-        <p>
-          When the input represents a local time occurring more than once because of a negative time zone transition (e.g. when daylight saving time ends or the time zone offset is decreased due to a time zone rule change), the returned List will have more than one element and will be sorted by ascending numerical value.
-          When the input represents a local time skipped because of a positive time zone transition (e.g. when daylight saving time begins or the time zone offset is increased due to a time zone rule change), the returned List will be empty.
-          Otherwise, the returned List will have one element.
-        </p>
-        <p>The default implementation of GetNamedTimeZoneEpochNanoseconds, to be used for ECMAScript implementations that do not include local political rules for any time zones, performs the following steps when called:</p>
-        <emu-alg>
-          1. Assert: _timeZoneIdentifier_ is *"UTC"*.
-          1. Let _epochNanoseconds_ be GetUTCEpochNanoseconds(_isoDateTime_).
-          1. Return « _epochNanoseconds_ ».
-        </emu-alg>
-        <emu-note>
-          <p>It is required for time zone aware implementations (and recommended for all others) to use the time zone information of the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a>.</p>
-          <p>1:30 AM on 5 November 2017 in America/New_York is repeated twice, so GetNamedTimeZoneEpochNanoseconds for that time zone and ISO date-time would return a List of length 2 in which the first element represents 05:30 UTC (corresponding with 01:30 US Eastern Daylight Time at UTC offset -04:00) and the second element represents 06:30 UTC (corresponding with 01:30 US Eastern Standard Time at UTC offset -05:00).</p>
-          <p>2:30 AM on 12 March 2017 in America/New_York does not exist, so GetNamedTimeZoneEpochNanoseconds for that time zone and ISO date-time would return an empty List.</p>
-        </emu-note>
-      </emu-clause>
-
-      <emu-clause id="sec-getnamedtimezoneoffsetnanoseconds" oldids="sec-local-time-zone-adjustment" type="implementation-defined abstract operation">
-        <h1>
-          GetNamedTimeZoneOffsetNanoseconds (
-            _timeZoneIdentifier_: an available named time zone identifier,
-            _epochNanoseconds_: a BigInt,
-          ): an integer
-        </h1>
-        <dl class="header">
-        </dl>
-        <p>The returned integer represents the offset from UTC of the named time zone identified by _timeZoneIdentifier_, at the instant corresponding with _epochNanoseconds_ relative to the epoch, both in nanoseconds.</p>
-        <p>The default implementation of GetNamedTimeZoneOffsetNanoseconds, to be used for ECMAScript implementations that do not include local political rules for any time zones, performs the following steps when called:</p>
-        <emu-alg>
-          1. Assert: _timeZoneIdentifier_ is *"UTC"*.
-          1. Return 0.
-        </emu-alg>
-        <emu-note>
-          <p>Time zone offset values may be positive or negative.</p>
-        </emu-note>
-      </emu-clause>
-
-      <emu-clause id="sec-time-zone-identifier-record">
-        <h1>Time Zone Identifier Record</h1>
-        <p>A <dfn variants="Time Zone Identifier Records">Time Zone Identifier Record</dfn> is a Record used to describe an available named time zone identifier and its corresponding primary time zone identifier.</p>
-        <p>Time Zone Identifier Records have the fields listed in <emu-xref href="#table-time-zone-identifier-record-fields"></emu-xref>.</p>
-        <emu-table id="table-time-zone-identifier-record-fields" caption="Time Zone Identifier Record Fields">
-          <table>
-            <thead>
-              <tr>
-                <th>Field Name</th>
-                <th>Value</th>
-                <th>Meaning</th>
-              </tr>
-            </thead>
-            <tr>
-              <td>[[Identifier]]</td>
-              <td>a String</td>
-              <td>An available named time zone identifier that is supported by the implementation.</td>
-            </tr>
-            <tr>
-              <td>[[PrimaryIdentifier]]</td>
-              <td>a String</td>
-              <td>The primary time zone identifier that [[Identifier]] resolves to.</td>
-            </tr>
-          </table>
-        </emu-table>
-        <emu-note>
-          <p>If [[Identifier]] is a primary time zone identifier, then [[Identifier]] is [[PrimaryIdentifier]].</p>
-        </emu-note>
-      </emu-clause>
-
-      <emu-clause id="sec-availablenamedtimezoneidentifiers" type="implementation-defined abstract operation">
-        <h1>AvailableNamedTimeZoneIdentifiers ( ): a List of Time Zone Identifier Records</h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>
-            Its result describes all available named time zone identifiers in this implementation, as well as the primary time zone identifier corresponding to each available named time zone identifier.
-            The List is ordered according to the [[Identifier]] field of each Time Zone Identifier Record.
-          </dd>
-        </dl>
-        <p>
-          Time zone aware implementations, including all implementations that implement the ECMA-402 Internationalization API, must implement the AvailableNamedTimeZoneIdentifiers abstract operation as specified in the ECMA-402 specification.
-          For implementations that are not time zone aware, AvailableNamedTimeZoneIdentifiers performs the following steps when called:
-        </p>
-        <emu-alg>
-          1. If the implementation does not include local political rules for any time zones, then
-            1. Return « the Time Zone Identifier Record { [[Identifier]]: *"UTC"*, [[PrimaryIdentifier]]: *"UTC"* } ».
-          1. Let _identifiers_ be the List of unique available named time zone identifiers, sorted according to lexicographic code unit order.
-          1. Let _result_ be a new empty List.
-          1. For each element _identifier_ of _identifiers_, do
-            1. Let _primary_ be _identifier_.
-            1. If _identifier_ is a non-primary time zone identifier in this implementation and _identifier_ is not *"UTC"*, then
-              1. Set _primary_ to the primary time zone identifier associated with _identifier_.
-              1. NOTE: An implementation may need to resolve _identifier_ iteratively to obtain the primary time zone identifier.
-            1. Let _record_ be the Time Zone Identifier Record { [[Identifier]]: _identifier_, [[PrimaryIdentifier]]: _primary_ }.
-            1. Append _record_ to _result_.
-          1. Assert: _result_ contains a Time Zone Identifier Record _r_ such that _r_.[[Identifier]] is *"UTC"* and _r_.[[PrimaryIdentifier]] is *"UTC"*.
-          1. Return _result_.
-        </emu-alg>
-      </emu-clause>
-
-      <emu-clause id="sec-systemtimezoneidentifier" oldids="sec-defaulttimezone" type="implementation-defined abstract operation">
-        <h1>SystemTimeZoneIdentifier ( ): an available time zone identifier</h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>
-            It returns a String representing the host environment's current time zone, which is either a primary time zone identifier or an offset time zone identifier.
-          </dd>
-        </dl>
-
-        <emu-alg>
-          1. If the implementation only supports the UTC time zone, return *"UTC"*.
-          1. Let _systemTimeZoneString_ be the String representing the host environment's current time zone as a time zone identifier in normalized format, either a primary time zone identifier or an offset time zone identifier.
-          1. Return _systemTimeZoneString_.
-        </emu-alg>
-
-        <emu-note>
-          <p>
-            To ensure the level of functionality that implementations commonly provide in the methods of the Date object, it is recommended that SystemTimeZoneIdentifier return an IANA time zone name corresponding to the host environment's time zone setting, if such a thing exists.
-            GetNamedTimeZoneEpochNanoseconds and GetNamedTimeZoneOffsetNanoseconds must reflect the local political rules for standard time and daylight saving time in that time zone, if such rules exist.
-          </p>
-          <p>For example, if the host environment is a browser on a system where the user has chosen US Eastern Time as their time zone, SystemTimeZoneIdentifier returns *"America/New_York"*.</p>
-        </emu-note>
-      </emu-clause>
-
-      <emu-clause id="sec-parsetimezoneidentifier" type="abstract operation">
-        <h1>
-          ParseTimeZoneIdentifier (
-            _identifier_: a String,
-          ): either a normal completion containing a Time Zone Identifier Parse Record, or a throw completion
-        </h1>
-        <dl class="header">
-          <dt>skip global checks</dt>
-          <dd>true</dd>
-          <dt>description</dt>
-          <dd>
-            It parses _identifier_ to determine whether it identifies an offset time zone or named time zone. If _identifier_ is syntactically invalid, a *RangeError* will be thrown.
-          </dd>
-        </dl>
-        <emu-alg>
-          1. Let _parseResult_ be ParseText(StringToCodePoints(_identifier_), |TimeZoneIdentifier|).
-          1. If _parseResult_ is a List of errors, throw a *RangeError* exception.
-          1. If _parseResult_ contains a |TimeZoneIANAName| Parse Node, then
-            1. Let _name_ be the source text matched by the |TimeZoneIANAName| Parse Node contained within _parseResult_.
-            1. NOTE: _name_ is syntactically valid, but does not necessarily conform to <a href="https://data.iana.org/time-zones/theory.html#naming">IANA Time Zone Database naming guidelines</a> or correspond with an available named time zone identifier.
-            1. Return Time Zone Identifier Parse Record { [[Name]]: CodePointsToString(_name_), [[OffsetMinutes]]: ~empty~ }.
-          1. Assert: _parseResult_ contains a |UTCOffset[~SubMinutePrecision]| Parse Node.
-          1. Let _offset_ be the source text matched by the |UTCOffset[~SubMinutePrecision]| Parse Node contained within _parseResult_.
-          1. Let _offsetNanoseconds_ be ! ParseDateTimeUTCOffset(CodePointsToString(_offset_)).
-          1. Let _offsetMinutes_ be _offsetNanoseconds_ / (60 × 10<sup>9</sup>).
-          1. Return Time Zone Identifier Parse Record { [[Name]]: ~empty~, [[OffsetMinutes]]: _offsetMinutes_ }.
         </emu-alg>
       </emu-clause>
 
@@ -34252,56 +34088,7 @@ THH:mm:ss.sss
           UTC offsets that represent offset time zone identifiers, or that are intended for interoperability with ISO 8601, use only hours and minutes and are specified by |UTCOffset[~SubMinutePrecision]|.
           UTC offsets that represent the offset of a named time zone can be more precise, and are specified by |UTCOffset[+SubMinutePrecision]|.
         </p>
-        <p>These formats are described by the following grammar.</p>
-
-        <h2>Syntax</h2>
-        <emu-grammar type="definition">
-          UTCOffset[SubMinutePrecision] :::
-            ASCIISign Hour
-            ASCIISign Hour HourSubcomponents[?SubMinutePrecision, +Extended]
-            ASCIISign Hour HourSubcomponents[?SubMinutePrecision, ~Extended]
-
-          ASCIISign ::: one of
-            `+` `-`
-
-          Hour :::
-            `0` DecimalDigit
-            `1` DecimalDigit
-            `20`
-            `21`
-            `22`
-            `23`
-
-          HourSubcomponents[SubMinutePrecision, Extended] :::
-            TimeSeparator[?Extended] MinuteSecond
-            [+SubMinutePrecision] TimeSeparator[?Extended] MinuteSecond TimeSeparator[?Extended] MinuteSecond TemporalDecimalFraction?
-
-          TimeSeparator[Extended] :::
-            [+Extended] `:`
-            [~Extended] [empty]
-
-          MinuteSecond :::
-            `0` DecimalDigit
-            `1` DecimalDigit
-            `2` DecimalDigit
-            `3` DecimalDigit
-            `4` DecimalDigit
-            `5` DecimalDigit
-
-          TemporalDecimalFraction :::
-            TemporalDecimalSeparator DecimalDigit
-            TemporalDecimalSeparator DecimalDigit DecimalDigit
-            TemporalDecimalSeparator DecimalDigit DecimalDigit DecimalDigit
-            TemporalDecimalSeparator DecimalDigit DecimalDigit DecimalDigit DecimalDigit
-            TemporalDecimalSeparator DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit
-            TemporalDecimalSeparator DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit
-            TemporalDecimalSeparator DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit
-            TemporalDecimalSeparator DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit
-            TemporalDecimalSeparator DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit DecimalDigit
-
-          TemporalDecimalSeparator ::: one of
-            `.` `,`
-        </emu-grammar>
+        <p>These formats are described by the grammar in <emu-xref href="#sec-rfc9557-grammar"></emu-xref>.</p>
 
         <emu-clause id="sec-isoffsettimezoneidentifier" oldids="sec-istimezoneoffsetstring" type="abstract operation">
           <h1>
@@ -34327,8 +34114,6 @@ THH:mm:ss.sss
             ): either a normal completion containing an integer in the interval from -86400 × 10<sup>9</sup> (exclusive) to 86400 × 10<sup>9</sup> (exclusive), or a throw completion
           </h1>
           <dl class="header">
-            <dt>skip global checks</dt>
-            <dd>true</dd>
             <dt>description</dt>
             <dd>
               The return value is the UTC offset, as a number of nanoseconds, that corresponds to the String _offsetString_.
@@ -34368,362 +34153,6 @@ THH:mm:ss.sss
             1. Return _sign_ × (((_hours_ × 60 + _minutes_) × 60 + _seconds_) × 10<sup>9</sup> + _nanoseconds_).
           </emu-alg>
         </emu-clause>
-
-        <emu-clause id="sec-formattimestring" type="abstract operation">
-          <h1>
-            FormatTimeString (
-              _hour_: an integer in the inclusive interval from 0 to 23,
-              _minute_: an integer in the inclusive interval from 0 to 59,
-              _second_: an integer in the inclusive interval from 0 to 59,
-              _subSecondNanoseconds_: an integer in the inclusive interval from 0 to 999999999,
-              _precision_: either an integer in the inclusive interval from 0 to 9, ~minute~, or ~auto~,
-              optional _style_: either ~separated~ or ~unseparated~,
-            ): a String
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>
-              It formats a collection of unsigned time components into a string, truncating units as necessary, and separating hours, minutes, and seconds with colons unless _style_ is ~unseparated~.
-              The output will be formatted like HH:MM or HHMM if _precision_ is ~minute~.
-              Otherwise, the output will be formatted like HH:MM:SS or HHMMSS if _precision_ = 0, or _subSecondNanoseconds_ = 0 and _precision_ is ~auto~.
-              Otherwise, the output will be formatted like HH:MM:SS.fff or HHMMSS.fff where "fff" is a sequence of fractional seconds digits, truncated to _precision_ digits or (if _precision_ is ~auto~) to the last non-zero digit.
-            </dd>
-          </dl>
-          <emu-alg>
-            1. If _style_ is present and _style_ is ~unseparated~, let _separator_ be the empty String; else let _separator_ be *":"*.
-            1. Let _hh_ be ToZeroPaddedDecimalString(_hour_, 2).
-            1. Let _mm_ be ToZeroPaddedDecimalString(_minute_, 2).
-            1. If _precision_ is ~minute~, return the string-concatenation of _hh_, _separator_, and _mm_.
-            1. Let _ss_ be ToZeroPaddedDecimalString(_second_, 2).
-            1. Let _subSecondsPart_ be FormatFractionalSeconds(_subSecondNanoseconds_, _precision_).
-            1. Return the string-concatenation of _hh_, _separator_, _mm_, _separator_, _ss_, and _subSecondsPart_.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-formatfractionalseconds" type="abstract operation">
-          <h1>
-            FormatFractionalSeconds (
-              _subSecondNanoseconds_: an integer in the inclusive interval from 0 to 999999999,
-              _precision_: either an integer in the inclusive interval from 0 to 9 or ~auto~,
-            ): a String
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>
-              If _precision_ = 0, or _precision_ is ~auto~ and _subSecondNanoseconds_ = 0, then an empty String will be returned.
-              Otherwise, the output will be a decimal point followed by a sequence of fractional seconds digits, truncated to _precision_ digits or (if _precision_ is ~auto~) to the last non-zero digit.
-            </dd>
-          </dl>
-          <emu-alg>
-            1. If _precision_ is ~auto~, then
-              1. If _subSecondNanoseconds_ = 0, return the empty String.
-              1. Let _fractionString_ be ToZeroPaddedDecimalString(_subSecondNanoseconds_, 9).
-              1. Set _fractionString_ to the longest prefix of _fractionString_ ending with a code unit other than 0x0030 (DIGIT ZERO).
-            1. Else,
-              1. If _precision_ = 0, return the empty String.
-              1. Let _fractionString_ be ToZeroPaddedDecimalString(_subSecondNanoseconds_, 9).
-              1. Set _fractionString_ to the substring of _fractionString_ from 0 to _precision_.
-            1. Return the string-concatenation of the code unit 0x002E (FULL STOP) and _fractionString_.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-formatoffsettimezoneidentifier" type="abstract operation">
-          <h1>
-            FormatOffsetTimeZoneIdentifier (
-              _offsetMinutes_: an integer in the inclusive interval from -1439 to 1439,
-              optional _style_: either ~separated~ or ~unseparated~,
-            ): an offset time zone identifier
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>
-              It formats a UTC offset, in minutes, into a UTC offset string.
-              If _style_ is ~separated~ or not present, then the output will be formatted like ±HH:MM.
-              If _style_ is ~unseparated~, then the output will be formatted like ±HHMM.
-            </dd>
-          </dl>
-          <emu-alg>
-            1. If _offsetMinutes_ ≥ 0, let _sign_ be the code unit 0x002B (PLUS SIGN); else let _sign_ be the code unit 0x002D (HYPHEN-MINUS).
-            1. Let _absoluteMinutes_ be abs(_offsetMinutes_).
-            1. Let _hour_ be floor(_absoluteMinutes_ / 60).
-            1. Let _minute_ be _absoluteMinutes_ modulo 60.
-            1. Let _timeString_ be FormatTimeString(_hour_, _minute_, 0, 0, ~minute~, _style_).
-            1. Return the string-concatenation of _sign_ and _timeString_.
-          </emu-alg>
-        </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-iso-date-records">
-        <h1>ISO Date Records</h1>
-        <p>
-          An <dfn variants="ISO Date Records">ISO Date Record</dfn> is a Record value used to represent a valid calendar date in the ISO 8601 calendar, although the year may be outside of the allowed range for Temporal.
-          ISO Date Records are produced by the abstract operation CreateISODateRecord.
-          For any ISO Date Record _d_, IsValidISODate(_d_.[[Year]], _d_.[[Month]], _d_.[[Day]]) must return *true*.
-        </p>
-        <p>ISO Date Records have the fields listed in <emu-xref href="#table-iso-date-record-fields"></emu-xref>.</p>
-        <emu-table id="table-iso-date-record-fields" caption="ISO Date Record Fields">
-          <table class="real-table">
-            <tr>
-              <th>Field Name</th>
-              <th>Value</th>
-              <th>Meaning</th>
-            </tr>
-            <tr>
-              <td>[[Year]]</td>
-              <td>an integer</td>
-              <td>
-                The year in the ISO 8601 calendar.
-              </td>
-            </tr>
-            <tr>
-              <td>[[Month]]</td>
-              <td>an integer between 1 and 12, inclusive</td>
-              <td>
-                The number of the month in the ISO 8601 calendar.
-              </td>
-            </tr>
-            <tr>
-              <td>[[Day]]</td>
-              <td>an integer between 1 and 31, inclusive</td>
-              <td>
-                The number of the day of the month in the ISO 8601 calendar.
-              </td>
-            </tr>
-          </table>
-        </emu-table>
-
-        <emu-clause id="sec-createisodaterecord" type="abstract operation">
-          <h1>
-            CreateISODateRecord (
-              _year_: an integer,
-              _month_: an integer between 1 and 12 inclusive,
-              _day_: an integer between 1 and 31 inclusive,
-            ): an ISO Date Record
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd></dd>
-          </dl>
-          <emu-alg>
-            1. Assert: IsValidISODate(_year_, _month_, _day_) is *true*.
-            1. Return ISO Date Record { [[Year]]: _year_, [[Month]]: _month_, [[Day]]: _day_ }.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-isvalidisodate" type="abstract operation">
-          <h1>
-            IsValidISODate (
-              _year_: an integer,
-              _month_: an integer,
-              _day_: an integer,
-            ): a Boolean
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>
-              The return value is *true* if its arguments form a valid date in the ISO 8601 calendar, and *false* otherwise.
-              This includes dates that may fall outside of the allowed range for Temporal.
-            </dd>
-          </dl>
-          <emu-alg>
-            1. If _month_ &lt; 1 or _month_ > 12, return *false*.
-            1. Let _daysInMonth_ be ISODaysInMonth(_year_, _month_).
-            1. If _day_ &lt; 1 or _day_ > _daysInMonth_, return *false*; else return *true*.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-isodaysinmonth" type="abstract operation">
-          <h1>
-            ISODaysInMonth (
-              _year_: an integer,
-              _month_: an integer in the inclusive interval from 1 to 12,
-            ): a positive integer
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>It returns the number of days in the given year and month in the ISO 8601 calendar.</dd>
-          </dl>
-          <emu-alg>
-            1. If _month_ is one of 1, 3, 5, 7, 8, 10, or 12, return 31.
-            1. If _month_ is one of 4, 6, 9, or 11, return 30.
-            1. Assert: _month_ = 2.
-            1. Return 28 + ℝ(InLeapYear(TimeFromYear(𝔽(_year_)))).
-          </emu-alg>
-        </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-time-records">
-        <h1>Time Records</h1>
-        <p>
-          A <dfn variants="Time Records">Time Record</dfn> is a Record value used to represent a valid clock time, together with a number of overflow days such as might occur in BalanceTime.
-          For any Time Record _t_, IsValidTime(_t_.[[Hour]], _t_.[[Minute]], _t_.[[Second]], _t_.[[Millisecond]], _t_.[[Microsecond]], _t_.[[Nanosecond]]) must return *true*.
-        </p>
-        <p>Time Records have the fields listed in <emu-xref href="#table-time-record-fields"></emu-xref>.</p>
-        <emu-table id="table-time-record-fields" caption="Time Record Fields">
-          <table class="real-table">
-            <tr>
-              <th>Field Name</th>
-              <th>Value</th>
-              <th>Meaning</th>
-            </tr>
-            <tr>
-              <td>[[Days]]</td>
-              <td>an integer</td>
-              <td>A number of overflow days.</td>
-            </tr>
-            <tr>
-              <td>[[Hour]]</td>
-              <td>an integer in the inclusive interval from 0 to 23</td>
-              <td>The number of the hour.</td>
-            </tr>
-            <tr>
-              <td>[[Minute]]</td>
-              <td>an integer in the inclusive interval from 0 to 59</td>
-              <td>The number of the minute.</td>
-            </tr>
-            <tr>
-              <td>[[Second]]</td>
-              <td>an integer in the inclusive interval from 0 to 59</td>
-              <td>The number of the second.</td>
-            </tr>
-            <tr>
-              <td>[[Millisecond]]</td>
-              <td>an integer in the inclusive interval from 0 to 999</td>
-              <td>The number of the millisecond.</td>
-            </tr>
-            <tr>
-              <td>[[Microsecond]]</td>
-              <td>an integer in the inclusive interval from 0 to 999</td>
-              <td>The number of the microsecond.</td>
-            </tr>
-            <tr>
-              <td>[[Nanosecond]]</td>
-              <td>an integer in the inclusive interval from 0 to 999</td>
-              <td>The number of the nanosecond.</td>
-            </tr>
-          </table>
-        </emu-table>
-
-        <emu-clause id="sec-createtimerecord" type="abstract operation">
-          <h1>
-            CreateTimeRecord (
-              _hour_: an integer in the inclusive interval from 0 to 23,
-              _minute_: an integer in the inclusive interval from 0 to 59,
-              _second_: an integer in the inclusive interval from 0 to 59,
-              _millisecond_: an integer in the inclusive interval from 0 to 999,
-              _microsecond_: an integer in the inclusive interval from 0 to 999,
-              _nanosecond_: an integer in the inclusive interval from 0 to 999,
-              optional _deltaDays_: an integer,
-            ): a Time Record
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>Most uses of Time Records do not require the _deltaDays_ parameter.</dd>
-          </dl>
-          <emu-alg>
-            1. If _deltaDays_ is not present, set _deltaDays_ to 0.
-            1. Assert: IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
-            1. Return Time Record { [[Days]]: _deltaDays_, [[Hour]]: _hour_, [[Minute]]: _minute_, [[Second]]: _second_, [[Millisecond]]: _millisecond_, [[Microsecond]]: _microsecond_, [[Nanosecond]]: _nanosecond_ }.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-isvalidtime" type="abstract operation">
-          <h1>
-            IsValidTime (
-              _hour_: an integer,
-              _minute_: an integer,
-              _second_: an integer,
-              _millisecond_: an integer,
-              _microsecond_: an integer,
-              _nanosecond_: an integer,
-            ): a Boolean
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>
-              The return value is *true* if its arguments form a valid time of day, and *false* otherwise.
-              Leap seconds are not taken into account.
-            </dd>
-          </dl>
-          <emu-alg>
-            1. If _hour_ &lt; 0 or _hour_ > 23, return *false*.
-            1. If _minute_ &lt; 0 or _minute_ > 59, return *false*.
-            1. If _second_ &lt; 0 or _second_ > 59, return *false*.
-            1. If _millisecond_ &lt; 0 or _millisecond_ > 999, return *false*.
-            1. If _microsecond_ &lt; 0 or _microsecond_ > 999, return *false*.
-            1. If _nanosecond_ &lt; 0 or _nanosecond_ > 999, return *false*.
-            1. Return *true*.
-          </emu-alg>
-        </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-iso-date-time-records">
-        <h1>ISO Date-Time Records</h1>
-        <p>
-          An <dfn variants="ISO Date-Time Records">ISO Date-Time Record</dfn> is a Record value used to represent a valid calendar date in the ISO 8601 calendar together with a clock time.
-          For any ISO Date-Time Record _r_, IsValidISODate(_r_.[[ISODate]].[[Year]], _r_.[[ISODate]].[[Month]], _r_.[[ISODate]].[[Day]]) must return *true*, and IsValidTime(_r_.[[Time]].[[Hour]], _r_.[[Time]].[[Minute]], _r_.[[Time]].[[Second]], _r_.[[Time]].[[Millisecond]], _r_.[[Time]].[[Microsecond]], _r_.[[Time]].[[Nanosecond]]) must return *true*.
-          It is not necessary for _r_ to correspond to an exact time between nsMinInstant and nsMaxInstant.
-        </p>
-        <p>ISO Date-Time Records have the fields listed in <emu-xref href="#table-iso-date-time-record-fields"></emu-xref>.</p>
-        <emu-table id="table-iso-date-time-record-fields" caption="ISO Date-Time Record Fields">
-          <table class="real-table">
-            <tr>
-              <th>Field Name</th>
-              <th>Value</th>
-              <th>Meaning</th>
-            </tr>
-            <tr>
-              <td>[[ISODate]]</td>
-              <td>an ISO Date Record</td>
-              <td>
-                The date in the ISO 8601 calendar.
-              </td>
-            </tr>
-            <tr>
-              <td>[[Time]]</td>
-              <td>a Time Record</td>
-              <td>The time. The [[Days]] field is ignored.</td>
-            </tr>
-          </table>
-        </emu-table>
-
-        <emu-clause id="sec-timevaluetoisodatetimerecord" type="abstract operation">
-          <h1>
-            TimeValueToISODateTimeRecord (
-              _t_: a finite time value,
-            ): an ISO Date-Time Record
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>
-              It converts a time value into an ISO Date-Time Record.
-            </dd>
-          </dl>
-          <emu-alg>
-            1. Let _isoDate_ be CreateISODateRecord(ℝ(YearFromTime(_t_)), ℝ(MonthFromTime(_t_)) + 1, ℝ(DateFromTime(_t_))).
-            1. Let _time_ be CreateTimeRecord(ℝ(HourFromTime(_t_)), ℝ(MinFromTime(_t_)), ℝ(SecFromTime(_t_)), ℝ(msFromTime(_t_)), 0, 0).
-            1. Return CombineISODateAndTimeRecord(_isoDate_, _time_).
-          </emu-alg>
-        </emu-clause>
-      </emu-clause>
-
-      <emu-clause id="sec-combineisodateandtimerecord" type="abstract operation">
-        <h1>
-          CombineISODateAndTimeRecord (
-            _isoDate_: an ISO Date Record,
-            _time_: a Time Record,
-          ): an ISO Date-Time Record
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>
-            It combines a date and a time into one ISO Date-Time Record.
-          </dd>
-        </dl>
-        <emu-alg>
-          1. NOTE: _time_.[[Days]] is ignored.
-          1. Return ISO Date-Time Record { [[ISODate]]: _isoDate_, [[Time]]: _time_ }.
-        </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-hostsystemutcepochnanoseconds" type="host-defined abstract operation">
@@ -34742,7 +34171,7 @@ THH:mm:ss.sss
         </dl>
         <p>An implementation of HostSystemUTCEpochNanoseconds must conform to the following requirements:</p>
         <ul>
-          <li>Its result must be between nsMinInstant and nsMaxInstant.</li>
+          <li>Its result must be between minEpochNanoseconds and maxEpochNanoseconds.</li>
         </ul>
         <emu-note>
           <p>
@@ -34752,8 +34181,8 @@ THH:mm:ss.sss
         </emu-note>
         <p>The default implementation of HostSystemUTCEpochNanoseconds performs the following steps when called:</p>
         <emu-alg>
-          1. Let _ns_ be the approximate current UTC date and time, in nanoseconds since the epoch.
-          1. Return the result of clamping _ns_ between nsMinInstant and nsMaxInstant.
+          1. Let _epochNanoseconds_ be the approximate current UTC date and time, in nanoseconds since the epoch.
+          1. Return the result of clamping _epochNanoseconds_ between minEpochNanoseconds and maxEpochNanoseconds.
         </emu-alg>
         <p>ECMAScript hosts that are not web browsers must use the default implementation of HostSystemUTCEpochNanoseconds.</p>
       </emu-clause>
@@ -35761,6 +35190,18 @@ THH:mm:ss.sss
         </emu-clause>
       </emu-clause>
 
+      <emu-clause id="sec-date.prototype.totemporalinstant">
+        <h1>Date.prototype.toTemporalInstant ( )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _dateObject_ be the *this* value.
+          1. Perform ? RequireInternalSlot(_dateObject_, [[DateValue]]).
+          1. Let _t_ be _dateObject_.[[DateValue]].
+          1. Let _epochNanoseconds_ be ? NumberToBigInt(_t_) × ℤ(10<sup>6</sup>).
+          1. Return ! CreateTemporalInstant(_epochNanoseconds_).
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-date.prototype.totimestring">
         <h1>Date.prototype.toTimeString ( )</h1>
         <p>This method performs the following steps when called:</p>
@@ -35828,6 +35269,22 @@ THH:mm:ss.sss
       <p>Date instances are ordinary objects that inherit properties from the Date prototype object. Date instances also have a [[DateValue]] internal slot. The [[DateValue]] internal slot is the time value represented by this Date.</p>
     </emu-clause>
   </emu-clause>
+
+  <emu-import href="temporal/timezone.emu"></emu-import>
+  <emu-import href="temporal/abstractops.emu"></emu-import>
+  <emu-import href="temporal/grammar.emu"></emu-import>
+  <emu-import href="temporal/formatting.emu"></emu-import>
+
+  <emu-import href="temporal/temporal.emu"></emu-import>
+  <emu-import href="temporal/now.emu"></emu-import>
+  <emu-import href="temporal/instant.emu"></emu-import>
+  <emu-import href="temporal/zoneddatetime.emu"></emu-import>
+  <emu-import href="temporal/plaindatetime.emu"></emu-import>
+  <emu-import href="temporal/plaindate.emu"></emu-import>
+  <emu-import href="temporal/plaintime.emu"></emu-import>
+  <emu-import href="temporal/plainyearmonth.emu"></emu-import>
+  <emu-import href="temporal/plainmonthday.emu"></emu-import>
+  <emu-import href="temporal/duration.emu"></emu-import>
 </emu-clause>
 
 <emu-clause id="sec-text-processing">
@@ -52853,26 +52310,74 @@ THH:mm:ss.sss
     <emu-prodref name="StrIntegerLiteral"></emu-prodref>
   </emu-annex>
 
-  <emu-annex id="sec-time-zone-identifier-grammar">
-    <h1>Time Zone Identifiers</h1>
-    <emu-prodref name="NormalizedUTCOffset"></emu-prodref>
-    <emu-prodref name="TimeZoneIdentifier"></emu-prodref>
-    <emu-prodref name="TimeZoneIANAName"></emu-prodref>
-    <emu-prodref name="TimeZoneIANANameComponent"></emu-prodref>
-    <emu-prodref name="TZLeadingChar"></emu-prodref>
-    <emu-prodref name="TZChar"></emu-prodref>
-  </emu-annex>
-
-  <emu-annex id="sec-time-zone-offset-string-format">
-    <h1>Time Zone Offset String Format</h1>
-    <emu-prodref name="UTCOffset"></emu-prodref>
+  <emu-annex id="sec-rfc9557" oldids="sec-time-zone-identifier-grammar sec-time-zone-offset-string-format">
+    <h1>ISO 8601 / RFC 9557</h1>
+    <emu-prodref name="AKeyChar"></emu-prodref>
+    <emu-prodref name="AKeyLeadingChar"></emu-prodref>
+    <emu-prodref name="Alpha"></emu-prodref>
+    <emu-prodref name="AnnotatedDateTime"></emu-prodref>
+    <emu-prodref name="AnnotatedTime"></emu-prodref>
+    <emu-prodref name="Annotation"></emu-prodref>
+    <emu-prodref name="AnnotationCriticalFlag"></emu-prodref>
+    <emu-prodref name="AnnotationKey"></emu-prodref>
+    <emu-prodref name="Annotations"></emu-prodref>
+    <emu-prodref name="AnnotationValue"></emu-prodref>
+    <emu-prodref name="AnnotationValueComponent"></emu-prodref>
     <emu-prodref name="ASCIISign"></emu-prodref>
+    <emu-prodref name="Date"></emu-prodref>
+    <emu-prodref name="DateDay"></emu-prodref>
+    <emu-prodref name="DateMonth"></emu-prodref>
+    <emu-prodref name="DateSeparator"></emu-prodref>
+    <emu-prodref name="DateSpec"></emu-prodref>
+    <emu-prodref name="DateSpecMonthDay"></emu-prodref>
+    <emu-prodref name="DateSpecYearMonth"></emu-prodref>
+    <emu-prodref name="DateTime"></emu-prodref>
+    <emu-prodref name="DateTimeSeparator"></emu-prodref>
+    <emu-prodref name="DateTimeUTCOffset"></emu-prodref>
+    <emu-prodref name="DateYear"></emu-prodref>
+    <emu-prodref name="DaysDesignator"></emu-prodref>
+    <emu-prodref name="DurationDate"></emu-prodref>
+    <emu-prodref name="DurationDaysPart"></emu-prodref>
+    <emu-prodref name="DurationDesignator"></emu-prodref>
+    <emu-prodref name="DurationHoursPart"></emu-prodref>
+    <emu-prodref name="DurationMinutesPart"></emu-prodref>
+    <emu-prodref name="DurationMonthsPart"></emu-prodref>
+    <emu-prodref name="DurationSecondsPart"></emu-prodref>
+    <emu-prodref name="DurationTime"></emu-prodref>
+    <emu-prodref name="DurationWeeksPart"></emu-prodref>
+    <emu-prodref name="DurationYearsPart"></emu-prodref>
     <emu-prodref name="Hour"></emu-prodref>
+    <emu-prodref name="HoursDesignator"></emu-prodref>
     <emu-prodref name="HourSubcomponents"></emu-prodref>
-    <emu-prodref name="TimeSeparator"></emu-prodref>
+    <emu-prodref name="LowercaseAlpha"></emu-prodref>
+    <emu-prodref name="MinutesDesignator"></emu-prodref>
     <emu-prodref name="MinuteSecond"></emu-prodref>
+    <emu-prodref name="MonthsDesignator"></emu-prodref>
+    <emu-prodref name="NormalizedUTCOffset"></emu-prodref>
+    <emu-prodref name="SecondsDesignator"></emu-prodref>
+    <emu-prodref name="TemporalDateTimeString"></emu-prodref>
     <emu-prodref name="TemporalDecimalFraction"></emu-prodref>
     <emu-prodref name="TemporalDecimalSeparator"></emu-prodref>
+    <emu-prodref name="TemporalDurationString"></emu-prodref>
+    <emu-prodref name="TemporalInstantString"></emu-prodref>
+    <emu-prodref name="TemporalMonthDayString"></emu-prodref>
+    <emu-prodref name="TemporalTimeString"></emu-prodref>
+    <emu-prodref name="TemporalYearMonthString"></emu-prodref>
+    <emu-prodref name="Time"></emu-prodref>
+    <emu-prodref name="TimeDesignator"></emu-prodref>
+    <emu-prodref name="TimeSecond"></emu-prodref>
+    <emu-prodref name="TimeSeparator"></emu-prodref>
+    <emu-prodref name="TimeSpec"></emu-prodref>
+    <emu-prodref name="TimeZoneAnnotation"></emu-prodref>
+    <emu-prodref name="TimeZoneIANAName"></emu-prodref>
+    <emu-prodref name="TimeZoneIANANameComponent"></emu-prodref>
+    <emu-prodref name="TimeZoneIdentifier"></emu-prodref>
+    <emu-prodref name="TZChar"></emu-prodref>
+    <emu-prodref name="TZLeadingChar"></emu-prodref>
+    <emu-prodref name="UTCDesignator"></emu-prodref>
+    <emu-prodref name="UTCOffset"></emu-prodref>
+    <emu-prodref name="WeeksDesignator"></emu-prodref>
+    <emu-prodref name="YearsDesignator"></emu-prodref>
   </emu-annex>
 
   <emu-annex id="sec-regular-expressions">
@@ -54070,16 +53575,22 @@ THH:mm:ss.sss
       <i>Unicode Standard Annex #31, Unicode Identifiers and Pattern Syntax</i>, available at &lt;<a href="https://unicode.org/reports/tr31/">https://unicode.org/reports/tr31/</a>>
     </li>
     <li>
+      <i>Unicode Technical Standard #35, Unicode Locale Data Markup Language (LDML)</i>, available at &lt;<a href="https://unicode.org/reports/tr35/">https://unicode.org/reports/tr35</a>>
+    </li>
+    <li>
       <i>Unicode Standard Annex #44: Unicode Character Database</i>, available at &lt;<a href="https://unicode.org/reports/tr44/">https://unicode.org/reports/tr44/</a>>
     </li>
     <li>
       <i>Unicode Technical Standard #51: Unicode Emoji</i>, available at &lt;<a href="https://unicode.org/reports/tr51/">https://unicode.org/reports/tr51/</a>>
     </li>
     <li>
+      <i>Unicode Common Locale Data Repository (CLDR) Project</i>, available at &lt;<a href="https://cldr.unicode.org/">https://cldr.unicode.org/</a>>
+    </li>
+    <li>
       <i>IANA Time Zone Database</i>, available at &lt;<a href="https://www.iana.org/time-zones">https://www.iana.org/time-zones</a>>
     </li>
     <li>
-      ISO 8601:2004(E) <i>Data elements and interchange formats — Information interchange — Representation of dates and times</i>
+      ISO 8601-1:2019(E) <i>Date and time — Representations for information interchange — Part 1: Basic rules</i>
     </li>
     <li>
       <i>RFC 1738 “Uniform Resource Locators (URL)”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc1738">https://tools.ietf.org/html/rfc1738</a>>
@@ -54088,10 +53599,16 @@ THH:mm:ss.sss
       <i>RFC 2396 “Uniform Resource Identifiers (URI): Generic Syntax”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc2396">https://tools.ietf.org/html/rfc2396</a>>
     </li>
     <li>
+      <i>RFC 3339, “Date and Time on the Internet: Timestamps”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc3339">https://tools.ietf.org/html/rfc3339</a>>
+    </li>
+    <li>
       <i>RFC 3629 “UTF-8, a transformation format of ISO 10646”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc3629">https://tools.ietf.org/html/rfc3629</a>>
     </li>
     <li>
       <i>RFC 7231 “Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc7231">https://tools.ietf.org/html/rfc7231</a>>
+    </li>
+    <li>
+      <i>RFC 9557, “Date and Time on the Internet: Timestamps with Additional Information”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc9557">https://tools.ietf.org/html/rfc9557</a>>
     </li>
   </ol>
 </emu-annex>
