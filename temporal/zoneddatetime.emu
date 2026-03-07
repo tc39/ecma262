@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<meta charset="utf8">
+
+<emu-clause id="sec-temporal-zoneddatetime-objects">
+  <h1>Temporal.ZonedDateTime Objects</h1>
+  <p>A <dfn variants="%Temporal.ZonedDateTime%">Temporal.ZonedDateTime</dfn> object is an Object referencing a fixed point in time with nanoseconds precision, and containing String identifiers corresponding to a particular time zone and calendar system.</p>
+
+  <emu-clause id="sec-temporal-zoneddatetime-constructor">
+    <h1>The Temporal.ZonedDateTime Constructor</h1>
+    <p>The Temporal.ZonedDateTime constructor:</p>
+    <ul>
+      <li>
+        creates and initializes a new Temporal.ZonedDateTime object when called as a constructor.
+      </li>
+      <li>
+        is not intended to be called as a function and will throw an exception when called in that manner.
+      </li>
+      <li>
+        may be used as the value of an `extends` clause of a class definition.
+        Subclass constructors that intend to inherit the specified Temporal.ZonedDateTime behaviour must
+        include a super call to the %Temporal.ZonedDateTime% constructor to create and initialize subclass
+        instances with the necessary internal slots.
+      </li>
+    </ul>
+
+    <emu-clause id="sec-temporal.zoneddatetime">
+      <h1>Temporal.ZonedDateTime ( _epochNanoseconds_, _timeZone_ [ , _calendar_ ] )</h1>
+      <p>This function performs the following steps when called:</p>
+      <emu-alg>
+        1. If NewTarget is *undefined*, throw a *TypeError* exception.
+        1. Set _epochNanoseconds_ to ? ToBigInt(_epochNanoseconds_).
+        1. If IsValidEpochNanoseconds(_epochNanoseconds_) is *false*, throw a *RangeError* exception.
+        1. If _timeZone_ is not a String, throw a *TypeError* exception.
+        1. Let _timeZoneParse_ be ? ParseTimeZoneIdentifier(_timeZone_).
+        1. If _timeZoneParse_.[[OffsetMinutes]] is ~empty~, then
+          1. Let _identifierRecord_ be GetAvailableNamedTimeZoneIdentifier(_timeZoneParse_.[[Name]]).
+          1. If _identifierRecord_ is ~empty~, throw a *RangeError* exception.
+          1. Set _timeZone_ to _identifierRecord_.[[Identifier]].
+        1. Else,
+          1. Set _timeZone_ to FormatOffsetTimeZoneIdentifier(_timeZoneParse_.[[OffsetMinutes]]).
+        1. If _calendar_ is *undefined*, set _calendar_ to *"iso8601"*.
+        1. If _calendar_ is not a String, throw a *TypeError* exception.
+        1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+        1. Return ? CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_, NewTarget).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-the-temporal-zoneddatetime-constructor">
+    <h1>Properties of the Temporal.ZonedDateTime Constructor</h1>
+    <p>The value of the [[Prototype]] internal slot of the Temporal.ZonedDateTime constructor is the intrinsic object %Function.prototype%.</p>
+    <p>The Temporal.ZonedDateTime constructor has the following properties:</p>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype">
+      <h1>Temporal.ZonedDateTime.prototype</h1>
+      <p>The initial value of `Temporal.ZonedDateTime.prototype` is %Temporal.ZonedDateTime.prototype%.</p>
+      <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.from">
+      <h1>Temporal.ZonedDateTime.from ( _item_ [ , _options_ ] )</h1>
+      <p>This function performs the following steps when called:</p>
+      <emu-alg>
+        1. Return ? ToTemporalZonedDateTime(_item_, _options_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.compare">
+      <h1>Temporal.ZonedDateTime.compare ( _one_, _two_ )</h1>
+      <p>This function performs the following steps when called:</p>
+      <emu-alg>
+        1. Set _one_ to ? ToTemporalZonedDateTime(_one_).
+        1. Set _two_ to ? ToTemporalZonedDateTime(_two_).
+        1. Return 𝔽(CompareEpochNanoseconds(_one_.[[EpochNanoseconds]], _two_.[[EpochNanoseconds]])).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-the-temporal-zoneddatetime-prototype-object">
+    <h1>Properties of the Temporal.ZonedDateTime Prototype Object</h1>
+
+    <p>The Temporal.ZonedDateTime prototype object</p>
+    <ul>
+      <li>is itself an ordinary object.</li>
+      <li>is not a Temporal.ZonedDateTime instance and does not have a [[InitializedTemporalZonedDateTime]] internal slot.</li>
+      <li>has a [[Prototype]] internal slot whose value is %Object.prototype%.</li>
+    </ul>
+
+    <emu-note>
+      An ECMAScript implementation that includes the ECMA-402 Internationalization API extends this prototype with additional properties in order to represent calendar data.
+    </emu-note>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.constructor">
+      <h1>Temporal.ZonedDateTime.prototype.constructor</h1>
+      <p>The initial value of `Temporal.ZonedDateTime.prototype.constructor` is %Temporal.ZonedDateTime%.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype-%symbol.tostringtag%">
+      <h1>Temporal.ZonedDateTime.prototype[ %Symbol.toStringTag% ]</h1>
+      <p>The initial value of the %Symbol.toStringTag% property is the String *"Temporal.ZonedDateTime"*.</p>
+      <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *true* }.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.calendarid">
+      <h1>get Temporal.ZonedDateTime.prototype.calendarId</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.calendarId` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return _zonedDateTime_.[[Calendar]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.timezoneid">
+      <h1>get Temporal.ZonedDateTime.prototype.timeZoneId</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.timeZoneId` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return _zonedDateTime_.[[TimeZone]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.era">
+      <h1>get Temporal.ZonedDateTime.prototype.era</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.era` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[Era]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.erayear">
+      <h1>get Temporal.ZonedDateTime.prototype.eraYear</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.eraYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Let _result_ be CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[EraYear]].
+        1. If _result_ is *undefined*, return *undefined*.
+        1. Return 𝔽(_result_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.year">
+      <h1>get Temporal.ZonedDateTime.prototype.year</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.year` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[Year]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.month">
+      <h1>get Temporal.ZonedDateTime.prototype.month</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.month` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[Month]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.monthcode">
+      <h1>get Temporal.ZonedDateTime.prototype.monthCode</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.monthCode` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[MonthCode]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.day">
+      <h1>get Temporal.ZonedDateTime.prototype.day</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.day` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[Day]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.hour">
+      <h1>get Temporal.ZonedDateTime.prototype.hour</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.hour` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(_isoDateTime_.[[Time]].[[Hour]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.minute">
+      <h1>get Temporal.ZonedDateTime.prototype.minute</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.minute` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(_isoDateTime_.[[Time]].[[Minute]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.second">
+      <h1>get Temporal.ZonedDateTime.prototype.second</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.second` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(_isoDateTime_.[[Time]].[[Second]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.millisecond">
+      <h1>get Temporal.ZonedDateTime.prototype.millisecond</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.millisecond` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(_isoDateTime_.[[Time]].[[Millisecond]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.microsecond">
+      <h1>get Temporal.ZonedDateTime.prototype.microsecond</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.microsecond` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(_isoDateTime_.[[Time]].[[Microsecond]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.nanosecond">
+      <h1>get Temporal.ZonedDateTime.prototype.nanosecond</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.nanosecond` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(_isoDateTime_.[[Time]].[[Nanosecond]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.epochmilliseconds">
+      <h1>get Temporal.ZonedDateTime.prototype.epochMilliseconds</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.epochMilliseconds` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _epochMilliseconds_ be floor(_zonedDateTime_.[[EpochNanoseconds]] / 10<sup>6</sup>).
+        1. Return 𝔽(_epochMilliseconds_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.epochnanoseconds">
+      <h1>get Temporal.ZonedDateTime.prototype.epochNanoseconds</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.epochNanoseconds` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return ℤ(_zonedDateTime_.[[EpochNanoseconds]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.dayofweek">
+      <h1>get Temporal.ZonedDateTime.prototype.dayOfWeek</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.dayOfWeek` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[DayOfWeek]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.dayofyear">
+      <h1>get Temporal.ZonedDateTime.prototype.dayOfYear</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.dayOfYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[DayOfYear]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.weekofyear">
+      <h1>get Temporal.ZonedDateTime.prototype.weekOfYear</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.weekOfYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Let _result_ be CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[WeekOfYear]].[[Week]].
+        1. If _result_ is *undefined*, return *undefined*.
+        1. Return 𝔽(_result_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.yearofweek">
+      <h1>get Temporal.ZonedDateTime.prototype.yearOfWeek</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.yearOfWeek` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Let _result_ be CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[WeekOfYear]].[[Year]].
+        1. If _result_ is *undefined*, return *undefined*.
+        1. Return 𝔽(_result_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.hoursinday">
+      <h1>get Temporal.ZonedDateTime.prototype.hoursInDay</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.hoursInDay` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _timeZone_ be _zonedDateTime_.[[TimeZone]].
+        1. Let _isoDateTime_ be GetISODateTimeFor(_timeZone_, _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Let _today_ be _isoDateTime_.[[ISODate]].
+        1. Let _tomorrow_ be AddDaysToISODate(_today_, 1).
+        1. Let _todayNs_ be ? GetStartOfDay(_timeZone_, _today_).
+        1. Let _tomorrowNs_ be ? GetStartOfDay(_timeZone_, _tomorrow_).
+        1. Let _diff_ be TimeDurationFromEpochNanosecondsDifference(_tomorrowNs_, _todayNs_).
+        1. Return 𝔽(TotalTimeDuration(_diff_, ~hour~)).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.daysinweek">
+      <h1>get Temporal.ZonedDateTime.prototype.daysInWeek</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.daysInWeek` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[DaysInWeek]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.daysinmonth">
+      <h1>get Temporal.ZonedDateTime.prototype.daysInMonth</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.daysInMonth` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[DaysInMonth]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.daysinyear">
+      <h1>get Temporal.ZonedDateTime.prototype.daysInYear</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.daysInYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[DaysInYear]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.monthsinyear">
+      <h1>get Temporal.ZonedDateTime.prototype.monthsInYear</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.monthsInYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return 𝔽(CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[MonthsInYear]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.inleapyear">
+      <h1>get Temporal.ZonedDateTime.prototype.inLeapYear</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.inLeapYear` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return CalendarISOToDate(_zonedDateTime_.[[Calendar]], _isoDateTime_.[[ISODate]]).[[InLeapYear]].
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.offsetnanoseconds">
+      <h1>get Temporal.ZonedDateTime.prototype.offsetNanoseconds</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.offsetNanoseconds` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return 𝔽(GetOffsetNanosecondsFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]])).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-get-temporal.zoneddatetime.prototype.offset">
+      <h1>get Temporal.ZonedDateTime.prototype.offset</h1>
+      <p>
+        `Temporal.ZonedDateTime.prototype.offset` is an accessor property whose set accessor function is *undefined*.
+        Its get accessor function performs the following steps:
+      </p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _offsetNanoseconds_ be GetOffsetNanosecondsFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return FormatUTCOffsetNanoseconds(_offsetNanoseconds_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.with">
+      <h1>Temporal.ZonedDateTime.prototype.with ( _temporalZonedDateTimeLike_ [ , _options_ ] )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. If ? IsPartialTemporalObject(_temporalZonedDateTimeLike_) is *false*, throw a *TypeError* exception.
+        1. Let _epochNs_ be _zonedDateTime_.[[EpochNanoseconds]].
+        1. Let _timeZone_ be _zonedDateTime_.[[TimeZone]].
+        1. Let _calendar_ be _zonedDateTime_.[[Calendar]].
+        1. Let _offsetNanoseconds_ be GetOffsetNanosecondsFor(_timeZone_, _epochNs_).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_timeZone_, _epochNs_).
+        1. Let _fields_ be ISODateToFields(_calendar_, _isoDateTime_.[[ISODate]], ~date~).
+        1. Set _fields_.[[Hour]] to _isoDateTime_.[[Time]].[[Hour]].
+        1. Set _fields_.[[Minute]] to _isoDateTime_.[[Time]].[[Minute]].
+        1. Set _fields_.[[Second]] to _isoDateTime_.[[Time]].[[Second]].
+        1. Set _fields_.[[Millisecond]] to _isoDateTime_.[[Time]].[[Millisecond]].
+        1. Set _fields_.[[Microsecond]] to _isoDateTime_.[[Time]].[[Microsecond]].
+        1. Set _fields_.[[Nanosecond]] to _isoDateTime_.[[Time]].[[Nanosecond]].
+        1. Set _fields_.[[OffsetString]] to FormatUTCOffsetNanoseconds(_offsetNanoseconds_).
+        1. Let _partialZonedDateTime_ be ? PrepareCalendarFields(_calendar_, _temporalZonedDateTimeLike_, « ~year~, ~month~, ~month-code~, ~day~ », « ~hour~, ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~, ~offset~ », ~partial~).
+        1. Set _fields_ to CalendarMergeFields(_calendar_, _fields_, _partialZonedDateTime_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _disambiguation_ be ? GetTemporalDisambiguationOption(_resolvedOptions_).
+        1. Let _offset_ be ? GetTemporalOffsetOption(_resolvedOptions_, ~prefer~).
+        1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Let _dateTimeResult_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, _overflow_).
+        1. Let _newOffsetNanoseconds_ be ! ParseDateTimeUTCOffset(_fields_.[[OffsetString]]).
+        1. Let _epochNanoseconds_ be ? InterpretISODateTimeOffset(_dateTimeResult_.[[ISODate]], _dateTimeResult_.[[Time]], ~option~, _newOffsetNanoseconds_, _timeZone_, _disambiguation_, _offset_, ~match-exactly~).
+        1. Return ! CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.withplaintime">
+      <h1>Temporal.ZonedDateTime.prototype.withPlainTime ( [ _plainTimeLike_ ] )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _timeZone_ be _zonedDateTime_.[[TimeZone]].
+        1. Let _calendar_ be _zonedDateTime_.[[Calendar]].
+        1. Let _isoDateTime_ be GetISODateTimeFor(_timeZone_, _zonedDateTime_.[[EpochNanoseconds]]).
+        1. If _plainTimeLike_ is *undefined*, then
+          1. Let _epochNs_ be ? GetStartOfDay(_timeZone_, _isoDateTime_.[[ISODate]]).
+        1. Else,
+          1. Let _plainTime_ be ? ToTemporalTime(_plainTimeLike_).
+          1. Let _resultISODateTime_ be CombineISODateAndTimeRecord(_isoDateTime_.[[ISODate]], _plainTime_.[[Time]]).
+          1. Let _epochNs_ be ? GetEpochNanosecondsFor(_timeZone_, _resultISODateTime_, ~compatible~).
+        1. Return ! CreateTemporalZonedDateTime(_epochNs_, _timeZone_, _calendar_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.withtimezone">
+      <h1>Temporal.ZonedDateTime.prototype.withTimeZone ( _timeZoneLike_ )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _timeZone_ be ? ToTemporalTimeZoneIdentifier(_timeZoneLike_).
+        1. Return ! CreateTemporalZonedDateTime(_zonedDateTime_.[[EpochNanoseconds]], _timeZone_, _zonedDateTime_.[[Calendar]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.withcalendar">
+      <h1>Temporal.ZonedDateTime.prototype.withCalendar ( _calendarLike_ )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _calendar_ be ? ToTemporalCalendarIdentifier(_calendarLike_).
+        1. Return ! CreateTemporalZonedDateTime(_zonedDateTime_.[[EpochNanoseconds]], _zonedDateTime_.[[TimeZone]], _calendar_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.add">
+      <h1>Temporal.ZonedDateTime.prototype.add ( _temporalDurationLike_ [ , _options_ ] )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return ? AddDurationToZonedDateTime(~add~, _zonedDateTime_, _temporalDurationLike_, _options_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.subtract">
+      <h1>Temporal.ZonedDateTime.prototype.subtract ( _temporalDurationLike_ [ , _options_ ] )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return ? AddDurationToZonedDateTime(~subtract~, _zonedDateTime_, _temporalDurationLike_, _options_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.until">
+      <h1>Temporal.ZonedDateTime.prototype.until ( _other_ [ , _options_ ] )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return ? DifferenceTemporalZonedDateTime(~until~, _zonedDateTime_, _other_, _options_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.since">
+      <h1>Temporal.ZonedDateTime.prototype.since ( _other_ [ , _options_ ] )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return ? DifferenceTemporalZonedDateTime(~since~, _zonedDateTime_, _other_, _options_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.round">
+      <h1>Temporal.ZonedDateTime.prototype.round ( _roundTo_ )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. If _roundTo_ is *undefined*, throw a *TypeError* exception.
+        1. If _roundTo_ is a String, then
+          1. Let _paramString_ be _roundTo_.
+          1. Set _roundTo_ to OrdinaryObjectCreate(*null*).
+          1. Perform ! CreateDataPropertyOrThrow(_roundTo_, *"smallestUnit"*, _paramString_).
+        1. Else,
+          1. Set _roundTo_ to ? GetOptionsObject(_roundTo_).
+        1. NOTE: The following steps read options and perform independent validation in alphabetical order (GetRoundingIncrementOption reads *"roundingIncrement"* and GetRoundingModeOption reads *"roundingMode"*).
+        1. Let _roundingIncrement_ be ? GetRoundingIncrementOption(_roundTo_).
+        1. Let _roundingMode_ be ? GetRoundingModeOption(_roundTo_, ~half-expand~).
+        1. Let _smallestUnit_ be ? GetTemporalUnitValuedOption(_roundTo_, *"smallestUnit"*, ~required~).
+        1. Perform ? ValidateTemporalUnitValue(_smallestUnit_, ~time~, « ~day~ »).
+        1. If _smallestUnit_ is ~day~, then
+          1. Let _maximum_ be 1.
+          1. Let _inclusive_ be *true*.
+        1. Else,
+          1. Let _maximum_ be MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
+          1. Assert: _maximum_ is not ~unset~.
+          1. Let _inclusive_ be *false*.
+        1. Perform ? ValidateTemporalRoundingIncrement(_roundingIncrement_, _maximum_, _inclusive_).
+        1. If _smallestUnit_ is ~nanosecond~ and _roundingIncrement_ = 1, then
+          1. Return ! CreateTemporalZonedDateTime(_zonedDateTime_.[[EpochNanoseconds]], _zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[Calendar]]).
+        1. Let _thisNs_ be _zonedDateTime_.[[EpochNanoseconds]].
+        1. Let _timeZone_ be _zonedDateTime_.[[TimeZone]].
+        1. Let _calendar_ be _zonedDateTime_.[[Calendar]].
+        1. Let _isoDateTime_ be GetISODateTimeFor(_timeZone_, _thisNs_).
+        1. If _smallestUnit_ is ~day~, then
+          1. Let _dateStart_ be _isoDateTime_.[[ISODate]].
+          1. Let _dateEnd_ be AddDaysToISODate(_dateStart_, 1).
+          1. Let _startNs_ be ? GetStartOfDay(_timeZone_, _dateStart_).
+          1. Assert: _thisNs_ ≥ _startNs_.
+          1. Let _endNs_ be ? GetStartOfDay(_timeZone_, _dateEnd_).
+          1. Assert: _thisNs_ &lt; _endNs_.
+          1. Let _dayLengthNs_ be _endNs_ - _startNs_.
+          1. Let _dayProgressNs_ be TimeDurationFromEpochNanosecondsDifference(_thisNs_, _startNs_).
+          1. Let _roundedDayNs_ be ! RoundTimeDurationToIncrement(_dayProgressNs_, _dayLengthNs_, _roundingMode_).
+          1. Let _epochNanoseconds_ be AddTimeDurationToEpochNanoseconds(_roundedDayNs_, _startNs_).
+        1. Else,
+          1. Let _roundResult_ be RoundISODateTime(_isoDateTime_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
+          1. Let _offsetNanoseconds_ be GetOffsetNanosecondsFor(_timeZone_, _thisNs_).
+          1. Let _epochNanoseconds_ be ? InterpretISODateTimeOffset(_roundResult_.[[ISODate]], _roundResult_.[[Time]], ~option~, _offsetNanoseconds_, _timeZone_, ~compatible~, ~prefer~, ~match-exactly~).
+        1. Return ! CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.equals">
+      <h1>Temporal.ZonedDateTime.prototype.equals ( _other_ )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Set _other_ to ? ToTemporalZonedDateTime(_other_).
+        1. If _zonedDateTime_.[[EpochNanoseconds]] ≠ _other_.[[EpochNanoseconds]], return *false*.
+        1. If TimeZoneEquals(_zonedDateTime_.[[TimeZone]], _other_.[[TimeZone]]) is *false*, return *false*.
+        1. Return CalendarEquals(_zonedDateTime_.[[Calendar]], _other_.[[Calendar]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.tostring">
+      <h1>Temporal.ZonedDateTime.prototype.toString ( [ _options_ ] )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. NOTE: The following steps read options and perform independent validation in alphabetical order (GetTemporalShowCalendarNameOption reads *"calendarName"*, GetTemporalFractionalSecondDigitsOption reads *"fractionalSecondDigits"*, GetTemporalShowOffsetOption reads *"offset"*, and GetRoundingModeOption reads *"roundingMode"*).
+        1. Let _showCalendar_ be ? GetTemporalShowCalendarNameOption(_resolvedOptions_).
+        1. Let _digits_ be ? GetTemporalFractionalSecondDigitsOption(_resolvedOptions_).
+        1. Let _showOffset_ be ? GetTemporalShowOffsetOption(_resolvedOptions_).
+        1. Let _roundingMode_ be ? GetRoundingModeOption(_resolvedOptions_, ~trunc~).
+        1. Let _smallestUnit_ be ? GetTemporalUnitValuedOption(_resolvedOptions_, *"smallestUnit"*, ~unset~).
+        1. Let _showTimeZone_ be ? GetTemporalShowTimeZoneNameOption(_resolvedOptions_).
+        1. Perform ? ValidateTemporalUnitValue(_smallestUnit_, ~time~).
+        1. If _smallestUnit_ is ~hour~, throw a *RangeError* exception.
+        1. Let _precision_ be ToSecondsStringPrecisionRecord(_smallestUnit_, _digits_).
+        1. Return TemporalZonedDateTimeToString(_zonedDateTime_, _precision_.[[Precision]], _showCalendar_, _showTimeZone_, _showOffset_, _precision_.[[Increment]], _precision_.[[Unit]], _roundingMode_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.tolocalestring">
+      <h1>Temporal.ZonedDateTime.prototype.toLocaleString ( [ _locales_ [ , _options_ ] ] )</h1>
+      <p>
+        An ECMAScript implementation that includes the ECMA-402 Internationalization API must implement this method as specified in the ECMA-402 specification.
+        If an ECMAScript implementation does not include the ECMA-402 API the following specification of this method is used.
+      </p>
+      <p>The meanings of the optional parameters to this method are defined in the ECMA-402 specification; implementations that do not include ECMA-402 support must not use those parameter positions for anything else.</p>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return TemporalZonedDateTimeToString(_zonedDateTime_, ~auto~, ~auto~, ~auto~, ~auto~).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.tojson">
+      <h1>Temporal.ZonedDateTime.prototype.toJSON ( )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return TemporalZonedDateTimeToString(_zonedDateTime_, ~auto~, ~auto~, ~auto~, ~auto~).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.valueof">
+      <h1>Temporal.ZonedDateTime.prototype.valueOf ( )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Throw a *TypeError* exception.
+      </emu-alg>
+      <emu-note>
+        <p>
+          This method always throws, because in the absence of `valueOf()`, expressions with arithmetic operators such as `zonedDateTime1 > zonedDateTime2` would fall back to being equivalent to `zonedDateTime1.toString() > zonedDateTime2.toString()`.
+          Lexicographical comparison of serialized strings might not seem obviously wrong, because the result would sometimes be correct.
+          Implementations are encouraged to phrase the error message to point users to `Temporal.ZonedDateTime.compare()`, `Temporal.ZonedDateTime.prototype.equals()`, and/or `Temporal.ZonedDateTime.prototype.toString()`.
+        </p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.startofday">
+      <h1>Temporal.ZonedDateTime.prototype.startOfDay ( )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _timeZone_ be _zonedDateTime_.[[TimeZone]].
+        1. Let _calendar_ be _zonedDateTime_.[[Calendar]].
+        1. Let _isoDateTime_ be GetISODateTimeFor(_timeZone_, _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Let _epochNanoseconds_ be ? GetStartOfDay(_timeZone_, _isoDateTime_.[[ISODate]]).
+        1. Return ! CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.gettimezonetransition">
+      <h1>Temporal.ZonedDateTime.prototype.getTimeZoneTransition ( _directionParam_ )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _timeZone_ be _zonedDateTime_.[[TimeZone]].
+        1. If _directionParam_ is *undefined*, throw a *TypeError* exception.
+        1. If _directionParam_ is a String, then
+          1. Let _paramString_ be _directionParam_.
+          1. Set _directionParam_ to OrdinaryObjectCreate(*null*).
+          1. Perform ! CreateDataPropertyOrThrow(_directionParam_, *"direction"*, _paramString_).
+        1. Else,
+          1. Set _directionParam_ to ? GetOptionsObject(_directionParam_).
+        1. Let _direction_ be ? GetDirectionOption(_directionParam_).
+        1. If IsOffsetTimeZoneIdentifier(_timeZone_) is *true*, return *null*.
+        1. If _direction_ is ~next~, then
+          1. Let _transition_ be GetNamedTimeZoneNextTransition(_timeZone_, _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Else,
+          1. Assert: _direction_ is ~previous~.
+          1. Let _transition_ be GetNamedTimeZonePreviousTransition(_timeZone_, _zonedDateTime_.[[EpochNanoseconds]]).
+        1. If _transition_ is *null*, return *null*.
+        1. Return ! CreateTemporalZonedDateTime(_transition_, _timeZone_, _zonedDateTime_.[[Calendar]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.toinstant">
+      <h1>Temporal.ZonedDateTime.prototype.toInstant ( )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Return ! CreateTemporalInstant(_zonedDateTime_.[[EpochNanoseconds]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.toplaindate">
+      <h1>Temporal.ZonedDateTime.prototype.toPlainDate ( )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return ! CreateTemporalDate(_isoDateTime_.[[ISODate]], _zonedDateTime_.[[Calendar]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.toplaintime">
+      <h1>Temporal.ZonedDateTime.prototype.toPlainTime ( )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return ! CreateTemporalTime(_isoDateTime_.[[Time]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporal.zoneddatetime.prototype.toplaindatetime">
+      <h1>Temporal.ZonedDateTime.prototype.toPlainDateTime ( )</h1>
+      <p>This method performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _zonedDateTime_ be the *this* value.
+        1. Perform ? RequireInternalSlot(_zonedDateTime_, [[InitializedTemporalZonedDateTime]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[EpochNanoseconds]]).
+        1. Return ! CreateTemporalDateTime(_isoDateTime_, _zonedDateTime_.[[Calendar]]).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-properties-of-temporal-zoneddatetime-instances">
+    <h1>Properties of Temporal.ZonedDateTime Instances</h1>
+    <p>
+      Temporal.ZonedDateTime instances are ordinary objects that inherit properties from the %Temporal.ZonedDateTime.prototype% intrinsic object.
+      Temporal.ZonedDateTime instances are initially created with the internal slots described in <emu-xref href="#table-internal-slots-of-temporalzoneddatetime-instances"></emu-xref>.
+    </p>
+    <emu-table id="table-internal-slots-of-temporalzoneddatetime-instances" caption="Internal Slots of Temporal.ZonedDateTime Instances">
+      <table>
+        <tr>
+          <th>
+            Internal Slot
+          </th>
+          <th>
+            Description
+          </th>
+        </tr>
+        <tr>
+          <td>
+            [[InitializedTemporalZonedDateTime]]
+          </td>
+          <td>
+            The only specified use of this slot is for distinguishing Temporal.ZonedDateTime instances from other objects.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[EpochNanoseconds]]
+          </td>
+          <td>
+            A BigInt representing the number of nanoseconds since the epoch, as described in <emu-xref href="#sec-epoch-nanoseconds"></emu-xref>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[TimeZone]]
+          </td>
+          <td>
+            An available time zone identifier.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            [[Calendar]]
+          </td>
+          <td>
+            A calendar type.
+          </td>
+        </tr>
+      </table>
+    </emu-table>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-zoneddatetime-abstract-ops">
+    <h1>Abstract Operations for Temporal.ZonedDateTime Objects</h1>
+
+    <emu-clause id="sec-createtemporalzoneddatetime" type="abstract operation">
+      <h1>
+        CreateTemporalZonedDateTime (
+          _epochNanoseconds_: an epoch nanoseconds value,
+          _timeZone_: an available time zone identifier,
+          _calendar_: a calendar type,
+          optional _newTarget_: a constructor,
+        ): either a normal completion containing a Temporal.ZonedDateTime or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It creates a Temporal.ZonedDateTime instance and fills the internal slots with valid values.</dd>
+      </dl>
+      <emu-alg>
+        1. Assert: IsValidEpochNanoseconds(_epochNanoseconds_) is *true*.
+        1. If _newTarget_ is not present, set _newTarget_ to %Temporal.ZonedDateTime%.
+        1. Let _object_ be ? OrdinaryCreateFromConstructor(_newTarget_, *"%Temporal.ZonedDateTime.prototype%"*, « [[InitializedTemporalZonedDateTime]], [[EpochNanoseconds]], [[TimeZone]], [[Calendar]] »).
+        1. Set _object_.[[EpochNanoseconds]] to _epochNanoseconds_.
+        1. Set _object_.[[TimeZone]] to _timeZone_.
+        1. Set _object_.[[Calendar]] to _calendar_.
+        1. Return _object_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-totemporalzoneddatetime" type="abstract operation">
+      <h1>
+        ToTemporalZonedDateTime (
+          _item_: an ECMAScript language value,
+          optional _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.ZonedDateTime, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          Converts _item_ to a new Temporal.ZonedDateTime instance if possible, and throws otherwise.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _options_ is not present, set _options_ to *undefined*.
+        1. Let _hasUTCDesignator_ be *false*.
+        1. Let _matchBehaviour_ be ~match-exactly~.
+        1. If _item_ is an Object, then
+          1. If _item_ has an [[InitializedTemporalZonedDateTime]] internal slot, then
+            1. NOTE: The following steps, and similar ones below, read options and perform independent validation in alphabetical order (GetTemporalDisambiguationOption reads *"disambiguation"*, GetTemporalOffsetOption reads *"offset"*, and GetTemporalOverflowOption reads *"overflow"*).
+            1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+            1. Perform ? GetTemporalDisambiguationOption(_resolvedOptions_).
+            1. Perform ? GetTemporalOffsetOption(_resolvedOptions_, ~reject~).
+            1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+            1. Return ! CreateTemporalZonedDateTime(_item_.[[EpochNanoseconds]], _item_.[[TimeZone]], _item_.[[Calendar]]).
+          1. Let _calendar_ be ? GetTemporalCalendarIdentifierWithISODefault(_item_).
+          1. Let _fields_ be ? PrepareCalendarFields(_calendar_, _item_, « ~year~, ~month~, ~month-code~, ~day~ », « ~hour~, ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~, ~offset~, ~time-zone~ », « ~time-zone~ »).
+          1. Let _timeZone_ be _fields_.[[TimeZone]].
+          1. Let _offsetString_ be _fields_.[[OffsetString]].
+          1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+          1. Let _disambiguation_ be ? GetTemporalDisambiguationOption(_resolvedOptions_).
+          1. Let _offsetOption_ be ? GetTemporalOffsetOption(_resolvedOptions_, ~reject~).
+          1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+          1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, _overflow_).
+          1. Let _isoDate_ be _result_.[[ISODate]].
+          1. Let _time_ be _result_.[[Time]].
+        1. Else,
+          1. If _item_ is not a String, throw a *TypeError* exception.
+          1. Let _result_ be ? ParseISODateTime(_item_, « |TemporalDateTimeString[+Zoned]| »).
+          1. Let _annotation_ be _result_.[[TimeZone]].[[TimeZoneAnnotation]].
+          1. Assert: _annotation_ is not ~empty~.
+          1. Let _timeZone_ be ? ToTemporalTimeZoneIdentifier(_annotation_).
+          1. Let _offsetString_ be _result_.[[TimeZone]].[[OffsetString]].
+          1. If _result_.[[TimeZone]].[[Z]] is *true*, then
+            1. Set _hasUTCDesignator_ to *true*.
+          1. Let _calendar_ be _result_.[[Calendar]].
+          1. If _calendar_ is ~empty~, set _calendar_ to *"iso8601"*.
+          1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+          1. Set _matchBehaviour_ to ~match-minutes~.
+          1. If _offsetString_ is not ~empty~, then
+            1. Let _offsetParseResult_ be ParseText(StringToCodePoints(_offsetString_), |UTCOffset[+SubMinutePrecision]|).
+            1. Assert: _offsetParseResult_ is a Parse Node.
+            1. If _offsetParseResult_ contains more than one |MinuteSecond| Parse Node, set _matchBehaviour_ to ~match-exactly~.
+          1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+          1. Let _disambiguation_ be ? GetTemporalDisambiguationOption(_resolvedOptions_).
+          1. Let _offsetOption_ be ? GetTemporalOffsetOption(_resolvedOptions_, ~reject~).
+          1. Perform ? GetTemporalOverflowOption(_resolvedOptions_).
+          1. Let _isoDate_ be CreateISODateRecord(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]).
+          1. Let _time_ be _result_.[[Time]].
+        1. If _hasUTCDesignator_ is *true*, then
+          1. Let _offsetBehaviour_ be ~exact~.
+        1. Else if _offsetString_ is ~empty~ or _offsetString_ is ~unset~, then
+          1. Let _offsetBehaviour_ be ~wall~.
+        1. Else,
+          1. Let _offsetBehaviour_ be ~option~.
+        1. Let _offsetNanoseconds_ be 0.
+        1. If _offsetBehaviour_ is ~option~, then
+          1. Set _offsetNanoseconds_ to ! ParseDateTimeUTCOffset(_offsetString_).
+        1. Let _epochNanoseconds_ be ? InterpretISODateTimeOffset(_isoDate_, _time_, _offsetBehaviour_, _offsetNanoseconds_, _timeZone_, _disambiguation_, _offsetOption_, _matchBehaviour_).
+        1. Return ! CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporalzoneddatetimetostring" type="abstract operation">
+      <h1>
+        TemporalZonedDateTimeToString (
+          _zonedDateTime_: a Temporal.ZonedDateTime,
+          _precision_: either an integer between 0 and 9 inclusive, ~minute~, or ~auto~,
+          _showCalendar_: one of ~auto~, ~always~, ~never~, or ~critical~,
+          _showTimeZone_: one of ~auto~, ~never~, or ~critical~,
+          _showOffset_: either ~auto~ or ~never~,
+          optional _increment_: a positive integer,
+          optional _unit_: one of ~minute~, ~second~, ~millisecond~, ~microsecond~, or ~nanosecond~,
+          optional _roundingMode_: a rounding mode,
+        ): a String
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It returns an ISO 8601 / RFC 9557 string representation of its argument, including a time zone name annotation and calendar annotation, which are extensions to the ISO 8601 format.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _increment_ is not present, set _increment_ to 1.
+        1. If _unit_ is not present, set _unit_ to ~nanosecond~.
+        1. If _roundingMode_ is not present, set _roundingMode_ to ~trunc~.
+        1. Let _epochNs_ be _zonedDateTime_.[[EpochNanoseconds]].
+        1. Set _epochNs_ to RoundEpochNanoseconds(_epochNs_, _increment_, _unit_, _roundingMode_).
+        1. Let _timeZone_ be _zonedDateTime_.[[TimeZone]].
+        1. Let _offsetNanoseconds_ be GetOffsetNanosecondsFor(_timeZone_, _epochNs_).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_timeZone_, _epochNs_).
+        1. Let _dateTimeString_ be FormatISODateTime(_isoDateTime_, *"iso8601"*, _precision_, ~never~).
+        1. If _showOffset_ is ~never~, then
+          1. Let _offsetString_ be the empty String.
+        1. Else,
+          1. Let _offsetString_ be FormatDateTimeUTCOffsetRounded(_offsetNanoseconds_).
+        1. If _showTimeZone_ is ~never~, then
+          1. Let _timeZoneString_ be the empty String.
+        1. Else,
+          1. If _showTimeZone_ is ~critical~, let _flag_ be *"!"*; else let _flag_ be the empty String.
+          1. Let _timeZoneString_ be the string-concatenation of the code unit 0x005B (LEFT SQUARE BRACKET), _flag_, _timeZone_, and the code unit 0x005D (RIGHT SQUARE BRACKET).
+        1. Let _calendarString_ be FormatCalendarAnnotation(_zonedDateTime_.[[Calendar]], _showCalendar_).
+        1. Return the string-concatenation of _dateTimeString_, _offsetString_, _timeZoneString_, and _calendarString_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-addzoneddatetime" type="abstract operation">
+      <h1>
+        AddZonedDateTime (
+          _epochNanoseconds_: an epoch nanoseconds value,
+          _timeZone_: an available time zone identifier,
+          _calendar_: a calendar type,
+          _duration_: an Internal Duration Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an epoch nanoseconds value or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It adds a duration in various units to a number of nanoseconds _epochNanoseconds_ since the epoch, subject to the rules of the time zone and calendar.
+          As specified in <a href="https://tools.ietf.org/html/rfc5545">RFC 5545</a>, the date portion of the duration is added in calendar days, and the time portion is added in exact time.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If DateDurationSign(_duration_.[[Date]]) = 0, return ? AddEpochNanoseconds(_epochNanoseconds_, _duration_.[[Time]]).
+        1. Let _isoDateTime_ be GetISODateTimeFor(_timeZone_, _epochNanoseconds_).
+        1. Let _addedDate_ be ? CalendarDateAdd(_calendar_, _isoDateTime_.[[ISODate]], _duration_.[[Date]], _overflow_).
+        1. Let _intermediateDateTime_ be CombineISODateAndTimeRecord(_addedDate_, _isoDateTime_.[[Time]]).
+        1. If ISODateTimeWithinLimits(_intermediateDateTime_) is *false*, throw a *RangeError* exception.
+        1. Let _intermediateNs_ be ! GetEpochNanosecondsFor(_timeZone_, _intermediateDateTime_, ~compatible~).
+        1. Return ? AddEpochNanoseconds(_intermediateNs_, _duration_.[[Time]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-adddurationtozoneddatetime" type="abstract operation">
+      <h1>
+        AddDurationToZonedDateTime (
+          _operation_: either ~add~ or ~subtract~,
+          _zonedDateTime_: a Temporal.ZonedDateTime,
+          _temporalDurationLike_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.ZonedDateTime or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It adds/subtracts _temporalDurationLike_ to/from _zonedDateTime_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _duration_ be ? ToTemporalDuration(_temporalDurationLike_).
+        1. If _operation_ is ~subtract~, set _duration_ to CreateNegatedTemporalDuration(_duration_).
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _overflow_ be ? GetTemporalOverflowOption(_resolvedOptions_).
+        1. Let _calendar_ be _zonedDateTime_.[[Calendar]].
+        1. Let _timeZone_ be _zonedDateTime_.[[TimeZone]].
+        1. Let _internalDuration_ be ToInternalDurationRecord(_duration_).
+        1. Let _epochNanoseconds_ be ? AddZonedDateTime(_zonedDateTime_.[[EpochNanoseconds]], _timeZone_, _calendar_, _internalDuration_, _overflow_).
+        1. Return ! CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-differencezoneddatetime" type="abstract operation">
+      <h1>
+        DifferenceZonedDateTime (
+          _ns1_: an epoch nanoseconds value,
+          _ns2_: an epoch nanoseconds value,
+          _timeZone_: an available time zone identifier,
+          _calendar_: a calendar type,
+          _largestUnit_: a Temporal unit,
+        ): either a normal completion containing an Internal Duration Record, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It computes the difference between two exact times expressed in nanoseconds since the epoch, and balances the result so that there is no non-zero unit larger than _largestUnit_ in the result, taking calendar reckoning and time zone offset changes into account.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _ns1_ = _ns2_, return CombineDateAndTimeDuration(ZeroDateDuration(), 0).
+        1. Let _startDateTime_ be GetISODateTimeFor(_timeZone_, _ns1_).
+        1. Let _endDateTime_ be GetISODateTimeFor(_timeZone_, _ns2_).
+        1. If CompareISODate(_startDateTime_.[[ISODate]], _endDateTime_.[[ISODate]]) = 0, then
+          1. Let _timeDuration_ be TimeDurationFromEpochNanosecondsDifference(_ns2_, _ns1_).
+          1. Return CombineDateAndTimeDuration(ZeroDateDuration(), _timeDuration_).
+        1. If _ns2_ - _ns1_ &lt; 0, let _sign_ be 1; else let _sign_ be -1.
+        1. If _sign_ = -1, let _maxDayCorrection_ be 2; else let _maxDayCorrection_ be 1.
+        1. Let _dayCorrection_ be 0.
+        1. Let _timeDuration_ be DifferenceTime(_startDateTime_.[[Time]], _endDateTime_.[[Time]]).
+        1. If TimeDurationSign(_timeDuration_) = _sign_, set _dayCorrection_ to _dayCorrection_ + 1.
+        1. Let _success_ be *false*.
+        1. Repeat, while _dayCorrection_ ≤ _maxDayCorrection_ and _success_ is *false*,
+          1. Let _intermediateDate_ be AddDaysToISODate(_endDateTime_.[[ISODate]], _dayCorrection_ × _sign_).
+          1. Let _intermediateDateTime_ be CombineISODateAndTimeRecord(_intermediateDate_, _startDateTime_.[[Time]]).
+          1. Let _intermediateNs_ be ? GetEpochNanosecondsFor(_timeZone_, _intermediateDateTime_, ~compatible~).
+          1. Set _timeDuration_ to TimeDurationFromEpochNanosecondsDifference(_ns2_, _intermediateNs_).
+          1. Let _timeSign_ be TimeDurationSign(_timeDuration_).
+          1. If _sign_ ≠ _timeSign_, then
+            1. Set _success_ to *true*.
+          1. Set _dayCorrection_ to _dayCorrection_ + 1.
+        1. Assert: _success_ is *true*.
+        1. Let _dateLargestUnit_ be LargerOfTwoTemporalUnits(_largestUnit_, ~day~).
+        1. Let _dateDifference_ be CalendarDateUntil(_calendar_, _startDateTime_.[[ISODate]], _intermediateDateTime_.[[ISODate]], _dateLargestUnit_).
+        1. Return CombineDateAndTimeDuration(_dateDifference_, _timeDuration_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-differencezoneddatetimewithrounding" type="abstract operation">
+      <h1>
+        DifferenceZonedDateTimeWithRounding (
+          _ns1_: an epoch nanoseconds value,
+          _ns2_: an epoch nanoseconds value,
+          _timeZone_: an available time zone identifier,
+          _calendar_: a calendar type,
+          _largestUnit_: a Temporal unit,
+          _roundingIncrement_: a positive integer,
+          _smallestUnit_: a Temporal unit,
+          _roundingMode_: a rounding mode,
+        ): either a normal completion containing an Internal Duration Record, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. If TemporalUnitCategory(_largestUnit_) is ~time~, return DifferenceEpochNanoseconds(_ns1_, _ns2_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
+        1. Let _difference_ be ? DifferenceZonedDateTime(_ns1_, _ns2_, _timeZone_, _calendar_, _largestUnit_).
+        1. If _smallestUnit_ is ~nanosecond~ and _roundingIncrement_ = 1, return _difference_.
+        1. Let _dateTime_ be GetISODateTimeFor(_timeZone_, _ns1_).
+        1. Return ? RoundRelativeDuration(_difference_, _ns1_, _ns2_, _dateTime_, _timeZone_, _calendar_, _largestUnit_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-differencezoneddatetimewithtotal" type="abstract operation">
+      <h1>
+        DifferenceZonedDateTimeWithTotal (
+          _ns1_: an epoch nanoseconds value,
+          _ns2_: an epoch nanoseconds value,
+          _timeZone_: an available time zone identifier,
+          _calendar_: a calendar type,
+          _unit_: a Temporal unit,
+        ): either a normal completion containing a mathematical value, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. If TemporalUnitCategory(_unit_) is ~time~, then
+          1. Let _difference_ be TimeDurationFromEpochNanosecondsDifference(_ns2_, _ns1_).
+          1. Return TotalTimeDuration(_difference_, _unit_).
+        1. Let _difference_ be ? DifferenceZonedDateTime(_ns1_, _ns2_, _timeZone_, _calendar_, _unit_).
+        1. Let _dateTime_ be GetISODateTimeFor(_timeZone_, _ns1_).
+        1. Return ? TotalRelativeDuration(_difference_, _ns1_, _ns2_, _dateTime_, _timeZone_, _calendar_, _unit_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-differencetemporalzoneddatetime" type="abstract operation">
+      <h1>
+        DifferenceTemporalZonedDateTime (
+          _operation_: either ~until~ or ~since~,
+          _zonedDateTime_: a Temporal.ZonedDateTime,
+          _other_: an ECMAScript language value,
+          _options_: an ECMAScript language value,
+        ): either a normal completion containing a Temporal.Duration or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It computes the difference between the two times represented by _zonedDateTime_ and _other_, optionally rounds it, and returns it as a Temporal.Duration object.</dd>
+      </dl>
+      <emu-alg>
+        1. Set _other_ to ? ToTemporalZonedDateTime(_other_).
+        1. If CalendarEquals(_zonedDateTime_.[[Calendar]], _other_.[[Calendar]]) is *false*, throw a *RangeError* exception.
+        1. Let _resolvedOptions_ be ? GetOptionsObject(_options_).
+        1. Let _settings_ be ? GetDifferenceSettings(_operation_, _resolvedOptions_, ~datetime~, « », ~nanosecond~, ~hour~).
+        1. If TemporalUnitCategory(_settings_.[[LargestUnit]]) is ~time~, then
+          1. Let _internalDuration_ be DifferenceEpochNanoseconds(_zonedDateTime_.[[EpochNanoseconds]], _other_.[[EpochNanoseconds]], _settings_.[[RoundingIncrement]], _settings_.[[SmallestUnit]], _settings_.[[RoundingMode]]).
+          1. Let _result_ be ! TemporalDurationFromInternal(_internalDuration_, _settings_.[[LargestUnit]]).
+          1. If _operation_ is ~since~, set _result_ to CreateNegatedTemporalDuration(_result_).
+          1. Return _result_.
+        1. NOTE: To calculate differences in two different time zones, _settings_.[[LargestUnit]] must be a time unit, because day lengths can vary between time zones due to DST and other UTC offset shifts.
+        1. If TimeZoneEquals(_zonedDateTime_.[[TimeZone]], _other_.[[TimeZone]]) is *false*, throw a *RangeError* exception.
+        1. If _zonedDateTime_.[[EpochNanoseconds]] = _other_.[[EpochNanoseconds]], return ! CreateTemporalDuration(0, 0, 0, 0, 0, 0, 0, 0, 0, 0).
+        1. Let _internalDuration_ be ? DifferenceZonedDateTimeWithRounding(_zonedDateTime_.[[EpochNanoseconds]], _other_.[[EpochNanoseconds]], _zonedDateTime_.[[TimeZone]], _zonedDateTime_.[[Calendar]], _settings_.[[LargestUnit]], _settings_.[[RoundingIncrement]], _settings_.[[SmallestUnit]], _settings_.[[RoundingMode]]).
+        1. Let _result_ be ! TemporalDurationFromInternal(_internalDuration_, ~hour~).
+        1. If _operation_ is ~since~, set _result_ to CreateNegatedTemporalDuration(_result_).
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-interpretisodatetimeoffset" type="abstract operation">
+      <h1>
+        InterpretISODateTimeOffset (
+          _isoDate_: an ISO Date Record,
+          _time_: either a Time Record or ~start-of-day~,
+          _offsetBehaviour_: one of ~option~, ~exact~, or ~wall~,
+          _offsetNanoseconds_: an integer in the interval from -86400 × 10<sup>9</sup> (exclusive) to 86400 × 10<sup>9</sup> (exclusive),
+          _timeZone_: an available time zone identifier,
+          _disambiguation_: one of ~earlier~, ~later~, ~compatible~, or ~reject~,
+          _offsetOption_: one of ~ignore~, ~use~, ~prefer~, or ~reject~,
+          _matchBehaviour_: either ~match-exactly~ or ~match-minutes~,
+        ): either a normal completion containing an epoch nanoseconds value or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          <p>
+            It determines the exact time in _timeZone_ corresponding to the given calendar date and time, and the given UTC offset in nanoseconds.
+            In the case of more than one possible exact time, or no possible exact time, an answer is determined using _offsetBehaviour_, _disambiguation_ and _offsetOption_.
+          </p>
+          <p>
+            As a special case when parsing ISO 8601 / RFC 9557 strings which are only required to specify time zone offsets to minutes precision, if _matchBehaviour_ is ~match minutes~, then a value for _offsetNanoseconds_ that is rounded to the nearest minute will be accepted in those cases where _offsetNanoseconds_ is compared against _timeZone_'s offset.
+            If _matchBehaviour_ is ~match exactly~, then this does not happen.
+          </p>
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _time_ is ~start-of-day~, then
+          1. Assert: _offsetBehaviour_ is ~wall~.
+          1. Assert: _offsetNanoseconds_ = 0.
+          1. Return ? GetStartOfDay(_timeZone_, _isoDate_).
+        1. Let _isoDateTime_ be CombineISODateAndTimeRecord(_isoDate_, _time_).
+        1. If _offsetBehaviour_ is ~wall~, or _offsetBehaviour_ is ~option~ and _offsetOption_ is ~ignore~, then
+          1. Return ? GetEpochNanosecondsFor(_timeZone_, _isoDateTime_, _disambiguation_).
+        1. If _offsetBehaviour_ is ~exact~, or _offsetBehaviour_ is ~option~ and _offsetOption_ is ~use~, then
+          1. Let _balanced_ be BalanceISODateTime(_isoDate_.[[Year]], _isoDate_.[[Month]], _isoDate_.[[Day]], _time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _time_.[[Millisecond]], _time_.[[Microsecond]], _time_.[[Nanosecond]] - _offsetNanoseconds_).
+          1. Perform ? CheckISODaysRange(_balanced_.[[ISODate]]).
+          1. Let _epochNanoseconds_ be GetUTCEpochNanoseconds(_balanced_).
+          1. If IsValidEpochNanoseconds(_epochNanoseconds_) is *false*, throw a *RangeError* exception.
+          1. Return _epochNanoseconds_.
+        1. Assert: _offsetBehaviour_ is ~option~.
+        1. Assert: _offsetOption_ is ~prefer~ or ~reject~.
+        1. Perform ? CheckISODaysRange(_isoDate_).
+        1. Let _utcEpochNanoseconds_ be GetUTCEpochNanoseconds(_isoDateTime_).
+        1. Let _possibleEpochNs_ be ? GetPossibleEpochNanoseconds(_timeZone_, _isoDateTime_).
+        1. For each element _candidate_ of _possibleEpochNs_, do
+          1. Let _candidateOffset_ be _utcEpochNanoseconds_ - _candidate_.
+          1. If _candidateOffset_ = _offsetNanoseconds_, return _candidate_.
+          1. If _matchBehaviour_ is ~match-minutes~, then
+            1. Let _roundedCandidateNanoseconds_ be RoundNumberToIncrement(_candidateOffset_, 60 × 10<sup>9</sup>, ~half-expand~).
+            1. If _roundedCandidateNanoseconds_ = _offsetNanoseconds_, return _candidate_.
+        1. If _offsetOption_ is ~reject~, throw a *RangeError* exception.
+        1. Return ? DisambiguatePossibleEpochNanoseconds(_possibleEpochNs_, _timeZone_, _isoDateTime_, _disambiguation_).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+</emu-clause>
