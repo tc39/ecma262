@@ -1,0 +1,3857 @@
+<!DOCTYPE html>
+<meta charset="utf8">
+
+<emu-clause id="sec-temporal-definitions">
+  <h1>Definitions and Abstract Operations for Temporal Objects</h1>
+
+  <emu-clause id="sec-calendar-date-records-and-calendar-fields-records">
+    <h1>Calendar Date Records and Calendar Fields Records</h1>
+
+    <emu-clause id="sec-calendar-date-records">
+      <h1>Calendar Date Records</h1>
+      <p>
+        A <dfn variants="Calendar Date Records">Calendar Date Record</dfn> is a Record value used to represent a valid calendar date, which may or may not be the ISO 8601 calendar.
+        Calendar Date Records are produced by the abstract operation CalendarISOToDate.
+      </p>
+      <p>Calendar Date Records have the fields listed in <emu-xref href="#table-calendar-date-record-fields"></emu-xref>.</p>
+      <emu-table id="table-calendar-date-record-fields" caption="Calendar Date Record Fields">
+        <table class="real-table">
+          <tr>
+            <th>Field Name</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[Era]]</td>
+            <td>a String or *undefined*</td>
+            <td>
+              A lowercase String representing the date's era, or *undefined* for calendars that do not have eras.
+            </td>
+          </tr>
+          <tr>
+            <td>[[EraYear]]</td>
+            <td>an integer or *undefined*</td>
+            <td>
+              The ordinal position of the date's year within its era, or *undefined* for calendars that do not have eras.
+              <emu-note>
+                Era years are 1-indexed for many calendars, but not all (e.g., the eras of the Burmese calendar, not currently available in CLDR, each start with a year 0). Years can also advance opposite the flow of time (as for BCE years in the Gregorian calendar).
+              </emu-note>
+            </td>
+          </tr>
+          <tr>
+            <td>[[Year]]</td>
+            <td>an integer</td>
+            <td>
+              The date's year relative to the first day of a calendar-specific "epoch year".
+              <emu-note>The year is relative to the first day of the calendar's epoch year, so if the epoch era starts in the middle of the year, the year will be the same value before and after the start date of the era.</emu-note>
+            </td>
+          </tr>
+          <tr>
+            <td>[[Month]]</td>
+            <td>a positive integer</td>
+            <td>
+              The 1-based ordinal position of the date's month within its year.
+              <emu-note>
+                When the number of months in a year of the calendar is variable, a different value can be returned for dates that are part of the same month in different years. For example, in the Hebrew calendar, 1 Nisan 5781 is associated with value 7 while 1 Nisan 5782 is associated with value 8 because 5782 is a leap year and Nisan follows the insertion of Adar I.
+              </emu-note>
+            </td>
+          </tr>
+          <tr>
+            <td>[[MonthCode]]</td>
+            <td>a month code</td>
+            <td>
+              The month code of the date's month.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Day]]</td>
+            <td>a positive integer</td>
+            <td>
+              The 1-based ordinal position of the date's day within its month.
+            </td>
+          </tr>
+          <tr>
+            <td>[[DayOfWeek]]</td>
+            <td>a positive integer</td>
+            <td>
+              The day of the week corresponding to the date. The value should be 1-based, where 1 is the day corresponding to Monday in the given calendar.
+            </td>
+          </tr>
+          <tr>
+            <td>[[DayOfYear]]</td>
+            <td>a positive integer</td>
+            <td>
+              The 1-based ordinal position of the date's day within its year.
+            </td>
+          </tr>
+          <tr>
+            <td>[[WeekOfYear]]</td>
+            <td>a Year-Week Record</td>
+            <td>
+              <p>The date's <em>calendar week of year</em>, and the corresponding <em>week calendar year</em>.</p>
+              <p>The Year-Week Record's [[Week]] field should be 1-based.</p>
+              <p>The Year-Week Record's [[Year]] field is relative to the first day of a calendar-specific "epoch year", as in the Calendar Date Record's [[Year]] field, not relative to an era as in [[EraYear]].</p>
+              <p>
+                Usually the Year-Week Record's [[Year]] field will contain the same value as the Calendar Date Record's [[Year]] field, but may contain the previous or next year if the week number in the Year-Week Record's [[Week]] field overlaps two different years.
+                See also ISOWeekOfYear.
+              </p>
+              <p>The Year-Week Record contains *undefined* in [[Week]] and [[Year]] field for calendars that do not have a well-defined week calendar system.</p>
+            </td>
+          </tr>
+          <tr>
+            <td>[[DaysInWeek]]</td>
+            <td>a positive integer</td>
+            <td>The number of days in the date's week.</td>
+          </tr>
+          <tr>
+            <td>[[DaysInMonth]]</td>
+            <td>a positive integer</td>
+            <td>The number of days in the date's month.</td>
+          </tr>
+          <tr>
+            <td>[[DaysInYear]]</td>
+            <td>a positive integer</td>
+            <td>The number of days in the date's year.</td>
+          </tr>
+          <tr>
+            <td>[[MonthsInYear]]</td>
+            <td>a positive integer</td>
+            <td>The number of months in the date's year.</td>
+          </tr>
+          <tr>
+            <td>[[InLeapYear]]</td>
+            <td>a Boolean</td>
+            <td>
+              *true* if the date falls within a leap year, and *false* otherwise.
+              <emu-note>
+                A "leap year" is a year that contains more days than other years (for solar or lunar calendars) or more months than other years (for lunisolar calendars like Hebrew or Chinese).
+                Some calendars, especially lunisolar ones, have further variation in year length that is not represented in the output of this operation (e.g., the Hebrew calendar includes common years with 353, 354, or 355 days and leap years with 383, 384, or 385 days).
+              </emu-note>
+            </td>
+          </tr>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-calendar-fields-records">
+      <h1>Calendar Fields Records</h1>
+      <p>
+        A <dfn variants="Calendar Fields Records">Calendar Fields Record</dfn> is a Record value used to represent full or partial input for a calendar date in a non-ISO 8601 calendar.
+        Calendar Fields Records are produced by several abstract operations, such as ISODateToFields and PrepareCalendarFields, and are passed to abstract operations such as CalendarDateFromFields.
+      </p>
+      <p>Many of the fields in a Calendar Fields Record have the same meaning as the fields of the same name in Calendar Date Records, but each field in a Calendar Fields Record may additionally be ~unset~ to indicate partial input.</p>
+      <p>
+        Each field has a corresponding property key.
+        These property keys correspond to the properties that are read from user input objects to populate the field, in methods such as `Temporal.PlainDate.prototype.with()`.
+      </p>
+      <p>
+        Each field has a corresponding enumeration key.
+        Lists of these enumeration keys are passed to abstract operations such as PrepareCalendarFields and CalendarFieldKeysToIgnore to denote a subset of fields to operate on.
+      </p>
+      <p>Calendar Fields Records have the fields listed in <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>.</p>
+      <emu-table id="table-calendar-fields-record-fields" caption="Calendar Fields Record Fields">
+        <table class="real-table">
+          <tr>
+            <th>Field Name</th>
+            <th>Value</th>
+            <th>Default</th>
+            <th>Property Key</th>
+            <th>Enumeration Key</th>
+            <th>Conversion</th>
+            <th>Meaning</th>
+          </tr>
+          <tr>
+            <td>[[Era]]</td>
+            <td>a String or ~unset~</td>
+            <td>~unset~</td>
+            <td>*"era"*</td>
+            <td>~era~</td>
+            <td>~to-string~</td>
+            <td>
+              A lowercase String representing the era.
+            </td>
+          </tr>
+          <tr>
+            <td>[[EraYear]]</td>
+            <td>an integer or ~unset~</td>
+            <td>~unset~</td>
+            <td>*"eraYear"*</td>
+            <td>~era-year~</td>
+            <td>~to-integer-with-truncation~</td>
+            <td>
+              The ordinal position of the year within the era.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Year]]</td>
+            <td>an integer or ~unset~</td>
+            <td>~unset~</td>
+            <td>*"year"*</td>
+            <td>~year~</td>
+            <td>~to-integer-with-truncation~</td>
+            <td>
+              The year relative to the first day of a calendar-specific "epoch year".
+            </td>
+          </tr>
+          <tr>
+            <td>[[Month]]</td>
+            <td>a positive integer or ~unset~</td>
+            <td>~unset~</td>
+            <td>*"month"*</td>
+            <td>~month~</td>
+            <td>~to-positive-integer-with-truncation~</td>
+            <td>
+              The 1-based ordinal position of the month within the year.
+            </td>
+          </tr>
+          <tr>
+            <td>[[MonthCode]]</td>
+            <td>a month code or ~unset~</td>
+            <td>~unset~</td>
+            <td>*"monthCode"*</td>
+            <td>~month-code~</td>
+            <td>~to-month-code~</td>
+            <td>
+              The month code of the month.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Day]]</td>
+            <td>a positive integer or ~unset~</td>
+            <td>~unset~</td>
+            <td>*"day"*</td>
+            <td>~day~</td>
+            <td>~to-positive-integer-with-truncation~</td>
+            <td>
+              The 1-based ordinal position of the day within the month.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Hour]]</td>
+            <td>an integer in the inclusive interval from 0 to 23 or ~unset~</td>
+            <td>0</td>
+            <td>*"hour"*</td>
+            <td>~hour~</td>
+            <td>~to-integer-with-truncation~</td>
+            <td>
+              The number of the hour within the day.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Minute]]</td>
+            <td>an integer in the inclusive interval from 0 to 59 or ~unset~</td>
+            <td>0</td>
+            <td>*"minute"*</td>
+            <td>~minute~</td>
+            <td>~to-integer-with-truncation~</td>
+            <td>
+              The number of the minute within the hour.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Second]]</td>
+            <td>an integer in the inclusive interval from 0 to 59 or ~unset~</td>
+            <td>0</td>
+            <td>*"second"*</td>
+            <td>~second~</td>
+            <td>~to-integer-with-truncation~</td>
+            <td>
+              The number of the second within the minute.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Millisecond]]</td>
+            <td>an integer in the inclusive interval from 0 to 999 or ~unset~</td>
+            <td>0</td>
+            <td>*"millisecond"*</td>
+            <td>~millisecond~</td>
+            <td>~to-integer-with-truncation~</td>
+            <td>
+              The number of the millisecond within the second.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Microsecond]]</td>
+            <td>an integer in the inclusive interval from 0 to 999 or ~unset~</td>
+            <td>0</td>
+            <td>*"microsecond"*</td>
+            <td>~microsecond~</td>
+            <td>~to-integer-with-truncation~</td>
+            <td>
+              The number of the microsecond within the millisecond.
+            </td>
+          </tr>
+          <tr>
+            <td>[[Nanosecond]]</td>
+            <td>an integer in the inclusive interval from 0 to 999 or ~unset~</td>
+            <td>0</td>
+            <td>*"nanosecond"*</td>
+            <td>~nanosecond~</td>
+            <td>~to-integer-with-truncation~</td>
+            <td>
+              The number of the nanosecond within the microsecond.
+            </td>
+          </tr>
+          <tr>
+            <td>[[OffsetString]]</td>
+            <td>a String or ~unset~</td>
+            <td>~unset~</td>
+            <td>*"offset"*</td>
+            <td>~offset~</td>
+            <td>~to-offset-string~</td>
+            <td>
+              A string of the form `±HH:MM[:SS.SSSSSSSSS]` that can be parsed by ParseDateTimeUTCOffset.
+            </td>
+          </tr>
+          <tr>
+            <td>[[TimeZone]]</td>
+            <td>a String or ~unset~</td>
+            <td>~unset~</td>
+            <td>*"timeZone"*</td>
+            <td>~time-zone~</td>
+            <td>~to-temporal-time-zone-identifier~</td>
+            <td>
+              An available time zone identifier.
+            </td>
+          </tr>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-preparecalendarfields" type="abstract operation">
+      <h1>
+        PrepareCalendarFields (
+          _calendar_: a calendar type,
+          _fields_: an Object,
+          _calendarFieldNames_: a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
+          _nonCalendarFieldNames_: a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
+          _requiredFieldNames_: either a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref> or ~partial~,
+        ): either a normal completion containing a Calendar Fields Record, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It returns the result of reading from _fields_ all of the property names corresponding to _calendarFieldNames_ and _nonCalendarFieldNames_, plus any extra fields required by the calendar.
+          The returned Record has a non-~unset~ value for each element of _fieldNames_ that corresponds with a non-*undefined* property on _fields_ used as the input for relevant conversion.
+          When _requiredFields_ is ~partial~, this operation throws if none of the properties are present with a non-*undefined* value.
+          When _requiredFields_ is a List, this operation throws if any of the properties named by it are absent or *undefined*.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Assert: If _requiredFieldNames_ is a List, _requiredFieldNames_ contains zero or one of each of the elements of _calendarFieldNames_ and _nonCalendarFieldNames_.
+        1. Let _fieldNames_ be the list-concatenation of _calendarFieldNames_ and _nonCalendarFieldNames_.
+        1. Let _extraFieldNames_ be CalendarExtraFields(_calendar_, _calendarFieldNames_).
+        1. Set _fieldNames_ to the list-concatenation of _fieldNames_ and _extraFieldNames_.
+        1. Assert: _fieldNames_ contains no duplicate elements.
+        1. Let _result_ be a Calendar Fields Record with all fields equal to ~unset~.
+        1. Let _any_ be *false*.
+        1. Let _sortedPropertyNames_ be a List whose elements are the values in the Property Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref> corresponding to the elements of _fieldNames_, sorted according to lexicographic code unit order.
+        1. For each property name _property_ of _sortedPropertyNames_, do
+          1. Let _key_ be the value in the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref> corresponding to the row whose Property Key value is _property_.
+          1. Let _value_ be ? Get(_fields_, _property_).
+          1. If _value_ is not *undefined*, then
+            1. Set _any_ to *true*.
+            1. Let _Conversion_ be the Conversion value of the same row.
+            1. If _Conversion_ is ~to-integer-with-truncation~, then
+              1. Set _value_ to ? ToIntegerWithTruncation(_value_).
+              1. Set _value_ to 𝔽(_value_).
+            1. Else if _Conversion_ is ~to-positive-integer-with-truncation~, then
+              1. Set _value_ to ? ToPositiveIntegerWithTruncation(_value_).
+              1. Set _value_ to 𝔽(_value_).
+            1. Else if _Conversion_ is ~to-string~, then
+              1. Set _value_ to ? ToString(_value_).
+            1. Else if _Conversion_ is ~to-temporal-time-zone-identifier~, then
+              1. Set _value_ to ? ToTemporalTimeZoneIdentifier(_value_).
+            1. Else if _Conversion_ is ~to-month-code~, then
+              1. Let _parsed_ be ? ParseMonthCode(_value_).
+              1. Set _value_ to CreateMonthCode(_parsed_.[[MonthNumber]], _parsed_.[[IsLeapMonth]]).
+            1. Else,
+              1. Assert: _Conversion_ is ~to-offset-string~.
+              1. Set _value_ be ? ToPrimitive(_value_, ~string~).
+              1. If _value_ is not a String, throw a *TypeError* exception.
+              1. Perform ? ParseDateTimeUTCOffset(_value_).
+            1. Set _result_'s field whose name is given in the Field Name column of the same row to _value_.
+          1. Else if _requiredFieldNames_ is a List, then
+            1. If _requiredFieldNames_ contains _key_, throw a *TypeError* exception.
+            1. Set _result_'s field whose name is given in the Field Name column of the same row to the corresponding Default value of the same row.
+        1. If _requiredFieldNames_ is ~partial~ and _any_ is *false*, throw a *TypeError* exception.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarfieldkeyspresent" type="abstract operation">
+      <h1>
+        CalendarFieldKeysPresent (
+          _fields_: a Calendar Fields Record,
+        ): a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned List contains the enumeration keys for all fields of _fields_ that are not ~unset~.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _list_ be « ».
+        1. For each row of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>, except the header row, do
+          1. Let _value_ be _fields_' field whose name is given in the Field Name column of the row.
+          1. Let _enumerationKey_ be the value in the Enumeration Key column of the row.
+          1. If _value_ is not ~unset~, append _enumerationKey_ to _list_.
+        1. Return _list_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarmergefields" type="abstract operation">
+      <h1>
+        CalendarMergeFields (
+          _calendar_: a calendar type,
+          _fields_: a Calendar Fields Record,
+          _additionalFields_: a Calendar Fields Record,
+        ): a Calendar Fields Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It merges the properties of _fields_ and _additionalFields_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _additionalKeys_ be CalendarFieldKeysPresent(_additionalFields_).
+        1. Let _overriddenKeys_ be CalendarFieldKeysToIgnore(_calendar_, _additionalKeys_).
+        1. Let _merged_ be a Calendar Fields Record with all fields set to ~unset~.
+        1. Let _fieldsKeys_ be CalendarFieldKeysPresent(_fields_).
+        1. For each row of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>, except the header row, do
+          1. Let _key_ be the value in the Enumeration Key column of the row.
+          1. If _fieldsKeys_ contains _key_ and _overriddenKeys_ does not contain _key_, then
+            1. Let _propValue_ be _fields_' field whose name is given in the Field Name column of the row.
+            1. Set _merged_'s field whose name is given in the Field Name column of the row to _propValue_.
+          1. If _additionalKeys_ contains _key_, then
+            1. Let _propValue_ be _additionalFields_' field whose name is given in the Field Name column of the row.
+            1. Set _merged_'s field whose name is given in the Field Name column of the row to _propValue_.
+        1. Return _merged_.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-calendar-identifiers">
+    <h1>Calendar Identifiers</h1>
+
+    <p>
+      At a minimum, ECMAScript implementations must support a built-in calendar named *"iso8601"*, representing the ISO 8601 calendar.
+      In addition, implementations may support any number of other built-in calendars corresponding with those of the <a href="https://cldr.unicode.org/">Unicode Common Locale Data Repository (CLDR)</a>.
+    </p>
+    <p>
+      ECMAScript implementations identify built-in calendars using a <dfn variants="calendar types">calendar type</dfn> that is a <a href="https://unicode.org/reports/tr35/tr35.html#UnicodeCalendarIdentifier">Unicode Calendar Identifier</a> as defined in <a href="https://unicode.org/reports/tr35/tr35.html#Key_And_Type_Definitions_">Unicode Technical Standard #35 Part 1 Core, Key and Type Definitions</a>.
+      Their canonical form is a string containing only Unicode Basic Latin lowercase letters (U+0061 LATIN SMALL LETTER A through U+007A LATIN SMALL LETTER Z, inclusive) and/or digits (U+0030 DIGIT ZERO through U+0039 DIGIT NINE, inclusive), with zero or more medial hyphens (U+002D HYPHEN-MINUS).
+    </p>
+
+    <emu-clause id="sec-availablecalendars" type="implementation-defined abstract operation">
+      <h1>AvailableCalendars ( ): a List of calendar types</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned List is sorted according to lexicographic code unit order, and contains unique calendar types in canonical form (<emu-xref href="#sec-calendar-identifiers"></emu-xref>) identifying the calendars for which the implementation provides the functionality of Temporal objects, including any aliases.</dd>
+      </dl>
+      <p>The default implementation of AvailableCalendars, to be used for ECMAScript implementations that do not support any calendar types other than *"iso8601"*, performs the following steps when called:</p>
+      <emu-alg>
+        1. Return « *"iso8601"* ».
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-canonicalizecalendar" type="abstract operation">
+      <h1>
+        CanonicalizeCalendar (
+          _id_: a String,
+        ): either a normal completion containing a calendar type, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the canonical form of the calendar type denoted by _id_, or throws an exception if there is no such built-in calendar.</dd>
+      </dl>
+      <p>The default implementation of CanonicalizeCalendar, to be used for ECMAScript implementations that do not support any calendar types other than *"iso8601"*, performs the following steps when called:</p>
+      <emu-alg>
+        1. If the ASCII-lowercase of _id_ is not *"iso8601"*, throw a *RangeError* exception.
+        1. Return *"iso8601"*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-totemporalcalendaridentifier" type="abstract operation">
+      <h1>
+        ToTemporalCalendarIdentifier (
+          _temporalCalendarLike_: an ECMAScript value,
+        ): either a normal completion containing a calendar type or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It attempts to derive a calendar type from _temporalCalendarLike_, and returns that value if found or throws an exception if not.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _temporalCalendarLike_ is an Object and _temporalCalendarLike_ has an [[InitializedTemporalDate]], [[InitializedTemporalDateTime]], [[InitializedTemporalMonthDay]], [[InitializedTemporalYearMonth]], or [[InitializedTemporalZonedDateTime]] internal slot, return _temporalCalendarLike_.[[Calendar]].
+        1. If _temporalCalendarLike_ is not a String, throw a *TypeError* exception.
+        1. Let _identifier_ be ? ParseTemporalCalendarString(_temporalCalendarLike_).
+        1. Return ? CanonicalizeCalendar(_identifier_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporalcalendarslotvaluewithisodefault" type="abstract operation">
+      <h1>
+        GetTemporalCalendarIdentifierWithISODefault (
+          _item_: an Object,
+        ): either a normal completion containing a calendar type or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It looks for a `calendar` property on the given _item_ and converts its value into a calendar identifier.
+          If no such property is present, the built-in ISO 8601 calendar is returned.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _item_ has an [[InitializedTemporalDate]], [[InitializedTemporalDateTime]], [[InitializedTemporalMonthDay]], [[InitializedTemporalYearMonth]], or [[InitializedTemporalZonedDateTime]] internal slot, then
+          1. Return _item_.[[Calendar]].
+        1. Let _calendarLike_ be ? Get(_item_, *"calendar"*).
+        1. If _calendarLike_ is *undefined*, return *"iso8601"*.
+        1. Return ? ToTemporalCalendarIdentifier(_calendarLike_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarequals" type="abstract operation">
+      <h1>
+        CalendarEquals (
+          _one_: a calendar type,
+          _two_: a calendar type,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns *true* if its arguments represent calendars using the same identifier.</dd>
+      </dl>
+      <emu-alg>
+        1. If ! CanonicalizeCalendar(_one_) is ! CanonicalizeCalendar(_two_), return *true*.
+        1. Return *false*.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-calendar-operations">
+    <h1>Calendar Operations</h1>
+
+    <emu-clause id="sec-calendardateadd" type="abstract operation">
+      <h1>
+        CalendarDateAdd (
+          _calendar_: a calendar type,
+          _isoDate_: an ISO Date Record,
+          _duration_: a Date Duration Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It adds _dateDuration_ to _isoDate_ using the years, months, and weeks reckoning of _calendar_.
+          If addition of years or months results in a nonexistent date, depending on _overflow_ it will be coerced to an existing date or the operation will throw.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _calendar_ is *"iso8601"*, then
+          1. Let _intermediate_ be BalanceISOYearMonth(_isoDate_.[[Year]] + _duration_.[[Years]], _isoDate_.[[Month]] + _duration_.[[Months]]).
+          1. Set _intermediate_ to ? RegulateISODate(_intermediate_.[[Year]], _intermediate_.[[Month]], _isoDate_.[[Day]], _overflow_).
+          1. Let _days_ be _duration_.[[Days]] + 7 × _duration_.[[Weeks]].
+          1. Let _result_ be AddDaysToISODate(_intermediate_, _days_).
+        1. Else,
+          1. Let _result_ be ? NonISODateAdd(_calendar_, _isoDate_, _duration_, _overflow_).
+        1. If ISODateWithinLimits(_result_) is *false*, throw a *RangeError* exception.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-nonisodateadd" type="implementation-defined abstract operation">
+      <h1>
+        NonISODateAdd (
+          _calendar_: a calendar type that is not *"iso8601"*,
+          _isoDate_: an ISO Date Record,
+          _duration_: a Date Duration Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          The operation performs implementation-defined processing to add _duration_ to _date_ in the context of the calendar represented by _calendar_ and returns the corresponding day, month and year of the result in the ISO 8601 calendar values as an ISO Date Record.
+          It may throw a *RangeError* exception if _overflow_ is ~reject~ and the resulting month or day would need to be clamped in order to form a valid date in _calendar_.
+        </dd>
+      </dl>
+    </emu-clause>
+
+    <emu-clause id="sec-calendardateuntil" type="abstract operation">
+      <h1>
+        CalendarDateUntil (
+          _calendar_: a calendar type,
+          _one_: an ISO Date Record,
+          _two_: an ISO Date Record,
+          _largestUnit_: a date unit,
+        ): a Date Duration Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It determines the difference between the dates _one_ and _two_ using the years, months, and weeks reckoning of _calendar_.
+          No fields larger than _largestUnit_ will be non-zero in the resulting Date Duration Record.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _sign_ be CompareISODate(_one_, _two_).
+        1. If _sign_ = 0, return ZeroDateDuration().
+        1. If _calendar_ is *"iso8601"*, then
+          1. Set _sign_ to -sign.
+          1. Let _years_ be 0.
+          1. If _largestUnit_ is ~year~, then
+            1. Let _candidateYears_ be _sign_.
+            1. Repeat, while ISODateSurpasses(_sign_, _one_, _two_, _candidateYears_, 0, 0, 0) is *false*,
+              1. Set _years_ to _candidateYears_.
+              1. Set _candidateYears_ to _candidateYears_ + _sign_.
+          1. Let _months_ be 0.
+          1. If _largestUnit_ is either ~year~ or ~month~, then
+            1. Let _candidateMonths_ be _sign_.
+            1. Repeat, while ISODateSurpasses(_sign_, _one_, _two_, _years_, _candidateMonths_, 0, 0) is *false*,
+              1. Set _months_ to _candidateMonths_.
+              1. Set _candidateMonths_ to _candidateMonths_ + _sign_.
+          1. Let _weeks_ be 0.
+          1. If _largestUnit_ is ~week~, then
+            1. Let _candidateWeeks_ be _sign_.
+            1. Repeat, while ISODateSurpasses(_sign_, _one_, _two_, _years_, _months_, _candidateWeeks_, 0) is *false*,
+              1. Set _weeks_ to _candidateWeeks_.
+              1. Set _candidateWeeks_ to _candidateWeeks_ + sign.
+          1. Let _days_ be 0.
+          1. Let _candidateDays_ be _sign_.
+          1. Repeat, while ISODateSurpasses(_sign_, _one_, _two_, _years_, _months_, _weeks_, _candidateDays_) is *false*,
+            1. Set _days_ to _candidateDays_.
+            1. Set _candidateDays_ to _candidateDays_ + _sign_.
+          1. Return ! CreateDateDurationRecord(_years_, _months_, _weeks_, _days_).
+        1. Return NonISODateUntil(_calendar_, _one_, _two_, _largestUnit_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-nonisodateuntil" type="implementation-defined abstract operation">
+      <h1>
+        NonISODateUntil (
+          _calendar_: a calendar type that is not *"iso8601"*,
+          _one_: an ISO Date Record,
+          _two_: an ISO Date Record,
+          _largestUnit_: a date unit,
+        ): a Date Duration Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It performs implementation-defined processing to determine the difference between the dates _one_ and _two_ using the years, months, and weeks reckoning of _calendar_.
+          No fields larger than _largestUnit_ will be non-zero in the resulting Date Duration Record.
+        </dd>
+      </dl>
+    </emu-clause>
+
+    <emu-clause id="sec-calendardatetoiso" type="abstract operation">
+      <h1>
+        CalendarDateToISO (
+          _calendar_: a calendar type,
+          _fields_: a Calendar Fields Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It converts _fields_, which represents either a date or a year and month in the built-in calendar identified by _calendar_, to a corresponding representative date in the ISO 8601 calendar, subject to overflow correction specified by _overflow_.
+          For ~reject~, values that do not form a valid date cause an exception to be thrown, as described below.
+          For ~constrain~, values that do not form a valid date are clamped to their respective valid range.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _calendar_ is *"iso8601"*, then
+          1. Assert: _fields_.[[Year]], _fields_.[[Month]], and _fields_.[[Day]] are not ~unset~.
+          1. Return ? RegulateISODate(_fields_.[[Year]], _fields_.[[Month]], _fields_.[[Day]], _overflow_).
+        1. Return ? NonISOCalendarDateToISO(_calendar_, _fields_, _overflow_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-nonisocalendardatetoiso" type="implementation-defined abstract operation">
+      <h1>
+        NonISOCalendarDateToISO (
+          _calendar_: a calendar type that is not *"iso8601"*,
+          _fields_: a Calendar Fields Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It performs implementation-defined processing to convert _fields_, which represents either a date or a year and month in the built-in calendar identified by _calendar_, to a corresponding representative date in the ISO 8601 calendar, subject to overflow correction specified by _overflow_.
+          For ~reject~, values that do not form a valid date cause an exception to be thrown, as described below.
+          For ~constrain~, values that do not form a valid date are clamped to their respective valid range.
+        </dd>
+      </dl>
+      <p>Like RegulateISODate, the operation throws a *RangeError* exception when _overflow_ is ~reject~ and the date described by _fields_ does not exist.</p>
+      <p>Clamping an invalid date to the correct range when _overflow_ is ~constrain~ is a behaviour specific to each calendar other than *"iso8601"*, but all calendars follow this guideline:</p>
+      <ul>
+        <li>Pick the closest day in the same month. If there are two equally-close dates in that month, pick the later one.</li>
+        <li>If the month is a leap month that doesn't exist in the year, pick another date according to the cultural conventions of that calendar's users. Usually this will result in the same day in the month before or after where that month would normally fall in a leap year.</li>
+        <li>Otherwise, pick the closest date that is still in the same year. If there are two equally-close dates in that year, pick the later one.</li>
+        <li>If the entire year doesn't exist, pick the closest date in a different year. If there are two equally-close dates, pick the later one.</li>
+      </ul>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarmonthdaytoisoreferencedate" type="abstract operation">
+      <h1>
+        CalendarMonthDayToISOReferenceDate (
+          _calendar_: a calendar type,
+          _fields_: a Calendar Fields Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It converts _fields_, which represents a calendar date without a year (i.e., month code and day pair, or equivalent) in the built-in calendar identified by _calendar_, to a corresponding reference date in the ISO 8601 calendar as described below, subject to overflow correction specified by _overflow_.
+          For ~reject~, values that do not form a valid date cause an exception to be thrown.
+          For ~constrain~, values that do not form a valid date are clamped to their respective valid range as in CalendarDateToISO.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _calendar_ is *"iso8601"*, then
+          1. Assert: _fields_.[[Month]] and _fields_.[[Day]] are not ~unset~.
+          1. Let _referenceISOYear_ be 1972 (the first ISO 8601 leap year after the epoch).
+          1. If _fields_.[[Year]] is ~unset~, let _year_ be _referenceISOYear_; else let _year_ be _fields_.[[Year]].
+          1. Let _result_ be ? RegulateISODate(_year_, _fields_.[[Month]], _fields_.[[Day]], _overflow_).
+          1. Return CreateISODateRecord(_referenceISOYear_, _result_.[[Month]], _result_.[[Day]]).
+        1. Return ? NonISOMonthDayToISOReferenceDate(_calendar_, _fields_, _overflow_).
+      </emu-alg>
+      <p>
+        The fields of the returned ISO Date Record represent a reference date in the ISO 8601 calendar that, when converted to _calendar_, corresponds to the month code and day of _fields_ in an arbitrary but deterministically chosen reference year.
+        For the ISO 8601 calendar, the reference year is always 1972. For other calendars, see the note in NonISOMonthDayToISOReferenceDate.
+      </p>
+      <p>Like RegulateISODate, the operation throws a *RangeError* exception if _overflow_ is ~reject~ and the month and day described by _fields_ does not exist (or does not exist within the year described by _fields_ when there is such a year).</p>
+      <p>Also like RegulateISODate, if _overflow_ is ~constrain~ and the date or month and day described by _fields_ does not exist (or does not exist within the year described by _fields_ when there is such a year), the values of those fields are clamped to their respective valid range. As in CalendarDateToISO, such clamping is calendar-specific.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-nonisomonthdaytoisoreferencedate" type="implementation-defined abstract operation">
+      <h1>
+        NonISOMonthDayToISOReferenceDate (
+          _calendar_: a calendar type that is not *"iso8601"*,
+          _fields_: a Calendar Fields Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It performs implementation-defined processing to convert _fields_, which represents a calendar date without a year (i.e., month code and day pair, or equivalent) in the built-in calendar identified by _calendar_, to a corresponding reference date in the ISO 8601 calendar as described below, subject to overflow correction specified by _overflow_.
+          For ~reject~, values that do not form a valid date cause an exception to be thrown.
+          For ~constrain~, values that do not form a valid date are clamped to their respective valid range as in CalendarDateToISO.
+        </dd>
+      </dl>
+      <p>
+        The fields of the returned ISO Date Record represent a reference date in the ISO 8601 calendar that, when converted to _calendar_, corresponds to the month code and day of _fields_ in an arbitrary but deterministically chosen reference year.
+        The reference date is the latest ISO 8601 date corresponding to the calendar date that is between January 1, 1900 and December 31, 1972 inclusive. If there is no such date, it is the earliest ISO 8601 date corresponding to the calendar date between January 1, 1973 and December 31, 2035 inclusive.
+      </p>
+      <p>The reference year is almost always 1972 (the first ISO 8601 leap year after the epoch), with exceptions for calendars where some dates (e.g. leap days or days in leap months) didn't occur during that ISO 8601 year. For example, Hebrew calendar leap month Adar I occurred in calendar years 5730 and 5733 (respectively overlapping ISO 8601 February/March 1970 and February/March 1973), but did not occur between them, so the reference year for days of that month is 1970.</p>
+      <p>
+        Like RegulateISODate, the operation throws a *RangeError* exception if _overflow_ is ~reject~ and the month and day described by _fields_ does not exist (or does not exist within the year described by _fields_ when there is such a year).
+        For example, when _calendar_ is *"gregory"* and _overflow_ is ~reject~, _fields_ values of { [[MonthCode]]: *"M01"*, [[Day]]: 32 } and { [[Year]]: 2001, [[Month]]: 2, [[Day]]: 29 } would both cause a *RangeError* to be thrown.
+        In the latter case, even though February 29 is a date in leap years of the Gregorian calendar, 2001 was not a leap year and a month code cannot be determined from the nonexistent date 2001-02-29 with the specified month index.
+      </p>
+      <p>
+        Also like RegulateISODate, if _overflow_ is ~constrain~ and the date or month and day described by _fields_ does not exist (or does not exist within the year described by _fields_ when there is such a year), the values of those fields are clamped to their respective valid range. As in CalendarDateToISO, such clamping is calendar-specific.
+        For example, when _calendar_ is *"gregory"* and _overflow_ is ~constrain~, a _fields_ value of { [[MonthCode]]: *"M02"*, [[Day]]: 30 } is clamped to { [[Year]]: 1972, [[Month]]: 2, [[Day]]: 29 } (because 29 is the maximum valid day for February) while _fields_ values of { [[Year]]: 2001, [[MonthCode]]: *"M02"*, [[Day]]: 30 } and { [[Era]]: *"ce"*, [[EraYear]]: 2001, [[Month]]: 2, [[Day]]: 30 } (or an equivalent with a supported value for [[Era]] representing the Common Era beginning in ISO 8601 year 1) are clamped to { [[Year]]: 1972, [[Month]]: 2, [[Day]]: 28 } (because 28 is the maximum valid day for February 2001, which did not include a leap day).
+      </p>
+      <p>
+        The operation throws a *RangeError* if _fields_.[[Year]] is not ~unset~ and the ISO 8601 year _year_ corresponding to _fields_.[[Year]] would cause ISODateWithinLimits to return *false* (i.e., _year_ is not in the inclusive interval from -271,821 to 275,760.)
+        This is so as not to require calculating whether the month and day described in _fields_ exist in years arbitrarily far in the future or past.
+        Note this restriction does not apply to CalendarMonthDayToISOReferenceDate when _calendar_ is *"iso8601"*.
+      </p>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarisotodate" type="abstract operation">
+      <h1>
+        CalendarISOToDate (
+          _calendar_: a calendar type,
+          _isoDate_: an ISO Date Record,
+        ): a Calendar Date Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It finds the date corresponding to _isoDate_ in the context of the calendar represented by _calendar_ and returns a Calendar Date Record representing that calendar date, with its fields filled in according to their descriptions.</dd>
+      </dl>
+      <emu-alg>
+        1. If _calendar_ is *"iso8601"*, then
+          1. If MathematicalInLeapYear(EpochTimeForYear(_isoDate_.[[Year]])) = 1, let _inLeapYear_ be *true*; else let _inLeapYear_ be *false*.
+          1. Return Calendar Date Record {
+              [[Era]]: *undefined*,
+              [[EraYear]]: *undefined*,
+              [[Year]]: _isoDate_.[[Year]],
+              [[Month]]: _isoDate_.[[Month]],
+              [[MonthCode]]: CreateMonthCode(_isoDate_.[[Month]], *false*),
+              [[Day]]: _isoDate_.[[Day]],
+              [[DayOfWeek]]: ISODayOfWeek(_isoDate_),
+              [[DayOfYear]]: ISODayOfYear(_isoDate_),
+              [[WeekOfYear]]: ISOWeekOfYear(_isoDate_),
+              [[DaysInWeek]]: 7,
+              [[DaysInMonth]]: ISODaysInMonth(_isoDate_.[[Year]], _isoDate_.[[Month]]),
+              [[DaysInYear]]: MathematicalDaysInYear(_isoDate_.[[Year]]),
+              [[MonthsInYear]]: 12,
+              [[InLeapYear]]: _inLeapYear_
+            }.
+        1. Return NonISOCalendarISOToDate(_calendar_, _isoDate_).
+      </emu-alg>
+      <emu-note>
+        <p>Implementations are encouraged to elide fields that are not read by the caller.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-nonisocalendarisotodate" type="implementation-defined abstract operation">
+      <h1>
+        NonISOCalendarISOToDate (
+          _calendar_: a calendar type that is not *"iso8601"*,
+          _isoDate_: an ISO Date Record,
+        ): a Calendar Date Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It performs implementation-defined processing to find the date corresponding to _isoDate_ in the context of the calendar represented by _calendar_ and returns a Calendar Date Record representing that calendar date, with its fields filled in according to their descriptions in <emu-xref href="#table-calendar-date-record-fields"></emu-xref>.</dd>
+      </dl>
+      <emu-note>
+        <p>Implementations are encouraged to elide fields that are not read by the caller.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarextrafields" type="implementation-defined abstract operation">
+      <h1>
+        CalendarExtraFields (
+          _calendar_: a calendar type,
+          _fields_: a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
+        ): a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It characterizes calendar-specific fields that are relevant for the provided _fields_ in the built-in calendar identified by _calendar_. For example, « ~era~, ~era-year~ » is returned when _calendar_ is *"gregory"* or *"japanese"* and _fields_ is a List containing ~year~.</dd>
+      </dl>
+      <emu-alg>
+        1. If _calendar_ is *"iso8601"*, return a new empty List.
+        1. Return an implementation-defined List as described above.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarfieldkeystoignore" type="abstract operation">
+      <h1>
+        CalendarFieldKeysToIgnore (
+          _calendar_: a calendar type,
+          _keys_: a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
+        ): a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It determines which calendar date fields changing any of the fields named in _keys_ can potentially conflict with or invalidate, for the given _calendar_.
+          A field always invalidates at least itself.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _calendar_ is *"iso8601"*, then
+          1. Let _ignoredKeys_ be a new empty List.
+          1. For each element _key_ of _keys_, do
+            1. Append _key_ to _ignoredKeys_.
+            1. If _key_ is ~month~, append ~month-code~ to _ignoredKeys_.
+            1. Else if _key_ is ~month-code~, append ~month~ to _ignoredKeys_.
+          1. NOTE: While _ignoredKeys_ can have duplicate elements, this is not intended to be meaningful. This specification only checks whether particular keys are or are not members of the list.
+          1. Return _ignoredKeys_.
+        1. Return NonISOFieldKeysToIgnore(_calendar_, _keys_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-nonisofieldkeystoignore" type="implementation-defined abstract operation">
+      <h1>
+        NonISOFieldKeysToIgnore (
+          _calendar_: a calendar type that is not *"iso8601"*,
+          _keys_: a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
+        ): a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It performs implementation-defined processing to determine which calendar date fields changing any of the fields named in _keys_ can potentially conflict with or invalidate, for the given _calendar_.
+          A field always invalidates at least itself.
+        </dd>
+      </dl>
+      <p>This operation is relevant for calendars which accept fields other than the standard set of ISO 8601 calendar fields, in order to implement the Temporal objects' `with()` methods in such a way that the result is free of ambiguity or conflicts.</p>
+      <p>
+        For example, given a _calendar_ that uses eras, such as *"gregory"*, a key in _keys_ being any one of ~year~, ~era~, or ~era-year~ would exclude all three.
+        Passing any one of the three to a `with()` method might conflict with either of the other two properties on the receiver object, so those properties of the receiver object should be ignored.
+        Given this, in addition to the ISO 8601 mutual exclusion of ~month~ and ~month-code~, a possible implementation might produce the following results when _calendar_ is *"gregory"*:
+      </p>
+      <emu-table id="table-calendarfieldkeystoignore-example">
+        <emu-caption>Example results of CalendarFieldKeysToIgnore</emu-caption>
+        <table>
+          <thead>
+            <tr>
+              <th>_keys_</th>
+              <th>Returned List</th>
+            </tr>
+          </thead>
+          <tr>
+            <td>« ~era~ »</td>
+            <td>« ~era~, ~era-year~, ~year~ »</td>
+          </tr>
+          <tr>
+            <td>« ~era-year~ »</td>
+            <td>« ~era~, ~era-year~, ~year~ »</td>
+          </tr>
+          <tr>
+            <td>« ~year~ »</td>
+            <td>« ~era~, ~era-year~, ~year~ »</td>
+          </tr>
+          <tr>
+            <td>« ~month~ »</td>
+            <td>« ~month~, ~month-code~ »</td>
+          </tr>
+          <tr>
+            <td>« ~month-code~ »</td>
+            <td>« ~month~, ~month-code~ »</td>
+          </tr>
+          <tr>
+            <td>« ~day~ »</td>
+            <td>« ~day~ »</td>
+          </tr>
+          <tr>
+            <td>« ~year~, ~month~, ~day~ »</td>
+            <td>« ~era~, ~era-year~, ~year~, ~month~, ~month-code~, ~day~ »</td>
+          </tr>
+        </table>
+      </emu-table>
+      <emu-note>
+        In a _calendar_ such as *"japanese"* where eras do not start and end at year and/or month boundaries, note that the returned List should contain ~era~ and ~era-year~ if _keys_ contains ~day~, ~month~, or ~month-code~ (not only if it contains ~era~, ~era-year~, or ~year~, as in the example above) because it's possible for changing the day or month to cause a conflict with the era.
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarresolvefields" type="abstract operation">
+      <h1>
+        CalendarResolveFields (
+          _calendar_: a calendar type,
+          _fields_: a Calendar Fields Record,
+          _type_: one of ~date~, ~year-month~, or ~month-day~,
+        ): either a normal completion containing ~unused~ or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It validates that _fields_ (which describes a date or partial date in the built-in calendar identified by _calendar_) is sufficiently complete to satisfy _type_ and not internally inconsistent, and mutates _fields_ into acceptable input for <emu-xref href="#sec-calendardatetoiso" title></emu-xref> or <emu-xref href="#sec-calendarmonthdaytoisoreferencedate" title></emu-xref> by merging data that can be represented in multiple forms into standard fields and removing redundant fields (for example, merging [[Era]] and [[EraYear]] into [[Year]]).
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _calendar_ is *"iso8601"*, then
+          1. Let _needsYear_ be *false*.
+          1. If _type_ is either ~date~ or ~year-month~, set _needsYear_ to *true*.
+          1. Let _needsDay_ be *false*.
+          1. If _type_ is either ~date~ or ~month-day~, set _needsDay_ to *true*.
+          1. If _needsYear_ is *true* and _fields_.[[Year]] is ~unset~, throw a *TypeError* exception.
+          1. If _needsDay_ is *true* and _fields_.[[Day]] is ~unset~, throw a *TypeError* exception.
+          1. If _fields_.[[Month]] is ~unset~ and _fields_.[[MonthCode]] is ~unset~, throw a *TypeError* exception.
+          1. If _fields_.[[MonthCode]] is not ~unset~, then
+            1. Let _parsedMonthCode_ be ! ParseMonthCode(_fields_.[[MonthCode]]).
+            1. If _parsedMonthCode_.[[IsLeapMonth]] is *true*, throw a *RangeError* exception.
+            1. Let _month_ be _parsedMonthCode_.[[MonthNumber]].
+            1. If _month_ > 12, throw a *RangeError* exception.
+            1. If _fields_.[[Month]] is not ~unset~ and _fields_.[[Month]] ≠ _month_, throw a *RangeError* exception.
+            1. Set _fields_.[[Month]] to _month_.
+        1. Else,
+          1. Perform ? NonISOResolveFields(_calendar_, _fields_, _type_).
+        1. Return ~unused~.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-nonisoresolvefields" type="implementation-defined abstract operation">
+      <h1>
+        NonISOResolveFields (
+          _calendar_: a calendar type that is not *"iso8601"*,
+          _fields_: a Calendar Fields Record,
+          _type_: one of ~date~, ~year-month~, or ~month-day~,
+        ): either a normal completion containing ~unused~ or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It performs implementation-defined processing to validate that _fields_ (which describes a date or partial date in the built-in calendar identified by _calendar_) is sufficiently complete to satisfy _type_ and not internally inconsistent, and mutates _fields_ into acceptable input for <emu-xref href="#sec-calendardatetoiso" title></emu-xref> or <emu-xref href="#sec-calendarmonthdaytoisoreferencedate" title></emu-xref> by merging data that can be represented in multiple forms into standard fields and removing redundant fields (for example, merging [[Era]] and [[EraYear]] into [[Year]]).
+        </dd>
+      </dl>
+      <p>The operation throws a *TypeError* exception if the non-~unset~ fields of _fields_ are insufficient to identify a unique instance of _type_ in the calendar (e.g., when at least one field in each combination capable of determining some part of its data is ~unset~) or a *RangeError* exception if the fields are sufficient but their values are internally inconsistent within the calendar (e.g., when fields such as [[Month]] and [[MonthCode]] have conflicting non-~unset~ values). For example:</p>
+      <ul>
+        <li>If _type_ is either ~date~ or ~month-day~, and "day" in the calendar has an interpretation similar to ISO 8601 and _fields_.[[Day]] is ~unset~.</li>
+        <li>If _fields_.[[MonthCode]] identifies a month code that is not valid in any year of the calendar.</li>
+        <li>If _fields_.[[Month]] and _fields_.[[MonthCode]] are both ~unset~ or neither value is ~unset~ but they do not identify the same month.</li>
+        <li>If _type_ is ~month-day~ and _fields_.[[MonthCode]] is ~unset~ and a specific year cannot be determined from _fields_.</li>
+        <li>If the calendar supports the usual partitioning of years into eras with their own year counting as represented by "year", "era", and "era year" (as in the Gregorian or traditional Japanese calendars) and any of the following cases apply:
+          <ul>
+            <li>_type_ is ~date~ or ~year-month~ and each of _fields_.[[Year]], _fields_.[[Era]], and _fields_.[[EraYear]] is ~unset~.</li>
+            <li>_fields_.[[Era]] is ~unset~ but _fields_.[[EraYear]] is not.</li>
+            <li>_fields_.[[EraYear]] is ~unset~ but _fields_.[[Era]] is not.</li>
+            <li>None of the three values are ~unset~ but _fields_.[[Era]] and _fields_.[[EraYear]] do not together identify the same year as _fields_.[[Year]].</li>
+          </ul>
+        </li>
+      </ul>
+      <emu-note>
+        The ISODateWithinLimits assertion holds because the result of CalendarMonthDayToISOReferenceDate should return a reference year that falls within the representable range.
+      </emu-note>
+      In some cases, verifying the internal consistency of two fields requires the data from other fields, such as checking _fields_.[[MonthCode]] *"M06"* against _fields_.[[Month]] 7 in the Hebrew calendar (which are consistent if and only if _fields_ identifies a year that includes leap month Adar I).
+      </emu-note>
+      <emu-note>
+        <p>When the fields of _fields_ are inconsistent with respect to a non-~unset~ _fields_.[[Era]], it is recommended that _fields_.[[Era]] and _fields_.[[EraYear]] be updated to resolve the inconsistency by lenient interpretation of out-of-bounds values (rather than throwing a *RangeError*), which is particularly useful for consistent interpretation of dates in calendars with regnal eras.</p>
+        <ul>
+          <li>In the Gregorian calendar, a zero or negative _fields_.[[EraYear]] should be replaced with a positive [[EraYear]] corresponding with extension of the era into its complement and _fields_.[[Era]] should be updating accordingly (such that Common Era [[EraYear]] 0 is updated to Before Common Era [[EraYear]] 1, Before Common Era [[EraYear]] -1 is updated to Common Era [[EraYear]] 2, etc.).</li>
+          <li>In the Japanese calendar, when _fields_.[[Era]] is not ~unset~ and the date represented by _fields_ is not within the bounds of that era, _fields_.[[Era]] should be updated to the appropriate containing era for that date (for example, because the transition from Heisei era [[EraYear]] 31 to Reiwa era [[EraYear]] 1 took place on May 1 of [[Year]] 2019, Heisei era [[EraYear]] 32 should be updated to Reiwa era [[EraYear]] 2, Reiwa era [[EraYear]] 1 [[Month]] 1 should be updated to Heisei era [[EraYear]] 31 [[Month]] 1, etc.).</li>
+        </ul>
+      </emu-note>
+      <emu-note>
+        When _type_ is ~month-day~ and _fields_.[[Month]] is not ~unset~, it is recommended that all built-in calendars other than the ISO 8601 calendar require a disambiguating year (e.g., either _fields_.[[Year]] or _fields_.[[Era]] and _fields_.[[EraYear]]) to avoid a *TypeError*, regardless of whether or not _fields_.[[MonthCode]] is also ~unset~. The ISO 8601 calendar allows _fields_.[[Year]] to be ~unset~ in this case because it is a special default calendar that is permanently stable for automated processing.
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-calendardatefromfields" type="abstract operation">
+      <h1>
+        CalendarDateFromFields (
+          _calendar_: a calendar type,
+          _fields_: a Calendar Fields Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts a calendar date in the reckoning of _calendar_, if it is uniquely determined by the fields of _fields_, into an ISO Date Record.</dd>
+      </dl>
+      <emu-alg>
+        1. Perform ? CalendarResolveFields(_calendar_, _fields_, ~date~).
+        1. Let _result_ be ? CalendarDateToISO(_calendar_, _fields_, _overflow_).
+        1. If ISODateWithinLimits(_result_) is *false*, throw a *RangeError* exception.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-calendaryearmonthfromfields" type="abstract operation">
+      <h1>
+        CalendarYearMonthFromFields (
+          _calendar_: a calendar type,
+          _fields_: a Calendar Fields Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts a calendar month in the reckoning of _calendar_, if it is uniquely determined by the properties on _fields_, into an ISO Date Record denoting the first day of that month.</dd>
+      </dl>
+      <emu-alg>
+        1. Set _fields_.[[Day]] to 1.
+        1. Perform ? CalendarResolveFields(_calendar_, _fields_, ~year-month~).
+        1. Let _result_ be ? CalendarDateToISO(_calendar_, _fields_, _overflow_).
+        1. If ISOYearMonthWithinLimits(_result_) is *false*, throw a *RangeError* exception.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-calendarmonthdayfromfields" type="abstract operation">
+      <h1>
+        CalendarMonthDayFromFields (
+          _calendar_: a calendar type,
+          _fields_: a Calendar Fields Record,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts a calendar month-day in the reckoning of _calendar_, if it is uniquely determined by the properties on _fields_, into an ISO Date Record denoting that day in an appropriate reference year.</dd>
+      </dl>
+      <emu-alg>
+        1. Perform ? CalendarResolveFields(_calendar_, _fields_, ~month-day~).
+        1. Let _result_ be ? CalendarMonthDayToISOReferenceDate(_calendar_, _fields_, _overflow_).
+        1. Assert: ISODateWithinLimits(_result_) is *true*.
+        1. Return _result_.
+      </emu-alg>
+      <emu-note>
+        The ISODateWithinLimits assertion holds because the result of CalendarMonthDayToISOReferenceDate should return a reference year that falls within the representable range.
+      </emu-note>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-date-duration-records">
+    <h1>Date Duration Records</h1>
+    <p>
+      A <dfn variants="Date Duration Records">Date Duration Record</dfn> is a Record value used to represent the portion of a Temporal.Duration object that deals with calendar date units.
+      Date Duration Records are produced by the abstract operation CreateDateDurationRecord, among others.
+    </p>
+    <p>Date Duration Records have the fields listed in <emu-xref href="#table-date-duration-record-fields"></emu-xref>.</p>
+    <emu-table id="table-date-duration-record-fields" caption="Date Duration Record Fields">
+      <table class="real-table">
+        <tr>
+          <th>Field Name</th>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td>[[Years]]</td>
+          <td>a float64-representable integer</td>
+          <td>
+            The number of years in the duration.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Months]]</td>
+          <td>a float64-representable integer</td>
+          <td>
+            The number of months in the duration.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Weeks]]</td>
+          <td>a float64-representable integer</td>
+          <td>
+            The number of weeks in the duration.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Days]]</td>
+          <td>a float64-representable integer</td>
+          <td>
+            The number of days in the duration.
+          </td>
+        </tr>
+      </table>
+    </emu-table>
+
+    <emu-clause id="sec-adjustdatedurationrecord" type="abstract operation">
+      <h1>
+        AdjustDateDurationRecord (
+          _dateDuration_: a Date Duration Record,
+          _days_: an integer,
+          optional _weeks_: an integer,
+          optional _months_: an integer,
+        ): either a normal completion containing a Date Duration Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It creates a new Date Duration Record that is a copy of _dateDuration_, with one or more fields replaced with new values.</dd>
+      </dl>
+      <emu-alg>
+        1. If _weeks_ is not present, set _weeks_ to _dateDuration_.[[Weeks]].
+        1. If _months_ is not present, set _months_ to _dateDuration_.[[Months]].
+        1. Return ? CreateDateDurationRecord(_dateDuration_.[[Years]], _months_, _weeks_, _days_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-createdatedurationrecord" type="abstract operation">
+      <h1>
+        CreateDateDurationRecord (
+          _years_: an integer,
+          _months_: an integer,
+          _weeks_: an integer,
+          _days_: an integer,
+        ): either a normal completion containing a Date Duration Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. If IsValidDuration(_years_, _months_, _weeks_, _days_, 0, 0, 0, 0, 0, 0) is *false*, throw a *RangeError* exception.
+        1. Return Date Duration Record {
+          [[Years]]: ℝ(𝔽(_years_)),
+          [[Months]]: ℝ(𝔽(_months_)),
+          [[Weeks]]: ℝ(𝔽(_weeks_)),
+          [[Days]]: ℝ(𝔽(_days_))
+          }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-datedurationdays" type="abstract operation">
+      <h1>
+        DateDurationDays (
+          _dateDuration_: a Date Duration Record,
+          _plainRelativeTo_: a Temporal.PlainDate,
+        ): either a normal completion containing an integer or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts the calendar units of a duration into a number of days, and returns the result.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _yearsMonthsWeeksDuration_ be ! AdjustDateDurationRecord(_dateDuration_, 0).
+        1. If DateDurationSign(_yearsMonthsWeeksDuration_) = 0, return _dateDuration_.[[Days]].
+        1. Let _later_ be ? CalendarDateAdd(_plainRelativeTo_.[[Calendar]], _plainRelativeTo_.[[ISODate]], _yearsMonthsWeeksDuration_, ~constrain~).
+        1. Let _epochDays1_ be ISODateToEpochDays(_plainRelativeTo_.[[ISODate]].[[Year]], _plainRelativeTo_.[[ISODate]].[[Month]] - 1, _plainRelativeTo_.[[ISODate]].[[Day]]).
+        1. Let _epochDays2_ be ISODateToEpochDays(_later_.[[Year]], _later_.[[Month]] - 1, _later_.[[Day]]).
+        1. Let _yearsMonthsWeeksInDays_ be _epochDays2_ - _epochDays1_.
+        1. Return _dateDuration_.[[Days]] + _yearsMonthsWeeksInDays_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-datedurationsign" type="abstract operation">
+      <h1>
+        DateDurationSign (
+          _dateDuration_: a Date Duration Record,
+        ): one of -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns 1 if the most significant non-zero field in the _dateDuration_ argument is positive, and -1 if the most significant non-zero field is negative. If all of _dateDuration_'s fields are zero, it returns 0.</dd>
+      </dl>
+      <emu-alg>
+        1. For each value _v_ of « _dateDuration_.[[Years]], _dateDuration_.[[Months]], _dateDuration_.[[Weeks]], _dateDuration_.[[Days]] », do
+          1. If _v_ &lt; 0, return -1.
+          1. If _v_ > 0, return 1.
+        1. Return 0.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-zerodateduration" type="abstract operation">
+      <h1>ZeroDateDuration ( ): a Date Duration Record</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned Record represents a duration with length 0.</dd>
+      </dl>
+      <emu-alg>
+        1. Return ! CreateDateDurationRecord(0, 0, 0, 0).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-date-equations">
+    <h1>Date Equations</h1>
+
+    <p>The definitions in this section correspond with equations and operations in <emu-xref href="#sec-isodatetoepochdays"></emu-xref>, but calculate the result in mathematical values instead of Numbers.</p>
+    <emu-note>These definitions can be unified when <a href="https://github.com/tc39/ecma262/issues/1087">issue gh-1087</a> is fixed.</emu-note>
+
+    <p>A given time _t_ belongs to day number</p>
+    <emu-eqn id="eqn-EpochTimeToDayNumber" aoid="EpochTimeToDayNumber">EpochTimeToDayNumber(_t_) = floor(_t_ / ℝ(msPerDay))</emu-eqn>
+    <p>Number of days in year are given by:</p>
+    <emu-eqn id="eqn-mathematicaldaysinyear" aoid="MathematicalDaysInYear">
+      MathematicalDaysInYear(_y_)
+        = 365 if ((_y_) modulo 4) ≠ 0
+        = 366 if ((_y_) modulo 4) = 0 and ((_y_) modulo 100) ≠ 0
+        = 365 if ((_y_) modulo 100) = 0 and ((_y_) modulo 400) ≠ 0
+        = 366 if ((_y_) modulo 400) = 0
+    </emu-eqn>
+    <p>The day number of the first day of year _y_ is given by:</p>
+    <emu-eqn id="eqn-epochdaynumberforyear" aoid="EpochDayNumberForYear">EpochDayNumberForYear(_y_) = 365 × (_y_ - 1970) + floor((_y_ - 1969) / 4) - floor((_y_ - 1901) / 100) + floor((_y_ - 1601) / 400)</emu-eqn>
+    <p>The time of the start of a year is:</p>
+    <emu-eqn id="eqn-epochtimeforyear" aoid="EpochTimeForYear">EpochTimeForYear(_y_) = ℝ(msPerDay) × EpochDayNumberForYear(_y_)</emu-eqn>
+    <p>Epoch year from time _t_ is given by:</p>
+    <emu-eqn id="eqn-epochtimetoepochyear" aoid="EpochTimeToEpochYear">EpochTimeToEpochYear(_t_) = the largest integral Number _y_ (closest to +∞) such that EpochTimeForYear(_y_) ≤ _t_</emu-eqn>
+    <p>The following function returns 1 for a time within leap year otherwise it returns 0:</p>
+    <emu-eqn id="eqn-mathematicalinleapyear" aoid="MathematicalInLeapYear">
+      MathematicalInLeapYear(_t_)
+        = 0 if MathematicalDaysInYear(EpochTimeToEpochYear(_t_)) = 365
+        = 1 if MathematicalDaysInYear(EpochTimeToEpochYear(_t_)) = 366
+    </emu-eqn>
+    <p>The month number for a time _t_ is given by:</p>
+    <emu-eqn id="eqn-epochtimetomonthinyear" aoid="EpochTimeToMonthInYear">
+      EpochTimeToMonthInYear(_t_)
+        = 0 if 0 ≤ EpochTimeToDayInYear(_t_) &lt; 31
+        = 1 if 31 ≤ EpochTimeToDayInYear(_t_) &lt; 59 + MathematicalInLeapYear(_t_)
+        = 2 if 59 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 90 + MathematicalInLeapYear(_t_)
+        = 3 if 90 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 120 + MathematicalInLeapYear(_t_)
+        = 4 if 120 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 151 + MathematicalInLeapYear(_t_)
+        = 5 if 151 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 181 + MathematicalInLeapYear(_t_)
+        = 6 if 181 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 212 + MathematicalInLeapYear(_t_)
+        = 7 if 212 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 243 + MathematicalInLeapYear(_t_)
+        = 8 if 243 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 273 + MathematicalInLeapYear(_t_)
+        = 9 if 273 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 304 + MathematicalInLeapYear(_t_)
+        = 10 if 304 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 334 + MathematicalInLeapYear(_t_)
+        = 11 if 334 + MathematicalInLeapYear(_t_) ≤ EpochTimeToDayInYear(_t_) &lt; 365 + MathematicalInLeapYear(_t_)
+    </emu-eqn>
+    <p>where</p>
+    <emu-eqn id="eqn-epochtimetodayinyear" aoid="EpochTimeToDayInYear">EpochTimeToDayInYear(_t_) = EpochTimeToDayNumber(_t_) - EpochDayNumberForYear(EpochTimeToEpochYear(_t_))</emu-eqn>
+    <p>A month value of 0 specifies January; 1 specifies February; 2 specifies March; 3 specifies April; 4 specifies May; 5 specifies June; 6 specifies July; 7 specifies August; 8 specifies September; 9 specifies October; 10 specifies November; and 11 specifies December. Note that <emu-eqn>EpochTimeToMonthInYear(0) = 0</emu-eqn>, corresponding to Thursday, 1 January 1970.</p>
+    <p>The date number for a time _t_ is given by:</p>
+    <emu-eqn id="eqn-epochtimetodate" aoid="EpochTimeToDate">
+      EpochTimeToDate(_t_)
+        = EpochTimeToDayInYear(_t_) + 1 if EpochTimeToMonthInYear(_t_) = 0
+        = EpochTimeToDayInYear(_t_) - 30 if EpochTimeToMonthInYear(_t_) = 1
+        = EpochTimeToDayInYear(_t_) - 58 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 2
+        = EpochTimeToDayInYear(_t_) - 89 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 3
+        = EpochTimeToDayInYear(_t_) - 119 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 4
+        = EpochTimeToDayInYear(_t_) - 150 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 5
+        = EpochTimeToDayInYear(_t_) - 180 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 6
+        = EpochTimeToDayInYear(_t_) - 211 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 7
+        = EpochTimeToDayInYear(_t_) - 242 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 8
+        = EpochTimeToDayInYear(_t_) - 272 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 9
+        = EpochTimeToDayInYear(_t_) - 303 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 10
+        = EpochTimeToDayInYear(_t_) - 333 - MathematicalInLeapYear(_t_) if EpochTimeToMonthInYear(_t_) = 11
+    </emu-eqn>
+    <p>The weekday for a particular time _t_ is defined as:</p>
+    <emu-eqn id="eqn-epochtimetoweekday" aoid="EpochTimeToWeekDay">EpochTimeToWeekDay(_t_) =(EpochTimeToDayNumber(_t_) + 4) modulo 7</emu-eqn>
+    <p>A weekday value of 0 specifies Sunday; 1 specifies Monday; 2 specifies Tuesday; 3 specifies Wednesday; 4 specifies Thursday; 5 specifies Friday; and 6 specifies Saturday. Note that <emu-eqn>EpochTimeToWeekDay(0) = 4</emu-eqn>, corresponding to Thursday, 1 January 1970.</p>
+
+    <emu-clause id="sec-checkisodaysrange" type="abstract operation">
+      <h1>
+        CheckISODaysRange (
+          _isoDate_: an ISO Date Record,
+        ): either a normal completion containing ~unused~ or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It checks that the given date is within the range of 10<sup>8</sup> days from the epoch.</dd>
+      </dl>
+      <emu-alg>
+        1. If abs(ISODateToEpochDays(_isoDate_.[[Year]], _isoDate_.[[Month]] - 1, _isoDate_.[[Day]])) > 10<sup>8</sup>, throw a *RangeError* exception.
+        1. Return ~unused~.
+      </emu-alg>
+      <emu-note>
+        This operation ensures that GetUTCEpochNanoseconds is not called with numbers that are too large, and can be removed when <a href="https://github.com/tc39/ecma262/issues/1087">issue gh-1087</a> is fixed. It is distinct from ISODateWithinLimits.
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-epochdaystoepochms" type="abstract operation">
+      <h1>
+        EpochDaysToEpochMs (
+          _day_: an integer,
+          _time_: an integer,
+        ): an integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It calculates a number of milliseconds as in MakeDate, using mathematical values.</dd>
+      </dl>
+      <emu-alg>
+        1. Return _day_ × ℝ(msPerDay) + _time_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isodatetoepochdays" type="abstract operation">
+      <h1>
+        ISODateToEpochDays (
+          _year_: an integer,
+          _month_: an integer,
+          _date_: an integer,
+        ): an integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It calculates a number of days as in MakeDay, using mathematical values.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _resolvedYear_ be _year_ + floor(_month_ / 12).
+        1. Let _resolvedMonth_ be _month_ modulo 12.
+        1. Find a time _t_ such that EpochTimeToEpochYear(_t_) = _resolvedYear_, EpochTimeToMonthInYear(_t_) = _resolvedMonth_, and EpochTimeToDate(_t_) = 1.
+        1. Return EpochTimeToDayNumber(_t_) + _date_ - 1.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-epoch-nanoseconds">
+    <h1>Epoch Nanoseconds and Range</h1>
+
+    <p>An instant in time to nanosecond precision, or <dfn>epoch nanoseconds value</dfn>, as stored in the [[EpochNanoseconds]] internal slot of Temporal.Instant and Temporal.ZonedDateTime, is represented by an integer. It supports a range of exactly -100,000,000 to 100,000,000 days relative to midnight at the beginning of 1 January 1970 UTC, the same range as a time value. There is no nanosecond equivalent of the time value *NaN*; there is no representation for no specific instant.</p>
+
+    <p>The exact moment of midnight at the beginning of 1 January 1970 UTC is represented by the value 0. The maximum value is maxEpochNanoseconds, and the minimum value is minEpochNanoseconds.</p>
+
+    <emu-clause id="sec-addepochnanoseconds" type="abstract operation">
+      <h1>
+        AddEpochNanoseconds (
+          _epochNanoseconds_: an epoch nanoseconds value,
+          _timeDuration_: a time duration,
+        ): either a normal completion containing an epoch nanoseconds value or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It adds a duration to a number of nanoseconds since the epoch.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _result_ be AddTimeDurationToEpochNanoseconds(_timeDuration_, _epochNanoseconds_).
+        1. If IsValidEpochNanoseconds(_result_) is *false*, throw a *RangeError* exception.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-compareepochnanoseconds" type="abstract operation">
+      <h1>
+        CompareEpochNanoseconds (
+          _epochNanosecondsOne_: an epoch nanoseconds value,
+          _epochNanosecondsTwo_: an epoch nanoseconds value,
+        ): either -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. If _epochNanosecondsOne_ > _epochNanosecondsTwo_, return 1.
+        1. If _epochNanosecondsOne_ &lt; _epochNanosecondsTwo_, return -1.
+        1. Return 0.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-differenceepochnanoseconds" type="abstract operation">
+      <h1>
+        DifferenceEpochNanoseconds (
+          _ns1_: an epoch nanoseconds value,
+          _ns2_: an epoch nanoseconds value,
+          _roundingIncrement_: a positive integer,
+          _smallestUnit_: a time unit,
+          _roundingMode_: a rounding mode,
+        ): an Internal Duration Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It computes the difference between two exact times _ns1_ and _ns2_ expressed in nanoseconds since the epoch, and rounds the result according to the parameters _roundingIncrement_, _smallestUnit_, and _roundingMode_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _timeDuration_ be TimeDurationFromEpochNanosecondsDifference(_ns2_, _ns1_).
+        1. Set _timeDuration_ to ! RoundTimeDuration(_timeDuration_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
+        1. Return CombineDateAndTimeDuration(ZeroDateDuration(), _timeDuration_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isvalidepochnanoseconds" type="abstract operation">
+      <h1>
+        IsValidEpochNanoseconds (
+          _epochNanoseconds_: an epoch nanoseconds value,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns *true* if its argument is within the allowed range of nanoseconds since the epoch for a Temporal.Instant and Temporal.ZonedDateTime, and *false* otherwise.</dd>
+      </dl>
+      <emu-alg>
+        1. If _epochNanoseconds_ &lt; minEpochNanoseconds or _epochNanoseconds_ > maxEpochNanoseconds, return *false*; else return *true*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-roundepochnanoseconds" type="abstract operation">
+      <h1>
+        RoundEpochNanoseconds (
+          _epochNanoseconds_: an epoch nanoseconds value,
+          _increment_: a positive integer,
+          _unit_: a time unit,
+          _roundingMode_: a rounding mode,
+        ): an epoch nanoseconds value
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It rounds a number of nanoseconds _epochNanoseconds_ since the epoch to the given rounding increment.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _unitLength_ be the value in the "Length in Nanoseconds" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> whose "Value" column contains _unit_.
+        1. Let _incrementNs_ be _increment_ × _unitLength_.
+        1. Return RoundNumberToIncrementAsIfPositive(_epochNanoseconds_, _incrementNs_, _roundingMode_).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-internal-duration-records">
+    <h1>Internal Duration Records</h1>
+
+    <p>
+      A <dfn variants="Internal Duration Records">Internal Duration Record</dfn> is a Record value used to represent the combination of a Date Duration Record with a time duration.
+      Such Records are used by operations that deal with both date and time portions of durations, such as RoundTimeDuration.
+    </p>
+
+    <p>Internal Duration Records have the fields listed in <emu-xref href="#table-internal-duration-record-fields"></emu-xref>.</p>
+    <emu-table id="table-internal-duration-record-fields" caption="Internal Duration Record Fields">
+      <table class="real-table">
+        <tr>
+          <th>Field Name</th>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td>[[Date]]</td>
+          <td>a Date Duration Record</td>
+          <td>
+            The date portion of the duration.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Time]]</td>
+          <td>a time duration</td>
+          <td>
+            The time portion of the duration.
+          </td>
+        </tr>
+      </table>
+    </emu-table>
+
+    <emu-clause id="sec-combinedateandtimeduration" type="abstract operation">
+      <h1>
+        CombineDateAndTimeDuration (
+          _dateDuration_: a Date Duration Record,
+          _timeDuration_: a time duration,
+        ): an Internal Duration Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. Let _dateSign_ be DateDurationSign(_dateDuration_).
+        1. Let _timeSign_ be TimeDurationSign(_timeDuration_).
+        1. Assert: If _dateSign_ ≠ 0 and _timeSign_ ≠ 0, _dateSign_ = _timeSign_.
+        1. Return Internal Duration Record {
+          [[Date]]: _dateDuration_,
+          [[Time]]: _timeDuration_
+          }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-internaldurationsign" type="abstract operation">
+      <h1>
+        InternalDurationSign (
+          _internalDuration_: an Internal Duration Record,
+        ): one of -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns 1 if the most significant non-zero field in the _internalDuration_ argument is positive, and -1 if the most significant non-zero field is negative. If all of _internalDuration_'s fields are zero, it returns 0.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _dateSign_ be DateDurationSign(_internalDuration_.[[Date]]).
+        1. If _dateSign_ ≠ 0, return _dateSign_.
+        1. Return TimeDurationSign(_internalDuration_.[[Time]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-tointernaldurationrecord" type="abstract operation">
+      <h1>
+        ToInternalDurationRecord (
+          _duration_: a Temporal.Duration,
+        ): an Internal Duration Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _duration_ into its internal form, for use in duration calculations that may involve time zones. The duration's days are kept separate and not converted into the [[Time]] field.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _dateDuration_ be ! CreateDateDurationRecord(_duration_.[[Years]], _duration_.[[Months]], _duration_.[[Weeks]], _duration_.[[Days]]).
+        1. Let _timeDuration_ be TimeDurationFromComponents(_duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]]).
+        1. Return CombineDateAndTimeDuration(_dateDuration_, _timeDuration_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-tointernaldurationrecordwith24hourdays" type="abstract operation">
+      <h1>
+        ToInternalDurationRecordWith24HourDays (
+          _duration_: a Temporal.Duration,
+        ): an Internal Duration Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _duration_ into its internal form, for use in duration calculations that do not involve time zones. The duration's days are assumed to be uniformly 24 hours, and the [[Date]].[[Days]] field of the returned Record is set to 0, while the [[Time]] field includes the days.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _timeDuration_ be TimeDurationFromComponents(_duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]]).
+        1. Set _timeDuration_ to ! Add24HourDaysToTimeDuration(_timeDuration_, _duration_.[[Days]]).
+        1. Let _dateDuration_ be ! CreateDateDurationRecord(_duration_.[[Years]], _duration_.[[Months]], _duration_.[[Weeks]], 0).
+        1. Return CombineDateAndTimeDuration(_dateDuration_, _timeDuration_).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-iso8601-calendar">
+    <h1>The ISO 8601 Calendar</h1>
+
+    <p>
+      The only calendar type that a conforming ECMA-262 implementation is <em>required</em> to support, is the ISO 8601 calendar.
+      This section contains definitions specific to calendrical calculations in the ISO 8601 calendar.
+    </p>
+
+    <emu-clause id="sec-comparesurpasses" type="abstract operation">
+      <h1>
+        CompareSurpasses (
+          _sign_: either -1 or 1,
+          _year_: an integer,
+          _monthOrCode_: either an integer or a month code,
+          _day_: an integer,
+          _target_: a Calendar Date Record,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          The return value indicates whether the ISO 8601 calendar date formed by _year_, _monthOrCode_, and _day_, which need not exist, surpasses _target_ in the direction denoted by _sign_.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _year_ ≠ _target_.[[Year]], then
+          1. If _sign_ × (_year_ - _target_.[[Year]]) > 0, return *true*.
+        1. Else if _monthOrCode_ is a month code and _monthOrCode_ is not _target_.[[MonthCode]], then
+          1. If _sign_ > 0, then
+            1. If _monthOrCode_ is lexicographically greater than _target_.[[MonthCode]], return *true*.
+          1. Else,
+            1. If _target_.[[MonthCode]] is lexicographically greater than _monthOrCode_, return *true*.
+        1. Else if _monthOrCode_ is an integer and _monthOrCode_ ≠ _target_.[[Month]], then
+          1. If _sign_ × (_monthOrCode_ - _target_.[[Month]]) > 0, return *true*.
+        1. Else if _day_ ≠ _target_.[[Day]], then
+          1. If _sign_ × (_day_ - _target_.[[Day]]) > 0, return *true*.
+        1. Return *false*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isodatesurpasses" type="abstract operation">
+      <h1>
+        ISODateSurpasses (
+          _sign_: either -1 or 1,
+          _baseDate_: an ISO Date Record,
+          _isoDate2_: an ISO Date Record,
+          _years_: an integer,
+          _months_: an integer,
+          _weeks_: an integer,
+          _days_: an integer,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          The return value indicates whether the date _isoDate1_, the result of adding the duration denoted by _years_, _months_, _weeks_, and _days_ to _baseDate_, surpasses _isoDate2_ in the direction denoted by _sign_.
+          If _weeks_ and _days_ are both zero, then _isoDate1_ need not exist (for example, it could be February 30).
+          Note that this operation is specific to date difference calculations and is not the same as CompareISODate.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _parts_ be CalendarISOToDate(*"iso8601"*, _baseDate_).
+        1. Let _target_ be CalendarISOToDate(*"iso8601"*, _isoDate2_).
+        1. Let _y0_ be _parts_.[[Year]] + _years_.
+        1. If CompareSurpasses(_sign_, _y0_, _parts_.[[MonthCode]], _parts_.[[Day]], _target_) is *true*, return *true*.
+        1. If _months_ = 0, _weeks_ = 0, and _days_ = 0, return *false*.
+        1. Let _m0_ be _parts_.[[Month]] + _months_.
+        1. Let _monthsAdded_ be BalanceISOYearMonth(_y0_, _m0_).
+        1. If CompareSurpasses(_sign_, _monthsAdded_.[[Year]], _monthsAdded_.[[Month]], _parts_.[[Day]], _target_) is *true*, return *true*.
+        1. If _weeks_ = 0 and _days_ = 0, return *false*.
+        1. Let _regulatedDate_ be ! RegulateISODate(_monthsAdded_.[[Year]], _monthsAdded_.[[Month]], _parts_.[[Day]], ~constrain~).
+        1. Let _daysInWeek_ be 7.
+        1. Let _balancedDate_ be AddDaysToISODate(_regulatedDate_, _daysInWeek_ * _weeks_ + _days_).
+        1. Return CompareSurpasses(_sign_, _balancedDate_.[[Year]], _balancedDate_.[[Month]], _balancedDate_.[[Day]], _target_).
+      </emu-alg>
+      <emu-note>
+        <p>This operation intentionally uses overflow ~constrain~ when regulating the year-month. As a result, adding the duration returned by `.since` or `.until` to _baseDate_ may cause a *RangeError* exception when _overflow_ is ~reject~.</p>
+      </emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-isodaysinmonth" type="abstract operation">
+      <h1>
+        ISODaysInMonth (
+          _year_: an integer,
+          _month_: an integer in the inclusive interval from 1 to 12,
+        ): a positive integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the number of days in the given year and month in the ISO 8601 calendar.</dd>
+      </dl>
+      <emu-alg>
+        1. If _month_ is one of 1, 3, 5, 7, 8, 10, or 12, return 31.
+        1. If _month_ is one of 4, 6, 9, or 11, return 30.
+        1. Assert: _month_ = 2.
+        1. Return 28 + MathematicalInLeapYear(EpochTimeForYear(_year_)).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-year-week-record">
+      <h1>Year-Week Records</h1>
+      <p>
+        The <dfn variants="Year-Week Records">Year-Week Record</dfn> specification type is returned by the week number calculation in ISOWeekOfYear, and the corresponding calculations for other calendars if applicable.
+        It comprises a <em>calendar week of year</em> with the corresponding <em>week calendar year</em>.
+      </p>
+      <p>Year-Week Records have the fields listed in table <emu-xref href="#table-year-week-record"></emu-xref>.</p>
+      <emu-table id="table-year-week-record">
+        <emu-caption>Year-Week Record Fields</emu-caption>
+        <table class="real-table">
+          <thead>
+            <tr>
+              <th>Field Name</th>
+              <th>Value</th>
+              <th>Meaning</th>
+            </tr>
+          </thead>
+          <tr>
+            <td>[[Week]]</td>
+            <td>a positive integer or *undefined*</td>
+            <td>The calendar week of year.</td>
+          </tr>
+          <tr>
+            <td>[[Year]]</td>
+            <td>an integer or *undefined*</td>
+            <td>The week calendar year.</td>
+          </tr>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-isoweekofyear" type="abstract operation">
+      <h1>
+        ISOWeekOfYear (
+          _isoDate_: an ISO Date Record,
+        ): a Year-Week Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It determines where a calendar day falls in the ISO 8601 week calendar and calculates its <em>calendar week of year</em>, which is the 1-based ordinal number of its calendar week within the corresponding <em>week calendar year</em> (which may differ from _year_ by up to 1 in either direction).</dd>
+      </dl>
+      <emu-alg>
+        1. Let _year_ be _isoDate_.[[Year]].
+        1. Let _wednesday_ be 3.
+        1. Let _thursday_ be 4.
+        1. Let _friday_ be 5.
+        1. Let _saturday_ be 6.
+        1. Let _daysInWeek_ be 7.
+        1. Let _maxWeekNumber_ be 53.
+        1. Let _dayOfYear_ be ISODayOfYear(_isoDate_).
+        1. Let _dayOfWeek_ be ISODayOfWeek(_isoDate_).
+        1. Let _week_ be floor((_dayOfYear_ + _daysInWeek_ - _dayOfWeek_ + _wednesday_) / _daysInWeek_).
+        1. If _week_ &lt; 1, then
+          1. NOTE: This is the last week of the previous year.
+          1. Let _jan1st_ be CreateISODateRecord(_year_, 1, 1).
+          1. Let _dayOfJan1st_ be ISODayOfWeek(_jan1st_).
+          1. If _dayOfJan1st_ = _friday_, then
+            1. Return Year-Week Record { [[Week]]: _maxWeekNumber_, [[Year]]: _year_ - 1 }.
+          1. If _dayOfJan1st_ = _saturday_, and MathematicalInLeapYear(EpochTimeForYear(_year_ - 1)) = 1, then
+            1. Return Year-Week Record { [[Week]]: _maxWeekNumber_. [[Year]]: _year_ - 1 }.
+          1. Return Year-Week Record { [[Week]]: _maxWeekNumber_ - 1, [[Year]]: _year_ - 1 }.
+        1. If _week_ = _maxWeekNumber_, then
+          1. Let _daysInYear_ be MathematicalDaysInYear(_year_).
+          1. Let _daysLaterInYear_ be _daysInYear_ - _dayOfYear_.
+          1. Let _daysAfterThursday_ be _thursday_ - _dayOfWeek_.
+          1. If _daysLaterInYear_ &lt; _daysAfterThursday_, then
+            1. Return Year-Week Record { [[Week]]: 1, [[Year]]: _year_ + 1 }.
+        1. Return Year-Week Record { [[Week]]: _week_, [[Year]]: _year_ }.
+      </emu-alg>
+      <emu-note>In the ISO 8601 week calendar, calendar week number 1 of a calendar year is the week including the first Thursday of that year (based on the principle that a week belongs to the same calendar year as the majority of its calendar days), which always includes January 4 and starts on the Monday on or immediately before then. Because of this, some calendar days of the first calendar week of a calendar year may be part of the _preceding_ [proleptic Gregorian] date calendar year, and some calendar days of the last calendar week of a calendar year may be part of the _following_ [proleptic Gregorian] date calendar year. See ISO 8601 for details.</emu-note>
+      <emu-note>For example, week calendar year 2020 includes both 31 December 2019 (a Tuesday belonging to its calendar week 1) and 1 January 2021 (a Friday belonging to its calendar week 53).</emu-note>
+    </emu-clause>
+
+    <emu-clause id="sec-isodayofyear" type="abstract operation">
+      <h1>
+        ISODayOfYear (
+          _isoDate_: an ISO Date Record,
+        ): an integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the ISO 8601 <em>calendar day of year</em> of a calendar day, which is its 1-based ordinal number within its ISO 8601 calendar year.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _epochDays_ be ISODateToEpochDays(_isoDate_.[[Year]], _isoDate_.[[Month]] - 1, _isoDate_.[[Day]]).
+        1. Return EpochTimeToDayInYear(EpochDaysToEpochMs(_epochDays_, 0)) + 1.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isodayofweek" type="abstract operation">
+      <h1>
+        ISODayOfWeek (
+          _isoDate_: an ISO Date Record,
+        ): an integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the ISO 8601 <em>calendar day of week</em> of a calendar day, which is its 1-based ordinal position within the sequence of week calendar days that starts with Monday at 1 and ends with Sunday at 7.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _epochDays_ be ISODateToEpochDays(_isoDate_.[[Year]], _isoDate_.[[Month]] - 1, _isoDate_.[[Day]]).
+        1. Let _dayOfWeek_ be EpochTimeToWeekDay(EpochDaysToEpochMs(_epochDays_, 0)).
+        1. If _dayOfWeek_ = 0, return 7.
+        1. Return _dayOfWeek_.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-iso-date-records">
+    <h1>ISO Date Records</h1>
+    <p>
+      An <dfn variants="ISO Date Records">ISO Date Record</dfn> is a Record value used to represent a valid calendar date in the ISO 8601 calendar, although the year may be outside of the allowed range for Temporal.
+      ISO Date Records are produced by the abstract operation CreateISODateRecord.
+      For any ISO Date Record _d_, IsValidISODate(_d_.[[Year]], _d_.[[Month]], _d_.[[Day]]) must return *true*.
+    </p>
+    <p>ISO Date Records have the fields listed in <emu-xref href="#table-iso-date-record-fields"></emu-xref>.</p>
+    <emu-table id="table-iso-date-record-fields" caption="ISO Date Record Fields">
+      <table class="real-table">
+        <tr>
+          <th>Field Name</th>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td>[[Year]]</td>
+          <td>an integer</td>
+          <td>
+            The year in the ISO 8601 calendar.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Month]]</td>
+          <td>an integer between 1 and 12, inclusive</td>
+          <td>
+            The number of the month in the ISO 8601 calendar.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Day]]</td>
+          <td>an integer between 1 and 31, inclusive</td>
+          <td>
+            The number of the day of the month in the ISO 8601 calendar.
+          </td>
+        </tr>
+      </table>
+    </emu-table>
+
+    <emu-clause id="sec-adddaystoisodate" type="abstract operation">
+      <h1>
+        AddDaysToISODate (
+          _isoDate_: an ISO Date Record,
+          _days_: an integer,
+        ): an ISO Date Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It adds _days_ to _isoDate_ into a valid calendar date in the ISO 8601 calendar as given by IsValidISODate, by overflowing out-of-range month or day values into the next-highest unit.
+          This date may be outside the range given by ISODateTimeWithinLimits.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _epochDays_ be ISODateToEpochDays(_isoDate_.[[Year]], _isoDate_.[[Month]] - 1, _isoDate_.[[Day]]) + _days_.
+        1. Let _epochMilliseconds_ be EpochDaysToEpochMs(_epochDays_, 0).
+        1. Return CreateISODateRecord(EpochTimeToEpochYear(_epochMilliseconds_), EpochTimeToMonthInYear(_epochMilliseconds_) + 1, EpochTimeToDate(_epochMilliseconds_)).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-compareisodate" type="abstract operation">
+      <h1>
+        CompareISODate (
+          _isoDate1_: an ISO Date Record,
+          _isoDate2_: an ISO Date Record,
+        ): one of -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It performs a comparison of the two dates denoted by _isoDate1_ and _isoDate2_ according to ISO 8601 calendar arithmetic.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _isoDate1_.[[Year]] > _isoDate2_.[[Year]], return 1.
+        1. If _isoDate1_.[[Year]] &lt; _isoDate2_.[[Year]], return -1.
+        1. If _isoDate1_.[[Month]] > _isoDate2_.[[Month]], return 1.
+        1. If _isoDate1_.[[Month]] &lt; _isoDate2_.[[Month]], return -1.
+        1. If _isoDate1_.[[Day]] > _isoDate2_.[[Day]], return 1.
+        1. If _isoDate1_.[[Day]] &lt; _isoDate2_.[[Day]], return -1.
+        1. Return 0.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-createisodaterecord" type="abstract operation">
+      <h1>
+        CreateISODateRecord (
+          _year_: an integer,
+          _month_: an integer between 1 and 12 inclusive,
+          _day_: an integer between 1 and 31 inclusive,
+        ): an ISO Date Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. Assert: IsValidISODate(_year_, _month_, _day_) is *true*.
+        1. Return ISO Date Record { [[Year]]: _year_, [[Month]]: _month_, [[Day]]: _day_ }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isodatetofields" type="abstract operation">
+      <h1>
+        ISODateToFields (
+          _calendar_: a calendar type,
+          _isoDate_: an ISO Date Record,
+          _type_: one of ~date~, ~year-month~, or ~month-day~,
+        ): a Calendar Fields Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. Let _fields_ be an empty Calendar Fields Record with all fields set to ~unset~.
+        1. Let _calendarDate_ be CalendarISOToDate(_calendar_, _isoDate_).
+        1. Set _fields_.[[MonthCode]] to _calendarDate_.[[MonthCode]].
+        1. If _type_ is either ~month-day~ or ~date~, then
+          1. Set _fields_.[[Day]] to _calendarDate_.[[Day]].
+        1. If _type_ is either ~year-month~ or ~date~, then
+          1. Set _fields_.[[Year]] to _calendarDate_.[[Year]].
+        1. Return _fields_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isodatewithinlimits" type="abstract operation">
+      <h1>
+        ISODateWithinLimits (
+          _isoDate_: an ISO Date Record,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The return value is *true* if the date in the ISO 8601 calendar given by the argument is within the representable range of `Temporal.PlainDate`, and *false* otherwise.</dd>
+      </dl>
+      <emu-note>
+        <p>Deferring to ISODateTimeWithinLimits with an hour of 12 avoids trouble at the extremes of the representable range of Temporal.PlainDateTime, which stops just before midnight on each end.</p>
+      </emu-note>
+      <emu-alg>
+        1. Let _isoDateTime_ be CombineISODateAndTimeRecord(_isoDate_, NoonTimeRecord()).
+        1. Return ISODateTimeWithinLimits(_isoDateTime_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isvalidisodate" type="abstract operation">
+      <h1>
+        IsValidISODate (
+          _year_: an integer,
+          _month_: an integer,
+          _day_: an integer,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          The return value is *true* if its arguments form a valid date in the ISO 8601 calendar, and *false* otherwise.
+          This includes dates that may fall outside of the allowed range for Temporal.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _month_ &lt; 1 or _month_ > 12, return *false*.
+        1. Let _daysInMonth_ be ISODaysInMonth(_year_, _month_).
+        1. If _day_ &lt; 1 or _day_ > _daysInMonth_, return *false*; else return *true*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-regulateisodate" type="abstract operation">
+      <h1>
+        RegulateISODate (
+          _year_: an integer,
+          _month_: an integer,
+          _day_: an integer,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing an ISO Date Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It performs the overflow correction specified by _overflow_ on the values _year_, _month_, and _day_, in order to arrive at a valid date in the ISO 8601 calendar, as determined by IsValidISODate.
+          For ~reject~, values that do not form a valid date cause an exception to be thrown.
+          For ~constrain~, values that do not form a valid date are independently clamped to their respective valid range in order of descending unit magnitude.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _overflow_ is ~constrain~, then
+          1. Set _month_ to the result of clamping _month_ between 1 and 12.
+          1. Let _daysInMonth_ be ISODaysInMonth(_year_, _month_).
+          1. Set _day_ to the result of clamping _day_ between 1 and _daysInMonth_.
+        1. Else,
+          1. Assert: _overflow_ is ~reject~.
+          1. If IsValidISODate(_year_, _month_, _day_) is *false*, throw a *RangeError* exception.
+        1. Return CreateISODateRecord(_year_, _month_, _day_).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-iso-date-time-records">
+    <h1>ISO Date-Time Records</h1>
+    <p>
+      An <dfn variants="ISO Date-Time Records">ISO Date-Time Record</dfn> is a Record value used to represent a valid calendar date in the ISO 8601 calendar together with a clock time.
+      For any ISO Date-Time Record _r_, IsValidISODate(_r_.[[ISODate]].[[Year]], _r_.[[ISODate]].[[Month]], _r_.[[ISODate]].[[Day]]) must return *true*, and IsValidTime(_r_.[[Time]].[[Hour]], _r_.[[Time]].[[Minute]], _r_.[[Time]].[[Second]], _r_.[[Time]].[[Millisecond]], _r_.[[Time]].[[Microsecond]], _r_.[[Time]].[[Nanosecond]]) must return *true*.
+      It is not necessary for ISODateTimeWithinLimits(_r__) to return *true*.
+    </p>
+    <p>ISO Date-Time Records have the fields listed in <emu-xref href="#table-iso-date-time-record-fields"></emu-xref>.</p>
+    <emu-table id="table-iso-date-time-record-fields" caption="ISO Date-Time Record Fields">
+      <table class="real-table">
+        <tr>
+          <th>Field Name</th>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td>[[ISODate]]</td>
+          <td>an ISO Date Record</td>
+          <td>
+            The date in the ISO 8601 calendar.
+          </td>
+        </tr>
+        <tr>
+          <td>[[Time]]</td>
+          <td>a Time Record</td>
+          <td>The time. The [[Days]] field is ignored.</td>
+        </tr>
+      </table>
+    </emu-table>
+
+    <emu-clause id="sec-balanceisodatetime" type="abstract operation">
+      <h1>
+        BalanceISODateTime (
+          _year_: an integer,
+          _month_: an integer,
+          _day_: an integer,
+          _hour_: an integer,
+          _minute_: an integer,
+          _second_: an integer,
+          _millisecond_: an integer,
+          _microsecond_: an integer,
+          _nanosecond_: an integer,
+        ): an ISO Date-Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. Let _balancedTime_ be BalanceTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
+        1. Let _balancedDate_ be AddDaysToISODate(CreateISODateRecord(_year_, _month_, _day_), _balancedTime_.[[Days]]).
+        1. Return CombineISODateAndTimeRecord(_balancedDate_, _balancedTime_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-combineisodateandtimerecord" type="abstract operation">
+      <h1>
+        CombineISODateAndTimeRecord (
+          _isoDate_: an ISO Date Record,
+          _time_: a Time Record,
+        ): an ISO Date-Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It combines a date and a time into one ISO Date-Time Record.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. NOTE: _time_.[[Days]] is ignored.
+        1. Return ISO Date-Time Record { [[ISODate]]: _isoDate_, [[Time]]: _time_ }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-compareisodatetime" type="abstract operation">
+      <h1>
+        CompareISODateTime (
+          _isoDateTime1_: an ISO Date-Time Record,
+          _isoDateTime2_: an ISO Date-Time Record,
+        ): one of -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It performs a comparison of two date-times according to ISO 8601 calendar arithmetic.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _dateResult_ be CompareISODate(_isoDateTime1_.[[ISODate]], _isoDateTime2_.[[ISODate]]).
+        1. If _dateResult_ ≠ 0, return _dateResult_.
+        1. Return CompareTimeRecord(_isoDateTime1_.[[Time]], _isoDateTime2_.[[Time]]).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-differenceisodatetime" type="abstract operation">
+      <h1>
+        DifferenceISODateTime (
+          _isoDateTime1_: an ISO Date-Time Record,
+          _isoDateTime2_: an ISO Date-Time Record,
+          _calendar_: a calendar type,
+          _largestUnit_: a Temporal unit,
+        ): an Internal Duration Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          The returned Internal Duration Record contains the elapsed duration from a first date and time, until a second date and time, according to the reckoning of the given calendar.
+          The given date and time units are all in the ISO 8601 calendar.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Assert: ISODateTimeWithinLimits(_isoDateTime1_) is *true*.
+        1. Assert: ISODateTimeWithinLimits(_isoDateTime2_) is *true*.
+        1. Let _timeDuration_ be DifferenceTime(_isoDateTime1_.[[Time]], _isoDateTime2_.[[Time]]).
+        1. Let _timeSign_ be TimeDurationSign(_timeDuration_).
+        1. Let _dateSign_ be CompareISODate(_isoDateTime1_.[[ISODate]], _isoDateTime2_.[[ISODate]]).
+        1. Let _adjustedDate_ be _isoDateTime2_.[[ISODate]].
+        1. If _timeSign_ = _dateSign_, then
+          1. Set _adjustedDate_ to AddDaysToISODate(_adjustedDate_, _timeSign_).
+          1. Set _timeDuration_ to ! Add24HourDaysToTimeDuration(_timeDuration_, -_timeSign_).
+        1. Let _dateLargestUnit_ be LargerOfTwoTemporalUnits(~day~, _largestUnit_).
+        1. Let _dateDifference_ be CalendarDateUntil(_calendar_, _isoDateTime1_.[[ISODate]], _adjustedDate_, _dateLargestUnit_).
+        1. If _largestUnit_ is not _dateLargestUnit_, then
+          1. Set _timeDuration_ to ! Add24HourDaysToTimeDuration(_timeDuration_, _dateDifference_.[[Days]]).
+          1. Set _dateDifference_.[[Days]] to 0.
+        1. Return CombineDateAndTimeDuration(_dateDifference_, _timeDuration_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isodatetimewithinlimits" type="abstract operation">
+      <h1>
+        ISODateTimeWithinLimits (
+          _isoDateTime_: an ISO Date-Time Record,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The return value is *true* if the combination of a date in the ISO 8601 calendar with a wall-clock time, given by the arguments, is within the representable range of `Temporal.PlainDateTime`, and *false* otherwise.</dd>
+      </dl>
+      <emu-note>
+        <p>
+          Temporal.PlainDateTime objects can represent points in time within 24 hours (8.64 × 10<sup>13</sup> nanoseconds) of the Temporal.Instant boundaries.
+          This ensures that a Temporal.Instant object can be converted into a Temporal.PlainDateTime object using any time zone.
+        </p>
+      </emu-note>
+      <emu-alg>
+        1. If abs(ISODateToEpochDays(_isoDateTime_.[[ISODate]].[[Year]], _isoDateTime_.[[ISODate]].[[Month]] - 1, _isoDateTime_.[[ISODate]].[[Day]])) > 10<sup>8</sup> + 1, return *false*.
+        1. Let _epochNanoseconds_ be GetUTCEpochNanoseconds(_isoDateTime_).
+        1. If _epochNanoseconds_ ≤ minEpochNanoseconds - nsPerDay, return *false*.
+        1. If _epochNanoseconds_ ≥ maxEpochNanoseconds + nsPerDay, return *false*.
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-roundisodatetime" type="abstract operation">
+      <h1>
+        RoundISODateTime (
+          _isoDateTime_: an ISO Date-Time Record,
+          _increment_: a positive integer,
+          _unit_: either a time unit or ~day~,
+          _roundingMode_: a rounding mode,
+        ): an ISO Date-Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It rounds the time part of a combined date and time, carrying over any excess into the date part.</dd>
+      </dl>
+      <emu-alg>
+        1. Assert: ISODateTimeWithinLimits(_isoDateTime_) is *true*.
+        1. Let _roundedTime_ be RoundTime(_isoDateTime_.[[Time]], _increment_, _unit_, _roundingMode_).
+        1. Let _balanceResult_ be AddDaysToISODate(_isoDateTime_.[[ISODate]], _roundedTime_.[[Days]]).
+        1. Return CombineISODateAndTimeRecord(_balanceResult_, _roundedTime_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-timevaluetoisodatetimerecord" type="abstract operation">
+      <h1>
+        TimeValueToISODateTimeRecord (
+          _t_: a finite time value,
+        ): an ISO Date-Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It converts a time value into an ISO Date-Time Record.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _isoDate_ be CreateISODateRecord(ℝ(YearFromTime(_t_)), ℝ(MonthFromTime(_t_)) + 1, ℝ(DateFromTime(_t_))).
+        1. Let _time_ be CreateTimeRecord(ℝ(HourFromTime(_t_)), ℝ(MinFromTime(_t_)), ℝ(SecFromTime(_t_)), ℝ(msFromTime(_t_)), 0, 0).
+        1. Return CombineISODateAndTimeRecord(_isoDate_, _time_).
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-month-codes">
+    <h1>Month Codes</h1>
+
+    <p>
+      Lunisolar calendars may insert leap months into certain years, in order to reconcile the discrepancy between lunar cycles and the solar year.
+      For this reason, a particular month may not have the same ordinal number every year if a leap month is inserted before it.
+    </p>
+    <p>
+      A <dfn>month code</dfn> <emu-not-ref>is a String</emu-not-ref> that refers uniquely to a particular month, even one that is not present every year.
+      Month codes are lexicographically ordered according to the notional order of months in the year, even though not all may be present in any given year.
+      They conform to the following string format:
+    </p>
+    <p>
+      The month code for a month that is not a leap month and whose 1-based ordinal position in a common year of the calendar (i.e., a year that is not a leap year) is _n_ is the string-concatenation of *"M"* and ToZeroPaddedDecimalString(_n_, 2).
+      The month code for a leap month inserted after a month whose 1-based ordinal position in a common year of the calendar is _p_, is the string-concatenation of *"M"*, ToZeroPaddedDecimalString(_p_, 2), and *"L"*.
+    </p>
+    <p>The month codes in the ISO 8601 calendar, which does not have leap months, are *"M01"* for January through *"M12"* for December.</p>
+    <emu-note>
+      For example, in the Hebrew calendar, the month code of Adar (and Adar II, in leap years) is *"M06"* and the month code of Adar I (the leap month inserted before Adar II) is *"M05L"*.
+      Theoretically, in a calendar with a leap month at the start of some years, the month code of that month would be *"M00L"*.
+    </emu-note>
+
+    <emu-clause id="sec-createmonthcode" type="abstract operation">
+      <h1>
+        CreateMonthCode (
+          _monthNumber_: an integer in the inclusive interval from 0 to 99,
+          _isLeapMonth_: a Boolean,
+        ): a month code
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It creates a month code with the given month number and leap month flag.
+        </dd>
+      </dl>
+      <p>It performs the following steps when called:</p>
+      <emu-alg>
+        1. Assert: If _isLeapMonth_ is *false*, _monthNumber_ > 0.
+        1. Let _numberPart_ be ToZeroPaddedDecimalString(_monthNumber_, 2).
+        1. If _isLeapMonth_ is *true*, then
+          1. Return the string-concatenation of the code unit 0x004D (LATIN CAPITAL LETTER M), _numberPart_, and the code unit 0x004C (LATIN CAPITAL LETTER L).
+        1. Return the string-concatenation of the code unit 0x004D (LATIN CAPITAL LETTER M) and _numberPart_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-parsemonthcode" type="abstract operation">
+      <h1>
+        ParseMonthCode (
+          _argument_: an ECMAScript language value,
+        ): either a normal completion containing a Record with fields [[MonthNumber]] (an integer) and [[IsLeapMonth]] (a Boolean) or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It converts _argument_ to a month code and parses it into its parts, or throws a *TypeError* if conversion to String fails, or throws a *RangeError* if the result is not a syntactically valid month code.
+          The month code is not guaranteed to be correct in the context of any particular calendar; for example, some calendars do not have leap months.
+        </dd>
+      </dl>
+      <p>It performs the following steps when called:</p>
+      <emu-alg>
+        1. Let _monthCode_ be ? ToPrimitive(_argument_, ~string~).
+        1. If _monthCode_ is not a String, throw a *TypeError* exception.
+        1. If ParseText(StringToCodePoints(_monthCode_), |MonthCode|) is a List of errors, throw a *RangeError* exception.
+        1. Let _isLeapMonth_ be *false*.
+        1. If the length of _monthCode_ = 4, then
+          1. Assert: The fourth code unit of _monthCode_ is 0x004C (LATIN CAPITAL LETTER L).
+          1. Set _isLeapMonth_ to *true*.
+        1. Let _monthCodeDigits_ be the substring of _monthCode_ from 1 to 3.
+        1. Let _monthNumber_ be ℝ(StringToNumber(_monthCodeDigits_)).
+        1. Return the Record { [[MonthNumber]]: _monthNumber_, [[IsLeapMonth]]: _isLeapMonth_ }.
+      </emu-alg>
+      <emu-grammar type="definition">
+        MonthCode :::
+          `M00L`
+          `M0` NonZeroDigit `L`?
+          `M` NonZeroDigit DecimalDigit `L`?
+      </emu-grammar>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-operations-for-reading-options">
+    <h1>Operations for Reading Options</h1>
+
+    <p>
+      This section defines abstract operations for reading the properties of options Objects passed to Temporal functions.
+      For example, GetTemporalOverflowOption accesses the *"overflow"* property of an Object, ensures that it is one of the allowed values *"constrain"* or *"reject"*, and returns one of the corresponding Enum specification types ~constrain~ or ~reject~.
+    </p>
+
+    <emu-clause id="sec-getdifferencesettings" type="abstract operation">
+      <h1>
+        GetDifferenceSettings (
+          _operation_: either ~since~ or ~until~,
+          _options_: an Object,
+          _unitGroup_: one of ~date~, ~time~, or ~datetime~,
+          _disallowedUnits_: a List of Temporal units,
+          _fallbackSmallestUnit_: a Temporal unit,
+          _smallestLargestDefaultUnit_: a Temporal unit,
+        ): either a normal completion containing a Record with fields [[SmallestUnit]] (a Temporal unit), [[LargestUnit]] (a Temporal unit), [[RoundingMode]] (a rounding mode), and [[RoundingIncrement]] (an integer in the inclusive interval from 1 to 10<sup>9</sup>), or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It reads unit and rounding options needed by difference operations.</dd>
+      </dl>
+      <emu-alg>
+        1. NOTE: The following steps read options and perform independent validation in alphabetical order.
+        1. Let _largestUnit_ be ? GetTemporalUnitValuedOption(_options_, *"largestUnit"*, ~unset~).
+        1. Let _roundingIncrement_ be ? GetRoundingIncrementOption(_options_).
+        1. Let _roundingMode_ be ? GetRoundingModeOption(_options_, ~trunc~).
+        1. Let _smallestUnit_ be ? GetTemporalUnitValuedOption(_options_, *"smallestUnit"*, ~unset~).
+        1. Perform ? ValidateTemporalUnitValue(_largestUnit_, _unitGroup_, « ~auto~ »).
+        1. If _largestUnit_ is ~unset~, then
+          1. Set _largestUnit_ to ~auto~.
+        1. If _disallowedUnits_ contains _largestUnit_, throw a *RangeError* exception.
+        1. Perform ? ValidateTemporalUnitValue(_smallestUnit_, _unitGroup_).
+        1. If _smallestUnit_ is ~unset~, then
+          1. Set _smallestUnit_ to _fallbackSmallestUnit_.
+        1. If _disallowedUnits_ contains _smallestUnit_, throw a *RangeError* exception.
+        1. Let _defaultLargestUnit_ be LargerOfTwoTemporalUnits(_smallestLargestDefaultUnit_, _smallestUnit_).
+        1. If _largestUnit_ is ~auto~, set _largestUnit_ to _defaultLargestUnit_.
+        1. If LargerOfTwoTemporalUnits(_largestUnit_, _smallestUnit_) is not _largestUnit_, throw a *RangeError* exception.
+        1. Let _maximum_ be MaximumTemporalDurationRoundingIncrement(_smallestUnit_).
+        1. If _maximum_ is not ~unset~, perform ? ValidateTemporalRoundingIncrement(_roundingIncrement_, _maximum_, *false*).
+        1. If _operation_ is ~since~, then
+          1. Set _roundingMode_ to NegateRoundingMode(_roundingMode_).
+        1. Return the Record {
+          [[SmallestUnit]]: _smallestUnit_,
+          [[LargestUnit]]: _largestUnit_,
+          [[RoundingMode]]: _roundingMode_,
+          [[RoundingIncrement]]: _roundingIncrement_,
+          }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-getdirectionoption" type="abstract operation">
+      <h1>
+        GetDirectionOption (
+          _options_: an Object,
+        ): either a normal completion containing either ~next~ or ~previous~, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"direction"* property from _options_, throwing if absent.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"direction"*).
+        1. If _value_ is *undefined*, throw a *RangeError* exception.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is *"next"*, return ~next~.
+        1. If _stringValue_ is *"previous"*, return ~previous~.
+        1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-getroundingincrementoption" type="abstract operation">
+      <h1>
+        GetRoundingIncrementOption (
+          _options_: an Object,
+        ): either a normal completion containing a positive integer in the inclusive interval from 1 to 10<sup>9</sup>, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It fetches and validates the *"roundingIncrement"* property from _options_, returning a default if absent.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"roundingIncrement"*).
+        1. If _value_ is *undefined*, return *1*<sub>𝔽</sub>.
+        1. Let _integerIncrement_ be ? ToIntegerWithTruncation(_value_).
+        1. If _integerIncrement_ &lt; 1 or _integerIncrement_ > 10<sup>9</sup>, throw a *RangeError* exception.
+        1. Return _integerIncrement_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-getroundingmodeoption" type="abstract operation">
+      <h1>
+        GetRoundingModeOption (
+          _options_: an Object,
+          _fallback_: a rounding mode,
+        ): either a normal completion containing a rounding mode, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"roundingMode"* property from _options_, returning _fallback_ as a default if absent.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"roundingMode"*).
+        1. If _value_ is *undefined*, return _fallback_.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is not one of the Strings from the "String Identifier" column of <emu-xref href="#table-rounding-modes"></emu-xref>, throw a *RangeError*.
+        1. Return the value from the "Rounding Mode" column of the row with _stringValue_ in its "String Identifier" column.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporaldisambiguationoption" type="abstract operation">
+      <h1>
+        GetTemporalDisambiguationOption (
+          _options_: an Object,
+        ): either a normal completion containing either ~compatible~, ~earlier~, ~later~, or ~reject~, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"disambiguation"* property of _options_, returning a default if absent.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"disambiguation"*).
+        1. If _value_ is *undefined*, return ~compatible~.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is *"compatible"*, return ~compatible~.
+        1. If _stringValue_ is *"earlier"*, return ~earlier~.
+        1. If _stringValue_ is *"later"*, return ~later~.
+        1. If _stringValue_ is *"reject"*, return ~reject~.
+        1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporalfractionalseconddigitsoption" type="abstract operation">
+      <h1>
+        GetTemporalFractionalSecondDigitsOption (
+          _options_: an Object,
+        ): either a normal completion containing either ~auto~ or an integer in the inclusive interval from 0 to 9, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"fractionalSecondDigits"* property from _options_, returning a default if absent.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _digitsValue_ be ? Get(_options_, *"fractionalSecondDigits"*).
+        1. If _digitsValue_ is *undefined*, return ~auto~.
+        1. If _digitsValue_ is not a Number, then
+          1. If ? ToString(_digitsValue_) is not *"auto"*, throw a *RangeError* exception.
+          1. Return ~auto~.
+        1. If _digitsValue_ is one of *NaN*, *+∞*<sub>𝔽</sub>, or *-∞*<sub>𝔽</sub>, throw a *RangeError* exception.
+        1. Let _digitCount_ be floor(ℝ(_digitsValue_)).
+        1. If _digitCount_ &lt; 0 or _digitCount_ > 9, throw a *RangeError* exception.
+        1. Return _digitCount_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporaloffsetoption" type="abstract operation">
+      <h1>
+        GetTemporalOffsetOption (
+          _options_: an Object,
+          _fallback_: one of ~prefer~, ~use~, ~ignore~, or ~reject~,
+        ): either a normal completion containing either ~prefer~, ~use~, ~ignore~, or ~reject~, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"offset"* property of _options_, returning _fallback_ as a default if absent.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"offset"*).
+        1. If _value_ is *undefined*, return _fallback_.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is *"prefer"*, return ~prefer~.
+        1. If _stringValue_ is *"use"*, return ~use~.
+        1. If _stringValue_ is *"ignore"*, return ~ignore~.
+        1. If _stringValue_ is *"reject"*, return ~reject~.
+        1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporaloverflowoption" type="abstract operation">
+      <h1>
+        GetTemporalOverflowOption (
+          _options_: an Object,
+        ): either a normal completion containing either ~constrain~ or ~reject~, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"overflow"* property of _options_, returning a default if absent.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"overflow"*).
+        1. If _value_ is *undefined*, return ~constrain~.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is *"constrain"*, return ~constrain~.
+        1. If _stringValue_ is *"reject"*, return ~reject~.
+        1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporalrelativetooption" type="abstract operation">
+      <h1>
+        GetTemporalRelativeToOption (
+          _options_: an Object,
+        ): either a normal completion containing a Record with fields [[PlainRelativeTo]] (a Temporal.PlainDate or *undefined*) and [[ZonedRelativeTo]] (a Temporal.ZonedDateTime or *undefined*), or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It examines the value of the `relativeTo` property of its _options_ argument.
+          If the value is *undefined*, both the [[PlainRelativeTo]] and [[ZonedRelativeTo]] fields of the returned Record are *undefined*.
+          If the value is not a String or an Object, it throws a *TypeError*.
+          Otherwise, it attempts to return a Temporal.ZonedDateTime instance in the [[ZonedRelativeTo]] field, or a Temporal.PlainDate instance in the [[PlainRelativeTo]] field, in order of preference, by converting the value.
+          If neither of those are possible, it throws a *RangeError*.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"relativeTo"*).
+        1. If _value_ is *undefined*, return the Record { [[PlainRelativeTo]]: *undefined*, [[ZonedRelativeTo]]: *undefined* }.
+        1. Let _offsetBehaviour_ be ~option~.
+        1. Let _matchBehaviour_ be ~match-exactly~.
+        1. If _value_ is an Object, then
+          1. If _value_ has an [[InitializedTemporalZonedDateTime]] internal slot, then
+            1. Return the Record { [[PlainRelativeTo]]: *undefined*, [[ZonedRelativeTo]]: _value_ }.
+          1. If _value_ has an [[InitializedTemporalDate]] internal slot, then
+            1. Return the Record { [[PlainRelativeTo]]: _value_, [[ZonedRelativeTo]]: *undefined* }.
+          1. If _value_ has an [[InitializedTemporalDateTime]] internal slot, then
+            1. Let _plainDate_ be ! CreateTemporalDate(_value_.[[ISODateTime]].[[ISODate]], _value_.[[Calendar]]).
+            1. Return the Record { [[PlainRelativeTo]]: _plainDate_, [[ZonedRelativeTo]]: *undefined* }.
+          1. Let _calendar_ be ? GetTemporalCalendarIdentifierWithISODefault(_value_).
+          1. Let _fields_ be ? PrepareCalendarFields(_calendar_, _value_, « ~year~, ~month~, ~month-code~, ~day~ », « ~hour~, ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~, ~offset~, ~time-zone~ », «»).
+          1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, ~constrain~).
+          1. Let _timeZone_ be _fields_.[[TimeZone]].
+          1. Let _offsetString_ be _fields_.[[OffsetString]].
+          1. If _offsetString_ is ~unset~, then
+            1. Set _offsetBehaviour_ to ~wall~.
+          1. Let _isoDate_ be _result_.[[ISODate]].
+          1. Let _time_ be _result_.[[Time]].
+        1. Else,
+          1. If _value_ is not a String, throw a *TypeError* exception.
+          1. Let _result_ be ? ParseISODateTime(_value_, « |TemporalDateTimeString[+Zoned]|, |TemporalDateTimeString[~Zoned]| »).
+          1. Let _offsetString_ be _result_.[[TimeZone]].[[OffsetString]].
+          1. Let _annotation_ be _result_.[[TimeZone]].[[TimeZoneAnnotation]].
+          1. If _annotation_ is ~empty~, then
+            1. Let _timeZone_ be ~unset~.
+          1. Else,
+            1. Let _timeZone_ be ? ToTemporalTimeZoneIdentifier(_annotation_).
+            1. If _result_.[[TimeZone]].[[Z]] is *true*, then
+              1. Set _offsetBehaviour_ to ~exact~.
+            1. Else if _offsetString_ is ~empty~, then
+              1. Set _offsetBehaviour_ to ~wall~.
+            1. Set _matchBehaviour_ to ~match-minutes~.
+            1. If _offsetString_ is not ~empty~, then
+              1. Let _offsetParseResult_ be ParseText(StringToCodePoints(_offsetString_), |UTCOffset[+SubMinutePrecision]|).
+              1. Assert: _offsetParseResult_ is a Parse Node.
+              1. If _offsetParseResult_ contains more than one |MinuteSecond| Parse Node, set _matchBehaviour_ to ~match-exactly~.
+          1. Let _calendar_ be _result_.[[Calendar]].
+          1. If _calendar_ is ~empty~, set _calendar_ to *"iso8601"*.
+          1. Set _calendar_ to ? CanonicalizeCalendar(_calendar_).
+          1. Let _isoDate_ be CreateISODateRecord(_result_.[[Year]], _result_.[[Month]], _result_.[[Day]]).
+          1. Let _time_ be _result_.[[Time]].
+        1. If _timeZone_ is ~unset~, then
+          1. Let _plainDate_ be ? CreateTemporalDate(_isoDate_, _calendar_).
+          1. Return the Record { [[PlainRelativeTo]]: _plainDate_, [[ZonedRelativeTo]]: *undefined* }.
+        1. If _offsetBehaviour_ is ~option~, then
+          1. Let _offsetNs_ be ! ParseDateTimeUTCOffset(_offsetString_).
+        1. Else,
+          1. Let _offsetNs_ be 0.
+        1. Let _epochNanoseconds_ be ? InterpretISODateTimeOffset(_isoDate_, _time_, _offsetBehaviour_, _offsetNs_, _timeZone_, ~compatible~, ~reject~, _matchBehaviour_).
+        1. Let _zonedRelativeTo_ be ! CreateTemporalZonedDateTime(_epochNanoseconds_, _timeZone_, _calendar_).
+        1. Return the Record { [[PlainRelativeTo]]: *undefined*, [[ZonedRelativeTo]]: _zonedRelativeTo_ }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporalshowcalendarnameoption" type="abstract operation">
+      <h1>
+        GetTemporalShowCalendarNameOption (
+          _options_: an Object,
+        ): either a normal completion containing either ~auto~, ~always~, ~never~, or ~critical~, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"calendarName"* property from _options_, returning a default if absent.</dd>
+      </dl>
+      <emu-note>
+        This property is used in `toString` methods in Temporal to control whether a calendar annotation should be output.
+      </emu-note>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"calendarName"*).
+        1. If _value_ is *undefined*, return ~auto~.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is *"always"*, return ~always~.
+        1. If _stringValue_ is *"never"*, return ~never~.
+        1. If _stringValue_ is *"critical"*, return ~critical~.
+        1. If _stringValue_ is *"auto"*, return ~auto~.
+        1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporalshowoffsetoption" type="abstract operation">
+      <h1>
+        GetTemporalShowOffsetOption (
+          _options_: an Object,
+        ): either a normal completion containing either ~auto~ or ~never~, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"offset"* property from _options_, returning a default if absent.</dd>
+      </dl>
+      <emu-note>
+        This property is used in `Temporal.ZonedDateTime.prototype.toString()`.
+        It is different from the `offset` property passed to `Temporal.ZonedDateTime.from()`.
+      </emu-note>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"offset"*).
+        1. If _value_ is *undefined*, return ~auto~.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is *"never"*, return ~never~.
+        1. If _stringValue_ is *"auto"*, return ~auto~.
+        1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporalshowtimezonenameoption" type="abstract operation">
+      <h1>
+        GetTemporalShowTimeZoneNameOption (
+          _options_: an Object,
+        ): either a normal completion containing either ~auto~, ~never~, or ~critical~, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It fetches and validates the *"timeZoneName"* property from _options_, returning a default if absent.</dd>
+      </dl>
+      <emu-note>
+        This property is used in `Temporal.ZonedDateTime.prototype.toString()`.
+        It is different from the `timeZone` property passed to `Temporal.ZonedDateTime.from()` and from the `timeZone` property in the options passed to `Temporal.Instant.prototype.toString()`.
+      </emu-note>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, *"timeZoneName"*).
+        1. If _value_ is *undefined*, return ~auto~.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is *"never"*, return ~never~.
+        1. If _stringValue_ is *"critical"*, return ~critical~.
+        1. If _stringValue_ is *"auto"*, return ~auto~.
+        1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-gettemporalunitvaluedoption" type="abstract operation">
+      <h1>
+        GetTemporalUnitValuedOption (
+          _options_: an Object,
+          _key_: a property key,
+          _default_: either ~required~ or ~unset~,
+        ): either a normal completion containing either a Temporal unit, ~unset~, or ~auto~, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It attempts to read a Temporal unit from the specified property of _options_.</dd>
+      </dl>
+      <p>Both singular and plural unit names are accepted, but only the singular form is used internally.</p>
+      <emu-alg>
+        1. Let _value_ be ? Get(_options_, _key_).
+        1. If _value_ is *undefined*, then
+          1. If _default_ is ~required~, throw a *RangeError* exception.
+          1. Return ~unset~.
+        1. Let _stringValue_ be ? ToString(_value_).
+        1. If _stringValue_ is *"auto"*, return ~auto~.
+        1. If _stringValue_ is not listed in the "Singular property name" or "Plural property name" columns of <emu-xref href="#table-temporal-units"></emu-xref>, throw a *RangeError* exception.
+        1. Return the value in the "Value" column of <emu-xref href="#table-temporal-units"></emu-xref> corresponding to the row with _stringValue_ in its "Singular property name" or "Plural property name" column.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-rounding-modes-and-increments">
+    <h1>Rounding Modes and Increments</h1>
+
+    <p>
+      This section contains definitions pertaining to rounding increments and rounding modes.
+      Several Temporal Objects provide the capability of rounding a quantity to a given increment, following different rounding rules.
+    </p>
+    <p>
+      A <dfn>rounding mode</dfn> is one of the values in the "Rounding Mode" column of <emu-xref href="#table-rounding-modes"></emu-xref>.
+      An <dfn>unsigned rounding mode</dfn> is one of the values in the "Unsigned Rounding Mode" column of <emu-xref href="#table-unsigned-rounding-modes"></emu-xref>.
+    </p>
+
+    <emu-table id="table-rounding-modes">
+      <emu-caption>Rounding modes</emu-caption>
+      <table class="real-table">
+        <thead>
+          <tr>
+            <th rowspan="2">Rounding Mode</th>
+            <th rowspan="2">String Identifier</th>
+            <th rowspan="2">Description</th>
+            <th colspan="5">Examples: Round to 0 fraction digits</th>
+          </tr>
+          <tr>
+            <th>-1.5</th>
+            <th>0.4</th>
+            <th>0.5</th>
+            <th>0.6</th>
+            <th>1.5</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>~ceil~</td>
+          <td>*"ceil"*</td>
+          <td>Toward positive infinity</td>
+          <td>⬆️ [-1]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [2]</td>
+        </tr>
+        <tr>
+          <td>~floor~</td>
+          <td>*"floor"*</td>
+          <td>Toward negative infinity</td>
+          <td>⬇️ [-2]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [1]</td>
+        </tr>
+        <tr>
+          <td>~expand~</td>
+          <td>*"expand"*</td>
+          <td>Away from zero</td>
+          <td>⬇️ [-2]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [2]</td>
+        </tr>
+        <tr>
+          <td>~trunc~</td>
+          <td>*"trunc"*</td>
+          <td>Toward zero</td>
+          <td>⬆️ [-1]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [1]</td>
+        </tr>
+        <tr>
+          <td>~half-ceil~</td>
+          <td>*"halfCeil"*</td>
+          <td>Ties toward positive infinity</td>
+          <td>⬆️ [-1]</td>
+          <td>⬇️ [0]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [2]</td>
+        </tr>
+        <tr>
+          <td>~half-floor~</td>
+          <td>*"halfFloor"*</td>
+          <td>Ties toward negative infinity</td>
+          <td>⬇️ [-2]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [0]</td>
+          <td>⬆️ [1]</td>
+          <td>⬇️ [1]</td>
+        </tr>
+        <tr>
+          <td>~half-expand~</td>
+          <td>*"halfExpand"*</td>
+          <td>Ties away from zero</td>
+          <td>⬇️ [-2]</td>
+          <td>⬇️ [0]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [2]</td>
+        </tr>
+        <tr>
+          <td>~half-trunc~</td>
+          <td>*"halfTrunc"*</td>
+          <td>Ties toward zero</td>
+          <td>⬆️ [-1]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [0]</td>
+          <td>⬆️ [1]</td>
+          <td>⬇️ [1]</td>
+        </tr>
+        <tr>
+          <td>~half-even~</td>
+          <td>*"halfEven"*</td>
+          <td>Ties toward an even rounding increment multiple</td>
+          <td>⬇️ [-2]</td>
+          <td>⬇️ [0]</td>
+          <td>⬇️ [0]</td>
+          <td>⬆️ [1]</td>
+          <td>⬆️ [2]</td>
+        </tr>
+      </table>
+      <emu-note>The examples are illustrative of the unique behaviour of each option. ⬆️ means "resolves toward positive infinity"; ⬇️ means "resolves toward negative infinity".</emu-note>
+    </emu-table>
+
+    <emu-table id="table-unsigned-rounding-modes">
+      <emu-caption>Conversion from rounding mode to unsigned rounding mode</emu-caption>
+      <table class="real-table">
+        <thead>
+          <tr>
+            <th>Rounding Mode</th>
+            <th>Sign</th>
+            <th>Unsigned Rounding Mode</th>
+          </tr>
+        </thead>
+        <tr>
+          <td rowspan="2">~ceil~</td>
+          <td>~positive~</td>
+          <td>~infinity~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~zero~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~floor~</td>
+          <td>~positive~</td>
+          <td>~zero~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~infinity~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~expand~</td>
+          <td>~positive~</td>
+          <td>~infinity~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~infinity~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~trunc~</td>
+          <td>~positive~</td>
+          <td>~zero~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~zero~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-ceil~</td>
+          <td>~positive~</td>
+          <td>~half-infinity~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-zero~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-floor~</td>
+          <td>~positive~</td>
+          <td>~half-zero~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-infinity~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-expand~</td>
+          <td>~positive~</td>
+          <td>~half-infinity~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-infinity~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-trunc~</td>
+          <td>~positive~</td>
+          <td>~half-zero~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-zero~</td>
+        </tr>
+        <tr>
+          <td rowspan="2">~half-even~</td>
+          <td>~positive~</td>
+          <td>~half-even~</td>
+        </tr>
+        <tr>
+          <td>~negative~</td>
+          <td>~half-even~</td>
+        </tr>
+      </table>
+    </emu-table>
+
+    <emu-clause id="sec-applyunsignedroundingmode" type="abstract operation">
+      <h1>
+        ApplyUnsignedRoundingMode (
+          _x_: a mathematical value,
+          _r1_: a mathematical value,
+          _r2_: a mathematical value,
+          _unsignedRoundingMode_: either a specification type from the "Unsigned Rounding Mode" column of <emu-xref href="#table-unsigned-rounding-modes"></emu-xref> or *undefined*,
+        ): a mathematical value
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It considers _x_, bracketed below by _r1_ and above by _r2_, and returns either _r1_ or _r2_ according to _unsignedRoundingMode_.</dd>
+      </dl>
+      <emu-alg>
+        1. If _x_ = _r1_, return _r1_.
+        1. Assert: _r1_ &lt; _x_ &lt; _r2_.
+        1. Assert: _unsignedRoundingMode_ is not *undefined*.
+        1. If _unsignedRoundingMode_ is ~zero~, return _r1_.
+        1. If _unsignedRoundingMode_ is ~infinity~, return _r2_.
+        1. Let _d1_ be <emu-eqn>_x_ – _r1_</emu-eqn>.
+        1. Let _d2_ be <emu-eqn>_r2_ – _x_</emu-eqn>.
+        1. If _d1_ &lt; _d2_, return _r1_.
+        1. If _d2_ &lt; _d1_, return _r2_.
+        1. Assert: _d1_ is equal to _d2_.
+        1. If _unsignedRoundingMode_ is ~half-zero~, return _r1_.
+        1. If _unsignedRoundingMode_ is ~half-infinity~, return _r2_.
+        1. Assert: _unsignedRoundingMode_ is ~half-even~.
+        1. Let _cardinality_ be <emu-eqn>(_r1_ / (_r2_ – _r1_)) modulo 2</emu-eqn>.
+        1. If _cardinality_ = 0, return _r1_.
+        1. Return _r2_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-getunsignedroundingmode" type="abstract operation">
+      <h1>
+        GetUnsignedRoundingMode (
+          _roundingMode_: a rounding mode,
+          _sign_: either ~negative~ or ~positive~,
+        ): an unsigned rounding mode
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the rounding mode that should be applied to the absolute value of a number to produce the same result as if _roundingMode_ were applied to the signed value of the number (negative if _sign_ is ~negative~, or positive otherwise).</dd>
+      </dl>
+      <emu-alg>
+        1. Return the specification type in the "Unsigned Rounding Mode" column of <emu-xref href="#table-unsigned-rounding-modes"></emu-xref> for the row where the value in the "Rounding Mode" column is _roundingMode_ and the value in the "Sign" column is _sign_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-maximumtemporaldurationroundingincrement" type="abstract operation">
+      <h1>
+        MaximumTemporalDurationRoundingIncrement (
+          _unit_: a Temporal unit,
+        ): one of 24, 60, 1000, or ~unset~
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Given a string representing a Temporal.Duration unit, it returns the maximum rounding increment for that unit, or ~unset~ if there is no maximum.</dd>
+      </dl>
+      <emu-alg>
+        1. Return the value from the "Maximum duration rounding increment" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> in which _unit_ is in the "Value" column.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-negateroundingmode" type="abstract operation">
+      <h1>
+        NegateRoundingMode (
+          _roundingMode_: a rounding mode,
+        ): a rounding mode
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the correct rounding mode to use when rounding the negative of a value that was originally given with _roundingMode_.</dd>
+      </dl>
+      <emu-alg>
+        1. If _roundingMode_ is ~ceil~, return ~floor~.
+        1. If _roundingMode_ is ~floor~, return ~ceil~.
+        1. If _roundingMode_ is ~half-ceil~, return ~half-floor~.
+        1. If _roundingMode_ is ~half-floor~, return ~half-ceil~.
+        1. Return _roundingMode_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-roundnumbertoincrement" type="abstract operation">
+      <h1>
+        RoundNumberToIncrement (
+          _x_: a mathematical value,
+          _increment_: a positive integer,
+          _roundingMode_: a rounding mode,
+        ): an integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It rounds _x_ to the nearest multiple of _increment_, up or down according to _roundingMode_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _quotient_ be _x_ / _increment_.
+        1. If _quotient_ &lt; 0, then
+          1. Let _isNegative_ be ~negative~.
+          1. Set _quotient_ to -_quotient_.
+        1. Else,
+          1. Let _isNegative_ be ~positive~.
+        1. Let _unsignedRoundingMode_ be GetUnsignedRoundingMode(_roundingMode_, _isNegative_).
+        1. Let _r1_ be the largest integer such that _r1_ ≤ _quotient_.
+        1. Let _r2_ be the smallest integer such that _r2_ > _quotient_.
+        1. Let _rounded_ be ApplyUnsignedRoundingMode(_quotient_, _r1_, _r2_, _unsignedRoundingMode_).
+        1. If _isNegative_ is ~negative~, set _rounded_ to -_rounded_.
+        1. Return _rounded_ × _increment_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-roundnumbertoincrementasifpositive" type="abstract operation">
+      <h1>
+        RoundNumberToIncrementAsIfPositive (
+          _x_: a mathematical value,
+          _increment_: a positive integer,
+          _roundingMode_: a rounding mode,
+        ): an integer
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It rounds _x_ to the nearest multiple of _increment_, up or down according to _roundingMode_, but always as if _x_ were positive.
+          For example, ~floor~ and ~trunc~ behave identically.
+          This is used when rounding exact times, where "rounding down" conceptually always means towards the beginning of time, even if the time is expressed as a negative amount of time relative to an epoch.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _quotient_ be _x_ / _increment_.
+        1. Let _unsignedRoundingMode_ be GetUnsignedRoundingMode(_roundingMode_, ~positive~).
+        1. Let _r1_ be the largest integer such that _r1_ ≤ _quotient_.
+        1. Let _r2_ be the smallest integer such that _r2_ > _quotient_.
+        1. Let _rounded_ be ApplyUnsignedRoundingMode(_quotient_, _r1_, _r2_, _unsignedRoundingMode_).
+        1. Return _rounded_ × _increment_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-validatetemporalroundingincrement" type="abstract operation">
+      <h1>
+        ValidateTemporalRoundingIncrement (
+          _increment_: a positive integer,
+          _dividend_: a positive integer,
+          _inclusive_: a Boolean,
+        ): either a normal completion containing ~unused~ or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It verifies that _increment_ evenly divides _dividend_, otherwise throwing a *RangeError*.
+          _dividend_ must be divided into more than one part unless _inclusive_ is *true*.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _inclusive_ is *true*, then
+          1. Let _maximum_ be _dividend_.
+        1. Else,
+          1. Assert: _dividend_ > 1.
+          1. Let _maximum_ be _dividend_ - 1.
+        1. If _increment_ > _maximum_, throw a *RangeError* exception.
+        1. If _dividend_ modulo _increment_ ≠ 0, throw a *RangeError* exception.
+        1. Return ~unused~.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-time-durations">
+    <h1>Time Durations</h1>
+
+    <p>
+      A <dfn>time duration</dfn> is an integer in the inclusive interval from -maxTimeDuration to maxTimeDuration, where
+      <emu-eqn id="eqn-maxTimeDuration" aoid="maxTimeDuration">
+        maxTimeDuration = 2<sup>53</sup> × 10<sup>9</sup> - 1 = 9,007,199,254,740,991,999,999,999
+      </emu-eqn>
+      It represents the portion of a Temporal.Duration object that deals with time units, but as a combined value of total nanoseconds.
+    </p>
+
+    <emu-clause id="sec-add24hourdaystonormalizedtimeduration" type="abstract operation">
+      <h1>
+        Add24HourDaysToTimeDuration (
+          _d_: a time duration,
+          _days_: an integer,
+        ): either a normal completion containing a time duration or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It returns a time duration that is the sum of _d_ and the number of 24-hour days indicated by _days_, throwing an exception if the result is greater than the maximum time duration.
+          This operation should not be used when adding days relative to a Temporal.ZonedDateTime, since the days may not be 24 hours long.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _result_ be _d_ + _days_ × nsPerDay.
+        1. If abs(_result_) > maxTimeDuration, throw a *RangeError* exception.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-addtimeduration" type="abstract operation">
+      <h1>
+        AddTimeDuration (
+          _one_: a time duration,
+          _two_: a time duration,
+        ): either a normal completion containing a time duration or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns a time duration that is the sum of _one_ and _two_, throwing an exception if the result is greater than the maximum time duration.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _result_ be _one_ + _two_.
+        1. If abs(_result_) > maxTimeDuration, throw a *RangeError* exception.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-addtimedurationtoepochnanoseconds" type="abstract operation">
+      <h1>
+        AddTimeDurationToEpochNanoseconds (
+          _d_: a time duration,
+          _epochNs_: an epoch nanoseconds value,
+        ): an epoch nanoseconds value
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It adds a time duration _d_ to an exact time in nanoseconds since the epoch, _epochNs_, and returns a new exact time.
+          The returned exact time is not required to be valid according to IsValidEpochNanoseconds.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Return _d_ + _epochNs_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-roundtimeduration" type="abstract operation">
+      <h1>
+        RoundTimeDuration (
+          _timeDuration_: a time duration,
+          _increment_: a positive integer,
+          _unit_: a time unit,
+          _roundingMode_: a rounding mode,
+        ): either a normal completion containing a time duration, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It rounds a _timeDuration_ according to the rounding parameters _unit_, _increment_, and _roundingMode_, and returns the time duration result.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Let _divisor_ be the value in the "Length in Nanoseconds" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> whose "Value" column contains _unit_.
+        1. Return ? RoundTimeDurationToIncrement(_timeDuration_, _divisor_ × _increment_, _roundingMode_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-roundtimedurationtoincrement" type="abstract operation">
+      <h1>
+        RoundTimeDurationToIncrement (
+          _d_: a time duration,
+          _increment_: a positive integer,
+          _roundingMode_: a rounding mode,
+        ): either a normal completion containing a time duration or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It rounds the total number of nanoseconds in the time duration _d_ to the nearest multiple of _increment_, up or down according to _roundingMode_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _rounded_ be RoundNumberToIncrement(_d_, _increment_, _roundingMode_).
+        1. If abs(_rounded_) > maxTimeDuration, throw a *RangeError* exception.
+        1. Return _rounded_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-timedurationfromcomponents" type="abstract operation">
+      <h1>
+        TimeDurationFromComponents (
+          _hours_: an integer,
+          _minutes_: an integer,
+          _seconds_: an integer,
+          _milliseconds_: an integer,
+          _microseconds_: an integer,
+          _nanoseconds_: an integer,
+        ): a time duration
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          From the given units, it computes a time duration consisting of total nanoseconds.
+          The time duration can be stored losslessly in two 64-bit floating point numbers consisting of truncate(_nanoseconds_ / 10<sup>9</sup>) and remainder(_nanoseconds_, 10<sup>9</sup>).
+          Alternatively, _nanoseconds_ can be stored as a 96-bit integer.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. Set _minutes_ to _minutes_ + _hours_ × 60.
+        1. Set _seconds_ to _seconds_ + _minutes_ × 60.
+        1. Set _milliseconds_ to _milliseconds_ + _seconds_ × 1000.
+        1. Set _microseconds_ to _microseconds_ + _milliseconds_ × 1000.
+        1. Set _nanoseconds_ to _nanoseconds_ + _microseconds_ × 1000.
+        1. Assert: abs(_nanoseconds_) ≤ maxTimeDuration.
+        1. Return _nanoseconds_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-timedurationfromepochnanosecondsdifference" type="abstract operation">
+      <h1>
+        TimeDurationFromEpochNanosecondsDifference (
+          _one_: an epoch nanoseconds value,
+          _two_: an epoch nanoseconds value,
+        ): a time duration
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned time duration is the difference between two exact times in nanoseconds since the epoch, which must not be greater than the maximum time duration.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _result_ be _one_ - _two_.
+        1. Assert: abs(_result_) ≤ maxTimeDuration.
+        1. Return _result_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-timedurationsign" type="abstract operation">
+      <h1>
+        TimeDurationSign (
+          _d_: a time duration,
+        ): one of -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns 0 if the duration is zero, or ±1 depending on the sign of the duration.</dd>
+      </dl>
+      <emu-alg>
+        1. If _d_ &lt; 0, return -1.
+        1. If _d_ > 0, return 1.
+        1. Return 0.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-totaltimeduration" type="abstract operation">
+      <h1>
+        TotalTimeDuration (
+          _timeDuration_: a time duration,
+          _unit_: either a time unit or ~day~,
+        ): a mathematical value
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the total number of _unit_ in _duration_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _divisor_ be the value in the "Length in Nanoseconds" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> whose "Value" column contains _unit_.
+        1. NOTE: The following step cannot be implemented directly using floating-point arithmetic when 𝔽(_timeDuration_) is not a safe integer. The division can be implemented in C++ with the `__float128` type if the compiler supports it, or with software emulation such as in the <a href="https://bellard.org/softfp/">SoftFP</a> library.
+        1. Return _timeDuration_ / _divisor_.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-time-records">
+    <h1>Time Records</h1>
+    <p>
+      A <dfn variants="Time Records">Time Record</dfn> is a Record value used to represent a valid clock time, together with a number of overflow days such as might occur in BalanceTime.
+      For any Time Record _t_, IsValidTime(_t_.[[Hour]], _t_.[[Minute]], _t_.[[Second]], _t_.[[Millisecond]], _t_.[[Microsecond]], _t_.[[Nanosecond]]) must return *true*.
+    </p>
+    <p>Time Records have the fields listed in <emu-xref href="#table-time-record-fields"></emu-xref>.</p>
+    <emu-table id="table-time-record-fields" caption="Time Record Fields">
+      <table class="real-table">
+        <tr>
+          <th>Field Name</th>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+        <tr>
+          <td>[[Days]]</td>
+          <td>an integer</td>
+          <td>A number of overflow days.</td>
+        </tr>
+        <tr>
+          <td>[[Hour]]</td>
+          <td>an integer in the inclusive interval from 0 to 23</td>
+          <td>The number of the hour.</td>
+        </tr>
+        <tr>
+          <td>[[Minute]]</td>
+          <td>an integer in the inclusive interval from 0 to 59</td>
+          <td>The number of the minute.</td>
+        </tr>
+        <tr>
+          <td>[[Second]]</td>
+          <td>an integer in the inclusive interval from 0 to 59</td>
+          <td>The number of the second.</td>
+        </tr>
+        <tr>
+          <td>[[Millisecond]]</td>
+          <td>an integer in the inclusive interval from 0 to 999</td>
+          <td>The number of the millisecond.</td>
+        </tr>
+        <tr>
+          <td>[[Microsecond]]</td>
+          <td>an integer in the inclusive interval from 0 to 999</td>
+          <td>The number of the microsecond.</td>
+        </tr>
+        <tr>
+          <td>[[Nanosecond]]</td>
+          <td>an integer in the inclusive interval from 0 to 999</td>
+          <td>The number of the nanosecond.</td>
+        </tr>
+      </table>
+    </emu-table>
+
+    <emu-clause id="sec-addtime" type="abstract operation">
+      <h1>
+        AddTime (
+          _time_: a Time Record,
+          _timeDuration_: a time duration,
+        ): a Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. Return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _time_.[[Millisecond]], _time_.[[Microsecond]], _time_.[[Nanosecond]] + _timeDuration_).
+        1. NOTE: If using floating points to implement this operation, add the time components separately before balancing to avoid errors with unsafe integers.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-balancetime" type="abstract operation">
+      <h1>
+        BalanceTime (
+          _hour_: an integer,
+          _minute_: an integer,
+          _second_: an integer,
+          _millisecond_: an integer,
+          _microsecond_: an integer,
+          _nanosecond_: an integer,
+        ): a Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd></dd>
+      </dl>
+      <emu-alg>
+        1. Set _microsecond_ to _microsecond_ + floor(_nanosecond_ / 1000).
+        1. Set _nanosecond_ to _nanosecond_ modulo 1000.
+        1. Set _millisecond_ to _millisecond_ + floor(_microsecond_ / 1000).
+        1. Set _microsecond_ to _microsecond_ modulo 1000.
+        1. Set _second_ to _second_ + floor(_millisecond_ / 1000).
+        1. Set _millisecond_ to _millisecond_ modulo 1000.
+        1. Set _minute_ to _minute_ + floor(_second_ / 60).
+        1. Set _second_ to _second_ modulo 60.
+        1. Set _hour_ to _hour_ + floor(_minute_ / 60).
+        1. Set _minute_ to _minute_ modulo 60.
+        1. Let _deltaDays_ be floor(_hour_ / 24).
+        1. Set _hour_ to _hour_ modulo 24.
+        1. Return CreateTimeRecord(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_, _deltaDays_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-comparetimerecord" type="abstract operation">
+      <h1>
+        CompareTimeRecord (
+          _time1_: a Time Record,
+          _time2_: a Time Record,
+        ): one of -1, 0, or 1
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It compares the two given times and returns -1 if the second comes earlier in the day than the first, 1 if the first comes earlier in the day than the second, and 0 if they are the same.</dd>
+      </dl>
+      <emu-alg>
+        1. If _time1_.[[Hour]] > _time2_.[[Hour]], return 1.
+        1. If _time1_.[[Hour]] &lt; _time2_.[[Hour]], return -1.
+        1. If _time1_.[[Minute]] > _time2_.[[Minute]], return 1.
+        1. If _time1_.[[Minute]] &lt; _time2_.[[Minute]], return -1.
+        1. If _time1_.[[Second]] > _time2_.[[Second]], return 1.
+        1. If _time1_.[[Second]] &lt; _time2_.[[Second]], return -1.
+        1. If _time1_.[[Millisecond]] > _time2_.[[Millisecond]], return 1.
+        1. If _time1_.[[Millisecond]] &lt; _time2_.[[Millisecond]], return -1.
+        1. If _time1_.[[Microsecond]] > _time2_.[[Microsecond]], return 1.
+        1. If _time1_.[[Microsecond]] &lt; _time2_.[[Microsecond]], return -1.
+        1. If _time1_.[[Nanosecond]] > _time2_.[[Nanosecond]], return 1.
+        1. If _time1_.[[Nanosecond]] &lt; _time2_.[[Nanosecond]], return -1.
+        1. Return 0.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-createtimerecord" type="abstract operation">
+      <h1>
+        CreateTimeRecord (
+          _hour_: an integer in the inclusive interval from 0 to 23,
+          _minute_: an integer in the inclusive interval from 0 to 59,
+          _second_: an integer in the inclusive interval from 0 to 59,
+          _millisecond_: an integer in the inclusive interval from 0 to 999,
+          _microsecond_: an integer in the inclusive interval from 0 to 999,
+          _nanosecond_: an integer in the inclusive interval from 0 to 999,
+          optional _deltaDays_: an integer,
+        ): a Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Most uses of Time Records do not require the _deltaDays_ parameter.</dd>
+      </dl>
+      <emu-alg>
+        1. If _deltaDays_ is not present, set _deltaDays_ to 0.
+        1. Assert: IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_).
+        1. Return Time Record { [[Days]]: _deltaDays_, [[Hour]]: _hour_, [[Minute]]: _minute_, [[Second]]: _second_, [[Millisecond]]: _millisecond_, [[Microsecond]]: _microsecond_, [[Nanosecond]]: _nanosecond_ }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-differencetime" type="abstract operation">
+      <h1>
+        DifferenceTime (
+          _time1_: a Time Record,
+          _time2_: a Time Record,
+        ): a time duration
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the elapsed duration from a first wall-clock time, until a second wall-clock time.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _hours_ be _time2_.[[Hour]] - _time1_.[[Hour]].
+        1. Let _minutes_ be _time2_.[[Minute]] - _time1_.[[Minute]].
+        1. Let _seconds_ be _time2_.[[Second]] - _time1_.[[Second]].
+        1. Let _milliseconds_ be _time2_.[[Millisecond]] - _time1_.[[Millisecond]].
+        1. Let _microseconds_ be _time2_.[[Microsecond]] - _time1_.[[Microsecond]].
+        1. Let _nanoseconds_ be _time2_.[[Nanosecond]] - _time1_.[[Nanosecond]].
+        1. Let _timeDuration_ be TimeDurationFromComponents(_hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
+        1. Assert: abs(_timeDuration_) &lt; nsPerDay.
+        1. Return _timeDuration_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-isvalidtime" type="abstract operation">
+      <h1>
+        IsValidTime (
+          _hour_: an integer,
+          _minute_: an integer,
+          _second_: an integer,
+          _millisecond_: an integer,
+          _microsecond_: an integer,
+          _nanosecond_: an integer,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          The return value is *true* if its arguments form a valid time of day, and *false* otherwise.
+          Leap seconds are not taken into account.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _hour_ &lt; 0 or _hour_ > 23, return *false*.
+        1. If _minute_ &lt; 0 or _minute_ > 59, return *false*.
+        1. If _second_ &lt; 0 or _second_ > 59, return *false*.
+        1. If _millisecond_ &lt; 0 or _millisecond_ > 999, return *false*.
+        1. If _microsecond_ &lt; 0 or _microsecond_ > 999, return *false*.
+        1. If _nanosecond_ &lt; 0 or _nanosecond_ > 999, return *false*.
+        1. Return *true*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-midnighttimerecord" type="abstract operation">
+      <h1>MidnightTimeRecord ( ): a Time Record</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned Record denotes the wall-clock time of midnight.</dd>
+      </dl>
+      <emu-alg>
+        1. Return Time Record {
+            [[Days]]: 0,
+            [[Hour]]: 0,
+            [[Minute]]: 0,
+            [[Second]]: 0,
+            [[Millisecond]]: 0,
+            [[Microsecond]]: 0,
+            [[Nanosecond]]: 0
+          }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-noontimerecord" type="abstract operation">
+      <h1>NoonTimeRecord ( ): a Time Record</h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>The returned Record denotes the wall-clock time of noon.</dd>
+      </dl>
+      <emu-alg>
+        1. Return Time Record {
+            [[Days]]: 0,
+            [[Hour]]: 12,
+            [[Minute]]: 0,
+            [[Second]]: 0,
+            [[Millisecond]]: 0,
+            [[Microsecond]]: 0,
+            [[Nanosecond]]: 0
+          }.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-regulatetime" type="abstract operation">
+      <h1>
+        RegulateTime (
+          _hour_: an integer,
+          _minute_: an integer,
+          _second_: an integer,
+          _millisecond_: an integer,
+          _microsecond_: an integer,
+          _nanosecond_: an integer,
+          _overflow_: either ~constrain~ or ~reject~,
+        ): either a normal completion containing a Time Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>
+          It applies the correction given by _overflow_ to the given time.
+          If _overflow_ is ~constrain~, out-of-range values are clamped.
+          If _overflow_ is ~reject~, a *RangeError* is thrown if any values are out of range.
+        </dd>
+      </dl>
+      <emu-alg>
+        1. If _overflow_ is ~constrain~, then
+          1. Set _hour_ to the result of clamping _hour_ between 0 and 23.
+          1. Set _minute_ to the result of clamping _minute_ between 0 and 59.
+          1. Set _second_ to the result of clamping _second_ between 0 and 59.
+          1. Set _millisecond_ to the result of clamping _millisecond_ between 0 and 999.
+          1. Set _microsecond_ to the result of clamping _microsecond_ between 0 and 999.
+          1. Set _nanosecond_ to the result of clamping _nanosecond_ between 0 and 999.
+        1. Else,
+          1. Assert: _overflow_ is ~reject~.
+          1. If IsValidTime(_hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_) is *false*, throw a *RangeError* exception.
+        1. Return CreateTimeRecord(_hour_, _minute_, _second_, _millisecond_, _microsecond_,_nanosecond_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-roundtime" type="abstract operation">
+      <h1>
+        RoundTime (
+          _time_: a Time Record,
+          _increment_: a positive integer,
+          _unit_: either a time unit or ~day~,
+          _roundingMode_: a rounding mode,
+        ): a Time Record
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It rounds a time to the given increment.</dd>
+      </dl>
+      <emu-alg>
+        1. If _unit_ is either ~day~ or ~hour~, then
+          1. Let _quantity_ be ((((_time_.[[Hour]] × 60 + _time_.[[Minute]]) × 60 + _time_.[[Second]]) × 1000 + _time_.[[Millisecond]]) × 1000 + _time_.[[Microsecond]]) × 1000 + _time_.[[Nanosecond]].
+        1. Else if _unit_ is ~minute~, then
+          1. Let _quantity_ be (((_time_.[[Minute]] × 60 + _time_.[[Second]]) × 1000 + _time_.[[Millisecond]]) × 1000 + _time_.[[Microsecond]]) × 1000 + _time_.[[Nanosecond]].
+        1. Else if _unit_ is ~second~, then
+          1. Let _quantity_ be ((_time_.[[Second]] × 1000 + _time_.[[Millisecond]]) × 1000 + _time_.[[Microsecond]]) × 1000 + _time_.[[Nanosecond]].
+        1. Else if _unit_ is ~millisecond~, then
+          1. Let _quantity_ be (_time_.[[Millisecond]] × 1000 + _time_.[[Microsecond]]) × 1000 + _time_.[[Nanosecond]].
+        1. Else if _unit_ is ~microsecond~, then
+          1. Let _quantity_ be _time_.[[Microsecond]] × 1000 + _time_.[[Nanosecond]].
+        1. Else,
+          1. Assert: _unit_ is ~nanosecond~.
+          1. Let _quantity_ be _time_.[[Nanosecond]].
+        1. Let _unitLength_ be the value in the "Length in Nanoseconds" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> whose "Value" column contains _unit_.
+        1. Let _result_ be RoundNumberToIncrement(_quantity_, _increment_ × _unitLength_, _roundingMode_) / _unitLength_.
+        1. If _unit_ is ~day~, return CreateTimeRecord(0, 0, 0, 0, 0, 0, _result_).
+        1. If _unit_ is ~hour~, return BalanceTime(_result_, 0, 0, 0, 0, 0).
+        1. If _unit_ is ~minute~, return BalanceTime(_time_.[[Hour]], _result_, 0, 0, 0, 0).
+        1. If _unit_ is ~second~, return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _result_, 0, 0, 0).
+        1. If _unit_ is ~millisecond~, return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _result_, 0, 0).
+        1. If _unit_ is ~microsecond~, return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _time_.[[Millisecond]], _result_, 0).
+        1. Assert: _unit_ is ~nanosecond~.
+        1. Return BalanceTime(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _time_.[[Millisecond]], _time_.[[Microsecond]], _result_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-timerecordtostring" type="abstract operation">
+      <h1>
+        TimeRecordToString (
+          _time_: a Time Record,
+          _precision_: either an integer in the inclusive interval from 0 to 9, ~minute~, or ~auto~,
+        ): a String
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It formats the given time as an ISO 8601 string, to the precision specified by _precision_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _subSecondNanoseconds_ be _time_.[[Millisecond]] × 10<sup>6</sup> + _time_.[[Microsecond]] × 10<sup>3</sup> + _time_.[[Nanosecond]].
+        1. Return FormatTimeString(_time_.[[Hour]], _time_.[[Minute]], _time_.[[Second]], _subSecondNanoseconds_, _precision_).
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-totemporaltimerecord" type="abstract operation">
+      <h1>
+        ToTemporalTimeRecord (
+          _temporalTimeLike_: an Object,
+          optional _completeness_: either ~partial~ or ~complete~,
+        ): either a normal completion containing a TemporalTimeLike Record or a throw completion
+      </h1>
+      <dl class="header">
+      </dl>
+      <emu-alg>
+        1. If _completeness_ is not present, set _completeness_ to ~complete~.
+        1. If _completeness_ is ~complete~, then
+          1. Let _result_ be a new TemporalTimeLike Record with each field set to 0.
+        1. Else,
+          1. Let _result_ be a new TemporalTimeLike Record with each field set to ~unset~.
+        1. Let _any_ be *false*.
+        1. Let _hour_ be ? Get(_temporalTimeLike_, *"hour"*).
+        1. If _hour_ is not *undefined*, then
+          1. Set _result_.[[Hour]] to ? ToIntegerWithTruncation(_hour_).
+          1. Set _any_ to *true*.
+        1. Let _microsecond_ be ? Get(_temporalTimeLike_, *"microsecond"*).
+        1. If _microsecond_ is not *undefined*, then
+          1. Set _result_.[[Microsecond]] to ? ToIntegerWithTruncation(_microsecond_).
+          1. Set _any_ to *true*.
+        1. Let _millisecond_ be ? Get(_temporalTimeLike_, *"millisecond"*).
+        1. If _millisecond_ is not *undefined*, then
+          1. Set _result_.[[Millisecond]] to ? ToIntegerWithTruncation(_millisecond_).
+          1. Set _any_ to *true*.
+        1. Let _minute_ be ? Get(_temporalTimeLike_, *"minute"*).
+        1. If _minute_ is not *undefined*, then
+          1. Set _result_.[[Minute]] to ? ToIntegerWithTruncation(_minute_).
+          1. Set _any_ to *true*.
+        1. Let _nanosecond_ be ? Get(_temporalTimeLike_, *"nanosecond"*).
+        1. If _nanosecond_ is not *undefined*, then
+          1. Set _result_.[[Nanosecond]] to ? ToIntegerWithTruncation(_nanosecond_).
+          1. Set _any_ to *true*.
+        1. Let _second_ be ? Get(_temporalTimeLike_, *"second"*).
+        1. If _second_ is not *undefined*, then
+          1. Set _result_.[[Second]] to ? ToIntegerWithTruncation(_second_).
+          1. Set _any_ to *true*.
+        1. If _any_ is *false*, throw a *TypeError* exception.
+        1. Return _result_.
+      </emu-alg>
+
+      <emu-table id="table-temporal-temporaltimelike-record-fields">
+        <emu-caption>TemporalTimeLike Record Fields</emu-caption>
+        <table class="real-table">
+          <thead>
+            <tr>
+              <th>Field Name</th>
+              <th>Property Name</th>
+            </tr>
+          </thead>
+          <tr>
+            <td>[[Hour]]</td>
+            <td>*"hour"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Minute]]</td>
+            <td>*"minute"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Second]]</td>
+            <td>*"second"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Millisecond]]</td>
+            <td>*"millisecond"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Microsecond]]</td>
+            <td>*"microsecond"*</td>
+          </tr>
+
+          <tr>
+            <td>[[Nanosecond]]</td>
+            <td>*"nanosecond"*</td>
+          </tr>
+        </table>
+      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-totimerecordormidnight" type="abstract operation">
+      <h1>
+        ToTimeRecordOrMidnight (
+          _item_: an ECMAScript language value,
+        ): either a normal completion containing a Time Record or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Converts _item_ to a Time Record if possible, considering *undefined* to be the same as midnight, and throws otherwise.</dd>
+      </dl>
+      <emu-alg>
+        1. If _item_ is *undefined*, return MidnightTimeRecord().
+        1. Let _plainTime_ be ? ToTemporalTime(_item_).
+        1. Return _plainTime_.[[Time]].
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-temporal-units">
+    <h1>Units</h1>
+    <p>
+      Time is reckoned using multiple units.
+      These units are listed in <emu-xref href="#table-temporal-units"></emu-xref>.
+    </p>
+    <p>
+      A <dfn>Temporal unit</dfn> is a value listed in the "Value" column of <emu-xref href="#table-temporal-units"></emu-xref>.
+      A <dfn>calendar unit</dfn> is a Temporal unit for which IsCalendarUnit returns *true*.
+      A <dfn>date unit</dfn> is a Temporal unit for which the corresponding "Category" value in <emu-xref href="#table-temporal-units"></emu-xref> is ~date~, and a <dfn>time unit</dfn> is a Temporal unit for which the corresponding "Category" value is ~time~.
+    </p>
+    <emu-table id="table-temporal-units">
+      <emu-caption>Temporal units by descending magnitude</emu-caption>
+      <table class="real-table">
+        <thead>
+          <tr>
+            <th>Value</th>
+            <th>Singular property name</th>
+            <th>Plural property name</th>
+            <th>Category</th>
+            <th>Length in nanoseconds</th>
+            <th>Maximum duration rounding increment</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>~year~</td>
+          <td>*"year"*</td>
+          <td>*"years"*</td>
+          <td>~date~</td>
+          <td>calendar-dependent</td>
+          <td>~unset~</td>
+        </tr>
+
+        <tr>
+          <td>~month~</td>
+          <td>*"month"*</td>
+          <td>*"months"*</td>
+          <td>~date~</td>
+          <td>calendar-dependent</td>
+          <td>~unset~</td>
+        </tr>
+
+        <tr>
+          <td>~week~</td>
+          <td>*"week"*</td>
+          <td>*"weeks"*</td>
+          <td>~date~</td>
+          <td>calendar-dependent</td>
+          <td>~unset~</td>
+        </tr>
+
+        <tr>
+          <td>~day~</td>
+          <td>*"day"*</td>
+          <td>*"days"*</td>
+          <td>~date~</td>
+          <td>nsPerDay</td>
+          <td>~unset~</td>
+        </tr>
+
+        <tr>
+          <td>~hour~</td>
+          <td>*"hour"*</td>
+          <td>*"hours"*</td>
+          <td>~time~</td>
+          <td>3.6 × 10<sup>12</sup></td>
+          <td>24</td>
+        </tr>
+
+        <tr>
+          <td>~minute~</td>
+          <td>*"minute"*</td>
+          <td>*"minutes"*</td>
+          <td>~time~</td>
+          <td>6 × 10<sup>10</sup></td>
+          <td>60</td>
+        </tr>
+
+        <tr>
+          <td>~second~</td>
+          <td>*"second"*</td>
+          <td>*"seconds"*</td>
+          <td>~time~</td>
+          <td>10<sup>9</sup></td>
+          <td>60</td>
+        </tr>
+
+        <tr>
+          <td>~millisecond~</td>
+          <td>*"millisecond"*</td>
+          <td>*"milliseconds"*</td>
+          <td>~time~</td>
+          <td>10<sup>6</sup></td>
+          <td>1000</td>
+        </tr>
+
+        <tr>
+          <td>~microsecond~</td>
+          <td>*"microsecond"*</td>
+          <td>*"microseconds"*</td>
+          <td>~time~</td>
+          <td>10<sup>3</sup></td>
+          <td>1000</td>
+        </tr>
+
+        <tr>
+          <td>~nanosecond~</td>
+          <td>*"nanosecond"*</td>
+          <td>*"nanoseconds"*</td>
+          <td>~time~</td>
+          <td>1</td>
+          <td>1000</td>
+        </tr>
+      </table>
+    </emu-table>
+    <emu-note>
+      The length of a day is given as nsPerDay in the table.
+      Note that changes in the UTC offset of a time zone may result in longer or shorter days, so care should be taken when using this value in the context of `Temporal.ZonedDateTime`.
+    </emu-note>
+
+    <emu-clause id="sec-defaulttemporallargestunit" type="abstract operation">
+      <h1>
+        DefaultTemporalLargestUnit (
+          _duration_: a Temporal.Duration,
+        ): a Temporal unit
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It implements the logic used in the `Temporal.Duration.prototype.round()` method and elsewhere, where the `largestUnit` option, if not given explicitly, is set to the largest-magnitude non-zero unit.</dd>
+      </dl>
+      <emu-alg>
+        1. If _duration_.[[Years]] ≠ 0, return ~year~.
+        1. If _duration_.[[Months]] ≠ 0, return ~month~.
+        1. If _duration_.[[Weeks]] ≠ 0, return ~week~.
+        1. If _duration_.[[Days]] ≠ 0, return ~day~.
+        1. If _duration_.[[Hours]] ≠ 0, return ~hour~.
+        1. If _duration_.[[Minutes]] ≠ 0, return ~minute~.
+        1. If _duration_.[[Seconds]] ≠ 0, return ~second~.
+        1. If _duration_.[[Milliseconds]] ≠ 0, return ~millisecond~.
+        1. If _duration_.[[Microseconds]] ≠ 0, return ~microsecond~.
+        1. Return ~nanosecond~.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-iscalendarunit" type="abstract operation">
+      <h1>
+        IsCalendarUnit (
+          _unit_: a Temporal unit,
+        ): a Boolean
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns whether _unit_ is a Temporal unit for which rounding would require calendar calculations.</dd>
+      </dl>
+      <emu-alg>
+        1. If _unit_ is ~year~, return *true*.
+        1. If _unit_ is ~month~, return *true*.
+        1. If _unit_ is ~week~, return *true*.
+        1. Return *false*.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-largeroftwotemporalunits" type="abstract operation">
+      <h1>
+        LargerOfTwoTemporalUnits (
+          _u1_: a Temporal unit,
+          _u2_: a Temporal unit,
+        ): a Temporal unit
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>Given two Temporal units, it returns the larger of the two units.</dd>
+      </dl>
+      <emu-alg>
+        1. For each row of <emu-xref href="#table-temporal-units"></emu-xref>, except the header row, in table order, do
+          1. Let _unit_ be the value in the "Value" column of the row.
+          1. If _u1_ is _unit_, return _unit_.
+          1. If _u2_ is _unit_, return _unit_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporalunitcategory" type="abstract operation">
+      <h1>
+        TemporalUnitCategory (
+          _unit_: a Temporal unit,
+        ): either ~date~ or ~time~
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the category (date or time) of the Temporal unit _unit_.</dd>
+      </dl>
+      <emu-alg>
+        1. Return the value from the "Category" column of the row of <emu-xref href="#table-temporal-units"></emu-xref> in which _unit_ is in the "Value" column.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-validatetemporalunitvalue" type="abstract operation">
+      <h1>
+        ValidateTemporalUnitValue (
+          _value_: either a Temporal unit, ~unset~, or ~auto~,
+          _unitGroup_: one of ~date~, ~time~, or ~datetime~,
+          optional _extraValues_: a List of either Temporal units or ~auto~,
+        ): either a normal completion containing ~unused~ or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It validates that the result of GetTemporalUnitValuedOption is <emu-not-ref>covered</emu-not-ref> by the union of _unitGroup_, _extraValues_, and « ~unset~ ».</dd>
+      </dl>
+      <emu-alg>
+        1. If _value_ is ~unset~, return ~unused~.
+        1. If _extraValues_ is present and _extraValues_ contains _value_, return ~unused~.
+        1. Let _category_ be the value in the “Category” column of the row of <emu-xref href="#table-temporal-units"></emu-xref> whose “Value” column contains _value_. If there is no such row, throw a *RangeError* exception.
+        1. If _category_ is ~date~ and _unitGroup_ is either ~date~ or ~datetime~, return ~unused~.
+        1. If _category_ is ~time~ and _unitGroup_ is either ~time~ or ~datetime~, return ~unused~.
+        1. Throw a *RangeError* exception.
+      </emu-alg>
+    </emu-clause>
+  </emu-clause>
+
+  <emu-clause id="sec-ispartialtemporalobject" type="abstract operation">
+    <h1>
+      IsPartialTemporalObject (
+        _value_: an ECMAScript language value,
+      ): either a normal completion containing a Boolean or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It determines whether _value_ is a suitable input for one of the Temporal objects' `with()` methods: it must be an Object, it must not be an instance of one of the time-related or date-related Temporal types, and it must not have a `calendar` or `timeZone` property.</dd>
+    </dl>
+    <emu-alg>
+      1. If _value_ is not an Object, return *false*.
+      1. If _value_ has an [[InitializedTemporalDate]], [[InitializedTemporalDateTime]], [[InitializedTemporalMonthDay]], [[InitializedTemporalTime]], [[InitializedTemporalYearMonth]], or [[InitializedTemporalZonedDateTime]] internal slot, return *false*.
+      1. Let _calendarProperty_ be ? Get(_value_, *"calendar"*).
+      1. If _calendarProperty_ is not *undefined*, return *false*.
+      1. Let _timeZoneProperty_ be ? Get(_value_, *"timeZone"*).
+      1. If _timeZoneProperty_ is not *undefined*, return *false*.
+      1. Return *true*.
+    </emu-alg>
+  </emu-clause>
+</emu-clause>
