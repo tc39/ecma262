@@ -19758,7 +19758,7 @@
           1. Return ? EvaluateImportCall(the first |AssignmentExpression|, ~evaluation~, the second |AssignmentExpression|).
         </emu-alg>
 
-        <emu-grammar>ImportCall : `import` `.` `source` `(` AssignmentExpression `,` AssignmentExpression `,`? `)`</emu-grammar>
+        <emu-grammar>ImportCall : `import` `.` `source` `(` AssignmentExpression `,`? `)`</emu-grammar>
         <emu-alg>
           1. Return ? EvaluateImportCall(|AssignmentExpression|, ~source~).
         </emu-alg>
@@ -19843,7 +19843,7 @@
           1. If _phase_ is ~source~, then
             1. Let _moduleSource_ be _module_.[[ModuleSource]].
             1. If _moduleSource_ is ~empty~, then
-              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a new *SyntaxError* »).
+              1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *SyntaxError* object »).
             1. Else,
               1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, « _moduleSource_ »).
             1. Return ~unused~.
@@ -26814,13 +26814,12 @@
               </td>
             </tr>
             <tr id="abstract-get-module-source-kind">
-              <td>
-                GetModuleSourceKind()
-              </td>
+              <td>GetModuleSourceKind ( ): a String</td>
               <td>
                 <p>Returns a constant string for each concrete module record that exposes a source representation through their [[ModuleSource]] field, to be used as the return value of the %Symbol.toStringTag% getter on %AbstractModuleSource%.</p>
                 <p>For Module Records that do not have a source representation (currently all ECMA-262-defined Module Records), GetModuleSourceKind() is never called.</p>
               </td>
+              <td></td>
             </tr>
           </table>
         </emu-table>
@@ -27133,17 +27132,6 @@
               1. Let _state_ be the GraphLoadingState Record { [[IsLoading]]: *true*, [[PendingModulesCount]]: 1, [[Visited]]: « », [[PromiseCapability]]: _pc_, [[HostDefined]]: _hostDefined_ }.
               1. Perform InnerModuleLoading(_state_, _module_, ~recursive-load~).
               1. Return _pc_.[[Promise]].
-              1. Assert: _state_.[[IsLoading]] is *true*.
-              1. If _module_ is a Cyclic Module Record, _module_.[[Status]] is ~new~, and _state_.[[Visited]] does not contain _module_, then
-                1. Append _module_ to _state_.[[Visited]].
-              1. Assert: _state_.[[PendingModulesCount]] ≥ 1.
-              1. Set _state_.[[PendingModulesCount]] to _state_.[[PendingModulesCount]] - 1.
-              1. If _state_.[[PendingModulesCount]] = 0, then
-                1. Set _state_.[[IsLoading]] to *false*.
-                1. For each Cyclic Module Record _loaded_ of _state_.[[Visited]], do
-                  1. If _loaded_.[[Status]] is ~new~, set _loaded_.[[Status]] to ~unlinked~.
-                1. Perform ! Call(_state_.[[PromiseCapability]].[[Resolve]], *undefined*, « *undefined* »).
-              1. Return ~unused~.
             </emu-alg>
 
             <emu-note>
@@ -27175,7 +27163,7 @@
                       1. Let _error_ be ThrowCompletion(a newly created *SyntaxError* object).
                       1. Perform ContinueModuleLoading(_state_, _request_.[[Phase]], _error_).
                     1. Else if _module_.[[LoadedModules]] contains a LoadedModuleRequest Record _record_ such that ModuleRequestsEqual(_record_, _request_) is *true*, then
-                      1. If _request_.[[Phase]] is ~source~, let _innerLoadType_ be ~single~; otherwise let _innerLoadType_ be ~recursive-load~.
+                      1. If _request_.[[Phase]] is ~source~, let _innerLoadType_ be ~single~; else let _innerLoadType_ be ~recursive-load~.
                       1. Perform InnerModuleLoading(_state_, _record_.[[Module]], _innerLoadType_).
                     1. Else,
                       1. Perform HostLoadImportedModule(_module_, _request_, _state_.[[HostDefined]], _state_).
@@ -27196,7 +27184,7 @@
               <h1>
                 ContinueModuleLoading (
                   _state_: a GraphLoadingState Record,
-                  _phase_: ~source~ or ~evaluation,
+                  _phase_: ~source~ or ~evaluation~,
                   _moduleCompletion_: either a normal completion containing a Module Record or a throw completion,
                 ): ~unused~
               </h1>
@@ -27208,7 +27196,7 @@
               <emu-alg>
                 1. If _state_.[[IsLoading]] is *false*, return ~unused~.
                 1. If _moduleCompletion_ is a normal completion, then
-                  1. If _phase_ is ~source~, let _loadType_ be ~single~; otherwise let _loadType_ be ~recursive-load~.
+                  1. If _phase_ is ~source~, let _loadType_ be ~single~; else let _loadType_ be ~recursive-load~.
                   1. Perform InnerModuleLoading(_state_, _moduleCompletion_.[[Value]], _loadType_).
                 1. Else,
                   1. Set _state_.[[IsLoading]] to *false*.
@@ -28150,7 +28138,7 @@
                 [[ImportName]]
               </td>
               <td>
-                a String, ~namespace~ or ~source~
+                a String, ~namespace~, or ~source~
               </td>
               <td>
                 The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. The value ~namespace~ indicates that the import request is for the target module's namespace object. The value ~source~ represents an import at the source phase.
@@ -29085,11 +29073,11 @@
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-HostGetModuleSourceModuleRecord" type="host-defined abstract operation">
+      <emu-clause id="sec-hostgetmodulesourcemodulerecord" type="host-defined abstract operation">
         <h1>
           HostGetModuleSourceModuleRecord (
             _specifier_: an Object,
-          ): either a Module Record or ~not-a-source~
+          ): a Module Record or ~not-a-source~
         </h1>
         <dl class="header">
           <dt>description</dt>
@@ -29311,7 +29299,7 @@
         <emu-grammar>ImportDeclaration : `import` `source` ImportedBinding FromClause WithClause? `;`</emu-grammar>
         <emu-alg>
           1. Let _module_ be the sole element of the ModuleRequests of |ImportDeclaration|.
-          1. Let _localName_ be the sole element of BoundNames of |ImportedBinding|.
+          1. Let _localName_ be the sole element of the BoundNames of |ImportedBinding|.
           1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~source~, [[LocalName]]: _localName_ }.
           1. Return « _entry_ ».
         </emu-alg>
@@ -51705,14 +51693,14 @@ THH:mm:ss.sss
       <h1>The AbstractModuleSource Constructor</h1>
       <p>The AbstractModuleSource constructor:</p>
       <ul>
-        <li>is %AbstractModuleSource%.</li>
+        <li>is <dfn>%AbstractModuleSource%</dfn>.</li>
         <li>along with its corresponding prototype object, provides common properties that are inherited by Module Source constructors and their instances.</li>
         <li>does not have a global name or appear as a property of the global object.</li>
         <li>acts as a common superclass of the constructors of Module Source Objects.</li>
         <li>will throw an error when invoked, because it is an abstract class constructor. The module source constructors do not perform a `super` call to it.</li>
       </ul>
 
-      <emu-clause id="sec-abstractmodulesource">
+      <emu-clause id="sec-abstractmodulesource" type="built-in function">
         <h1>AbstractModuleSource ( )</h1>
         <p>This function performs the following steps when called:</p>
         <emu-alg>
@@ -51752,9 +51740,9 @@ THH:mm:ss.sss
         <p>The initial value of %AbstractModuleSource%`.prototype.constructor` is %AbstractModuleSource%.</p>
       </emu-clause>
 
-      <emu-clause id="sec-get-%abstractmodulesource%.prototype.@@tostringtag">
-        <h1>get %AbstractModuleSource%.prototype [ @@toStringTag ]</h1>
-        <p>%AbstractModuleSource%.prototype `[@@toStringTag]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
+      <emu-clause id="sec-get-%abstractmodulesource%.prototype-%symbol.tostringtag%" type="built-in function">
+        <h1>get %AbstractModuleSource%.prototype [ %Symbol.toStringTag% ]</h1>
+        <p>%AbstractModuleSource%`.prototype[%Symbol.toStringTag%]` is an accessor property whose set accessor function is *undefined*. Its get accessor function performs the following steps when called:</p>
         <emu-alg>
           1. Let _O_ be the *this* value.
           1. If _O_ is not an Object, return *undefined*.
