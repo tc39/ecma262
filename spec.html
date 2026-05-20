@@ -26857,7 +26857,9 @@
                 a Cyclic Module Record or ~empty~
               </td>
               <td>
-                The first visited module of the cycle, the root DFS ancestor of the strongly connected component. For a module not in a cycle, this would be the module itself. Once Evaluate has completed, a module's [[DFSAncestorIndex]] is the depth-first traversal index of its [[CycleRoot]].
+                <p>This field is initially ~empty~. Once InnerModuleEvaluation runs on a module's strongly connected component without returning a throw completion, it's updated to be the first visited module of the SCC (the root DFS ancestor). For a module not in a cycle, this would be the module itself.</p>
+
+                <p>Once this field is set, a module's [[DFSAncestorIndex]] is the depth-first traversal index of its [[CycleRoot]].</p>
               </td>
             </tr>
             <tr>
@@ -27283,6 +27285,7 @@
                     1. If _requiredModule_.[[Status]] is ~evaluating~, then
                       1. Set _module_.[[DFSAncestorIndex]] to min(_module_.[[DFSAncestorIndex]], _requiredModule_.[[DFSAncestorIndex]]).
                     1. Else,
+                      1. Assert: _requiredModule_.[[CycleRoot]] is not ~empty~.
                       1. Set _requiredModule_ to _requiredModule_.[[CycleRoot]].
                       1. Assert: _requiredModule_.[[Status]] is either ~evaluating-async~ or ~evaluated~.
                       1. If _requiredModule_.[[EvaluationError]] is not ~empty~, return ? _requiredModule_.[[EvaluationError]].
@@ -27307,6 +27310,7 @@
                     1. If _requiredModule_.[[AsyncEvaluationOrder]] is ~unset~, set _requiredModule_.[[Status]] to ~evaluated~.
                     1. Else, set _requiredModule_.[[Status]] to ~evaluating-async~.
                     1. If _requiredModule_ and _module_ are the same Module Record, set _done_ to *true*.
+                    1. Assert: _requiredModule_.[[CycleRoot]] is ~empty~.
                     1. Set _requiredModule_.[[CycleRoot]] to _module_.
                 1. Return _index_.
               </emu-alg>
@@ -27356,15 +27360,16 @@
               </dl>
               <emu-alg>
                 1. For each Cyclic Module Record _m_ of _module_.[[AsyncParentModules]], do
-                  1. If _execList_ does not contain _m_ and _m_.[[CycleRoot]].[[EvaluationError]] is ~empty~, then
+                  1. If _execList_ does not contain _m_ and _m_.[[EvaluationError]] is ~empty~, then
                     1. Assert: _m_.[[Status]] is ~evaluating-async~.
-                    1. Assert: _m_.[[EvaluationError]] is ~empty~.
-                    1. Assert: _m_.[[AsyncEvaluationOrder]] is an integer.
-                    1. Assert: _m_.[[PendingAsyncDependencies]] > 0.
-                    1. Set _m_.[[PendingAsyncDependencies]] to _m_.[[PendingAsyncDependencies]] - 1.
-                    1. If _m_.[[PendingAsyncDependencies]] = 0, then
-                      1. Append _m_ to _execList_.
-                      1. If _m_.[[HasTLA]] is *false*, perform GatherAvailableAncestors(_m_, _execList_).
+                    1. Assert: _m_.[[CycleRoot]] is not ~empty~.
+                    1. If _m_.[[CycleRoot]].[[EvaluationError]] is ~empty~, then
+                      1. Assert: _m_.[[AsyncEvaluationOrder]] is an integer.
+                      1. Assert: _m_.[[PendingAsyncDependencies]] > 0.
+                      1. Set _m_.[[PendingAsyncDependencies]] to _m_.[[PendingAsyncDependencies]] - 1.
+                      1. If _m_.[[PendingAsyncDependencies]] = 0, then
+                        1. Append _m_ to _execList_.
+                        1. If _m_.[[HasTLA]] is *false*, perform GatherAvailableAncestors(_m_, _execList_).
                 1. Return ~unused~.
               </emu-alg>
               <emu-note>
