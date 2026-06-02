@@ -7224,6 +7224,20 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-ifabruptcloseiterators" aoid="IfAbruptCloseIterators">
+      <h1>IfAbruptCloseIterators ( _value_, _iteratorRecords_ )</h1>
+      <p>IfAbruptCloseIterators is a shorthand for a sequence of algorithm steps that use a list of Iterator Records. An algorithm step of the form:</p>
+      <emu-alg>
+        1. IfAbruptCloseIterators(_value_, _iteratorRecords_).
+      </emu-alg>
+      <p>means the same thing as:</p>
+      <emu-alg>
+        1. Assert: _value_ is a Completion Record.
+        1. If _value_ is an abrupt completion, return ? IteratorCloseAll(_iteratorRecords_, _value_).
+        1. Set _value_ to ! _value_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-asynciteratorclose" type="abstract operation">
       <h1>
         AsyncIteratorClose (
@@ -48609,6 +48623,105 @@ THH:mm:ss.sss
           <p>The initial value of Iterator.prototype is the Iterator prototype object.</p>
           <p>This property has the attributes { [[Writable]]: *false*, [[Enumerable]]: *false*, [[Configurable]]: *false* }.</p>
         </emu-clause>
+
+        <emu-clause id="sec-iterator.zip" type="built-in function">
+          <h1>Iterator.zip ( _iterables_ [ , _options_ ] )</h1>
+          <p>This function performs the following steps when called:</p>
+          <emu-alg>
+            1. If _iterables_ is not an Object, throw a *TypeError* exception.
+            1. Set _options_ to ? GetOptionsObject(_options_).
+            1. Let _mode_ be ? Get(_options_, *"mode"*).
+            1. If _mode_ is *undefined*, set _mode_ to *"shortest"*.
+            1. If _mode_ is not one of *"shortest"*, *"longest"*, or *"strict"*, throw a *TypeError* exception.
+            1. Let _paddingOption_ be *undefined*.
+            1. If _mode_ is *"longest"*, then
+              1. Set _paddingOption_ to ? Get(_options_, *"padding"*).
+              1. If _paddingOption_ is not *undefined* and _paddingOption_ is not an Object, throw a *TypeError* exception.
+            1. Let _iters_ be a new empty List.
+            1. Let _padding_ be a new empty List.
+            1. Let _inputIter_ be ? GetIterator(_iterables_, ~sync~).
+            1. Let _next_ be ~not-started~.
+            1. Repeat, while _next_ is not ~done~,
+              1. Set _next_ to Completion(IteratorStepValue(_inputIter_)).
+              1. IfAbruptCloseIterators(_next_, _iters_).
+              1. If _next_ is not ~done~, then
+                1. Let _iter_ be Completion(GetIteratorFlattenable(_next_, ~reject-primitives~)).
+                1. Let _needClosing_ be the list-concatenation of « _inputIter_ » and _iters_.
+                1. IfAbruptCloseIterators(_iter_, _needClosing_).
+                1. Append _iter_ to _iters_.
+            1. Let _iterCount_ be the number of elements in _iters_.
+            1. If _mode_ is *"longest"*, then
+              1. If _paddingOption_ is *undefined*, then
+                1. Repeat _iterCount_ times:
+                  1. Append *undefined* to _padding_.
+              1. Else,
+                1. Let _paddingIter_ be Completion(GetIterator(_paddingOption_, ~sync~)).
+                1. IfAbruptCloseIterators(_paddingIter_, _iters_).
+                1. Let _usingIterator_ be *true*.
+                1. Repeat _iterCount_ times:
+                  1. If _usingIterator_ is *true*, then
+                    1. Set _next_ to Completion(IteratorStepValue(_paddingIter_)).
+                    1. IfAbruptCloseIterators(_next_, _iters_).
+                    1. If _next_ is ~done~, then
+                      1. Set _usingIterator_ to *false*.
+                    1. Else,
+                      1. Append _next_ to _padding_.
+                  1. If _usingIterator_ is *false*, append *undefined* to _padding_.
+                1. If _usingIterator_ is *true*, then
+                  1. Let _completion_ be Completion(IteratorClose(_paddingIter_, NormalCompletion(~unused~))).
+                  1. IfAbruptCloseIterators(_completion_, _iters_).
+            1. Let _finishResults_ be a new Abstract Closure with parameters (_results_) that captures nothing and performs the following steps when called:
+              1. Return CreateArrayFromList(_results_).
+            1. Return IteratorZip(_iters_, _mode_, _padding_, _finishResults_).
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-iterator.zipkeyed" type="built-in function">
+          <h1>Iterator.zipKeyed ( _iterables_ [ , _options_ ] )</h1>
+          <p>This function performs the following steps when called:</p>
+          <emu-alg>
+            1. If _iterables_ is not an Object, throw a *TypeError* exception.
+            1. Set _options_ to ? GetOptionsObject(_options_).
+            1. Let _mode_ be ? Get(_options_, *"mode"*).
+            1. If _mode_ is *undefined*, set _mode_ to *"shortest"*.
+            1. If _mode_ is not one of *"shortest"*, *"longest"*, or *"strict"*, throw a *TypeError* exception.
+            1. Let _paddingOption_ be *undefined*.
+            1. If _mode_ is *"longest"*, then
+              1. Set _paddingOption_ to ? Get(_options_, *"padding"*).
+              1. If _paddingOption_ is not *undefined* and _paddingOption_ is not an Object, throw a *TypeError* exception.
+            1. Let _iters_ be a new empty List.
+            1. Let _padding_ be a new empty List.
+            1. Let _allKeys_ be ? _iterables_.[[OwnPropertyKeys]]().
+            1. Let _keys_ be a new empty List.
+            1. For each element _key_ of _allKeys_, do
+              1. Let _propertyDesc_ be Completion(_iterables_.[[GetOwnProperty]](_key_)).
+              1. IfAbruptCloseIterators(_propertyDesc_, _iters_).
+              1. If _propertyDesc_ is not *undefined* and _propertyDesc_.[[Enumerable]] is *true*, then
+                1. Let _value_ be Completion(Get(_iterables_, _key_)).
+                1. IfAbruptCloseIterators(_value_, _iters_).
+                1. If _value_ is not *undefined*, then
+                  1. Append _key_ to _keys_.
+                  1. Let _iter_ be Completion(GetIteratorFlattenable(_value_, ~reject-primitives~)).
+                  1. IfAbruptCloseIterators(_iter_, _iters_).
+                  1. Append _iter_ to _iters_.
+            1. Let _iterCount_ be the number of elements in _iters_.
+            1. If _mode_ is *"longest"*, then
+              1. If _paddingOption_ is *undefined*, then
+                1. Repeat _iterCount_ times:
+                  1. Append *undefined* to _padding_.
+              1. Else,
+                1. For each element _key_ of _keys_, do
+                  1. Let _value_ be Completion(Get(_paddingOption_, _key_)).
+                  1. IfAbruptCloseIterators(_value_, _iters_).
+                  1. Append _value_ to _padding_.
+            1. Let _finishResults_ be a new Abstract Closure with parameters (_results_) that captures _keys_ and _iterCount_ and performs the following steps when called:
+              1. Let _obj_ be OrdinaryObjectCreate(*null*).
+              1. For each integer _i_ such that 0 ≤ _i_ &lt; _iterCount_, in ascending order, do
+                1. Perform ! CreateDataPropertyOrThrow(_obj_, _keys_[_i_], _results_[_i_]).
+              1. Return _obj_.
+            1. Return IteratorZip(_iters_, _mode_, _padding_, _finishResults_).
+          </emu-alg>
+        </emu-clause>
       </emu-clause>
 
       <emu-clause oldids="sec-%iteratorprototype%-object" id="sec-%iterator.prototype%-object">
@@ -48977,6 +49090,74 @@ THH:mm:ss.sss
           <emu-note>
             <p>Unlike the %Symbol.toStringTag% property on most built-in prototypes, for web-compatibility reasons this property must be an accessor.</p>
           </emu-note>
+        </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-abstract-operations-for-iterators">
+        <h1>Abstract Operations for Iterators</h1>
+
+        <emu-clause id="sec-iteratorzip" type="abstract operation">
+          <h1>
+            IteratorZip (
+              _iters_: a List of Iterator Records,
+              _mode_: *"shortest"*, *"longest"*, or *"strict"*,
+              _padding_: a List of ECMAScript language values,
+              _finishResults_: an Abstract Closure that takes a List of ECMAScript language values and returns an ECMAScript language value,
+            ): a Generator
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Let _iterCount_ be the number of elements in _iters_.
+            1. Let _openIters_ be a copy of _iters_.
+            1. Let _closure_ be a new Abstract Closure with no parameters that captures _iters_, _iterCount_, _openIters_, _mode_, _padding_, and _finishResults_ and performs the following steps when called:
+              1. If _iterCount_ = 0, return ReturnCompletion(*undefined*).
+              1. Repeat,
+                1. Let _results_ be a new empty List.
+                1. Assert: _openIters_ is not empty.
+                1. For each integer _i_ such that 0 ≤ _i_ &lt; _iterCount_, in ascending order, do
+                  1. Let _iter_ be _iters_[_i_].
+                  1. If _iter_ is *null*, then
+                    1. Assert: _mode_ is *"longest"*.
+                    1. Let _result_ be _padding_[_i_].
+                  1. Else,
+                    1. Let _result_ be Completion(IteratorStepValue(_iter_)).
+                    1. If _result_ is an abrupt completion, then
+                      1. Remove _iter_ from _openIters_.
+                      1. Return ? IteratorCloseAll(_openIters_, _result_).
+                    1. Set _result_ to ! _result_.
+                    1. If _result_ is ~done~, then
+                      1. Remove _iter_ from _openIters_.
+                      1. If _mode_ is *"shortest"*, then
+                        1. Return ? IteratorCloseAll(_openIters_, ReturnCompletion(*undefined*)).
+                      1. Else if _mode_ is *"strict"*, then
+                        1. If _i_ ≠ 0, then
+                          1. Return ? IteratorCloseAll(_openIters_, ThrowCompletion(a newly created *TypeError* object)).
+                        1. For each integer _k_ such that 1 ≤ _k_ &lt; _iterCount_, in ascending order, do
+                          1. Assert: _iters_[_k_] is not *null*.
+                          1. Let _open_ be Completion(IteratorStep(_iters_[_k_])).
+                          1. If _open_ is an abrupt completion, then
+                            1. Remove _iters_[_k_] from _openIters_.
+                            1. Return ? IteratorCloseAll(_openIters_, _open_).
+                          1. Set _open_ to ! _open_.
+                          1. If _open_ is ~done~, then
+                            1. Remove _iters_[_k_] from _openIters_.
+                          1. Else,
+                            1. Return ? IteratorCloseAll(_openIters_, ThrowCompletion(a newly created *TypeError* object)).
+                        1. Return ReturnCompletion(*undefined*).
+                      1. Else,
+                        1. Assert: _mode_ is *"longest"*.
+                        1. If _openIters_ is empty, return ReturnCompletion(*undefined*).
+                        1. Set _iters_[_i_] to *null*.
+                        1. Set _result_ to _padding_[_i_].
+                  1. Append _result_ to _results_.
+                1. Set _results_ to _finishResults_(_results_).
+                1. Let _completion_ be Completion(Yield(_results_)).
+                1. IfAbruptCloseIterators(_completion_, _openIters_).
+            1. Let _gen_ be CreateIteratorFromClosure(_closure_, *"Iterator Helper"*, %IteratorHelperPrototype%, « [[UnderlyingIterators]] »).
+            1. Set _gen_.[[UnderlyingIterators]] to _openIters_.
+            1. Return _gen_.
+          </emu-alg>
         </emu-clause>
       </emu-clause>
     </emu-clause>
