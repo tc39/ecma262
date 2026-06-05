@@ -12264,10 +12264,17 @@
           <td>an integer</td>
           <td>Initially 0, used to assign unique incrementing values to the [[AsyncEvaluationOrder]] field of modules that are asynchronous or have asynchronous dependencies.</td>
         </tr>
+        <tr>
+          <td>[[GlobalSymbolRegistry]]</td>
+          <td>a List of GlobalSymbolRegistry Records</td>
+          <td>Initially a new empty List, representing the list of Symbol values produced by <emu-xref href="#sec-symbol.for">Symbol.for</emu-xref>.</td>
+        </tr>
       </table>
     </emu-table>
 
     <p>The values of [[LittleEndian]], [[Signifier]], [[IsLockFree1]], [[IsLockFree2]], and [[IsLockFree8]] cannot change.</p>
+
+    <p>The [[GlobalSymbolRegistry]] List is append-only and never reassigned.</p>
 
     <emu-note>
       <p>The values of [[IsLockFree1]], [[IsLockFree2]], and [[IsLockFree8]] are not necessarily determined by the hardware, but may also reflect implementation choices that can vary over time and between ECMAScript implementations.</p>
@@ -31571,53 +31578,15 @@
         <p>This function performs the following steps when called:</p>
         <emu-alg>
           1. Let _stringKey_ be ? ToString(_key_).
-          1. For each element _element_ of the GlobalSymbolRegistry List, do
+          1. Let _agentRecord_ be the Agent Record of the surrounding agent.
+          1. Let _globalSymbolRegistry_ be _agentRecord_.[[GlobalSymbolRegistry]].
+          1. For each element _element_ of _globalSymbolRegistry_, do
             1. If _element_.[[Key]] is _stringKey_, return _element_.[[Symbol]].
-          1. Assert: The GlobalSymbolRegistry List does not currently contain an entry for _stringKey_.
+          1. Assert: _globalSymbolRegistry_ does not currently contain an entry for _stringKey_.
           1. Let _newSymbol_ be a new Symbol whose [[Description]] is _stringKey_.
-          1. Append the GlobalSymbolRegistry Record { [[Key]]: _stringKey_, [[Symbol]]: _newSymbol_ } to the GlobalSymbolRegistry List.
+          1. Append the GlobalSymbolRegistry Record { [[Key]]: _stringKey_, [[Symbol]]: _newSymbol_ } to _globalSymbolRegistry_.
           1. Return _newSymbol_.
         </emu-alg>
-        <p>The <dfn>GlobalSymbolRegistry List</dfn> is an append-only List that is globally available. It is shared by all realms. Prior to the evaluation of any ECMAScript code, it is initialized as a new empty List. Elements of the GlobalSymbolRegistry List are Records with the structure defined in <emu-xref href="#table-globalsymbolregistry-record-fields"></emu-xref>.</p>
-        <emu-table id="table-globalsymbolregistry-record-fields" caption="GlobalSymbolRegistry Record Fields" oldids="table-44">
-          <table>
-            <thead>
-              <tr>
-                <th>
-                  Field Name
-                </th>
-                <th>
-                  Value
-                </th>
-                <th>
-                  Usage
-                </th>
-              </tr>
-            </thead>
-            <tr>
-              <td>
-                [[Key]]
-              </td>
-              <td>
-                a String
-              </td>
-              <td>
-                A string key used to globally identify a Symbol.
-              </td>
-            </tr>
-            <tr>
-              <td>
-                [[Symbol]]
-              </td>
-              <td>
-                a Symbol
-              </td>
-              <td>
-                A symbol that can be retrieved from any realm.
-              </td>
-            </tr>
-          </table>
-        </emu-table>
       </emu-clause>
 
       <emu-clause id="sec-symbol.hasinstance">
@@ -31812,6 +31781,33 @@
     <emu-clause id="sec-abstract-operations-for-symbols">
       <h1>Abstract Operations for Symbols</h1>
 
+      <emu-clause id="sec-globalsymbolregistry-records">
+        <h1>GlobalSymbolRegistry Records</h1>
+        <p>A <dfn variants="GlobalSymbolRegistry Records">GlobalSymbolRegistry Record</dfn> is a Record value used to associate a String key with a Symbol value registered through <emu-xref href="#sec-symbol.for">Symbol.for</emu-xref>.</p>
+        <p>GlobalSymbolRegistry Records have the fields listed in <emu-xref href="#table-globalsymbolregistry-record-fields"></emu-xref>.</p>
+        <emu-table id="table-globalsymbolregistry-record-fields" caption="GlobalSymbolRegistry Record Fields" oldids="table-44">
+          <table>
+            <thead>
+              <tr>
+                <th>Field Name</th>
+                <th>Value</th>
+                <th>Usage</th>
+              </tr>
+            </thead>
+            <tr>
+              <td>[[Key]]</td>
+              <td>a String</td>
+              <td>A string key used to globally identify a Symbol.</td>
+            </tr>
+            <tr>
+              <td>[[Symbol]]</td>
+              <td>a Symbol</td>
+              <td>A symbol that can be retrieved from any realm.</td>
+            </tr>
+          </table>
+        </emu-table>
+      </emu-clause>
+
       <emu-clause id="sec-keyforsymbol" type="abstract operation">
         <h1>
           KeyForSymbol (
@@ -31820,12 +31816,14 @@
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>If _symbol_ is in the GlobalSymbolRegistry List, the String used to register _symbol_ will be returned.</dd>
+          <dd>If _symbol_ is in the surrounding agent's [[GlobalSymbolRegistry]] List, the String used to register _symbol_ will be returned.</dd>
         </dl>
         <emu-alg>
-          1. For each element _element_ of the GlobalSymbolRegistry List, do
+          1. Let _agentRecord_ be the Agent Record of the surrounding agent.
+          1. Let _globalSymbolRegistry_ be _agentRecord_.[[GlobalSymbolRegistry]].
+          1. For each element _element_ of _globalSymbolRegistry_, do
             1. If SameValue(_element_.[[Symbol]], _symbol_) is *true*, return _element_.[[Key]].
-          1. Assert: The GlobalSymbolRegistry List does not currently contain an entry for _symbol_.
+          1. Assert: _globalSymbolRegistry_ does not currently contain an entry for _symbol_.
           1. Return *undefined*.
         </emu-alg>
       </emu-clause>
