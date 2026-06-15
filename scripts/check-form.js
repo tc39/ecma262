@@ -228,7 +228,7 @@ const legacy = new Set([
 	'angleKH',
 	'ivan-pan',
 	'chrikrah',
-	'viktmv',
+	'0xfirelight', // 'viktmv' (renamed)
 	'bathos',
 	'johnnyrainbow',
 	'Kriyszig',
