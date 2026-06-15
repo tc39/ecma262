@@ -33,7 +33,7 @@ const PR = (() => {
     return ghEvent.number;
   } catch (_err) {}
 })();
-const SUMMARY = PR ? `PR #${PR}` : COMMIT.slice(0, 8);
+const SUMMARY = PR ? `PR #${PR}` : `commit ${COMMIT.slice(0, 8)}`;
 
 const WARNING_HTML = `
 <details class="annoying-warning" open="">
