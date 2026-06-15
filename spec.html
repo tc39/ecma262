@@ -2785,13 +2785,13 @@
               1. Set _x_ to (_x_ - _xDigit_) / 2.
               1. Set _y_ to (_y_ - _yDigit_) / 2.
             1. If _op_ is `&amp;`, then
-              1. Let _tmp_ be BinaryAnd(_x_ modulo 2, _y_ modulo 2).
+              1. Let _signBit_ be BinaryAnd(_x_ modulo 2, _y_ modulo 2).
             1. Else if _op_ is `|`, then
-              1. Let _tmp_ be BinaryOr(_x_ modulo 2, _y_ modulo 2).
+              1. Let _signBit_ be BinaryOr(_x_ modulo 2, _y_ modulo 2).
             1. Else,
               1. Assert: _op_ is `^`.
-              1. Let _tmp_ be BinaryXor(_x_ modulo 2, _y_ modulo 2).
-            1. If _tmp_ ≠ 0, then
+              1. Let _signBit_ be BinaryXor(_x_ modulo 2, _y_ modulo 2).
+            1. If _signBit_ ≠ 0, then
               1. Set _result_ to _result_ - 2<sup>_shift_</sup>.
               1. NOTE: This extends the sign.
             1. Return the BigInt value for _result_.
@@ -4752,7 +4752,7 @@
     <emu-clause id="sec-data-blocks">
       <h1>Data Blocks</h1>
       <p>The <dfn variants="Data Blocks">Data Block</dfn> specification type is used to describe a distinct and mutable sequence of byte-sized (8 bit) numeric values. A <dfn variants="byte values">byte value</dfn> is an integer in the inclusive interval from 0 to 255. A Data Block value is created with a fixed number of bytes that each have the initial value 0.</p>
-      <p>For notational convenience within this specification, an array-like syntax can be used to access the individual bytes of a Data Block value. This notation presents a Data Block value as a 0-based <emu-not-ref>integer-indexed</emu-not-ref> sequence of bytes. For example, if _db_ is a 5 byte Data Block value then _db_[2] can be used to access its 3<sup>rd</sup> byte.</p>
+      <p>For notational convenience within this specification, an array-like syntax can be used to access the individual bytes of a Data Block value. This notation presents a Data Block value as a 0-based <emu-not-ref>integer-indexed</emu-not-ref> sequence of bytes. For example, if _dataBlock_ is a 5 byte Data Block value then _dataBlock_[2] can be used to access its 3<sup>rd</sup> byte.</p>
       <p>A data block that resides in memory that can be referenced from multiple agents concurrently is designated a <dfn variants="Shared Data Blocks">Shared Data Block</dfn>. A Shared Data Block has an identity (for the purposes of equality testing Shared Data Block values) that is <em>address-free</em>: it is tied not to the virtual addresses the block is mapped to in any process, but to the set of locations in memory that the block represents. Two data blocks are equal only if the sets of the locations they contain are equal; otherwise, they are not equal and the intersection of the sets of locations they contain is empty. Finally, Shared Data Blocks can be distinguished from Data Blocks.</p>
       <p>The semantics of Shared Data Blocks is defined using Shared Data Block events by the memory model. Abstract operations below introduce Shared Data Block events and act as the interface between evaluation semantics and the event semantics of the memory model. The events form a candidate execution, on which the memory model acts as a filter. Please consult the memory model for full semantics.</p>
       <p>Shared Data Block events are modelled by Records, defined in the memory model.</p>
@@ -4768,9 +4768,9 @@
         </dl>
         <emu-alg>
           1. If _size_ > 2<sup>53</sup> - 1, throw a *RangeError* exception.
-          1. Let _db_ be a new Data Block value consisting of _size_ bytes. If it is impossible to create such a Data Block, throw a *RangeError* exception.
-          1. Set all of the bytes of _db_ to 0.
-          1. Return _db_.
+          1. Let _dataBlock_ be a new Data Block value consisting of _size_ bytes. If it is impossible to create such a Data Block, throw a *RangeError* exception.
+          1. Set all of the bytes of _dataBlock_ to 0.
+          1. Return _dataBlock_.
         </emu-alg>
       </emu-clause>
 
@@ -4783,14 +4783,14 @@
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _db_ be a new Shared Data Block value consisting of _size_ bytes. If it is impossible to create such a Shared Data Block, throw a *RangeError* exception.
+          1. Let _dataBlock_ be a new Shared Data Block value consisting of _size_ bytes. If it is impossible to create such a Shared Data Block, throw a *RangeError* exception.
           1. Let _agentRecord_ be the Agent Record of the surrounding agent.
           1. Let _execution_ be _agentRecord_.[[CandidateExecution]].
           1. Let _eventsRecord_ be the Agent Events Record of _execution_.[[EventsRecords]] whose [[AgentSignifier]] is AgentSignifier().
           1. Let _zero_ be « 0 ».
-          1. For each index _index_ of _db_, do
-            1. Append WriteSharedMemory { [[Order]]: ~init~, [[NoTear]]: *true*, [[Block]]: _db_, [[ByteIndex]]: _index_, [[ElementSize]]: 1, [[Payload]]: _zero_ } to _eventsRecord_.[[EventList]].
-          1. Return _db_.
+          1. For each index _index_ of _dataBlock_, do
+            1. Append WriteSharedMemory { [[Order]]: ~init~, [[NoTear]]: *true*, [[Block]]: _dataBlock_, [[ByteIndex]]: _index_, [[ElementSize]]: 1, [[Payload]]: _zero_ } to _eventsRecord_.[[EventList]].
+          1. Return _dataBlock_.
         </emu-alg>
       </emu-clause>
 
@@ -6669,8 +6669,8 @@
       <dl class="header">
       </dl>
       <emu-alg>
-        1. If _obj_.[[PrivateElements]] contains a PrivateElement _pe_ such that _pe_.[[Key]] is _privateName_, then
-          1. Return _pe_.
+        1. If _obj_.[[PrivateElements]] contains a PrivateElement _entry_ such that _entry_.[[Key]] is _privateName_, then
+          1. Return _entry_.
         1. Return ~empty~.
       </emu-alg>
     </emu-clause>
@@ -12125,7 +12125,7 @@
       <h1>
         HostCallJobCallback (
           _jobCallback_: a JobCallback Record,
-          _value_: an ECMAScript language value,
+          _thisValue_: an ECMAScript language value,
           _argList_: a List of ECMAScript language values,
         ): either a normal completion containing an ECMAScript language value or a throw completion
       </h1>
@@ -12133,7 +12133,7 @@
       </dl>
       <p>An implementation of HostCallJobCallback must conform to the following requirements:</p>
       <ul>
-        <li>It must perform and return the result of Call(_jobCallback_.[[Callback]], _value_, _argList_).</li>
+        <li>It must perform and return the result of Call(_jobCallback_.[[Callback]], _thisValue_, _argList_).</li>
       </ul>
       <emu-note>
         <p>This requirement means that hosts cannot change the [[Call]] behaviour of function objects defined in this specification.</p>
@@ -12141,7 +12141,7 @@
       <p>The default implementation of HostCallJobCallback performs the following steps when called:</p>
       <emu-alg>
         1. Assert: IsCallable(_jobCallback_.[[Callback]]) is *true*.
-        1. Return ? Call(_jobCallback_.[[Callback]], _value_, _argList_).
+        1. Return ? Call(_jobCallback_.[[Callback]], _thisValue_, _argList_).
       </emu-alg>
       <p>ECMAScript hosts that are not web browsers must use the default implementation of HostCallJobCallback.</p>
     </emu-clause>
@@ -12479,10 +12479,10 @@
         1. For each element _value_ of _objSet_, do
           1. For each WeakRef _ref_ such that _ref_.[[WeakRefTarget]] is _value_, do
             1. Set _ref_.[[WeakRefTarget]] to ~empty~.
-          1. For each FinalizationRegistry _fg_ such that _fg_.[[Cells]] contains a Record _cell_ such that _cell_.[[WeakRefTarget]] is _value_, do
+          1. For each FinalizationRegistry _finalizationRegistry_ such that _finalizationRegistry_.[[Cells]] contains a Record _cell_ such that _cell_.[[WeakRefTarget]] is _value_, do
             1. Set _cell_.[[WeakRefTarget]] to ~empty~.
             1. Let _enqueueCleanup_ be an implementation-defined choice of either *true* or *false*.
-            1. If _enqueueCleanup_ is *true*, perform HostEnqueueFinalizationRegistryCleanupJob(_fg_).
+            1. If _enqueueCleanup_ is *true*, perform HostEnqueueFinalizationRegistryCleanupJob(_finalizationRegistry_).
           1. For each WeakMap _map_ such that _map_.[[WeakMapData]] contains a Record _entry_ such that _entry_.[[Key]] is _value_, do
             1. Set _entry_.[[Key]] to ~empty~.
             1. Set _entry_.[[Value]] to ~empty~.
@@ -13863,26 +13863,26 @@
         1. If _hasParamExprs_ is *false*, then
           1. NOTE: Only a single Environment Record is needed for the parameters and top-level vars.
           1. Let _instantiatedVariableNames_ be a copy of the List _paramBindings_.
-          1. For each element _n_ of _variableNames_, do
-            1. If _instantiatedVariableNames_ does not contain _n_, then
-              1. Append _n_ to _instantiatedVariableNames_.
-              1. Perform ! _envRecord_.CreateMutableBinding(_n_, *false*).
-              1. Perform ! _envRecord_.InitializeBinding(_n_, *undefined*).
+          1. For each element _name_ of _variableNames_, do
+            1. If _instantiatedVariableNames_ does not contain _name_, then
+              1. Append _name_ to _instantiatedVariableNames_.
+              1. Perform ! _envRecord_.CreateMutableBinding(_name_, *false*).
+              1. Perform ! _envRecord_.InitializeBinding(_name_, *undefined*).
           1. Let _variableEnv_ be _envRecord_.
         1. Else,
           1. NOTE: A separate Environment Record is needed to ensure that closures created by expressions in the formal parameter list do not have visibility of declarations in the function body.
           1. Let _variableEnv_ be NewDeclarativeEnvironment(_envRecord_).
           1. Set the VariableEnvironment of _calleeContext_ to _variableEnv_.
           1. Let _instantiatedVariableNames_ be a new empty List.
-          1. For each element _n_ of _variableNames_, do
-            1. If _instantiatedVariableNames_ does not contain _n_, then
-              1. Append _n_ to _instantiatedVariableNames_.
-              1. Perform ! _variableEnv_.CreateMutableBinding(_n_, *false*).
-              1. If _paramBindings_ does not contain _n_ or _funcNames_ contains _n_, then
+          1. For each element _name_ of _variableNames_, do
+            1. If _instantiatedVariableNames_ does not contain _name_, then
+              1. Append _name_ to _instantiatedVariableNames_.
+              1. Perform ! _variableEnv_.CreateMutableBinding(_name_, *false*).
+              1. If _paramBindings_ does not contain _name_ or _funcNames_ contains _name_, then
                 1. Let _initialValue_ be *undefined*.
               1. Else,
-                1. Let _initialValue_ be ! _envRecord_.GetBindingValue(_n_, *false*).
-              1. Perform ! _variableEnv_.InitializeBinding(_n_, _initialValue_).
+                1. Let _initialValue_ be ! _envRecord_.GetBindingValue(_name_, *false*).
+              1. Perform ! _variableEnv_.InitializeBinding(_name_, _initialValue_).
               1. NOTE: A var with the same name as a formal parameter initially has the same value as the corresponding initialized parameter.
         1. If _strict_ is *true*, then
           1. Let _lexicalEnv_ be _variableEnv_.
@@ -13897,10 +13897,10 @@
                   1. Perform ! _variableEnv_.InitializeBinding(_funcName_, *undefined*).
                   1. Append _funcName_ to _instantiatedVariableNames_.
                 1. [id="step-functiondeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _funcDecl_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                  1. Let _fEnv_ be the running execution context's VariableEnvironment.
-                  1. Let _bEnv_ be the running execution context's LexicalEnvironment.
-                  1. Let _fObj_ be ! _bEnv_.GetBindingValue(_funcName_, *false*).
-                  1. Perform ! _fEnv_.SetMutableBinding(_funcName_, _fObj_, *false*).
+                  1. Let _funcEnv_ be the running execution context's VariableEnvironment.
+                  1. Let _blockEnv_ be the running execution context's LexicalEnvironment.
+                  1. Let _funcObj_ be ! _blockEnv_.GetBindingValue(_funcName_, *false*).
+                  1. Perform ! _funcEnv_.SetMutableBinding(_funcName_, _funcObj_, *false*).
                   1. Return ~unused~.
           1. Let _lexicalEnv_ be NewDeclarativeEnvironment(_variableEnv_).
           1. NOTE: Non-strict functions use a separate Environment Record for top-level lexical declarations so that a direct eval can determine whether any var scoped declarations introduced by the eval code conflict with pre-existing top-level lexically scoped declarations. This is not needed for strict functions because a strict direct eval always places all declarations into a new Environment Record.
@@ -13908,11 +13908,11 @@
         1. Let _lexicalDecls_ be the LexicallyScopedDeclarations of _code_.
         1. For each element _lexicalDecl_ of _lexicalDecls_, do
           1. NOTE: A lexically declared name cannot be the same as a function/generator declaration, formal parameter, or a var name. Lexically declared names are only instantiated here but not initialized.
-          1. For each element _dn_ of the BoundNames of _lexicalDecl_, do
+          1. For each element _name_ of the BoundNames of _lexicalDecl_, do
             1. If IsConstantDeclaration of _lexicalDecl_ is *true*, then
-              1. Perform ! _lexicalEnv_.CreateImmutableBinding(_dn_, *true*).
+              1. Perform ! _lexicalEnv_.CreateImmutableBinding(_name_, *true*).
             1. Else,
-              1. Perform ! _lexicalEnv_.CreateMutableBinding(_dn_, *false*).
+              1. Perform ! _lexicalEnv_.CreateMutableBinding(_name_, *false*).
         1. Let _privateEnv_ be the PrivateEnvironment of _calleeContext_.
         1. For each Parse Node _funcDecl_ of _funcsToInitialize_, do
           1. Let _funcName_ be the sole element of the BoundNames of _funcDecl_.
@@ -16807,9 +16807,9 @@
         </emu-alg>
         <emu-grammar>IdentifierName :: IdentifierName IdentifierPart</emu-grammar>
         <emu-alg>
-          1. Let _cps_ be the IdentifierCodePoints of the derived |IdentifierName|.
+          1. Let _codePoints_ be the IdentifierCodePoints of the derived |IdentifierName|.
           1. Let _codePoint_ be the IdentifierCodePoint of |IdentifierPart|.
-          1. Return the list-concatenation of _cps_ and « _codePoint_ ».
+          1. Return the list-concatenation of _codePoints_ and « _codePoint_ ».
         </emu-alg>
       </emu-clause>
 
@@ -19908,8 +19908,8 @@
           1. If _importMeta_ is ~empty~, then
             1. Set _importMeta_ to OrdinaryObjectCreate(*null*).
             1. Let _importMetaValues_ be HostGetImportMetaProperties(_module_).
-            1. For each Record { [[Key]], [[Value]] } _p_ of _importMetaValues_, do
-              1. Perform ! CreateDataPropertyOrThrow(_importMeta_, _p_.[[Key]], _p_.[[Value]]).
+            1. For each Record { [[Key]], [[Value]] } _entry_ of _importMetaValues_, do
+              1. Perform ! CreateDataPropertyOrThrow(_importMeta_, _entry_.[[Key]], _entry_.[[Value]]).
             1. Perform HostFinalizeImportMeta(_importMeta_, _module_).
             1. Set _module_.[[ImportMeta]] to _importMeta_.
             1. Return _importMeta_.
@@ -21493,26 +21493,26 @@
         1. Let _decls_ be the LexicallyScopedDeclarations of _code_.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
         1. For each element _decl_ of _decls_, do
-          1. For each element _dn_ of the BoundNames of _decl_, do
+          1. For each element _name_ of the BoundNames of _decl_, do
             1. If IsConstantDeclaration of _decl_ is *true*, then
-              1. Perform ! _envRecord_.CreateImmutableBinding(_dn_, *true*).
+              1. Perform ! _envRecord_.CreateImmutableBinding(_name_, *true*).
             1. Else,
               1. [id="step-blockdeclarationinstantiation-createmutablebinding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
-                1. If ! _envRecord_.HasBinding(_dn_) is *false*, then
-                  1. Perform ! _envRecord_.CreateMutableBinding(_dn_, *false*).
+                1. If ! _envRecord_.HasBinding(_name_) is *false*, then
+                  1. Perform ! _envRecord_.CreateMutableBinding(_name_, *false*).
               1. Else,
-                1. Perform ! _envRecord_.CreateMutableBinding(_dn_, *false*).
+                1. Perform ! _envRecord_.CreateMutableBinding(_name_, *false*).
           1. If _decl_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
-            1. Let _func_ be the sole element of the BoundNames of _decl_.
+            1. Let _funcName_ be the sole element of the BoundNames of _decl_.
             1. Let _funcObj_ be InstantiateFunctionObject of _decl_ with arguments _envRecord_ and _privateEnv_.
             1. [id="step-blockdeclarationinstantiation-initializebinding", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
-              1. If the binding for _func_ in _envRecord_ is an uninitialized binding, then
-                1. Perform ! _envRecord_.InitializeBinding(_func_, _funcObj_).
+              1. If the binding for _funcName_ in _envRecord_ is an uninitialized binding, then
+                1. Perform ! _envRecord_.InitializeBinding(_funcName_, _funcObj_).
               1. Else,
                 1. Assert: _decl_ is a |FunctionDeclaration|.
-                1. Perform ! _envRecord_.SetMutableBinding(_func_, _funcObj_, *false*).
+                1. Perform ! _envRecord_.SetMutableBinding(_funcName_, _funcObj_, *false*).
             1. Else,
-              1. Perform ! _envRecord_.InitializeBinding(_func_, _funcObj_).
+              1. Perform ! _envRecord_.InitializeBinding(_funcName_, _funcObj_).
         1. Return ~unused~.
       </emu-alg>
     </emu-clause>
@@ -22111,11 +22111,11 @@
           1. Let _loopEnv_ be NewDeclarativeEnvironment(_oldEnv_).
           1. Let _isConst_ be IsConstantDeclaration of |LexicalDeclaration|.
           1. Let _boundNames_ be the BoundNames of |LexicalDeclaration|.
-          1. For each element _dn_ of _boundNames_, do
+          1. For each element _name_ of _boundNames_, do
             1. If _isConst_ is *true*, then
-              1. Perform ! _loopEnv_.CreateImmutableBinding(_dn_, *true*).
+              1. Perform ! _loopEnv_.CreateImmutableBinding(_name_, *true*).
             1. Else,
-              1. Perform ! _loopEnv_.CreateMutableBinding(_dn_, *false*).
+              1. Perform ! _loopEnv_.CreateMutableBinding(_name_, *false*).
           1. Set the running execution context's LexicalEnvironment to _loopEnv_.
           1. Let _forDecl_ be Completion(Evaluation of |LexicalDeclaration|).
           1. If _forDecl_ is an abrupt completion, then
@@ -22174,10 +22174,10 @@
             1. Let _outer_ be _lastIterationEnv_.[[OuterEnv]].
             1. Assert: _outer_ is not *null*.
             1. Let _thisIterationEnv_ be NewDeclarativeEnvironment(_outer_).
-            1. For each element _bn_ of _perIterationBindings_, do
-              1. Perform ! _thisIterationEnv_.CreateMutableBinding(_bn_, *false*).
-              1. Let _lastValue_ be ? _lastIterationEnv_.GetBindingValue(_bn_, *true*).
-              1. Perform ! _thisIterationEnv_.InitializeBinding(_bn_, _lastValue_).
+            1. For each element _name_ of _perIterationBindings_, do
+              1. Perform ! _thisIterationEnv_.CreateMutableBinding(_name_, *false*).
+              1. Let _lastValue_ be ? _lastIterationEnv_.GetBindingValue(_name_, *true*).
+              1. Perform ! _thisIterationEnv_.InitializeBinding(_name_, _lastValue_).
             1. Set the running execution context's LexicalEnvironment to _thisIterationEnv_.
           1. Return ~unused~.
         </emu-alg>
@@ -25053,11 +25053,11 @@
       </dl>
       <emu-grammar>ClassStaticBlock : `static` `{` ClassStaticBlockBody `}`</emu-grammar>
       <emu-alg>
-        1. Let _lexical_ be the running execution context's LexicalEnvironment.
+        1. Let _lexicalEnv_ be the running execution context's LexicalEnvironment.
         1. Let _privateEnv_ be the running execution context's PrivateEnvironment.
         1. Let _sourceText_ be the empty sequence of Unicode code points.
         1. Let _formalParams_ be an instance of the production <emu-grammar>FormalParameters : [empty]</emu-grammar>.
-        1. [id="step-synthetic-class-static-block-fn"] Let _bodyFunc_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, _formalParams_, |ClassStaticBlockBody|, ~non-lexical-this~, _lexical_, _privateEnv_).
+        1. [id="step-synthetic-class-static-block-fn"] Let _bodyFunc_ be OrdinaryFunctionCreate(%Function.prototype%, _sourceText_, _formalParams_, |ClassStaticBlockBody|, ~non-lexical-this~, _lexicalEnv_, _privateEnv_).
         1. Perform MakeMethod(_bodyFunc_, _homeObj_).
         1. Return the ClassStaticBlockDefinition Record { [[BodyFunction]]: _bodyFunc_ }.
       </emu-alg>
@@ -25145,11 +25145,11 @@
         1. Let _outerPrivateEnv_ be the running execution context's PrivateEnvironment.
         1. Let _classPrivateEnv_ be NewPrivateEnvironment(_outerPrivateEnv_).
         1. If |ClassBody| is present, then
-          1. For each String _dn_ of the PrivateBoundIdentifiers of |ClassBody|, do
-            1. If _classPrivateEnv_.[[Names]] contains a Private Name _privateName_ such that _privateName_.[[Description]] is _dn_, then
+          1. For each String _description_ of the PrivateBoundIdentifiers of |ClassBody|, do
+            1. If _classPrivateEnv_.[[Names]] contains a Private Name _privateName_ such that _privateName_.[[Description]] is _description_, then
               1. Assert: This is only possible for getter/setter pairs.
             1. Else,
-              1. Let _name_ be a new Private Name whose [[Description]] is _dn_.
+              1. Let _name_ be a new Private Name whose [[Description]] is _description_.
               1. Append _name_ to _classPrivateEnv_.[[Names]].
         1. If |ClassHeritage| is not present, then
           1. Let _protoParent_ be %Object.prototype%.
@@ -25219,13 +25219,13 @@
             1. Assert: _element_.[[Kind]] is either ~method~ or ~accessor~.
             1. If IsStatic of _classElement_ is *false*, let _container_ be _instancePrivateMethods_.
             1. Else, let _container_ be _staticPrivateMethods_.
-            1. If _container_ contains a PrivateElement _pe_ such that _pe_.[[Key]] is _element_.[[Key]], then
-              1. Assert: _element_.[[Kind]] and _pe_.[[Kind]] are both ~accessor~.
+            1. If _container_ contains a PrivateElement _existingElement_ such that _existingElement_.[[Key]] is _element_.[[Key]], then
+              1. Assert: _element_.[[Kind]] and _existingElement_.[[Kind]] are both ~accessor~.
               1. If _element_.[[Get]] is *undefined*, then
-                1. Let _combined_ be PrivateElement { [[Key]]: _element_.[[Key]], [[Kind]]: ~accessor~, [[Get]]: _pe_.[[Get]], [[Set]]: _element_.[[Set]] }.
+                1. Let _combined_ be PrivateElement { [[Key]]: _element_.[[Key]], [[Kind]]: ~accessor~, [[Get]]: _existingElement_.[[Get]], [[Set]]: _element_.[[Set]] }.
               1. Else,
-                1. Let _combined_ be PrivateElement { [[Key]]: _element_.[[Key]], [[Kind]]: ~accessor~, [[Get]]: _element_.[[Get]], [[Set]]: _pe_.[[Set]] }.
-              1. Replace _pe_ in _container_ with _combined_.
+                1. Let _combined_ be PrivateElement { [[Key]]: _element_.[[Key]], [[Kind]]: ~accessor~, [[Get]]: _element_.[[Get]], [[Set]]: _existingElement_.[[Set]] }.
+              1. Replace _existingElement_ in _container_ with _combined_.
             1. Else,
               1. Append _element_ to _container_.
           1. Else if _element_ is a ClassFieldDefinition Record, then
@@ -26237,29 +26237,29 @@
           1. If _variableDecl_ is not either a |VariableDeclaration|, a |ForBinding|, or a |BindingIdentifier|, then
             1. Assert: _variableDecl_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|.
             1. NOTE: If there are multiple function declarations for the same name, the last declaration is used.
-            1. Let _func_ be the sole element of the BoundNames of _variableDecl_.
-            1. If _declaredFuncNames_ does not contain _func_, then
-              1. Let _funcDefinable_ be ? CanDeclareGlobalFunction(_envRecord_, _func_).
+            1. Let _funcName_ be the sole element of the BoundNames of _variableDecl_.
+            1. If _declaredFuncNames_ does not contain _funcName_, then
+              1. Let _funcDefinable_ be ? CanDeclareGlobalFunction(_envRecord_, _funcName_).
               1. If _funcDefinable_ is *false*, throw a *TypeError* exception.
-              1. Append _func_ to _declaredFuncNames_.
+              1. Append _funcName_ to _declaredFuncNames_.
               1. Insert _variableDecl_ as the first element of _funcsToInitialize_.
         1. Let _declaredVariableNames_ be a new empty List.
         1. For each element _variableDecl_ of _variableDecls_, do
           1. If _variableDecl_ is either a |VariableDeclaration|, a |ForBinding|, or a |BindingIdentifier|, then
-            1. For each String _vn_ of the BoundNames of _variableDecl_, do
-              1. If _declaredFuncNames_ does not contain _vn_, then
-                1. Let _vnDefinable_ be ? CanDeclareGlobalVar(_envRecord_, _vn_).
-                1. If _vnDefinable_ is *false*, throw a *TypeError* exception.
-                1. If _declaredVariableNames_ does not contain _vn_, then
-                  1. Append _vn_ to _declaredVariableNames_.
+            1. For each String _name_ of the BoundNames of _variableDecl_, do
+              1. If _declaredFuncNames_ does not contain _name_, then
+                1. Let _variableDefinable_ be ? CanDeclareGlobalVar(_envRecord_, _name_).
+                1. If _variableDefinable_ is *false*, throw a *TypeError* exception.
+                1. If _declaredVariableNames_ does not contain _name_, then
+                  1. Append _name_ to _declaredVariableNames_.
         1. NOTE: No abnormal terminations occur after this algorithm step if the global object is an ordinary object. However, if the global object is a Proxy exotic object it may exhibit behaviours that cause abnormal terminations in some of the following steps.
         1. [id="step-globaldeclarationinstantiation-web-compat-insertion-point", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
           1. Let _strict_ be ScriptIsStrict of _script_.
           1. If _strict_ is *false*, then
             1. Let _declaredFuncOrVariableNames_ be the list-concatenation of _declaredFuncNames_ and _declaredVariableNames_.
-            1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _script_ Contains _x_ is *true*, do
-              1. Let _funcName_ be the StringValue of the |BindingIdentifier| of _f_.
-              1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _funcName_ as a |BindingIdentifier| would not produce any Early Errors for _script_, then
+            1. For each |FunctionDeclaration| _funcDecl_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _script_ Contains _x_ is *true*, do
+              1. Let _funcName_ be the StringValue of the |BindingIdentifier| of _funcDecl_.
+              1. If replacing the |FunctionDeclaration| _funcDecl_ with a |VariableStatement| that has _funcName_ as a |BindingIdentifier| would not produce any Early Errors for _script_, then
                 1. If HasLexicalDeclaration(_envRecord_, _funcName_) is *false*, then
                   1. Let _funcDefinable_ be ? CanDeclareGlobalVar(_envRecord_, _funcName_).
                   1. If _funcDefinable_ is *true*, then
@@ -26267,27 +26267,27 @@
                     1. If _declaredFuncOrVariableNames_ does not contain _funcName_, then
                       1. Perform ? CreateGlobalVarBinding(_envRecord_, _funcName_, *false*).
                       1. Append _funcName_ to _declaredFuncOrVariableNames_.
-                    1. [id="step-globaldeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                      1. Let _gEnv_ be the running execution context's VariableEnvironment.
-                      1. Let _bEnv_ be the running execution context's LexicalEnvironment.
-                      1. Let _fObj_ be ! _bEnv_.GetBindingValue(_funcName_, *false*).
-                      1. Perform ? <emu-meta effects="user-code">_gEnv_.SetMutableBinding(_funcName_, _fObj_, *false*)</emu-meta>.
+                    1. [id="step-globaldeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _funcDecl_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
+                      1. Let _globalEnv_ be the running execution context's VariableEnvironment.
+                      1. Let _blockEnv_ be the running execution context's LexicalEnvironment.
+                      1. Let _funcObj_ be ! _blockEnv_.GetBindingValue(_funcName_, *false*).
+                      1. Perform ? <emu-meta effects="user-code">_globalEnv_.SetMutableBinding(_funcName_, _funcObj_, *false*)</emu-meta>.
                       1. Return ~unused~.
         1. Let _lexicalDecls_ be the LexicallyScopedDeclarations of _script_.
         1. Let _privateEnv_ be *null*.
         1. For each element _lexicalDecl_ of _lexicalDecls_, do
           1. NOTE: Lexically declared names are only instantiated here but not initialized.
-          1. For each element _dn_ of the BoundNames of _lexicalDecl_, do
+          1. For each element _name_ of the BoundNames of _lexicalDecl_, do
             1. If IsConstantDeclaration of _lexicalDecl_ is *true*, then
-              1. Perform ? <emu-meta effects="user-code">_envRecord_.CreateImmutableBinding(_dn_, *true*)</emu-meta>.
+              1. Perform ? <emu-meta effects="user-code">_envRecord_.CreateImmutableBinding(_name_, *true*)</emu-meta>.
             1. Else,
-              1. Perform ? <emu-meta effects="user-code">_envRecord_.CreateMutableBinding(_dn_, *false*)</emu-meta>.
-        1. For each Parse Node _f_ of _funcsToInitialize_, do
-          1. Let _func_ be the sole element of the BoundNames of _f_.
-          1. Let _funcObj_ be InstantiateFunctionObject of _f_ with arguments _envRecord_ and _privateEnv_.
-          1. Perform ? <emu-meta effects="user-code">CreateGlobalFunctionBinding(_envRecord_, _func_, _funcObj_, *false*)</emu-meta>.
-        1. For each String _vn_ of _declaredVariableNames_, do
-          1. Perform ? <emu-meta effects="user-code">CreateGlobalVarBinding(_envRecord_, _vn_, *false*)</emu-meta>.
+              1. Perform ? <emu-meta effects="user-code">_envRecord_.CreateMutableBinding(_name_, *false*)</emu-meta>.
+        1. For each Parse Node _funcDecl_ of _funcsToInitialize_, do
+          1. Let _funcName_ be the sole element of the BoundNames of _funcDecl_.
+          1. Let _funcObj_ be InstantiateFunctionObject of _funcDecl_ with arguments _envRecord_ and _privateEnv_.
+          1. Perform ? <emu-meta effects="user-code">CreateGlobalFunctionBinding(_envRecord_, _funcName_, _funcObj_, *false*)</emu-meta>.
+        1. For each String _variableName_ of _declaredVariableNames_, do
+          1. Perform ? <emu-meta effects="user-code">CreateGlobalVarBinding(_envRecord_, _variableName_, *false*)</emu-meta>.
         1. Return ~unused~.
       </emu-alg>
       <emu-note>
@@ -26380,8 +26380,8 @@
         </dl>
         <emu-alg>
           1. Let _localNames_ be a new empty List.
-          1. For each ImportEntry Record _i_ of _importEntries_, do
-            1. Append _i_.[[LocalName]] to _localNames_.
+          1. For each ImportEntry Record _importEntry_ of _importEntries_, do
+            1. Append _importEntry_.[[LocalName]] to _localNames_.
           1. Return _localNames_.
         </emu-alg>
       </emu-clause>
@@ -26559,9 +26559,9 @@
         <emu-alg>
           1. Let _requests_ be the ModuleRequests of |ModuleItemList|.
           1. Let _additionalRequests_ be the ModuleRequests of |ModuleItem|.
-          1. For each ModuleRequest Record _mr_ of _additionalRequests_, do
-            1. If _requests_ does not contain a ModuleRequest Record _mr2_ such that ModuleRequestsEqual(_mr_, _mr2_) is *true*, then
-              1. Append _mr_ to _requests_.
+          1. For each ModuleRequest Record _moduleRequest_ of _additionalRequests_, do
+            1. If _requests_ does not contain a ModuleRequest Record _otherModuleRequest_ such that ModuleRequestsEqual(_moduleRequest_, _otherModuleRequest_) is *true*, then
+              1. Append _moduleRequest_ to _requests_.
           1. Return _requests_.
         </emu-alg>
         <emu-grammar>ModuleItem : StatementListItem</emu-grammar>
@@ -27164,9 +27164,9 @@
               1. Let _stack_ be a new empty List.
               1. Let _result_ be Completion(InnerModuleLinking(_module_, _stack_, 0)).
               1. If _result_ is an abrupt completion, then
-                1. For each Cyclic Module Record _m_ of _stack_, do
-                  1. Assert: _m_.[[Status]] is ~linking~.
-                  1. Set _m_.[[Status]] to ~unlinked~.
+                1. For each Cyclic Module Record _requiredModule_ of _stack_, do
+                  1. Assert: _requiredModule_.[[Status]] is ~linking~.
+                  1. Set _requiredModule_.[[Status]] to ~unlinked~.
                 1. Assert: _module_.[[Status]] is ~unlinked~.
                 1. Return ? _result_.
               1. Assert: _module_.[[Status]] is one of ~linked~, ~evaluating-async~, or ~evaluated~.
@@ -27248,10 +27248,10 @@
               1. Set _module_.[[TopLevelCapability]] to _promiseCapability_.
               1. Let _result_ be Completion(InnerModuleEvaluation(_module_, _stack_, 0)).
               1. If _result_ is an abrupt completion, then
-                1. For each Cyclic Module Record _m_ of _stack_, do
-                  1. Assert: _m_.[[Status]] is ~evaluating~.
-                  1. Set _m_.[[Status]] to ~evaluated~.
-                  1. Set _m_.[[EvaluationError]] to _result_.
+                1. For each Cyclic Module Record _requiredModule_ of _stack_, do
+                  1. Assert: _requiredModule_.[[Status]] is ~evaluating~.
+                  1. Set _requiredModule_.[[Status]] to ~evaluated~.
+                  1. Set _requiredModule_.[[EvaluationError]] to _result_.
                 1. Assert: _module_.[[Status]] is ~evaluated~.
                 1. Assert: _module_.[[EvaluationError]] and _result_ are the same Completion Record.
                 1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _result_.[[Value]] »).
@@ -28473,8 +28473,8 @@
                   1. Append _exportEntry_ to _localExportEntries_.
                 1. Else,
                   1. NOTE: When exporting a binding or namespace object which was originally imported from another module, the ExportEntry Record is rewritten to match the form it would have if the binding or namespace object had been re-exported directly from the original module rather than imported then exported. This allows conflicts which arise from exporting the same binding or namespace twice under the same name through `export * from` to be ignored rather than being treated as ambiguous in step <emu-xref href="#step-resolveexport-conflict"></emu-xref> of <emu-xref href="#sec-resolveexport">the ResolveExport concrete method of Source Text Module Records</emu-xref>.
-                  1. Let _ie_ be the element of _importEntries_ whose [[LocalName]] is _exportEntry_.[[LocalName]].
-                  1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _exportEntry_.[[ExportName]] } to _indirectExportEntries_.
+                  1. Let _importEntry_ be the element of _importEntries_ whose [[LocalName]] is _exportEntry_.[[LocalName]].
+                  1. Append the ExportEntry Record { [[ModuleRequest]]: _importEntry_.[[ModuleRequest]], [[ImportName]]: _importEntry_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _exportEntry_.[[ExportName]] } to _indirectExportEntries_.
               1. Else if _exportEntry_.[[ImportName]] is ~all-but-default~, then
                 1. Assert: _exportEntry_.[[ExportName]] is *null*.
                 1. Append _exportEntry_ to _starExportEntries_.
@@ -28511,22 +28511,22 @@
                 1. Return a new empty List.
               1. Append _module_ to _exportStarSet_.
               1. Let _exportedNames_ be a new empty List.
-              1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
+              1. For each ExportEntry Record _exportEntry_ of _module_.[[LocalExportEntries]], do
                 1. Assert: _module_ provides the direct binding for this export.
-                1. Assert: _e_.[[ExportName]] is not *null*.
-                1. Append _e_.[[ExportName]] to _exportedNames_.
-              1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
+                1. Assert: _exportEntry_.[[ExportName]] is not *null*.
+                1. Append _exportEntry_.[[ExportName]] to _exportedNames_.
+              1. For each ExportEntry Record _exportEntry_ of _module_.[[IndirectExportEntries]], do
                 1. Assert: _module_ imports a specific binding for this export.
-                1. Assert: _e_.[[ExportName]] is not *null*.
-                1. Append _e_.[[ExportName]] to _exportedNames_.
-              1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
-                1. Assert: _e_.[[ModuleRequest]] is not *null*.
-                1. Let _requestedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
+                1. Assert: _exportEntry_.[[ExportName]] is not *null*.
+                1. Append _exportEntry_.[[ExportName]] to _exportedNames_.
+              1. For each ExportEntry Record _exportEntry_ of _module_.[[StarExportEntries]], do
+                1. Assert: _exportEntry_.[[ModuleRequest]] is not *null*.
+                1. Let _requestedModule_ be GetImportedModule(_module_, _exportEntry_.[[ModuleRequest]]).
                 1. Let _starNames_ be _requestedModule_.GetExportedNames(_exportStarSet_).
-                1. For each element _n_ of _starNames_, do
-                  1. If _n_ is not *"default"*, then
-                    1. If _exportedNames_ does not contain _n_, then
-                      1. Append _n_ to _exportedNames_.
+                1. For each element _name_ of _starNames_, do
+                  1. If _name_ is not *"default"*, then
+                    1. If _exportedNames_ does not contain _name_, then
+                      1. Append _name_ to _exportedNames_.
               1. Return _exportedNames_.
             </emu-alg>
             <emu-note>
@@ -28560,28 +28560,28 @@
                   1. Assert: This is a circular import request.
                   1. Return *null*.
               1. Append the Record { [[Module]]: _module_, [[ExportName]]: _exportName_ } to _resolveSet_.
-              1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
-                1. If _e_.[[ExportName]] is _exportName_, then
+              1. For each ExportEntry Record _exportEntry_ of _module_.[[LocalExportEntries]], do
+                1. If _exportEntry_.[[ExportName]] is _exportName_, then
                   1. Assert: _module_ provides the direct binding for this export.
-                  1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }.
-              1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
-                1. If _e_.[[ExportName]] is _exportName_, then
-                  1. Assert: _e_.[[ModuleRequest]] is not *null*.
-                  1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
-                  1. If _e_.[[ImportName]] is ~namespace~, then
+                  1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _exportEntry_.[[LocalName]] }.
+              1. For each ExportEntry Record _exportEntry_ of _module_.[[IndirectExportEntries]], do
+                1. If _exportEntry_.[[ExportName]] is _exportName_, then
+                  1. Assert: _exportEntry_.[[ModuleRequest]] is not *null*.
+                  1. Let _importedModule_ be GetImportedModule(_module_, _exportEntry_.[[ModuleRequest]]).
+                  1. If _exportEntry_.[[ImportName]] is ~namespace~, then
                     1. Assert: _module_ does not provide the direct binding for this export.
                     1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
                   1. Assert: _module_ imports a specific binding for this export.
-                  1. Assert: _e_.[[ImportName]] is a String.
-                  1. Return _importedModule_.ResolveExport(_e_.[[ImportName]], _resolveSet_).
+                  1. Assert: _exportEntry_.[[ImportName]] is a String.
+                  1. Return _importedModule_.ResolveExport(_exportEntry_.[[ImportName]], _resolveSet_).
               1. If _exportName_ is *"default"*, then
                 1. Assert: A `default` export was not explicitly defined by this module.
                 1. Return *null*.
                 1. NOTE: A `default` export cannot be provided by an `export * from "mod"` declaration.
               1. Let _starResolution_ be *null*.
-              1. For each ExportEntry Record _e_ of _module_.[[StarExportEntries]], do
-                1. Assert: _e_.[[ModuleRequest]] is not *null*.
-                1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
+              1. For each ExportEntry Record _exportEntry_ of _module_.[[StarExportEntries]], do
+                1. Assert: _exportEntry_.[[ModuleRequest]] is not *null*.
+                1. Let _importedModule_ be GetImportedModule(_module_, _exportEntry_.[[ModuleRequest]]).
                 1. Let _resolution_ be _importedModule_.ResolveExport(_exportName_, _resolveSet_).
                 1. If _resolution_ is ~ambiguous~, return ~ambiguous~.
                 1. If _resolution_ is not *null*, then
@@ -28610,9 +28610,9 @@
             </dl>
 
             <emu-alg>
-              1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
-                1. Assert: _e_.[[ExportName]] is not *null*.
-                1. Let _resolution_ be _module_.ResolveExport(_e_.[[ExportName]]).
+              1. For each ExportEntry Record _exportEntry_ of _module_.[[IndirectExportEntries]], do
+                1. Assert: _exportEntry_.[[ExportName]] is not *null*.
+                1. Let _resolution_ be _module_.ResolveExport(_exportEntry_.[[ExportName]]).
                 1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
                 1. Assert: _resolution_ is a ResolvedBinding Record.
               1. Assert: All named exports from _module_ are resolvable.
@@ -28620,22 +28620,22 @@
               1. Assert: _realm_ is not *undefined*.
               1. Let _envRecord_ be NewModuleEnvironment(_realm_.[[GlobalEnv]]).
               1. Set _module_.[[Environment]] to _envRecord_.
-              1. For each ImportEntry Record _in_ of _module_.[[ImportEntries]], do
-                1. Let _importedModule_ be GetImportedModule(_module_, _in_.[[ModuleRequest]]).
-                1. If _in_.[[ImportName]] is ~namespace~, then
+              1. For each ImportEntry Record _importEntry_ of _module_.[[ImportEntries]], do
+                1. Let _importedModule_ be GetImportedModule(_module_, _importEntry_.[[ModuleRequest]]).
+                1. If _importEntry_.[[ImportName]] is ~namespace~, then
                   1. Let _namespace_ be GetModuleNamespace(_importedModule_).
-                  1. Perform ! _envRecord_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
-                  1. Perform ! _envRecord_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+                  1. Perform ! _envRecord_.CreateImmutableBinding(_importEntry_.[[LocalName]], *true*).
+                  1. Perform ! _envRecord_.InitializeBinding(_importEntry_.[[LocalName]], _namespace_).
                 1. Else,
-                  1. Assert: _in_.[[ImportName]] is a String.
-                  1. Let _resolution_ be _importedModule_.ResolveExport(_in_.[[ImportName]]).
+                  1. Assert: _importEntry_.[[ImportName]] is a String.
+                  1. Let _resolution_ be _importedModule_.ResolveExport(_importEntry_.[[ImportName]]).
                   1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
                   1. If _resolution_.[[BindingName]] is ~namespace~, then
                     1. Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]]).
-                    1. Perform ! _envRecord_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
-                    1. Perform ! _envRecord_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+                    1. Perform ! _envRecord_.CreateImmutableBinding(_importEntry_.[[LocalName]], *true*).
+                    1. Perform ! _envRecord_.InitializeBinding(_importEntry_.[[LocalName]], _namespace_).
                   1. Else,
-                    1. Perform CreateImportBinding(_envRecord_, _in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+                    1. Perform CreateImportBinding(_envRecord_, _importEntry_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
               1. Let _moduleContext_ be a new ECMAScript code execution context.
               1. Set the Function of _moduleContext_ to *null*.
               1. Assert: _module_.[[Realm]] is not *undefined*.
@@ -28649,23 +28649,23 @@
               1. Let _code_ be _module_.[[ECMAScriptCode]].
               1. Let _variableDecls_ be the VarScopedDeclarations of _code_.
               1. Let _declaredVariableNames_ be a new empty List.
-              1. For each element _d_ of _variableDecls_, do
-                1. For each element _dn_ of the BoundNames of _d_, do
-                  1. If _declaredVariableNames_ does not contain _dn_, then
-                    1. Perform ! _envRecord_.CreateMutableBinding(_dn_, *false*).
-                    1. Perform ! _envRecord_.InitializeBinding(_dn_, *undefined*).
-                    1. Append _dn_ to _declaredVariableNames_.
+              1. For each element _variableDecl_ of _variableDecls_, do
+                1. For each element _name_ of the BoundNames of _variableDecl_, do
+                  1. If _declaredVariableNames_ does not contain _name_, then
+                    1. Perform ! _envRecord_.CreateMutableBinding(_name_, *false*).
+                    1. Perform ! _envRecord_.InitializeBinding(_name_, *undefined*).
+                    1. Append _name_ to _declaredVariableNames_.
               1. Let _lexicalDecls_ be the LexicallyScopedDeclarations of _code_.
               1. Let _privateEnv_ be *null*.
-              1. For each element _d_ of _lexicalDecls_, do
-                1. For each element _dn_ of the BoundNames of _d_, do
-                  1. If IsConstantDeclaration of _d_ is *true*, then
-                    1. Perform ! _envRecord_.CreateImmutableBinding(_dn_, *true*).
+              1. For each element _lexicalDecl_ of _lexicalDecls_, do
+                1. For each element _name_ of the BoundNames of _lexicalDecl_, do
+                  1. If IsConstantDeclaration of _lexicalDecl_ is *true*, then
+                    1. Perform ! _envRecord_.CreateImmutableBinding(_name_, *true*).
                   1. Else,
-                    1. Perform ! _envRecord_.CreateMutableBinding(_dn_, *false*).
-                  1. If _d_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
-                    1. Let _funcObj_ be InstantiateFunctionObject of _d_ with arguments _envRecord_ and _privateEnv_.
-                    1. Perform ! _envRecord_.InitializeBinding(_dn_, _funcObj_).
+                    1. Perform ! _envRecord_.CreateMutableBinding(_name_, *false*).
+                  1. If _lexicalDecl_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
+                    1. Let _funcObj_ be InstantiateFunctionObject of _lexicalDecl_ with arguments _envRecord_ and _privateEnv_.
+                    1. Perform ! _envRecord_.InitializeBinding(_name_, _funcObj_).
               1. Remove _moduleContext_ from the execution context stack.
               1. Return ~unused~.
             </emu-alg>
@@ -29955,32 +29955,32 @@
           1. If AllPrivateIdentifiersValid of _body_ with argument _privateIdentifiers_ is *false*, throw a *SyntaxError* exception.
           1. Let _funcsToInitialize_ be a new empty List.
           1. Let _declaredFuncNames_ be a new empty List.
-          1. For each element _d_ of _variableDecls_, in reverse List order, do
-            1. If _d_ is not either a |VariableDeclaration|, a |ForBinding|, or a |BindingIdentifier|, then
-              1. Assert: _d_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|.
+          1. For each element _variableDecl_ of _variableDecls_, in reverse List order, do
+            1. If _variableDecl_ is not either a |VariableDeclaration|, a |ForBinding|, or a |BindingIdentifier|, then
+              1. Assert: _variableDecl_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|.
               1. NOTE: If there are multiple function declarations for the same name, the last declaration is used.
-              1. Let _func_ be the sole element of the BoundNames of _d_.
-              1. If _declaredFuncNames_ does not contain _func_, then
+              1. Let _funcName_ be the sole element of the BoundNames of _variableDecl_.
+              1. If _declaredFuncNames_ does not contain _funcName_, then
                 1. If _variableEnv_ is a Global Environment Record, then
-                  1. Let _funcDefinable_ be ? CanDeclareGlobalFunction(_variableEnv_, _func_).
+                  1. Let _funcDefinable_ be ? CanDeclareGlobalFunction(_variableEnv_, _funcName_).
                   1. If _funcDefinable_ is *false*, throw a *TypeError* exception.
-                1. Append _func_ to _declaredFuncNames_.
-                1. Insert _d_ as the first element of _funcsToInitialize_.
+                1. Append _funcName_ to _declaredFuncNames_.
+                1. Insert _variableDecl_ as the first element of _funcsToInitialize_.
           1. Let _declaredVariableNames_ be a new empty List.
-          1. For each element _d_ of _variableDecls_, do
-            1. If _d_ is either a |VariableDeclaration|, a |ForBinding|, or a |BindingIdentifier|, then
-              1. For each String _vn_ of the BoundNames of _d_, do
-                1. If _declaredFuncNames_ does not contain _vn_, then
+          1. For each element _variableDecl_ of _variableDecls_, do
+            1. If _variableDecl_ is either a |VariableDeclaration|, a |ForBinding|, or a |BindingIdentifier|, then
+              1. For each String _name_ of the BoundNames of _variableDecl_, do
+                1. If _declaredFuncNames_ does not contain _name_, then
                   1. If _variableEnv_ is a Global Environment Record, then
-                    1. Let _vnDefinable_ be ? CanDeclareGlobalVar(_variableEnv_, _vn_).
-                    1. If _vnDefinable_ is *false*, throw a *TypeError* exception.
-                  1. If _declaredVariableNames_ does not contain _vn_, then
-                    1. Append _vn_ to _declaredVariableNames_.
+                    1. Let _variableDefinable_ be ? CanDeclareGlobalVar(_variableEnv_, _name_).
+                    1. If _variableDefinable_ is *false*, throw a *TypeError* exception.
+                  1. If _declaredVariableNames_ does not contain _name_, then
+                    1. Append _name_ to _declaredVariableNames_.
           1. [id="step-evaldeclarationinstantiation-web-compat-insertion-point", normative-optional] If _strict_ is *false* and the host is a web browser or otherwise supports <emu-xref href="#sec-block-level-function-declarations-web-legacy-compatibility-semantics" title></emu-xref>, then
             1. Let _declaredFuncOrVariableNames_ be the list-concatenation of _declaredFuncNames_ and _declaredVariableNames_.
-            1. For each |FunctionDeclaration| _f_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _body_ Contains _x_ is *true*, do
-              1. Let _funcName_ be the StringValue of the |BindingIdentifier| of _f_.
-              1. If replacing the |FunctionDeclaration| _f_ with a |VariableStatement| that has _funcName_ as a |BindingIdentifier| would not produce any Early Errors for _body_, then
+            1. For each |FunctionDeclaration| _funcDecl_ that is directly contained in the |StatementList| of any |Block|, |CaseClause|, or |DefaultClause| _x_ such that _body_ Contains _x_ is *true*, do
+              1. Let _funcName_ be the StringValue of the |BindingIdentifier| of _funcDecl_.
+              1. If replacing the |FunctionDeclaration| _funcDecl_ with a |VariableStatement| that has _funcName_ as a |BindingIdentifier| would not produce any Early Errors for _body_, then
                 1. Let _bindingExists_ be *false*.
                 1. Set _thisEnv_ to _lexicalEnv_.
                 1. Assert: The following loop will terminate.
@@ -30009,43 +30009,43 @@
                         1. Perform ! _variableEnv_.CreateMutableBinding(_funcName_, *true*).
                         1. Perform ! _variableEnv_.InitializeBinding(_funcName_, *undefined*).
                     1. Append _funcName_ to _declaredFuncOrVariableNames_.
-                  1. [id="step-evaldeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _f_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
-                    1. Let _gEnv_ be the running execution context's VariableEnvironment.
-                    1. Let _bEnv_ be the running execution context's LexicalEnvironment.
-                    1. Let _fObj_ be ! _bEnv_.GetBindingValue(_funcName_, *false*).
-                    1. Perform ? <emu-meta effects="user-code">_gEnv_.SetMutableBinding(_funcName_, _fObj_, *false*)</emu-meta>.
+                  1. [id="step-evaldeclarationinstantiation-alt-funcdecl-eval"] When the |FunctionDeclaration| _funcDecl_ is evaluated, perform the following steps in place of the |FunctionDeclaration| Evaluation algorithm provided in <emu-xref href="#sec-function-definitions-runtime-semantics-evaluation"></emu-xref>:
+                    1. Let _globalEnv_ be the running execution context's VariableEnvironment.
+                    1. Let _blockEnv_ be the running execution context's LexicalEnvironment.
+                    1. Let _funcObj_ be ! _blockEnv_.GetBindingValue(_funcName_, *false*).
+                    1. Perform ? <emu-meta effects="user-code">_globalEnv_.SetMutableBinding(_funcName_, _funcObj_, *false*)</emu-meta>.
                     1. Return ~unused~.
           1. [id="step-evaldeclarationinstantiation-post-validation"] NOTE: No abnormal terminations occur after this algorithm step unless _variableEnv_ is a Global Environment Record and the global object is a Proxy exotic object.
           1. Let _lexicalDecls_ be the LexicallyScopedDeclarations of _body_.
-          1. For each element _d_ of _lexicalDecls_, do
+          1. For each element _lexicalDecl_ of _lexicalDecls_, do
             1. NOTE: Lexically declared names are only instantiated here but not initialized.
-            1. For each element _dn_ of the BoundNames of _d_, do
-              1. If IsConstantDeclaration of _d_ is *true*, then
-                1. Perform ? _lexicalEnv_.CreateImmutableBinding(_dn_, *true*).
+            1. For each element _name_ of the BoundNames of _lexicalDecl_, do
+              1. If IsConstantDeclaration of _lexicalDecl_ is *true*, then
+                1. Perform ? _lexicalEnv_.CreateImmutableBinding(_name_, *true*).
               1. Else,
-                1. Perform ? _lexicalEnv_.CreateMutableBinding(_dn_, *false*).
-          1. For each Parse Node _f_ of _funcsToInitialize_, do
-            1. Let _func_ be the sole element of the BoundNames of _f_.
-            1. Let _funcObj_ be InstantiateFunctionObject of _f_ with arguments _lexicalEnv_ and _privateEnv_.
+                1. Perform ? _lexicalEnv_.CreateMutableBinding(_name_, *false*).
+          1. For each Parse Node _funcDecl_ of _funcsToInitialize_, do
+            1. Let _funcName_ be the sole element of the BoundNames of _funcDecl_.
+            1. Let _funcObj_ be InstantiateFunctionObject of _funcDecl_ with arguments _lexicalEnv_ and _privateEnv_.
             1. If _variableEnv_ is a Global Environment Record, then
-              1. Perform ? CreateGlobalFunctionBinding(_variableEnv_, _func_, _funcObj_, *true*).
+              1. Perform ? CreateGlobalFunctionBinding(_variableEnv_, _funcName_, _funcObj_, *true*).
             1. Else,
-              1. Let _bindingExists_ be ! _variableEnv_.HasBinding(_func_).
+              1. Let _bindingExists_ be ! _variableEnv_.HasBinding(_funcName_).
               1. If _bindingExists_ is *false*, then
                 1. NOTE: The following invocation cannot return an abrupt completion because of the validation preceding step <emu-xref href="#step-evaldeclarationinstantiation-post-validation"></emu-xref>.
-                1. Perform ! _variableEnv_.CreateMutableBinding(_func_, *true*).
-                1. Perform ! _variableEnv_.InitializeBinding(_func_, _funcObj_).
+                1. Perform ! _variableEnv_.CreateMutableBinding(_funcName_, *true*).
+                1. Perform ! _variableEnv_.InitializeBinding(_funcName_, _funcObj_).
               1. Else,
-                1. Perform ! _variableEnv_.SetMutableBinding(_func_, _funcObj_, *false*).
-          1. For each String _vn_ of _declaredVariableNames_, do
+                1. Perform ! _variableEnv_.SetMutableBinding(_funcName_, _funcObj_, *false*).
+          1. For each String _variableName_ of _declaredVariableNames_, do
             1. If _variableEnv_ is a Global Environment Record, then
-              1. Perform ? CreateGlobalVarBinding(_variableEnv_, _vn_, *true*).
+              1. Perform ? CreateGlobalVarBinding(_variableEnv_, _variableName_, *true*).
             1. Else,
-              1. Let _bindingExists_ be ! _variableEnv_.HasBinding(_vn_).
+              1. Let _bindingExists_ be ! _variableEnv_.HasBinding(_variableName_).
               1. If _bindingExists_ is *false*, then
                 1. NOTE: The following invocation cannot return an abrupt completion because of the validation preceding step <emu-xref href="#step-evaldeclarationinstantiation-post-validation"></emu-xref>.
-                1. Perform ! _variableEnv_.CreateMutableBinding(_vn_, *true*).
-                1. Perform ! _variableEnv_.InitializeBinding(_vn_, *undefined*).
+                1. Perform ! _variableEnv_.CreateMutableBinding(_variableName_, *true*).
+                1. Perform ! _variableEnv_.InitializeBinding(_variableName_, *undefined*).
           1. Return ~unused~.
         </emu-alg>
       </emu-clause>
@@ -30586,8 +30586,8 @@
         <p>This function copies the values of all of the enumerable own properties from one or more source objects to a _target_ object.</p>
         <p>It performs the following steps when called:</p>
         <emu-alg>
-          1. Let _to_ be ? ToObject(_target_).
-          1. If only one argument was passed, return _to_.
+          1. Let _targetObj_ be ? ToObject(_target_).
+          1. If only one argument was passed, return _targetObj_.
           1. For each element _nextSource_ of _sources_, do
             1. If _nextSource_ is neither *undefined* nor *null*, then
               1. Let _from_ be ! ToObject(_nextSource_).
@@ -30596,8 +30596,8 @@
                 1. Let _propertyDesc_ be ? <emu-meta effects="user-code">_from_.[[GetOwnProperty]](_nextKey_)</emu-meta>.
                 1. If _propertyDesc_ is not *undefined* and _propertyDesc_.[[Enumerable]] is *true*, then
                   1. Let _propertyValue_ be ? Get(_from_, _nextKey_).
-                  1. Perform ? Set(_to_, _nextKey_, _propertyValue_, *true*).
-          1. Return _to_.
+                  1. Perform ? Set(_targetObj_, _nextKey_, _propertyValue_, *true*).
+          1. Return _targetObj_.
         </emu-alg>
         <p>The *"length"* property of this function is *2*<sub>𝔽</sub>.</p>
       </emu-clause>
@@ -30785,9 +30785,9 @@
         <emu-alg>
           1. Let _groups_ be ? GroupBy(_items_, _callback_, ~property~).
           1. Let _obj_ be OrdinaryObjectCreate(*null*).
-          1. For each Record { [[Key]], [[Elements]] } _g_ of _groups_, do
-            1. Let _elements_ be CreateArrayFromList(_g_.[[Elements]]).
-            1. Perform ! CreateDataPropertyOrThrow(_obj_, _g_.[[Key]], _elements_).
+          1. For each Record { [[Key]], [[Elements]] } _group_ of _groups_, do
+            1. Let _elements_ be CreateArrayFromList(_group_.[[Elements]]).
+            1. Perform ! CreateDataPropertyOrThrow(_obj_, _group_.[[Key]], _elements_).
           1. Return _obj_.
         </emu-alg>
       </emu-clause>
@@ -31718,10 +31718,10 @@
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Let _propertyDesc_ be _symbol_.[[Description]].
-            1. If _propertyDesc_ is *undefined*, set _propertyDesc_ to the empty String.
-            1. Assert: _propertyDesc_ is a String.
-            1. Return the string-concatenation of *"Symbol("*, _propertyDesc_, and *")"*.
+            1. Let _description_ be _symbol_.[[Description]].
+            1. If _description_ is *undefined*, set _description_ to the empty String.
+            1. Assert: _description_ is a String.
+            1. Return the string-concatenation of *"Symbol("*, _description_, and *")"*.
           </emu-alg>
         </emu-clause>
       </emu-clause>
@@ -32575,9 +32575,9 @@
         <emu-alg>
           1. Set _bits_ to ? ToIndex(_bits_).
           1. Set _bigint_ to ? ToBigInt(_bigint_).
-          1. Let _module_ be ℝ(_bigint_) modulo 2<sup>_bits_</sup>.
-          1. If _module_ ≥ 2<sup>_bits_ - 1</sup>, return ℤ(_module_ - 2<sup>_bits_</sup>).
-          1. Return ℤ(_module_).
+          1. Let _remainder_ be ℝ(_bigint_) modulo 2<sup>_bits_</sup>.
+          1. If _remainder_ ≥ 2<sup>_bits_ - 1</sup>, return ℤ(_remainder_ - 2<sup>_bits_</sup>).
+          1. Return ℤ(_remainder_).
         </emu-alg>
       </emu-clause>
 
@@ -37352,9 +37352,9 @@ THH:mm:ss.sss
         </emu-alg>
         <emu-grammar>RegExpIdentifierName :: RegExpIdentifierName RegExpIdentifierPart</emu-grammar>
         <emu-alg>
-          1. Let _cps_ be the RegExpIdentifierCodePoints of the derived |RegExpIdentifierName|.
+          1. Let _codePoints_ be the RegExpIdentifierCodePoints of the derived |RegExpIdentifierName|.
           1. Let _codePoint_ be the RegExpIdentifierCodePoint of |RegExpIdentifierPart|.
-          1. Return the list-concatenation of _cps_ and « _codePoint_ ».
+          1. Return the list-concatenation of _codePoints_ and « _codePoint_ ».
         </emu-alg>
       </emu-clause>
 
@@ -48146,8 +48146,8 @@ THH:mm:ss.sss
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
           1. If IsCallable(_cleanupCallback_) is *false*, throw a *TypeError* exception.
           1. Let _finalizationRegistry_ be ? OrdinaryCreateFromConstructor(NewTarget, *"%FinalizationRegistry.prototype%"*, « [[Realm]], [[CleanupCallback]], [[Cells]] »).
-          1. Let _func_ be the active function object.
-          1. Set _finalizationRegistry_.[[Realm]] to _func_.[[Realm]].
+          1. Let _activeFunc_ be the active function object.
+          1. Set _finalizationRegistry_.[[Realm]] to _activeFunc_.[[Realm]].
           1. Set _finalizationRegistry_.[[CleanupCallback]] to HostMakeJobCallback(_cleanupCallback_).
           1. Set _finalizationRegistry_.[[Cells]] to a new empty List.
           1. Return _finalizationRegistry_.
@@ -51726,12 +51726,12 @@ THH:mm:ss.sss
           1. Let _proxy_ be ? ProxyCreate(_target_, _handler_).
           1. Let _revokerClosure_ be a new Abstract Closure with no parameters that captures nothing and performs the following steps when called:
             1. Let _activeFunc_ be the active function object.
-            1. Let _p_ be _activeFunc_.[[RevocableProxy]].
-            1. If _p_ is *null*, return NormalCompletion(*undefined*).
+            1. Let _revocableProxy_ be _activeFunc_.[[RevocableProxy]].
+            1. If _revocableProxy_ is *null*, return NormalCompletion(*undefined*).
             1. Set _activeFunc_.[[RevocableProxy]] to *null*.
-            1. Assert: _p_ is a Proxy exotic object.
-            1. Set _p_.[[ProxyTarget]] to *null*.
-            1. Set _p_.[[ProxyHandler]] to *null*.
+            1. Assert: _revocableProxy_ is a Proxy exotic object.
+            1. Set _revocableProxy_.[[ProxyTarget]] to *null*.
+            1. Set _revocableProxy_.[[ProxyHandler]] to *null*.
             1. Return NormalCompletion(*undefined*).
           1. Let _revoker_ be CreateBuiltinFunction(_revokerClosure_, 0, *""*, « [[RevocableProxy]] »).
           1. Set _revoker_.[[RevocableProxy]] to _proxy_.
@@ -52005,8 +52005,8 @@ THH:mm:ss.sss
       </dl>
       <emu-alg>
         1. Let _events_ be an empty Set.
-        1. For each Agent Events Record _aer_ of _execution_.[[EventsRecords]], do
-          1. For each Memory event _event_ of _aer_.[[EventList]], do
+        1. For each Agent Events Record _eventsRecord_ of _execution_.[[EventsRecords]], do
+          1. For each Memory event _event_ of _eventsRecord_.[[EventList]], do
             1. Add _event_ to _events_.
         1. Return _events_.
       </emu-alg>
@@ -52102,7 +52102,7 @@ THH:mm:ss.sss
       <h1>is-agent-order-before</h1>
       <p>For a candidate execution _execution_, its <dfn>is-agent-order-before</dfn> Relation is the least Relation on Memory events that satisfies the following.</p>
       <ul>
-        <li>For events _eventA_ and _eventB_, _eventA_ is-agent-order-before _eventB_ in _execution_ if there is some Agent Events Record _aer_ in _execution_.[[EventsRecords]] such that _aer_.[[EventList]] contains both _eventA_ and _eventB_ and _eventA_ is before _eventB_ in List order of _aer_.[[EventList]].</li>
+        <li>For events _eventA_ and _eventB_, _eventA_ is-agent-order-before _eventB_ in _execution_ if there is some Agent Events Record _eventsRecord_ in _execution_.[[EventsRecords]] such that _eventsRecord_.[[EventList]] contains both _eventA_ and _eventB_ and _eventA_ is before _eventB_ in List order of _eventsRecord_.[[EventList]].</li>
       </ul>
 
       <emu-note>
