@@ -50727,6 +50727,22 @@ THH:mm:ss.sss
         </emu-table>
       </emu-clause>
 
+      <emu-clause id="sec-createkeyedpromisecombinatorresultobject" type="abstract operation" number="10">
+        <h1>
+          CreateKeyedPromiseCombinatorResultObject (
+            _entries_: a List of Records with fields [[Key]] (a property key) and [[Value]] (an ECMAScript language value),
+          ): an Object
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Let _obj_ be OrdinaryObjectCreate(*null*).
+          1. For each Record { [[Key]], [[Value]] } _entry_ of _entries_, do
+            1. Perform ! CreateDataPropertyOrThrow(_obj_, _entry_.[[Key]], _entry_.[[Value]]).
+          1. Return _obj_.
+        </emu-alg>
+      </emu-clause>
+
       <emu-clause id="sec-createresolvingfunctions" oldids="sec-promise-reject-functions,sec-promise-resolve-functions" type="abstract operation">
         <h1>
           CreateResolvingFunctions (
@@ -51113,6 +51129,105 @@ THH:mm:ss.sss
         </emu-clause>
       </emu-clause>
 
+      <emu-clause id="sec-promise.allkeyed">
+        <h1>Promise.allKeyed ( _promises_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _ctor_ be the *this* value.
+          1. Let _promiseCapability_ be ? NewPromiseCapability(_ctor_).
+          1. Let _promiseResolve_ be Completion(GetPromiseResolve(_ctor_)).
+          1. IfAbruptRejectPromise(_promiseResolve_, _promiseCapability_).
+          1. If _promises_ is not an Object, then
+            1. Let _error_ be a newly created *TypeError* object.
+            1. Perform ? Call(_promiseCapability_.[[Reject]], *undefined*, « _error_ »).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _result_ be Completion(PerformPromiseAllKeyed(~all~, _promises_, _ctor_, _promiseCapability_, _promiseResolve_)).
+          1. IfAbruptRejectPromise(_result_, _promiseCapability_).
+          1. Return _promiseCapability_.[[Promise]].
+        </emu-alg>
+        <emu-note>
+          <p>This function requires its *this* value to be a constructor function that supports the parameter conventions of the Promise constructor.</p>
+        </emu-note>
+
+        <emu-clause id="sec-performpromiseallkeyed" type="abstract operation">
+          <h1>
+            PerformPromiseAllKeyed (
+              _variant_: ~all~ or ~all-settled~,
+              _promises_: an Object,
+              _ctor_: a constructor,
+              _resultCapability_: a PromiseCapability Record,
+              _promiseResolve_: a function object,
+            ): either a normal completion containing an Object or a throw completion
+          </h1>
+          <dl class="header">
+          </dl>
+          <emu-alg>
+            1. Let _allKeys_ be ? _promises_.[[OwnPropertyKeys]]().
+            1. Let _entries_ be a new empty List.
+            1. Let _remainingElementsCount_ be the Record { [[Value]]: 1 }.
+            1. Let _index_ be 0.
+            1. For each element _key_ of _allKeys_, do
+              1. Let _propertyDesc_ be ? _promises_.[[GetOwnProperty]](_key_).
+              1. If _propertyDesc_ is not *undefined* and _propertyDesc_.[[Enumerable]] is *true*, then
+                1. Let _propertyValue_ be ? Get(_promises_, _key_).
+                1. Append the Record { [[Key]]: _key_, [[Value]]: *undefined* } to _entries_.
+                1. Let _nextPromise_ be ? Call(_promiseResolve_, _ctor_, « _propertyValue_ »).
+                1. Let _alreadyCalled_ be the Record { [[Value]]: *false* }.
+                1. Let _fulfilledSteps_ be a new Abstract Closure with parameters (_value_) that captures _variant_, _entries_, _resultCapability_, and _remainingElementsCount_ and performs the following steps when called:
+                  1. Let _activeFunc_ be the active function object.
+                  1. If _activeFunc_.[[AlreadyCalled]].[[Value]] is *true*, return *undefined*.
+                  1. Set _activeFunc_.[[AlreadyCalled]].[[Value]] to *true*.
+                  1. Let _thisIndex_ be _activeFunc_.[[Index]].
+                  1. If _variant_ is ~all~, then
+                    1. Set _entries_[_thisIndex_].[[Value]] to _value_.
+                  1. Else,
+                    1. Assert: _variant_ is ~all-settled~.
+                    1. Let _obj_ be OrdinaryObjectCreate(%Object.prototype%).
+                    1. Perform ! CreateDataPropertyOrThrow(_obj_, *"status"*, *"fulfilled"*).
+                    1. Perform ! CreateDataPropertyOrThrow(_obj_, *"value"*, _value_).
+                    1. Set _entries_[_thisIndex_].[[Value]] to _obj_.
+                  1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+                  1. If _remainingElementsCount_.[[Value]] = 0, then
+                    1. Let _result_ be CreateKeyedPromiseCombinatorResultObject(_entries_).
+                    1. Return ? Call(_resultCapability_.[[Resolve]], *undefined*, « _result_ »).
+                  1. Return *undefined*.
+                1. Let _onFulfilled_ be CreateBuiltinFunction(_fulfilledSteps_, 1, *""*, « [[AlreadyCalled]], [[Index]] »).
+                1. Set _onFulfilled_.[[AlreadyCalled]] to _alreadyCalled_.
+                1. Set _onFulfilled_.[[Index]] to _index_.
+                1. If _variant_ is ~all~, then
+                  1. Let _onRejected_ be _resultCapability_.[[Reject]].
+                1. Else,
+                  1. Assert: _variant_ is ~all-settled~.
+                  1. Let _rejectedSteps_ be a new Abstract Closure with parameters (_error_) that captures _entries_, _resultCapability_, and _remainingElementsCount_ and performs the following steps when called:
+                    1. Let _activeFunc_ be the active function object.
+                    1. If _activeFunc_.[[AlreadyCalled]].[[Value]] is *true*, return *undefined*.
+                    1. Set _activeFunc_.[[AlreadyCalled]].[[Value]] to *true*.
+                    1. Let _thisIndex_ be _activeFunc_.[[Index]].
+                    1. Let _obj_ be OrdinaryObjectCreate(%Object.prototype%).
+                    1. Perform ! CreateDataPropertyOrThrow(_obj_, *"status"*, *"rejected"*).
+                    1. Perform ! CreateDataPropertyOrThrow(_obj_, *"reason"*, _error_).
+                    1. Set _entries_[_thisIndex_].[[Value]] to _obj_.
+                    1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+                    1. If _remainingElementsCount_.[[Value]] = 0, then
+                      1. Let _result_ be CreateKeyedPromiseCombinatorResultObject(_entries_).
+                      1. Return ? Call(_resultCapability_.[[Resolve]], *undefined*, « _result_ »).
+                    1. Return *undefined*.
+                  1. Let _onRejected_ be CreateBuiltinFunction(_rejectedSteps_, 1, *""*, « [[AlreadyCalled]], [[Index]] »).
+                  1. Set _onRejected_.[[AlreadyCalled]] to _alreadyCalled_.
+                  1. Set _onRejected_.[[Index]] to _index_.
+                1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] + 1.
+                1. Perform ? Invoke(_nextPromise_, *"then"*, « _onFulfilled_, _onRejected_ »).
+                1. Set _index_ to _index_ + 1.
+            1. Set _remainingElementsCount_.[[Value]] to _remainingElementsCount_.[[Value]] - 1.
+            1. If _remainingElementsCount_.[[Value]] = 0, then
+              1. NOTE: This can happen even if _entries_ is non-empty if an ill-behaved thenable synchronously invoked the callback passed to its *"then"* method.
+              1. Let _result_ be CreateKeyedPromiseCombinatorResultObject(_entries_).
+              1. Perform ? Call(_resultCapability_.[[Resolve]], *undefined*, « _result_ »).
+            1. Return _resultCapability_.[[Promise]].
+          </emu-alg>
+        </emu-clause>
+      </emu-clause>
+
       <emu-clause id="sec-promise.allsettled" type="built-in function">
         <h1>Promise.allSettled ( _iterable_ )</h1>
         <p>This function returns a promise that is fulfilled with an array of promise state snapshots, but only after all the original promises have settled, i.e. become either fulfilled or rejected. It resolves all elements of the passed iterable to promises as it runs this algorithm.</p>
@@ -51199,6 +51314,27 @@ THH:mm:ss.sss
               1. Perform ? Invoke(_nextPromise_, *"then"*, « _onFulfilled_, _onRejected_ »).
           </emu-alg>
         </emu-clause>
+      </emu-clause>
+
+      <emu-clause id="sec-promise.allsettledkeyed">
+        <h1>Promise.allSettledKeyed ( _promises_ )</h1>
+        <p>This method performs the following steps when called:</p>
+        <emu-alg>
+          1. Let _ctor_ be the *this* value.
+          1. Let _promiseCapability_ be ? NewPromiseCapability(_ctor_).
+          1. Let _promiseResolve_ be Completion(GetPromiseResolve(_ctor_)).
+          1. IfAbruptRejectPromise(_promiseResolve_, _promiseCapability_).
+          1. If _promises_ is not an Object, then
+            1. Let _error_ be a newly created *TypeError* object.
+            1. Perform ? Call(_promiseCapability_.[[Reject]], *undefined*, « _error_ »).
+            1. Return _promiseCapability_.[[Promise]].
+          1. Let _result_ be Completion(PerformPromiseAllKeyed(~all-settled~, _promises_, _ctor_, _promiseCapability_, _promiseResolve_)).
+          1. IfAbruptRejectPromise(_result_, _promiseCapability_).
+          1. Return _promiseCapability_.[[Promise]].
+        </emu-alg>
+        <emu-note>
+          <p>This function requires its *this* value to be a constructor function that supports the parameter conventions of the Promise constructor.</p>
+        </emu-note>
       </emu-clause>
 
       <emu-clause id="sec-promise.any" type="built-in function">
