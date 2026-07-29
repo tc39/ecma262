@@ -19011,8 +19011,7 @@
         </emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>. This rule is not applied if this |ObjectLiteral| is contained within a |Script| that is being parsed for ParseJSON (see step <emu-xref href="#step-json-parse-parse"></emu-xref> of ParseJSON).
-          </li>
+            It is a Syntax Error if the PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>. Note that the corresponding |JSONObject| production in ECMA-404 (which is used by the ParseJSON in this specification) does not raise a corresponding early error.
         </ul>
         <emu-note>
           <p>The List returned by PropertyNameList does not include property names defined using a |ComputedPropertyName|.</p>
@@ -47982,17 +47981,17 @@ THH:mm:ss.sss
         </h1>
         <dl class="header">
         </dl>
+        <emu-note>
+          <p>This algorithm references the |JSONValue| nonterminal from ECMA-404.</p>
+        </emu-note>
         <emu-alg>
           1. [id="step-json-parse-validate"] If StringToCodePoints(_text_) is not a valid JSON text as specified in ECMA-404, throw a *SyntaxError* exception.
           1. Let _scriptString_ be the string-concatenation of *"("*, _text_, and *");"*.
-          1. [id="step-json-parse-parse"] Let _script_ be ParseText(_scriptString_, |Script|).
-          1. NOTE: The early error rules defined in <emu-xref href="#sec-object-initializer-static-semantics-early-errors"></emu-xref> have special handling for the above invocation of ParseText.
-          1. Assert: _script_ is a Parse Node.
-          1. Let _jsonParseNode_ be ShallowestContainedJSONValue(_script_).
-          1. Assert: _jsonParseNode_ is not ~empty~.
+          1. [id="step-json-parse-parse"] Let _jsonParseNode_ be ParseText(_scriptString_, |JSONValue|).
+          1. Assert: _jsonParseNode_ is a Parse Node.
           1. [id="step-json-parse-eval"] Let _result_ be ! <emu-meta suppress-effects="user-code">JSONEvaluation of _jsonParseNode_</emu-meta>.
           1. [id="step-json-parse-assert-type"] Assert: _result_ is either a String, a Number, a Boolean, an Object that is defined by either an |ArrayLiteral| or an |ObjectLiteral|, or *null*.
-          1. Return the Record { [[ParseNode]]: _script_, [[Value]]: _result_ }.
+          1. Return the Record { [[ParseNode]]: _jsonParseNode_, [[Value]]: _result_ }.
         </emu-alg>
         <p>It is not permitted for a conforming implementation of `JSON.parse` to extend the JSON grammars. If an implementation wishes to support a modified or extended JSON interchange format it must do so by defining a different parse function.</p>
         <emu-note>
@@ -48057,14 +48056,13 @@ THH:mm:ss.sss
           <dd>It recursively combines a _parseNode_ parsed from JSON text and the _value_ produced by its evaluation.</dd>
         </dl>
         <emu-alg>
-          1. Let _typedValueNode_ be ShallowestContainedJSONValue(_parseNode_).
-          1. Assert: _typedValueNode_ is not ~empty~.
           1. Let _elements_ be a new empty List.
           1. Let _entries_ be a new empty List.
           1. If _value_ is an Object, then
             1. Let _isArray_ be ! <emu-meta suppress-effects="user-code">IsArray(_value_)</emu-meta>.
             1. If _isArray_ is *true*, then
-              1. Assert: _typedValueNode_ is an |ArrayLiteral| Parse Node.
+              1. Assert: _parseNode_ is a <emu-grammar>JSONValue : JSONArray</emu-grammar>.
+              1. Let _typedValueNode_ be the |JSONArray| Parse Node of _parseNode_.
               1. Let _contentNodes_ be the JSONArrayLiteralContentNodes of _typedValueNode_.
               1. Let _length_ be the number of elements in _contentNodes_.
               1. Let _valueLength_ be ! <emu-meta suppress-effects="user-code">LengthOfArrayLike(_value_)</emu-meta>.
@@ -48076,8 +48074,9 @@ THH:mm:ss.sss
                 1. Append _elementParseRecord_ to _elements_.
                 1. Set _index_ to _index_ + 1.
             1. Else,
-              1. Assert: _typedValueNode_ is an |ObjectLiteral| Parse Node.
-              1. Let _propertyNodes_ be the PropertyDefinitionNodes of _typedValueNode_.
+              1. Assert: _parseNode_ is a <emu-grammar>JSONValue : JSONObject</emu-grammar>.
+              1. Let _typedValueNode_ be the |JSONObject| Parse Node of _parseNode_.
+              1. Let _propertyNodes_ be the JSONObjectLiteralContentNodes of _typedValueNode_.
               1. NOTE: Because _value_ was produced from JSON text and has not been modified, all of its property keys are Strings and will be exhaustively enumerated.
               1. Let _keys_ be ! <emu-meta suppress-effects="user-code">EnumerableOwnProperties(_value_, ~key~)</emu-meta>.
               1. For each String _propertyKey_ of _keys_, do
@@ -48086,12 +48085,12 @@ THH:mm:ss.sss
                 1. For each Parse Node _propertyNode_ of _propertyNodes_, do
                   1. Let _propertyName_ be the PropName of _propertyNode_.
                   1. If _propertyName_ is _propertyKey_, set _propertyDefinition_ to _propertyNode_.
-                1. Assert: _propertyDefinition_ is <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>.
-                1. Let _propertyValueNode_ be the |AssignmentExpression| of _propertyDefinition_.
+                1. Assert: _propertyDefinition_ is <emu-grammar>JSONMember : JSONString `:` JSONValue</emu-grammar>.
+                1. Let _propertyValueNode_ be the |JSONValue| of _propertyDefinition_.
                 1. Let _entryParseRecord_ be CreateJSONParseRecord(_propertyValueNode_, _propertyKey_, ! <emu-meta suppress-effects="user-code">Get(_value_, _propertyKey_)</emu-meta>).
                 1. Append _entryParseRecord_ to _entries_.
           1. Else,
-            1. Assert: _typedValueNode_ is neither an |ArrayLiteral| Parse Node nor an |ObjectLiteral| Parse Node.
+            1. Assert: _typedValueNode_ is neither a |JSONArray| Parse Node nor a |JSONObject| Parse Node.
           1. Return the JSON Parse Record { [[ParseNode]]: _typedValueNode_, [[Key]]: _key_, [[Value]]: _value_, [[Elements]]: _elements_, [[Entries]]: _entries_ }.
         </emu-alg>
       </emu-clause>
@@ -48117,7 +48116,7 @@ THH:mm:ss.sss
           1. If _parseRecord_ is a JSON Parse Record and SameValue(_parseRecord_.[[Value]], _value_) is *true*, then
             1. If _value_ is not an Object, then
               1. Let _parseNode_ be _parseRecord_.[[ParseNode]].
-              1. Assert: _parseNode_ is neither an |ArrayLiteral| Parse Node nor an |ObjectLiteral| Parse Node.
+              1. Assert: _parseNode_ is neither a |JSONArray| Parse Node nor a |JSONObject| Parse Node.
               1. Let _sourceText_ be the source text matched by _parseNode_.
               1. Perform ! CreateDataPropertyOrThrow(_context_, *"source"*, CodePointsToString(_sourceText_)).
             1. Let _elementRecords_ be _parseRecord_.[[Elements]].
@@ -48153,134 +48152,148 @@ THH:mm:ss.sss
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-shallowestcontainedjsonvalue" type="abstract operation">
-        <h1>
-          Static Semantics: ShallowestContainedJSONValue (
-            _root_: a Parse Node,
-          ): a Parse Node or ~empty~
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>It performs a breadth-first search of the parse tree rooted at _root_, and returns the first node that is an instance of a nonterminal corresponding to a JSON value, or ~empty~ if there is no such node.</dd>
-        </dl>
-        <emu-alg>
-          1. Let _activeFunc_ be the active function object.
-          1. Assert: _activeFunc_ is a `JSON.parse` built-in function object (see <emu-xref href="#sec-json.parse">JSON.parse</emu-xref>).
-          1. Let _types_ be « |NullLiteral|, |BooleanLiteral|, |NumericLiteral|, |StringLiteral|, |ArrayLiteral|, |ObjectLiteral|, |UnaryExpression| ».
-          1. Let _unaryExpr_ be ~empty~.
-          1. Let _queue_ be « _root_ ».
-          1. Repeat, while _queue_ is not empty,
-            1. Let _candidate_ be the first element of _queue_.
-            1. Remove the first element from _queue_.
-            1. Let _queuedChildren_ be *false*.
-            1. For each nonterminal _type_ of _types_, do
-              1. If _candidate_ is an instance of _type_, then
-                1. NOTE: In the JSON grammar, a <code>number</code> token may represent a negative value. In ECMAScript, negation is represented as a unary operation in which a |UnaryExpression| parses to a `-` followed by a derived |UnaryExpression|.
-                1. If _type_ is |UnaryExpression|, then
-                  1. If the parent of _candidate_ is not a |UnaryExpression| Parse Node, set _unaryExpr_ to _candidate_.
-                1. Else if _type_ is |NumericLiteral|, then
-                  1. Assert: _candidate_ is contained within _unaryExpr_.
-                  1. Return _unaryExpr_.
-                1. Else,
-                  1. Return _candidate_.
-              1. If _queuedChildren_ is *false*, _candidate_ is an instance of a nonterminal, and _candidate_ Contains _type_ is *true*, then
-                1. Let _children_ be a List containing each child node of _candidate_, in order.
-                1. Set _queue_ to the list-concatenation of _queue_ and _children_.
-                1. Set _queuedChildren_ to *true*.
-          1. Return ~empty~.
-        </emu-alg>
-      </emu-clause>
-
       <emu-clause id="sec-static-semantics-jsonarrayliteralcontentnodes" type="sdo">
         <h1>Static Semantics: JSONArrayLiteralContentNodes ( ): a List of Parse Nodes</h1>
         <dl class="header">
         </dl>
         <emu-grammar>
-          ArrayLiteral :
-            `[` Elision? `]`
-            `[` ElementList `]`
-            `[` ElementList `,` Elision? `]`
+          JSONArray :
+            `[` `]`
+            `[` JSONElementList `]`
         </emu-grammar>
         <emu-alg>
-          1. Assert: |Elision| is not present.
-          1. If |ElementList| is not present, return a new empty List.
-          1. Return the JSONArrayLiteralContentNodes of |ElementList|.
+          1. If |JSONElementList| is not present, return a new empty List.
+          1. Return the JSONArrayLiteralContentNodes of |JSONElementList|.
         </emu-alg>
 
-        <emu-grammar>ElementList : Elision? AssignmentExpression</emu-grammar>
+        <emu-grammar>JSONElementList : JSONValue</emu-grammar>
         <emu-alg>
-          1. Assert: |Elision| is not present.
-          1. Return « |AssignmentExpression| ».
+          1. Return « |JSONValue| ».
         </emu-alg>
 
-        <emu-grammar>ElementList : ElementList `,` Elision? AssignmentExpression</emu-grammar>
+        <emu-grammar>JSONElementList : JSONElementList `,` JSONValue</emu-grammar>
         <emu-alg>
-          1. Assert: |Elision| is not present.
-          1. Let _elements_ be the JSONArrayLiteralContentNodes of the derived |ElementList|.
-          1. Return the list-concatenation of _elements_ and « |AssignmentExpression| ».
+          1. Let _elements_ be the JSONArrayLiteralContentNodes of the derived |JSONElementList|.
+          1. Return the list-concatenation of _elements_ and « |JSONValue| ».
         </emu-alg>
+      </emu-clause>
 
+      <emu-clause id="sec-static-semantics-jsonobjectliteralcontentnodes" type="sdo">
+        <h1>Static Semantics: JSONObjectLiteralContentNodes ( ): a List of Parse Nodes</h1>
+        <dl class="header">
+        </dl>
         <emu-grammar>
-          ElementList :
-            Elision? SpreadElement
-            ElementList `,` Elision? SpreadElement
+          JSONObject :
+            `{` `}`
+            `{` JSONMemberList `}`
         </emu-grammar>
         <emu-alg>
-          1. NOTE: JSON text as specified in ECMA-404 does not include |SpreadElement|.
-          1. Assert: This step is never reached.
+          1. If |JSONMemberList| is not present, return a new empty List.
+          1. Return the JSONObjectLiteralContentNodes of |JSONMemberList|.
+        </emu-alg>
+
+        <emu-grammar>JSONMemberList : JSONMember</emu-grammar>
+        <emu-alg>
+          1. Return « |JSONMember| ».
+        </emu-alg>
+
+        <emu-grammar>JSONMemberList : JSONMemberList `,` JSONMember</emu-grammar>
+        <emu-alg>
+          1. Let _elements_ be the JSONObjectLiteralContentNodes of the derived |JSONMemberList|.
+          1. Return the list-concatenation of _elements_ and « |JSONMember| ».
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-jsonevaluation" type="sdo">
-        <h1>Runtime Semantics: JSONEvaluation ( ): either a normal completion containing an ECMAScript language value or a throw completion</h1>
+        <h1>Runtime Semantics: JSONEvaluation ( ): an ECMAScript language value</h1>
         <dl class="header">
         </dl>
         <emu-grammar>
-          Literal :
-            NullLiteral
-            BooleanLiteral
-            NumericLiteral
-            StringLiteral
+          JSONValue : null
         </emu-grammar>
         <emu-alg>
-          1. Let _value_ be ! Evaluation of |Literal|.
-          1. Assert: _value_ is either a String, a Number, a Boolean, or *null*.
+          1. Return *null*.
+        </emu-alg>
+
+        <emu-grammar>
+          JSONValue : true
+        </emu-grammar>
+        <emu-alg>
+          1. Return *true*.
+        </emu-alg>
+
+        <emu-grammar>
+          JSONValue : false
+        </emu-grammar>
+        <emu-alg>
+          1. Return *false*.
+        </emu-alg>
+
+        <emu-grammar>
+          JSONValue : JSONNumber
+        </emu-grammar>
+        <emu-alg>
+          1. Let _source_ be the source text matched by |JSONNumber|.
+          1. Let _esNode_ be ParseText(_source_, |UnaryExpression|).
+          1. Assert: _esNode_ is a |UnaryExpression| Parse Node.
+          1. Let _completion_ be Evaluation of _esNode_.
+          1. Assert: _completion_ is not an abrupt completion.
+          1. Let _value_ be _completion_.[[Value]].
           1. Return _value_.
         </emu-alg>
 
         <emu-grammar>
-          UnaryExpression :
-            `delete` UnaryExpression
-            `void` UnaryExpression
-            `typeof` UnaryExpression
-            `+` UnaryExpression
-            `~` UnaryExpression
-            `!` UnaryExpression
-            CoverAwaitExpressionAndAwaitUsingDeclarationHead
+          JSONValue : JSONString
         </emu-grammar>
         <emu-alg>
-          1. NOTE: JSON text as specified in ECMA-404 does not include |UnaryExpression| except literals and the negative operator.
-          1. Assert: This step is never reached.
+          1. Return JSONEvaluation of |JSONString|.
         </emu-alg>
 
-        <emu-grammar>UnaryExpression : `-` UnaryExpression</emu-grammar>
+        <emu-grammer>
+          JSONString :
+            `"` JSONStringCharacters? `"`
+        </emu-grammer>
         <emu-alg>
-          1. Let _value_ be ! Evaluation of the parent |UnaryExpression|.
-          1. Assert: _value_ is a Number.
+          1. Let _source_ be the source text matched by |JSONString|.
+          1. Let _esNode_ be ParseText(_source_, |StringLiteral|).
+          1. Assert: _esNode_ is a |StringLiteral| Parse Node.
+          1. Let _value_ be SV of _esNode_.
           1. Return _value_.
         </emu-alg>
 
         <emu-grammar>
-          ArrayLiteral : `[` ElementList `]`
+          JSONValue : JSONArray
+        </emu-grammar>
+        <emu-alg>
+          1. Return JSONEvaluation of |JSONArray|.
+        </emu-alg>
+
+        <emu-grammar>
+          JSONArray : `[` `]`
         </emu-grammar>
         <emu-alg>
           1. Let _array_ be ! ArrayCreate(0).
-          1. Perform ? JSONArrayAccumulation of |ElementList| with arguments _array_ and 0.
           1. Return _array_.
         </emu-alg>
 
         <emu-grammar>
-          ObjectLiteral : `{` `}`
+          JSONArray : `[` JSONElementList `]`
+        </emu-grammar>
+        <emu-alg>
+          1. Let _array_ be ! ArrayCreate(0).
+          1. Perform JSONArrayAccumulation of |JSONElementList| with arguments _array_ and 0.
+          1. Return _array_.
+        </emu-alg>
+
+        <emu-grammar>
+          JSONValue : JSONObject
+        </emu-grammar>
+        <emu-alg>
+          1. Return JSONEvaluation of |JSONObject|.
+        </emu-alg>
+
+        <emu-grammar>
+          JSONObject : `{` `}`
         </emu-grammar>
         <emu-alg>
           1. Let _obj_ be OrdinaryObjectCreate(%Object.prototype%).
@@ -48288,11 +48301,11 @@ THH:mm:ss.sss
         </emu-alg>
 
         <emu-grammar>
-          ObjectLiteral : `{` PropertyDefinitionList `}`
+          JSONObject : `{` JSONMemberList `}`
         </emu-grammar>
         <emu-alg>
           1. Let _obj_ be OrdinaryObjectCreate(%Object.prototype%).
-          1. Perform ? JSONPropertyDefinitionEvaluation of |PropertyDefinitionList| with argument _obj_.
+          1. Perform JSONMemberListEvaluation of |JSONMemberList| with argument _obj_.
           1. Return _obj_.
         </emu-alg>
       </emu-clause>
@@ -48302,79 +48315,50 @@ THH:mm:ss.sss
           Runtime Semantics: JSONArrayAccumulation (
             _array_: an Array,
             _nextIndex_: an integer,
-          ): a Completion Record
+          ): ~unused~
         </h1>
         <dl class="header">
         </dl>
-        <emu-grammar>ElementList : Elision? AssignmentExpression</emu-grammar>
+        <emu-grammar>JSONElementList : JSONValue</emu-grammar>
         <emu-alg>
-          1. Assert: |Elision| is not present.
-          1. Let _node_ be ShallowestContainedJSONValue(|AssignmentExpression|).
-          1. Assert: _node_ is not ~empty~.
-          1. Let _result_ be ? JSONEvaluation of _node_.
+          1. Return JSONEvaluation of |JSONValue|.
+        </emu-alg>
+        <emu-grammar>JSONElementList : JSONElementList `,` JSONValue</emu-grammar>
+        <emu-alg>
+          1. Set _nextIndex_ to ? JSONArrayAccumulation of the derived |JSONElementList| with arguments _array_ and _nextIndex_.
+          1. Let _value_ be JSONEvaluation of |JSONValue|.
           1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_nextIndex_)), _result_).
           1. Return _nextIndex_ + 1.
-        </emu-alg>
-        <emu-grammar>ElementList : Elision? SpreadElement</emu-grammar>
-        <emu-alg>
-          1. NOTE: JSON text as specified in ECMA-404 does not include |SpreadElement|.
-          1. Assert: This step is never reached.
-        </emu-alg>
-        <emu-grammar>ElementList : ElementList `,` Elision? AssignmentExpression</emu-grammar>
-        <emu-alg>
-          1. Set _nextIndex_ to ? JSONArrayAccumulation of the derived |ElementList| with arguments _array_ and _nextIndex_.
-          1. Assert: |Elision| is not present.
-          1. Let _node_ be ShallowestContainedJSONValue(|AssignmentExpression|).
-          1. Assert: _node_ is not ~empty~.
-          1. Let _result_ be ? JSONEvaluation of _node_.
-          1. Perform ! CreateDataPropertyOrThrow(_array_, ! ToString(𝔽(_nextIndex_)), _result_).
-          1. Return _nextIndex_ + 1.
-        </emu-alg>
-        <emu-grammar>ElementList : ElementList `,` Elision? SpreadElement</emu-grammar>
-        <emu-alg>
-          1. NOTE: JSON text as specified in ECMA-404 does not include |SpreadElement|.
-          1. Assert: This step is never reached.
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-jsonpropertydefinitionevaluation" type="sdo">
         <h1>
-          Runtime Semantics: JSONPropertyDefinitionEvaluation (
+          Runtime Semantics: JSONMemberListEvaluation (
             _obj_: an Object,
-          ): either a normal completion containing ~unused~ or an abrupt completion
+          ): ~unused~
         </h1>
         <dl class="header">
         </dl>
-        <emu-grammar>PropertyDefinitionList : PropertyDefinitionList `,` PropertyDefinition</emu-grammar>
+        <emu-grammar>JSONMemberList : JSONMember</emu-grammar>
         <emu-alg>
-          1. Perform ? JSONPropertyDefinitionEvaluation of |PropertyDefinitionList| with arguments _obj_.
-          1. Perform ? JSONPropertyDefinitionEvaluation of |PropertyDefinition| with arguments _obj_.
+          1. Perform JSONMemberListEvaluation of |JSONMember| with arguments _obj_.
           1. Return ~unused~.
         </emu-alg>
-        <emu-grammar>PropertyDefinition : `...` AssignmentExpression</emu-grammar>
+        <emu-grammar>JSONMemberList : JSONMemberList `,` JSONMember</emu-grammar>
         <emu-alg>
-          1. NOTE: JSON text as specified in ECMA-404 does not include `...`.
-          1. Assert: This step is never reached.
+          1. Perform JSONMemberListEvaluation of |JSONMemberList| with arguments _obj_.
+          1. Perform JSONMemberListEvaluation of |JSONMember| with arguments _obj_.
+          1. Return ~unused~.
         </emu-alg>
-        <emu-grammar>PropertyDefinition : IdentifierReference</emu-grammar>
+        <emu-grammar>JSONMember : JSONString `:` JSONValue</emu-grammar>
         <emu-alg>
-          1. NOTE: JSON text as specified in ECMA-404 does not include object shorthand notation.
-          1. Assert: This step is never reached.
-        </emu-alg>
-        <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>
-        <emu-alg>
-          1. Let _propertyKey_ be ? Evaluation of |PropertyName|.
-          1. Let _node_ be ShallowestContainedJSONValue(|AssignmentExpression|).
-          1. Assert: _node_ is not ~empty~.
-          1. Let _propertyValue_ be ? JSONEvaluation of _node_.
+          1. Let _propertyKey_ be JSONEvaluation of |JSONString|.
+          1. Let _propertyValue_ be JSONEvaluation of |JSONValue|.
           1. Assert: _obj_ is an ordinary, extensible object with no non-configurable properties.
-          1. Perform ! CreateDataPropertyOrThrow(_obj_, _propertyKey_, _propertyValue_).
+          1. Let _completion_ be CreateDataPropertyOrThrow(_obj_, _propertyKey_, _propertyValue_).
+          1. Assert: _completion_ is not an abrupt completion.
           1. Return ~unused~.
-        </emu-alg>
-        <emu-grammar>PropertyDefinition : MethodDefinition</emu-grammar>
-        <emu-alg>
-          1. NOTE: JSON text as specified in ECMA-404 does not include |MethodDefinition|.
-          1. Assert: This step is never reached.
         </emu-alg>
       </emu-clause>
     </emu-clause>
