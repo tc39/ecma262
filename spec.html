@@ -19011,8 +19011,7 @@
         </emu-grammar>
         <ul>
           <li>
-            It is a Syntax Error if the PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>. Note that the corresponding |JSONObject| production in ECMA-404 (which is used by the ParseJSON in this specification) does not raise a corresponding early error.
-          </li>
+            It is a Syntax Error if the PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>.
         </ul>
         <emu-note>
           <p>The List returned by PropertyNameList does not include property names defined using a |ComputedPropertyName|.</p>
@@ -47987,8 +47986,7 @@ THH:mm:ss.sss
         </emu-note>
         <emu-alg>
           1. [id="step-json-parse-validate"] If StringToCodePoints(_text_) is not a valid JSON text as specified in ECMA-404, throw a *SyntaxError* exception.
-          1. Let _scriptString_ be the string-concatenation of *"("*, _text_, and *");"*.
-          1. [id="step-json-parse-parse"] Let _jsonParseNode_ be ParseText(_scriptString_, |JSONValue|).
+          1. [id="step-json-parse-parse"] Let _jsonParseNode_ be ParseText(_text_, |JSONValue|).
           1. Assert: _jsonParseNode_ is a Parse Node.
           1. [id="step-json-parse-eval"] Let _result_ be <emu-meta suppress-effects="user-code">JSONEvaluation of _jsonParseNode_</emu-meta>.
           1. [id="step-json-parse-assert-type"] Assert: _result_ is either a String, a Number, a Boolean, an Object that is defined by either an |ArrayLiteral| or an |ObjectLiteral|, or *null*.
@@ -47997,7 +47995,7 @@ THH:mm:ss.sss
         <p>It is not permitted for a conforming implementation of `JSON.parse` to extend the JSON grammars. If an implementation wishes to support a modified or extended JSON interchange format it must do so by defining a different parse function.</p>
         <emu-note>
           <p>Valid JSON text is a subset of the ECMAScript |PrimaryExpression| syntax. Step <emu-xref href="#step-json-parse-validate"></emu-xref> verifies that _jsonString_ conforms to that subset, and step <emu-xref href="#step-json-parse-assert-type"></emu-xref> asserts that evaluation returns a value of an appropriate type.</p>
-          <p>However, because JSONEvaluation behaves differently than Evaluation, the same source text can produce different results when evaluated as a |PrimaryExpression| rather than as JSON. Furthermore, the Early Error for duplicate *"__proto__"* properties in object literals, which likewise does not apply during ParseJSON, means that not all texts accepted by ParseJSON are valid as a |PrimaryExpression|, despite matching the grammar.</p>
+          <p>However, because JSONEvaluation behaves differently than Evaluation, the same source text can produce different results when evaluated as a |PrimaryExpression| rather than as JSON. Furthermore, the Early Error for duplicate *"__proto__"* properties in object literals, which likewise does not apply during ParseJSON, means that not all texts accepted by ParseJSON are valid as a |PrimaryExpression|, despite the JSON grammar being a subset of the |PrimaryExpression| one.</p>
         </emu-note>
         <emu-note>
           <p>In the case where there are duplicate name Strings within an object, lexically preceding values for the same key shall be overwritten.</p>
@@ -48062,8 +48060,8 @@ THH:mm:ss.sss
           1. If _value_ is an Object, then
             1. Let _isArray_ be ! <emu-meta suppress-effects="user-code">IsArray(_value_)</emu-meta>.
             1. If _isArray_ is *true*, then
-              1. Assert: _parseNode_ is a <emu-grammar>JSONValue : JSONArray</emu-grammar>.
-              1. Let _typedValueNode_ be the |JSONArray| Parse Node of _parseNode_.
+              1. Assert: _parseNode_ is an instance of the production <emu-grammar>JSONValue : JSONArray</emu-grammar>.
+              1. Let _typedValueNode_ be the |JSONArray| of _parseNode_.
               1. Let _contentNodes_ be the JSONArrayLiteralContentNodes of _typedValueNode_.
               1. Let _length_ be the number of elements in _contentNodes_.
               1. Let _valueLength_ be ! <emu-meta suppress-effects="user-code">LengthOfArrayLike(_value_)</emu-meta>.
@@ -48075,8 +48073,8 @@ THH:mm:ss.sss
                 1. Append _elementParseRecord_ to _elements_.
                 1. Set _index_ to _index_ + 1.
             1. Else,
-              1. Assert: _parseNode_ is a <emu-grammar>JSONValue : JSONObject</emu-grammar>.
-              1. Let _typedValueNode_ be the |JSONObject| Parse Node of _parseNode_.
+              1. Assert: _parseNode_ is an instance of the production <emu-grammar>JSONValue : JSONObject</emu-grammar>.
+              1. Let _typedValueNode_ be the |JSONObject| of _parseNode_.
               1. Let _propertyNodes_ be the JSONObjectLiteralContentNodes of _typedValueNode_.
               1. NOTE: Because _value_ was produced from JSON text and has not been modified, all of its property keys are Strings and will be exhaustively enumerated.
               1. Let _keys_ be ! <emu-meta suppress-effects="user-code">EnumerableOwnProperties(_value_, ~key~)</emu-meta>.
@@ -48091,6 +48089,7 @@ THH:mm:ss.sss
                 1. Let _entryParseRecord_ be CreateJSONParseRecord(_propertyValueNode_, _propertyKey_, ! <emu-meta suppress-effects="user-code">Get(_value_, _propertyKey_)</emu-meta>).
                 1. Append _entryParseRecord_ to _entries_.
           1. Else,
+            1. Let _typedValueNode_ be _parseNode_.
             1. Assert: _typedValueNode_ is neither a |JSONArray| Parse Node nor a |JSONObject| Parse Node.
           1. Return the JSON Parse Record { [[ParseNode]]: _typedValueNode_, [[Key]]: _key_, [[Value]]: _value_, [[Elements]]: _elements_, [[Entries]]: _entries_ }.
         </emu-alg>
@@ -48247,13 +48246,6 @@ THH:mm:ss.sss
         </emu-alg>
 
         <emu-grammar>
-          JSONValue : JSONString
-        </emu-grammar>
-        <emu-alg>
-          1. Return JSONEvaluation of |JSONString|.
-        </emu-alg>
-
-        <emu-grammar>
           JSONString :
             `"` JSONStringCharacters? `"`
         </emu-grammar>
@@ -48261,15 +48253,8 @@ THH:mm:ss.sss
           1. Let _source_ be the source text matched by |JSONString|.
           1. Let _esNode_ be ParseText(_source_, |StringLiteral|).
           1. Assert: _esNode_ is a |StringLiteral| Parse Node.
-          1. Let _value_ be SV of _esNode_.
+          1. Let _value_ be the SV of _esNode_.
           1. Return _value_.
-        </emu-alg>
-
-        <emu-grammar>
-          JSONValue : JSONArray
-        </emu-grammar>
-        <emu-alg>
-          1. Return JSONEvaluation of |JSONArray|.
         </emu-alg>
 
         <emu-grammar>
@@ -48287,13 +48272,6 @@ THH:mm:ss.sss
           1. Let _array_ be ! ArrayCreate(0).
           1. Perform JSONArrayAccumulation of |JSONElementList| with arguments _array_ and 0.
           1. Return _array_.
-        </emu-alg>
-
-        <emu-grammar>
-          JSONValue : JSONObject
-        </emu-grammar>
-        <emu-alg>
-          1. Return JSONEvaluation of |JSONObject|.
         </emu-alg>
 
         <emu-grammar>
