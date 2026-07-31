@@ -47986,17 +47986,15 @@ THH:mm:ss.sss
           <p>This algorithm references the |JSONValue| nonterminal from ECMA-404.</p>
         </emu-note>
         <emu-alg>
-          1. [id="step-json-parse-validate"] If StringToCodePoints(_text_) is not a valid JSON text as specified in ECMA-404, throw a *SyntaxError* exception.
-          1. [id="step-json-parse-parse"] Let _jsonParseNode_ be ParseText(_text_, |JSONValue|).
-          1. Assert: _jsonParseNode_ is a Parse Node.
-          1. [id="step-json-parse-eval"] Let _result_ be the <emu-meta suppress-effects="user-code">JSONEvaluation of _jsonParseNode_</emu-meta>.
+          1. Let _jsonParseNode_ be ParseText(_text_, |JSONValue|).
+          1. If _jsonParseNode_ is not a Parse Node, throw a *SyntaxError* exception.
+          1. Let _result_ be the JSONEvaluation of _jsonParseNode_.
           1. [id="step-json-parse-assert-type"] Assert: _result_ is either a String, a Number, a Boolean, an Object that is defined by either an |ArrayLiteral| or an |ObjectLiteral|, or *null*.
           1. Return the Record { [[ParseNode]]: _jsonParseNode_, [[Value]]: _result_ }.
         </emu-alg>
         <p>It is not permitted for a conforming implementation of `JSON.parse` to extend the JSON grammars. If an implementation wishes to support a modified or extended JSON interchange format it must do so by defining a different parse function.</p>
         <emu-note>
-          <p>Valid JSON text is a subset of the ECMAScript |PrimaryExpression| syntax. Step <emu-xref href="#step-json-parse-validate"></emu-xref> verifies that _jsonString_ conforms to that subset, and step <emu-xref href="#step-json-parse-assert-type"></emu-xref> asserts that evaluation returns a value of an appropriate type.</p>
-          <p>However, because JSONEvaluation behaves differently than Evaluation, the same source text can produce different results when evaluated as a |PrimaryExpression| rather than as JSON. Furthermore, the Early Error for duplicate *"__proto__"* properties in object literals, which likewise does not apply during ParseJSON, means that not all texts accepted by ParseJSON are valid as a |PrimaryExpression|, despite the JSON grammar being a subset of the |PrimaryExpression| one.</p>
+          <p>Valid JSON text is a syntactic subset of the ECMAScript |PrimaryExpression| syntax. However, because JSONEvaluation behaves differently than Evaluation, the same source text can produce different results when evaluated as a |PrimaryExpression| rather than as JSON. Furthermore, the early error for duplicate *"__proto__"* properties in object literals (<emu-xref href="#sec-object-initializer-static-semantics-early-errors"></emu-xref>), which has no analogue in JSON, means that some texts accepted by ParseJSON are not valid as a |PrimaryExpression|, (e.g., <code>{"__proto__":null,"__proto__":null}</code>).</p>
         </emu-note>
         <emu-note>
           <p>In the case where there are duplicate name Strings within an object, lexically preceding values for the same key shall be overwritten.</p>
@@ -48211,7 +48209,6 @@ THH:mm:ss.sss
           <dt>description</dt>
           <dd>
             <p>It generally produces the same values as Evaluation given the same inputs, but is defined over a much narrower set of productions, namely ECMA-404's |JSONValue|. Unlike Evaluation, it does not raise an early error when *"__proto__"* appears twice as a key (see <emu-xref href="#sec-object-initializer-static-semantics-early-errors"></emu-xref>). It also does not perform [[SetPrototypeOf]] when encountering a *"__proto__"* key, and instead creates an ordinary data property (see <emu-xref href="#sec-runtime-semantics-propertydefinitionevaluation"></emu-xref>).</p>
-            <p>The |JSONNumber| and |JSONString| productions are reparsed as ECMA-262 productions and call out to ECMA-262 Evaluation.</p>
           </dd>
         </dl>
         <emu-grammar>
@@ -48240,10 +48237,9 @@ THH:mm:ss.sss
         </emu-grammar>
         <emu-alg>
           1. Let _source_ be the source text matched by |JSONNumber|.
-          1. Let _esNode_ be ParseText(_source_, |UnaryExpression|).
-          1. Assert: _esNode_ is a |UnaryExpression| Parse Node.
-          1. Let _value_ be ! Evaluation of _esNode_.
-          1. Return _value_.
+          1. Let _number_ be StringToNumber(CodePointsToString(_source_)).
+          1. Assert: _number_ is not *NaN*.
+          1. Return _number_.
         </emu-alg>
 
         <emu-grammar>
@@ -48259,19 +48255,13 @@ THH:mm:ss.sss
         </emu-alg>
 
         <emu-grammar>
-          JSONArray : `[` `]`
+          JSONArray :
+            `[` `]`
+            `[` JSONElementList `]`
         </emu-grammar>
         <emu-alg>
           1. Let _array_ be ! ArrayCreate(0).
-          1. Return _array_.
-        </emu-alg>
-
-        <emu-grammar>
-          JSONArray : `[` JSONElementList `]`
-        </emu-grammar>
-        <emu-alg>
-          1. Let _array_ be ! ArrayCreate(0).
-          1. Perform JSONArrayAccumulation of |JSONElementList| with arguments _array_ and 0.
+          1. If |JSONElementList| is present, perform JSONArrayAccumulation of |JSONElementList| with arguments _array_ and 0.
           1. Return _array_.
         </emu-alg>
 
@@ -48284,11 +48274,13 @@ THH:mm:ss.sss
         </emu-alg>
 
         <emu-grammar>
-          JSONObject : `{` JSONMemberList `}`
+          JSONObject :
+            `{` `}`
+            `{` JSONMemberList `}`
         </emu-grammar>
         <emu-alg>
           1. Let _obj_ be OrdinaryObjectCreate(%Object.prototype%).
-          1. Perform JSONMemberListEvaluation of |JSONMemberList| with argument _obj_.
+          1. If |JSONMemberList| is present, perform JSONMemberListEvaluation of |JSONMemberList| with argument _obj_.
           1. Return _obj_.
         </emu-alg>
       </emu-clause>
@@ -48302,7 +48294,7 @@ THH:mm:ss.sss
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>It is just like ArrayAccumulation, except defined over a much narrower grammer (namely ECMA-404), and calling JSONEvaluation on its elements, rather than Evaluation.</dd>
+          <dd>It is just like ArrayAccumulation, except defined over a much narrower grammar (namely ECMA-404), and calling JSONEvaluation on its elements, rather than Evaluation.</dd>
         </dl>
         <emu-grammar>JSONElementList : JSONValue</emu-grammar>
         <emu-alg>
