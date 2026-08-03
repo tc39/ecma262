@@ -47989,7 +47989,6 @@ THH:mm:ss.sss
           1. Let _jsonParseNode_ be ParseText(_text_, |JSONValue|).
           1. If _jsonParseNode_ is not a Parse Node, throw a *SyntaxError* exception.
           1. Let _result_ be the JSONEvaluation of _jsonParseNode_.
-          1. [id="step-json-parse-assert-type"] Assert: _result_ is either a String, a Number, a Boolean, an Object that is defined by either an |ArrayLiteral| or an |ObjectLiteral|, or *null*.
           1. Return the Record { [[ParseNode]]: _jsonParseNode_, [[Value]]: _result_ }.
         </emu-alg>
         <p>It is not permitted for a conforming implementation of `JSON.parse` to extend the JSON grammars. If an implementation wishes to support a modified or extended JSON interchange format it must do so by defining a different parse function.</p>
@@ -48041,10 +48040,10 @@ THH:mm:ss.sss
         </emu-table>
       </emu-clause>
 
-      <emu-clause id="sec-createjsonparserecord" type="abstract operation">
+      <emu-clause id="sec-createjsonparserecord" type="abstract operation" oldids="sec-shallowestcontainedjsonvalue">
         <h1>
           CreateJSONParseRecord (
-            _parseNode_: a Parse Node,
+            _parseNode_: a |JSONValue| Parse Node,
             _key_: a property name,
             _value_: an ECMAScript language value,
           ): a JSON Parse Record
@@ -48054,42 +48053,35 @@ THH:mm:ss.sss
           <dd>It recursively combines a _parseNode_ parsed from JSON text and the _value_ produced by its evaluation.</dd>
         </dl>
         <emu-alg>
+          1. Assert: _parseNode_ has exactly one child.
+          1. Let _typedValueNode_ be the first child of _parseNode_.
           1. Let _elements_ be a new empty List.
           1. Let _entries_ be a new empty List.
-          1. If _value_ is an Object, then
-            1. Let _isArray_ be ! <emu-meta suppress-effects="user-code">IsArray(_value_)</emu-meta>.
-            1. If _isArray_ is *true*, then
-              1. Assert: _parseNode_ is an instance of the production <emu-grammar>JSONValue : JSONArray</emu-grammar>.
-              1. Let _typedValueNode_ be the |JSONArray| of _parseNode_.
-              1. Let _contentNodes_ be the JSONArrayLiteralContentNodes of _typedValueNode_.
-              1. Let _length_ be the number of elements in _contentNodes_.
-              1. Let _valueLength_ be ! <emu-meta suppress-effects="user-code">LengthOfArrayLike(_value_)</emu-meta>.
-              1. Assert: _valueLength_ is _length_.
-              1. Let _index_ be 0.
-              1. Repeat, while _index_ &lt; _length_,
-                1. Let _propertyName_ be ! ToString(𝔽(_index_)).
-                1. Let _elementParseRecord_ be CreateJSONParseRecord(_contentNodes_[_index_], _propertyName_, ! <emu-meta suppress-effects="user-code">Get(_value_, _propertyName_)</emu-meta>).
-                1. Append _elementParseRecord_ to _elements_.
-                1. Set _index_ to _index_ + 1.
-            1. Else,
-              1. Assert: _parseNode_ is an instance of the production <emu-grammar>JSONValue : JSONObject</emu-grammar>.
-              1. Let _typedValueNode_ be the |JSONObject| of _parseNode_.
-              1. Let _propertyNodes_ be the JSONObjectLiteralContentNodes of _typedValueNode_.
-              1. NOTE: Because _value_ was produced from JSON text and has not been modified, all of its property keys are Strings and will be exhaustively enumerated.
-              1. Let _keys_ be ! <emu-meta suppress-effects="user-code">EnumerableOwnProperties(_value_, ~key~)</emu-meta>.
-              1. For each String _propertyKey_ of _keys_, do
-                1. NOTE: In the case of JSON text specifying multiple name/value pairs with the same name for a single object (such as <code>{"a":"lost","a":"kept"}</code>), the value for the corresponding property of the resulting ECMAScript object is specified by the last pair with that name.
-                1. Let _propertyDefinition_ be ~empty~.
-                1. For each Parse Node _propertyNode_ of _propertyNodes_, do
-                  1. Let _propertyName_ be the PropName of _propertyNode_.
-                  1. If _propertyName_ is _propertyKey_, set _propertyDefinition_ to _propertyNode_.
-                1. Assert: _propertyDefinition_ is <emu-grammar>JSONMember : JSONString `:` JSONValue</emu-grammar>.
-                1. Let _propertyValueNode_ be the |JSONValue| of _propertyDefinition_.
-                1. Let _entryParseRecord_ be CreateJSONParseRecord(_propertyValueNode_, _propertyKey_, ! <emu-meta suppress-effects="user-code">Get(_value_, _propertyKey_)</emu-meta>).
-                1. Append _entryParseRecord_ to _entries_.
-          1. Else,
-            1. Let _typedValueNode_ be _parseNode_.
-            1. Assert: _typedValueNode_ is neither a |JSONArray| Parse Node nor a |JSONObject| Parse Node.
+          1. If _typedValueNode_ is a |JSONArray| Parse Node, then:
+            1. Let _contentNodes_ be the JSONArrayLiteralContentNodes of _typedValueNode_.
+            1. Let _length_ be the number of elements in _contentNodes_.
+            1. Let _valueLength_ be ! <emu-meta suppress-effects="user-code">LengthOfArrayLike(_value_)</emu-meta>.
+            1. Assert: _valueLength_ is _length_.
+            1. Let _index_ be 0.
+            1. Repeat, while _index_ &lt; _length_,
+              1. Let _propertyName_ be ! ToString(𝔽(_index_)).
+              1. Let _elementParseRecord_ be CreateJSONParseRecord(_contentNodes_[_index_], _propertyName_, ! <emu-meta suppress-effects="user-code">Get(_value_, _propertyName_)</emu-meta>).
+              1. Append _elementParseRecord_ to _elements_.
+              1. Set _index_ to _index_ + 1.
+          1. Else if _typedValueNode_ is a |JSONObject| Parse Node,
+            1. Let _propertyNodes_ be the JSONObjectLiteralContentNodes of _typedValueNode_.
+            1. NOTE: Because _value_ was produced from JSON text and has not been modified, all of its property keys are Strings and will be exhaustively enumerated.
+            1. Let _keys_ be ! <emu-meta suppress-effects="user-code">EnumerableOwnProperties(_value_, ~key~)</emu-meta>.
+            1. For each String _propertyKey_ of _keys_, do
+              1. NOTE: In the case of JSON text specifying multiple name/value pairs with the same name for a single object (such as <code>{"a":"lost","a":"kept"}</code>), the value for the corresponding property of the resulting ECMAScript object is specified by the last pair with that name.
+              1. Let _propertyDefinition_ be ~empty~.
+              1. For each Parse Node _propertyNode_ of _propertyNodes_, do
+                1. Let _propertyName_ be the PropName of _propertyNode_.
+                1. If _propertyName_ is _propertyKey_, set _propertyDefinition_ to _propertyNode_.
+              1. Assert: _propertyDefinition_ is <emu-grammar>JSONMember : JSONString `:` JSONValue</emu-grammar>.
+              1. Let _propertyValueNode_ be the |JSONValue| of _propertyDefinition_.
+              1. Let _entryParseRecord_ be CreateJSONParseRecord(_propertyValueNode_, _propertyKey_, ! <emu-meta suppress-effects="user-code">Get(_value_, _propertyKey_)</emu-meta>).
+              1. Append _entryParseRecord_ to _entries_.
           1. Return the JSON Parse Record { [[ParseNode]]: _typedValueNode_, [[Key]]: _key_, [[Value]]: _value_, [[Elements]]: _elements_, [[Entries]]: _entries_ }.
         </emu-alg>
       </emu-clause>
