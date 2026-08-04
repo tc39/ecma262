@@ -47967,12 +47967,12 @@ THH:mm:ss.sss
         1. If _deep_ is *false*, then
           1. Let _parseResult_ be ? ParseJSON(_jsonString_, ~shallow~).
           1. Return _parseResult_.[[Value]].
-        1. Let _parseResult be ? ParseJSON(_jsonString_, ~deep~).
+        1. Let _rootName_ be the empty String.
+        1. Let _parseResult be ? ParseJSON(_jsonString_, ~keep-nodes~, _rootName_).
         1. Let _unfiltered_ be _parseResult_.[[Value]].
         1. Let _root_ be OrdinaryObjectCreate(%Object.prototype%).
         1. Let _rootName_ be the empty String.
         1. Perform ! CreateDataPropertyOrThrow(_root_, _rootName_, _unfiltered_).
-        1. Let _parseResult_.[[Key]] be _rootName_.
         1. Return ? InternalizeJSONProperty(_root_, _rootName_, _reviver_, _parseResult_).
       </emu-alg>
       <p>The *"length"* property of this function is *2*<sub>𝔽</sub>.</p>
@@ -47981,7 +47981,8 @@ THH:mm:ss.sss
         <h1>
           ParseJSON (
             _text_: a String,
-            _how_: ~shallow~ or ~deep~,
+            _how_: ~discard-nodes~ or ~keep-nodes~,
+            optional _key_: a property name,
           ): either a normal completion containing a JSON Parse Record, or a throw completion
         </h1>
         <dl class="header">
@@ -47992,6 +47993,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _jsonParseNode_ be ParseText(_text_, |JSONValue|).
           1. If _jsonParseNode_ is not a Parse Node, throw a *SyntaxError* exception.
+          1. If _key_ is absent, set _key_ to the empty String.
           1. Let _result_ be the JSONEvaluation of _jsonParseNode_ with argument _how_.
           1. Return _result_.
         </emu-alg>
@@ -48022,7 +48024,7 @@ THH:mm:ss.sss
             </tr>
             <tr>
               <td>[[Key]]</td>
-              <td>a property name or ~EMPTY~</td>
+              <td>a property name</td>
               <td>The property name with which [[Value]] is associated.</td>
             </tr>
             <tr>
@@ -48044,12 +48046,12 @@ THH:mm:ss.sss
         </emu-table>
       </emu-clause>
 
-      <emu-clause id="sec-cratejsonparserecord" type="abstract operation" oldids="sec-shallowestcontainedjsonvalue">
+      <emu-clause id="sec-createjsonparserecord" type="abstract operation" oldids="sec-shallowestcontainedjsonvalue">
         <h1>
           CreateJSONParseRecord (
             _parseNode_: a |JSONValue| Parse Node,
             _value_: an ECMAScript language value,
-            optional _key_: a property name,
+            _key_: a property name,
           ): a JSON Parse Record
         </h1>
         <dl class="header">
@@ -48121,7 +48123,8 @@ THH:mm:ss.sss
       <emu-clause id="sec-jsonevaluation" type="sdo">
         <h1>
           Runtime Semantics: JSONEvaluation (
-            _how_: ~shallow~ or ~deep~,
+            _key_: a property key,
+            _deepNodes_: ~discard-nodes~ or ~keep-nodes~,
           ): a JSON Parse Record
         </h1>
         <dl class="header">
@@ -48134,24 +48137,24 @@ THH:mm:ss.sss
           JSONValue : `null`
         </emu-grammar>
         <emu-alg>
-          1. Let _result_ be CreateJSONParseRecord(`null`, *null*).
-          1. Return _result_.
+          1. Let _leaf_ be the first child of |JSONValue|.
+          1. Return the JSON Parse Record { [[ParseNode]]: _leaf_, [[Key]]: _key_, [[Value]]: *null*, [[Elements]]: « », [[Entries]]: « » }.
         </emu-alg>
 
         <emu-grammar>
           JSONValue : `true`
         </emu-grammar>
         <emu-alg>
-          1. Let _result_ be CreateJSONParseRecord(`true`, *true*).
-          1. Return _result_.
+          1. Let _leaf_ be the first child of |JSONValue|.
+          1. Return the JSON Parse Record { [[ParseNode]]: _leaf_, [[Key]]: _key_, [[Value]]: *true*, [[Elements]]: « », [[Entries]]: « » }.
         </emu-alg>
 
         <emu-grammar>
           JSONValue : `false`
         </emu-grammar>
         <emu-alg>
-          1. Let _result_ be CreateJSONParseRecord(`false`, *false*).
-          1. Return _result_.
+          1. Let _leaf_ be the first child of |JSONValue|.
+          1. Return the JSON Parse Record { [[ParseNode]]: _leaf_, [[Key]]: _key_, [[Value]]: *false*, [[Elements]]: « », [[Entries]]: « » }.
         </emu-alg>
 
         <emu-grammar>
@@ -48161,8 +48164,7 @@ THH:mm:ss.sss
           1. Let _source_ be the source text matched by |JSONNumber|.
           1. Let _number_ be StringToNumber(CodePointsToString(_source_)).
           1. Assert: _number_ is not *NaN*.
-          1. Let _result_ be CreateJSONParseRecord(|JSONNumber|, _number_).
-          1. Return _result_.
+          1. Return the JSON Parse Record { [[ParseNode]]: |JSONNumber|, [[Key]]: _key_, [[Value]]: number, [[Elements]]: « », [[Entries]]: « » }.
         </emu-alg>
 
         <emu-grammar>
@@ -48173,9 +48175,8 @@ THH:mm:ss.sss
           1. Let _source_ be the source text matched by |JSONString|.
           1. Let _esNode_ be ParseText(_source_, |StringLiteral|).
           1. Assert: _esNode_ is a |StringLiteral| Parse Node.
-          1. Let _value_ be the SV of _esNode_.
-          1. Let _result_ be CreateJSONParseRecord(|JSONString|, _value_).
-          1. Return _result_.
+          1. Let _string_ be the SV of _esNode_.
+          1. Return the JSON Parse Record { [[ParseNode]]: |JSONString|, [[Key]]: _key_, [[Value]]: _string_, [[Elements]]: « », [[Entries]]: « » }.
         </emu-alg>
 
         <emu-grammar>
@@ -48186,10 +48187,8 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _array_ be ! ArrayCreate(0).
           1. Let _elements_ be a new empty List.
-          1. If |JSONElementList| is present, perform JSONArrayAccumulation of |JSONElementList| with arguments _array_, _elements_, 0, and _how_.
-          1. Let _result_ be CreateJSONParseRecord(|JSONArray|, _array_).
-          1. Set _result_.[[Elements]] to _elements_.
-          1. Return _result_.
+          1. If |JSONElementList| is present, perform JSONArrayAccumulation of |JSONElementList| with arguments _array_, _deepNodes_, _elements_, and 0.
+          1. Return the JSON Parse Record { [[ParseNode]]: |JSONArray|, [[Key]]: _key_, [[Value]]: _array_, [[Elements]]: _elements_, [[Entries]]: « » }.
         </emu-alg>
 
         <emu-grammar>
@@ -48200,10 +48199,8 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be OrdinaryObjectCreate(%Object.prototype%).
           1. Let _entries_ be a new empty List.
-          1. If |JSONMemberList| is present, perform JSONMemberListEvaluation of |JSONMemberList| with argument _obj_, _entries_, and _how_.
-          1. Let _result_ be CreateJSONParseRecord(|JSONObject|, _obj_).
-          1. Set _result_.[[Entries]] to _entries_.
-          1. Return _result_.
+          1. If |JSONMemberList| is present, perform JSONMemberListEvaluation of |JSONMemberList| with argument _obj_, _deepNodes_, and _entries_.
+          1. Return the JSON Parse Record { [[ParseNode]]: |JSONObject|, [[Key]]: _key_, [[Value]]: _obj_, [[Elements]]: « », [[Entries]]: _entries_ }.
         </emu-alg>
       </emu-clause>
 
@@ -48211,14 +48208,14 @@ THH:mm:ss.sss
         <h1>
           Runtime Semantics: JSONArrayAccumulation (
             _array_: an Array,
+            _deepNodes_: ~discard-nodes~ or ~keep-nodes~,
             _elements_: a List of JSON Parse Records,
             _nextIndex_: a non-negative integer,
-            _how_: ~shallow~ or ~deep~,
           ): a non-negative integer
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>It is just like ArrayAccumulation, except defined over a much narrower grammar (namely ECMA-404), and calling JSONEvaluation on its elements, rather than Evaluation.</dd>
+          <dd>It is analagous ArrayAccumulation, except defined over a much narrower grammar (namely ECMA-404), and calling JSONEvaluation on its elements, rather than Evaluation.</dd>
         </dl>
         <emu-grammar>
           JSONElementList :
@@ -48226,13 +48223,11 @@ THH:mm:ss.sss
             JSONElementList `,` JSONValue
         </emu-grammar>
         <emu-alg>
-          1. If a derived |JSONElementList| is present, set _nextIndex_ to the JSONArrayAccumulation of the derived |JSONElementList| with arguments _array_, _elements_, _nextIndex_, and _how_.
+          1. If the derived |JSONElementList| is present, set _nextIndex_ to the JSONArrayAccumulation of the derived |JSONElementList| with arguments _array_, _deepNodes_, _elements_, and _nextIndex_.
           1. Let _key_ be ! ToString(𝔽(_nextIndex_)).
-          1. Let _parseRecord_ be the JSONEvaluation of |JSONValue| with argument _how_.
+          1. Let _parseRecord_ be the JSONEvaluation of |JSONValue| with arguments _key_ and _deepNodes_.
           1. Perform ! CreateDataPropertyOrThrow(_array_, _key_, _parseRecord_.[[Value]]).
-          1. If _how_ is ~deep~, then
-            1. Set _parseRecord_.[[Key]] to _key_.
-            1. Append _parseRecord_ to _elements_.
+          1. If _deepNodes_ is ~keep-nodes~, append _parseRecord_ to _elements_.
           1. Return _nextIndex_ + 1.
         </emu-alg>
       </emu-clause>
@@ -48241,8 +48236,8 @@ THH:mm:ss.sss
         <h1>
           Runtime Semantics: JSONMemberListEvaluation (
             _obj_: an Object,
-            _entries_: a List of Parse Nodes,
-            _how_: ~shallow~ or ~deep~,
+            _deepNodes_: ~discard-nodes~ or ~keep-nodes~,
+            _entries_: a List of JSON Parse Records,
           ): ~unused~
         </h1>
         <dl class="header">
