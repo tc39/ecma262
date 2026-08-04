@@ -6,7 +6,7 @@
 
   <p>
     Time zones in ECMAScript are represented by <dfn variants="time zone identifier">time zone identifiers</dfn>, which are Strings composed entirely of code units in the inclusive interval from 0x0021 to 0x007E, described by |TimeZoneIdentifier| in the grammar below.
-    Time zones supported by an ECMAScript implementation may be <dfn variants="available named time zone">available named time zones</dfn>, represented by the [[Identifier]] field of the Time Zone Identifier Records returned by AvailableNamedTimeZoneIdentifiers, or <dfn variants="offset time zone">offset time zones</dfn>, represented by Strings for which IsOffsetTimeZoneIdentifer returns *true*.
+    Time zones supported by an ECMAScript implementation may be <dfn variants="available named time zone">available named time zones</dfn>, represented by the [[Identifier]] field of the Time Zone Identifier Records returned by AvailableNamedTimeZoneIdentifiers, or <dfn variants="offset time zone">offset time zones</dfn>, represented by Strings for which IsOffsetTimeZoneIdentifier returns *true*.
   </p>
   <p>
     A <dfn variants="primary time zone identifiers">primary time zone identifier</dfn> is the preferred identifier for an available named time zone.
@@ -93,13 +93,13 @@
     <dl class="header">
     </dl>
     <p>
-      The returned value _t_ is the epoch nanoseconds count that corresponds to the first time zone UTC offset transition strictly after _epochNanoseconds_ in the IANA time zone identified by _timeZoneIdentifier_.
-      The operation returns *null* if no such transition exists for which _t_ ≤ MaxEpochNanoseconds.
+      The returned value _transition_ is the epoch nanoseconds count that corresponds to the first time zone UTC offset transition strictly after _epochNanoseconds_ in the IANA time zone identified by _timeZoneIdentifier_.
+      The operation returns *null* if no such transition exists for which _transition_ ≤ MaxEpochNanoseconds.
     </p>
     <p>
       A transition is a point in time where the UTC offset of a time zone changes, for example when daylight saving time starts or stops.
-      The returned value _t_ represents the first epoch nanoseconds count where the new UTC offset is used in this time zone, not the last epoch nanoseconds count where the previous UTC offset is used.
-      In other words, GetOffsetNanosecondsFor(_timeZone_, _t_) ≠ GetOffsetNanosecondsFor(_timeZone_, _t_ - 1).
+      The returned value _transition_ represents the first epoch nanoseconds count where the new UTC offset is used in this time zone, not the last epoch nanoseconds count where the previous UTC offset is used.
+      In other words, GetOffsetNanosecondsFor(_timeZone_, _transition_) ≠ GetOffsetNanosecondsFor(_timeZone_, _transition_ - 1).
     </p>
     <p>If this operation is called multiple times with the same values for _timeZoneIdentifier_ and _epochNanoseconds_, the result must be the same for each such call for the lifetime of the surrounding agent.</p>
     <p>The default implementation of GetNamedTimeZoneNextTransition for ECMAScript implementations that do not include local political rules for any time zones performs the following steps when called:</p>
@@ -119,13 +119,13 @@
     <dl class="header">
     </dl>
     <p>
-      The returned value _t_ is the epoch nanoseconds count that corresponds to the last time zone UTC offset transition strictly before _epochNanoseconds_ in the IANA time zone identified by _timeZoneIdentifier_.
-      The operation returns *null* if no such transition exists for which _t_ ≥ MinEpochNanoseconds.
+      The returned value _transition_ is the epoch nanoseconds count that corresponds to the last time zone UTC offset transition strictly before _epochNanoseconds_ in the IANA time zone identified by _timeZoneIdentifier_.
+      The operation returns *null* if no such transition exists for which _transition_ ≥ MinEpochNanoseconds.
     </p>
     <p>
       A transition is a point in time where the UTC offset of a time zone changes, for example when daylight saving time starts or stops.
-      The returned value _t_ represents the first epoch nanoseconds count where the new UTC offset is used in this time zone, not the last epoch nanoseconds count where the previous UTC offset is used.
-      In other words, GetOffsetNanosecondsFor(_timeZone_, _t_) ≠ GetOffsetNanosecondsFor(_timeZone_, _t_ - 1).
+      The returned value _transition_ represents the first epoch nanoseconds count where the new UTC offset is used in this time zone, not the last epoch nanoseconds count where the previous UTC offset is used.
+      In other words, GetOffsetNanosecondsFor(_timeZone_, _transition_) ≠ GetOffsetNanosecondsFor(_timeZone_, _transition_ - 1).
     </p>
     <p>If this operation is called multiple times with the same values for _timeZoneIdentifier_ and _epochNanoseconds_, the result must be the same for each such call for the lifetime of the surrounding agent.</p>
     <p>The default implementation of GetNamedTimeZonePreviousTransition for ECMAScript implementations that do not include local political rules for any time zones performs the following steps when called:</p>
@@ -355,14 +355,14 @@
       <dd>It chooses from a List of possible epoch nanoseconds counts the one indicated by the _disambiguation_ parameter.</dd>
     </dl>
     <emu-alg>
-      1. Let _n_ be the number of elements in _possibleEpochNanoseconds_.
-      1. If _n_ = 1, return the sole element of _possibleEpochNanoseconds_.
-      1. If _n_ ≠ 0, then
+      1. Let _count_ be the number of elements in _possibleEpochNanoseconds_.
+      1. If _count_ = 1, return the sole element of _possibleEpochNanoseconds_.
+      1. If _count_ ≠ 0, then
         1. If _disambiguation_ is either ~earlier~ or ~compatible~, return _possibleEpochNanoseconds_[0].
-        1. If _disambiguation_ is ~later~, return _possibleEpochNanoseconds_[_n_ - 1].
+        1. If _disambiguation_ is ~later~, return _possibleEpochNanoseconds_[_count_ - 1].
         1. Assert: _disambiguation_ is ~reject~.
         1. Throw a *RangeError* exception.
-      1. Assert: _n_ = 0.
+      1. Assert: _count_ = 0.
       1. If _disambiguation_ is ~reject~, throw a *RangeError* exception.
       1. Let _before_ be the latest possible ISO Date-Time Record for which CompareISODateTime(_before_, _isoDateTime_) = -1 and ! GetPossibleEpochNanoseconds(_timeZone_, _before_) is not empty.
       1. Let _after_ be the earliest possible ISO Date-Time Record for which CompareISODateTime(_after_, _isoDateTime_) = 1 and ! GetPossibleEpochNanoseconds(_timeZone_, _after_) is not empty.
@@ -388,9 +388,9 @@
       1. Let _laterDate_ be AddDaysToISODate(_isoDateTime_.[[ISODate]], _laterTime_.[[Days]]).
       1. Let _laterDateTime_ be CombineISODateAndTimeRecord(_laterDate_, _laterTime_).
       1. Set _possibleEpochNanoseconds_ to ? GetPossibleEpochNanoseconds(_timeZone_, _laterDateTime_).
-      1. Set _n_ to the number of elements in _possibleEpochNanoseconds_.
-      1. Assert: _n_ ≠ 0.
-      1. Return _possibleEpochNanoseconds_[_n_ - 1].
+      1. Set _count_ to the number of elements in _possibleEpochNanoseconds_.
+      1. Assert: _count_ ≠ 0.
+      1. Return _possibleEpochNanoseconds_[_count_ - 1].
     </emu-alg>
   </emu-clause>
 
