@@ -5766,26 +5766,38 @@
       </emu-alg>
     </emu-clause>
 
+    <emu-clause id="sec-toabsoluteindex" type="abstract operation">
+      <h1>
+        ToAbsoluteIndex (
+          _value_: an ECMAScript language value,
+          _length_: a non-negative integer,
+        ): either a normal completion containing either an integer, +&infin;, or -&infin;, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _value_ to an integer, +∞, or -∞, interpreting negative values relative to _length_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _int_ be ? ToIntegerOrInfinity(_value_).
+        1. If _int_ is finite and _int_ &lt; 0, set _int_ to _length_ + _int_.
+        1. Return _int_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-toclampedindex" type="abstract operation">
       <h1>
         ToClampedIndex (
           _value_: an ECMAScript language value,
           _length_: a non-negative integer,
-          optional _lowerBound_: an integer,
-          optional _upperBound_: an integer,
-        ): either a normal completion containing an integer or a throw completion
+        ): either a normal completion containing a non-negative integer or a throw completion
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It converts _value_ to an integer (interpreting negative values relative to _length_) and clamps the result to the inclusive interval from _lowerBound_ to _upperBound_ (respectively defaulting to 0 and _length_).</dd>
+        <dd>It converts _value_ to an integer (interpreting negative values relative to _length_) and clamps the result to the inclusive interval from 0 to _length_.</dd>
       </dl>
       <emu-alg>
-        1. If _lowerBound_ is not present, set _lowerBound_ to 0.
-        1. If _upperBound_ is not present, set _upperBound_ to _length_.
-        1. Assert: _lowerBound_ ≤ _upperBound_.
-        1. Let _integer_ be ? ToIntegerOrInfinity(_value_).
-        1. If _integer_ is finite and _integer_ &lt; 0, set _integer_ to _length_ + _integer_.
-        1. Return the result of clamping _integer_ between _lowerBound_ and _upperBound_.
+        1. Let _index_ be ? ToAbsoluteIndex(_value_, _length_).
+        1. Return the result of clamping _index_ between 0 and _length_.
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -36202,7 +36214,7 @@ THH:mm:ss.sss
           1. Perform ? RequireObjectCoercible(_thisValue_).
           1. Let _string_ be ? ToString(_thisValue_).
           1. Let _length_ be the length of _string_.
-          1. Let _k_ be ? ToClampedIndex(_index_, _length_, -1).
+          1. Let _k_ be ? ToAbsoluteIndex(_index_, _length_).
           1. If _k_ &lt; 0 or _k_ ≥ _length_, return *undefined*.
           1. Return the substring of _string_ from _k_ to _k_ + 1.
         </emu-alg>
@@ -40720,7 +40732,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _k_ be ? ToClampedIndex(_index_, _length_, -1).
+          1. Let _k_ be ? ToAbsoluteIndex(_index_, _length_).
           1. If _k_ &lt; 0 or _k_ ≥ _length_, return *undefined*.
           1. Return ? Get(_obj_, ! ToString(𝔽(_k_))).
         </emu-alg>
@@ -41233,7 +41245,7 @@ THH:mm:ss.sss
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
           1. If _length_ = 0, return *-1*<sub>𝔽</sub>.
-          1. If _fromIndex_ is not present, let _k_ be _length_ - 1; else let _k_ be ? ToClampedIndex(_fromIndex_, _length_, -1, _length_ - 1).
+          1. If _fromIndex_ is not present, let _k_ be _length_ - 1; else let _k_ be min(? ToAbsoluteIndex(_fromIndex_, _length_), _length_ - 1).
           1. Repeat, while _k_ ≥ 0,
             1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
             1. Let _kPresent_ be ? HasProperty(_obj_, _propertyKey_).
@@ -41917,10 +41929,8 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
-          1. If _relativeIndex_ ≥ 0, let _actualIndex_ be _relativeIndex_.
-          1. Else, let _actualIndex_ be _length_ + _relativeIndex_.
-          1. If _actualIndex_ ≥ _length_ or _actualIndex_ &lt; 0, throw a *RangeError* exception.
+          1. Let _actualIndex_ be ? ToAbsoluteIndex(_index_, _length_).
+          1. If _actualIndex_ &lt; 0 or _actualIndex_ ≥ _length_, throw a *RangeError* exception.
           1. Let _array_ be ? ArrayCreate(_length_).
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _length_,
@@ -42486,7 +42496,7 @@ THH:mm:ss.sss
           1. Let _obj_ be the *this* value.
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
-          1. Let _k_ be ? ToClampedIndex(_index_, _length_, -1).
+          1. Let _k_ be ? ToAbsoluteIndex(_index_, _length_).
           1. If _k_ &lt; 0 or _k_ ≥ _length_, return *undefined*.
           1. Return ! Get(_obj_, ! ToString(𝔽(_k_))).
         </emu-alg>
@@ -42824,7 +42834,7 @@ THH:mm:ss.sss
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
           1. If _length_ = 0, return *-1*<sub>𝔽</sub>.
-          1. If _fromIndex_ is not present, let _k_ be _length_ - 1; else let _k_ be ? ToClampedIndex(_fromIndex_, _length_, -1, _length_ - 1).
+          1. If _fromIndex_ is not present, let _k_ be _length_ - 1; else let _k_ be min(? ToAbsoluteIndex(_fromIndex_, _length_), _length_ - 1).
           1. Repeat, while _k_ ≥ 0,
             1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
             1. Let _kPresent_ be ! HasProperty(_obj_, _propertyKey_).
@@ -43253,9 +43263,7 @@ THH:mm:ss.sss
           1. Let _obj_ be the *this* value.
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
-          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
-          1. If _relativeIndex_ ≥ 0, let _actualIndex_ be _relativeIndex_.
-          1. Else, let _actualIndex_ be _length_ + _relativeIndex_.
+          1. Let _actualIndex_ be ? ToAbsoluteIndex(_index_, _length_).
           1. If _obj_.[[ContentType]] is ~bigint~, let _numericValue_ be ? ToBigInt(_value_).
           1. Else, let _numericValue_ be ? ToNumber(_value_).
           1. If IsValidIntegerIndex(_obj_, 𝔽(_actualIndex_)) is *false*, throw a *RangeError* exception.
