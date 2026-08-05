@@ -139,7 +139,7 @@
       </p>
       <p>
         Each field has a corresponding enumeration key.
-        Lists of these enumeration keys are passed to abstract operations such as PrepareCalendarFields and CalendarFieldKeysToIgnore to denote a subset of fields to operate on.
+        Lists of these enumeration keys are passed to abstract operations such as CalendarFieldKeysToIgnore to denote a subset of fields to operate on.
       </p>
       <p>Calendar Fields Records have the fields listed in <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>.</p>
       <emu-table id="table-calendar-fields-record-fields" caption="Calendar Fields Record Fields">
@@ -301,26 +301,37 @@
         PrepareCalendarFields (
           _calendar_: a calendar type,
           _fields_: an Object,
-          _calendarFieldNames_: a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
-          _nonCalendarFieldNames_: a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
-          _requiredFieldNames_: either a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref> or ~partial~,
+          _calendarFields_: ~date-fields~, ~year-month-fields~, ~only-day~, or ~only-year~,
+          _nonCalendarFields_: ~time-fields~, ~time-fields-with-offset~, ~time-fields-with-time-zone-and-offset~, or ~no-non-calendar-fields~,
+          _requiredFields_: ~partial~, ~time-zone~, or ~no-required-fields~,
         ): either a normal completion containing a Calendar Fields Record, or a throw completion
       </h1>
       <dl class="header">
         <dt>description</dt>
         <dd>
-          It returns the result of reading from _fields_ all of the property names corresponding to _calendarFieldNames_ and _nonCalendarFieldNames_, plus any extra fields required by the calendar.
-          The returned Record has a non-~empty~ value for each element of _calendarFieldNames_ and _nonCalendarFieldNames_ that corresponds with a non-*undefined* property on _fields_ used as the input for relevant conversion.
-          When _requiredFieldNames_ is ~partial~, this operation throws if none of the properties are present with a non-*undefined* value.
-          When _requiredFieldNames_ is a List, this operation throws if any of the properties named by it are absent or *undefined*.
+          It returns the result of reading from _fields_ all of the property names corresponding to _calendarFields_ and _nonCalendarFields_, plus any extra fields required by the calendar.
+          The returned Record has a non-~empty~ value for each property corresponding to _calendarFields_ and _nonCalendarFields_ that has a non-*undefined* value on _fields_, which is used as the input for relevant conversion.
+          When _requiredFields_ is ~partial~, this operation throws if none of the properties are present with a non-*undefined* value.
+          When _requiredFields_ is ~time-zone~, this operation throws if _fields_'s *"timeZone"* property is absent or *undefined*.
         </dd>
       </dl>
       <emu-alg>
-        1. Assert: If _requiredFieldNames_ is a List, _requiredFieldNames_ contains zero or one of each of the elements of _calendarFieldNames_ and _nonCalendarFieldNames_.
-        1. Let _fieldNames_ be the list-concatenation of _calendarFieldNames_ and _nonCalendarFieldNames_.
-        1. Let _extraFieldNames_ be CalendarExtraFields(_calendar_, _calendarFieldNames_).
-        1. Set _fieldNames_ to the list-concatenation of _fieldNames_ and _extraFieldNames_.
-        1. Assert: _fieldNames_ contains no duplicate elements.
+        1. If _calendarFields_ is ~date-fields~, then
+          1. Let _propertyNames_ be « *"day"*, *"month"*, *"monthCode"*, *"year"* ».
+        1. Else if _calendarFields_ is ~year-month-fields~, then
+          1. Let _propertyNames_ be « *"month"*, *"monthCode"*, *"year"* ».
+        1. Else if _calendarFields_ is ~only-day~, then
+          1. Let _propertyNames_ be « *"day"* ».
+        1. Else,
+          1. Assert: _calendarFields_ is ~only-year~.
+          1. Let _propertyNames_ be « *"year"* ».
+        1. Let _extraFieldNames_ be CalendarExtraFields(_calendar_, _propertyNames_).
+        1. If _nonCalendarFields_ is not ~no-non-calendar-fields~, then
+          1. Set _propertyNames_ to the list-concatenation of _propertyNames_ and « *"hour"*, *"microsecond"*, *"millisecond"*, *"minute"*, *"nanosecond"*, *"second"* ».
+        1. If _nonCalendarFields_ is either ~time-fields-with-offset~ or ~time-fields-with-time-zone-and-offset~, append *"offset"* to _propertyNames_.
+        1. If _nonCalendarFields_ is ~time-fields-with-time-zone-and-offset~, append *"timeZone"* to _propertyNames_.
+        1. Set _propertyNames_ to the list-concatenation of _propertyNames_ and _extraFieldNames_.
+        1. Assert: _propertyNames_ contains no duplicate elements.
         1. Let _result_ be the Calendar Fields Record {
           [[Era]]: ~empty~,
           [[EraYear]]: ~empty~,
@@ -338,9 +349,8 @@
           [[TimeZone]]: ~empty~
           }.
         1. Let _anyPresent_ be *false*.
-        1. Let _sortedPropertyNames_ be a List whose elements are the values in the Property Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref> corresponding to the elements of _fieldNames_, sorted according to lexicographic code unit order.
-        1. For each property name _property_ of _sortedPropertyNames_, do
-          1. Let _key_ be the value in the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref> corresponding to the row whose Property Key value is _property_.
+        1. Sort _propertyNames_ according to lexicographic code unit order.
+        1. For each property name _property_ of _propertyNames_, do
           1. Let _value_ be ? Get(_fields_, _property_).
           1. If _value_ is not *undefined*, then
             1. Set _anyPresent_ to *true*.
@@ -360,11 +370,11 @@
               1. Set _value_ be ? ToPrimitive(_value_, ~string~).
               1. If _value_ is not a String, throw a *TypeError* exception.
               1. Perform ? ParseDateTimeUTCOffset(_value_).
-            1. Set _result_'s field whose name is given in the Field Name column of the same row to _value_.
-          1. Else if _requiredFieldNames_ is a List, then
-            1. If _requiredFieldNames_ contains _key_, throw a *TypeError* exception.
-            1. Set _result_'s field whose name is given in the Field Name column of the same row to the corresponding Default value of the same row.
-        1. If _requiredFieldNames_ is ~partial~ and _anyPresent_ is *false*, throw a *TypeError* exception.
+            1. Set _result_'s field whose name is given in the Field Name column of the row whose Property Key value is _property_ to _value_.
+          1. Else if _requiredFields_ is not ~partial~, then
+            1. If _requiredFields_ is ~time-zone~ and _property_ is *"timeZone"*, throw a *TypeError* exception.
+            1. Set _result_'s field whose name is given in the Field Name column of the row whose Property Key value is _property_ to the corresponding Default value of the same row.
+        1. If _requiredFields_ is ~partial~ and _anyPresent_ is *false*, throw a *TypeError* exception.
         1. Return _result_.
       </emu-alg>
     </emu-clause>
@@ -819,8 +829,8 @@
       <h1>
         CalendarExtraFields (
           _calendar_: a calendar type,
-          _fields_: a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
-        ): a List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>
+          _fields_: a List of values from the Property Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>,
+        ): a List of values from the Property Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref>
       </h1>
       <dl class="header">
         <dt>description</dt>
@@ -828,7 +838,7 @@
       </dl>
       <emu-alg>
         1. If _calendar_ is *"iso8601"*, return a new empty List.
-        1. Return an implementation-defined List of values from the Enumeration Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref> that are relevant for the provided _fields_ in the calendar identified by _calendar_. For example, if _calendar_ reckons time in eras and _fields_ contains ~year~, return « ~era~, ~era-year~ ».
+        1. Return an implementation-defined List of values from the Property Key column of <emu-xref href="#table-calendar-fields-record-fields"></emu-xref> that are relevant for the provided _fields_ in the calendar identified by _calendar_. For example, if _calendar_ reckons time in eras and _fields_ contains *"year"*, return « *"era"*, *"eraYear"* ».
       </emu-alg>
     </emu-clause>
 
@@ -2383,7 +2393,7 @@
             1. Let _plainDate_ be ! CreateTemporalDate(_value_.[[ISODateTime]].[[ISODate]], _value_.[[Calendar]]).
             1. Return the Record { [[PlainRelativeTo]]: _plainDate_, [[ZonedRelativeTo]]: ~empty~ }.
           1. Let _calendar_ be ? GetTemporalCalendarIdentifierWithISODefault(_value_).
-          1. Let _fields_ be ? PrepareCalendarFields(_calendar_, _value_, « ~year~, ~month~, ~month-code~, ~day~ », « ~hour~, ~minute~, ~second~, ~millisecond~, ~microsecond~, ~nanosecond~, ~offset~, ~time-zone~ », «»).
+          1. Let _fields_ be ? PrepareCalendarFields(_calendar_, _value_, ~date-fields~, ~time-fields-with-time-zone-and-offset~, ~no-required-fields~).
           1. Let _result_ be ? InterpretTemporalDateTimeFields(_calendar_, _fields_, ~constrain~).
           1. Let _timeZone_ be _fields_.[[TimeZone]].
           1. Let _offsetString_ be _fields_.[[OffsetString]].
