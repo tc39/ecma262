@@ -535,8 +535,8 @@
     <emu-clause id="sec-calendarequals" type="abstract operation">
       <h1>
         CalendarEquals (
-          _one_: a calendar type,
-          _two_: a calendar type,
+          _xCalendar_: a calendar type,
+          _yCalendar_: a calendar type,
         ): a Boolean
       </h1>
       <dl class="header">
@@ -544,7 +544,7 @@
         <dd>It returns *true* if its arguments represent calendars using the same identifier.</dd>
       </dl>
       <emu-alg>
-        1. If ! CanonicalizeCalendar(_one_) is ! CanonicalizeCalendar(_two_), return *true*.
+        1. If ! CanonicalizeCalendar(_xCalendar_) is ! CanonicalizeCalendar(_yCalendar_), return *true*.
         1. Return *false*.
       </emu-alg>
     </emu-clause>
@@ -604,48 +604,48 @@
       <h1>
         CalendarDateUntil (
           _calendar_: a calendar type,
-          _one_: an ISO Date Record,
-          _two_: an ISO Date Record,
+          _isoDateFrom_: an ISO Date Record,
+          _isoDateTo_: an ISO Date Record,
           _largestUnit_: a date unit,
         ): a Date Duration Record
       </h1>
       <dl class="header">
         <dt>description</dt>
         <dd>
-          It determines the difference between the dates _one_ and _two_ using the years, months, and weeks reckoning of _calendar_.
+          It determines the difference between the dates _isoDateFrom_ and _isoDateTo_ using the years, months, and weeks reckoning of _calendar_.
           No fields larger than _largestUnit_ will be non-zero in the resulting Date Duration Record.
         </dd>
       </dl>
       <emu-alg>
-        1. Let _sign_ be CompareISODate(_one_, _two_).
+        1. Let _sign_ be CompareISODate(_isoDateFrom_, _isoDateTo_).
         1. If _sign_ = 0, return ZeroDateDuration().
         1. If _calendar_ is *"iso8601"*, then
           1. Set _sign_ to -_sign_.
           1. Let _years_ be 0.
           1. If _largestUnit_ is ~year~, then
             1. Let _candidateYears_ be _sign_.
-            1. Repeat, while ISODateSurpasses(_sign_, _one_, _candidateYears_, 0, 0, 0, _two_) is *false*,
+            1. Repeat, while ISODateSurpasses(_sign_, _isoDateFrom_, _candidateYears_, 0, 0, 0, _isoDateTo_) is *false*,
               1. Set _years_ to _candidateYears_.
               1. Set _candidateYears_ to _candidateYears_ + _sign_.
           1. Let _months_ be 0.
           1. If _largestUnit_ is either ~year~ or ~month~, then
             1. Let _candidateMonths_ be _sign_.
-            1. Repeat, while ISODateSurpasses(_sign_, _one_, _years_, _candidateMonths_, 0, 0, _two_) is *false*,
+            1. Repeat, while ISODateSurpasses(_sign_, _isoDateFrom_, _years_, _candidateMonths_, 0, 0, _isoDateTo_) is *false*,
               1. Set _months_ to _candidateMonths_.
               1. Set _candidateMonths_ to _candidateMonths_ + _sign_.
           1. Let _weeks_ be 0.
           1. If _largestUnit_ is ~week~, then
             1. Let _candidateWeeks_ be _sign_.
-            1. Repeat, while ISODateSurpasses(_sign_, _one_, _years_, _months_, _candidateWeeks_, 0, _two_) is *false*,
+            1. Repeat, while ISODateSurpasses(_sign_, _isoDateFrom_, _years_, _months_, _candidateWeeks_, 0, _isoDateTo_) is *false*,
               1. Set _weeks_ to _candidateWeeks_.
               1. Set _candidateWeeks_ to _candidateWeeks_ + _sign_.
           1. Let _days_ be 0.
           1. Let _candidateDays_ be _sign_.
-          1. Repeat, while ISODateSurpasses(_sign_, _one_, _years_, _months_, _weeks_, _candidateDays_, _two_) is *false*,
+          1. Repeat, while ISODateSurpasses(_sign_, _isoDateFrom_, _years_, _months_, _weeks_, _candidateDays_, _isoDateTo_) is *false*,
             1. Set _days_ to _candidateDays_.
             1. Set _candidateDays_ to _candidateDays_ + _sign_.
           1. Return ! CreateDateDurationRecord(_years_, _months_, _weeks_, _days_).
-        1. Return NonISODateUntil(_calendar_, _one_, _two_, _largestUnit_).
+        1. Return NonISODateUntil(_calendar_, _isoDateFrom_, _isoDateTo_, _largestUnit_).
       </emu-alg>
     </emu-clause>
 
@@ -653,15 +653,15 @@
       <h1>
         NonISODateUntil (
           _calendar_: a calendar type but not *"iso8601"*,
-          _one_: an ISO Date Record,
-          _two_: an ISO Date Record,
+          _isoDateFrom_: an ISO Date Record,
+          _isoDateTo_: an ISO Date Record,
           _largestUnit_: a date unit,
         ): a Date Duration Record
       </h1>
       <dl class="header">
         <dt>description</dt>
         <dd>
-          It performs implementation-defined processing to determine the difference between the dates _one_ and _two_ using the years, months, and weeks reckoning of _calendar_.
+          It performs implementation-defined processing to determine the difference between the dates _isoDateFrom_ and _isoDateTo_ using the years, months, and weeks reckoning of _calendar_.
           No fields larger than _largestUnit_ will be non-zero in the resulting Date Duration Record.
         </dd>
       </dl>
@@ -1191,10 +1191,10 @@
       <emu-alg>
         1. Let _yearsMonthsWeeksDuration_ be ! AdjustDateDurationRecord(_dateDuration_, 0).
         1. If DateDurationSign(_yearsMonthsWeeksDuration_) = 0, return _dateDuration_.[[Days]].
-        1. Let _later_ be ? CalendarDateAdd(_plainRelativeTo_.[[Calendar]], _plainRelativeTo_.[[ISODate]], _yearsMonthsWeeksDuration_, ~constrain~).
-        1. Let _epochDays1_ be ISODateToEpochDays(_plainRelativeTo_.[[ISODate]].[[Year]], _plainRelativeTo_.[[ISODate]].[[Month]] - 1, _plainRelativeTo_.[[ISODate]].[[Day]]).
-        1. Let _epochDays2_ be ISODateToEpochDays(_later_.[[Year]], _later_.[[Month]] - 1, _later_.[[Day]]).
-        1. Let _yearsMonthsWeeksInDays_ be _epochDays2_ - _epochDays1_.
+        1. Let _isoDateTo_ be ? CalendarDateAdd(_plainRelativeTo_.[[Calendar]], _plainRelativeTo_.[[ISODate]], _yearsMonthsWeeksDuration_, ~constrain~).
+        1. Let _epochDaysFrom_ be ISODateToEpochDays(_plainRelativeTo_.[[ISODate]].[[Year]], _plainRelativeTo_.[[ISODate]].[[Month]] - 1, _plainRelativeTo_.[[ISODate]].[[Day]]).
+        1. Let _epochDaysTo_ be ISODateToEpochDays(_isoDateTo_.[[Year]], _isoDateTo_.[[Month]] - 1, _isoDateTo_.[[Day]]).
+        1. Let _yearsMonthsWeeksInDays_ be _epochDaysTo_ - _epochDaysFrom_.
         1. Return _dateDuration_.[[Days]] + _yearsMonthsWeeksInDays_.
       </emu-alg>
     </emu-clause>
@@ -1321,17 +1321,17 @@
     <emu-clause id="sec-compareepochnanoseconds" type="abstract operation">
       <h1>
         CompareEpochNanoseconds (
-          _epochNanosecondsOne_: an epoch nanoseconds count,
-          _epochNanosecondsTwo_: an epoch nanoseconds count,
+          _xEpochNanoseconds_: an epoch nanoseconds count,
+          _yEpochNanoseconds_: an epoch nanoseconds count,
         ): one of -1, 0, or 1
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>A return value of 0 means _epochNanosecondsOne_ and _epochNanosecondsTwo_ are equal, 1 means _epochNanosecondsOne_ comes after _epochNanosecondsTwo_, and -1 means _epochNanosecondsTwo_ comes after _epochNanosecondsOne_.</dd>
+        <dd>A return value of 0 means _xEpochNanoseconds_ and _yEpochNanoseconds_ are equal, 1 means _xEpochNanoseconds_ comes after _yEpochNanoseconds_, and -1 means _yEpochNanoseconds_ comes after _xEpochNanoseconds_.</dd>
       </dl>
       <emu-alg>
-        1. If _epochNanosecondsOne_ > _epochNanosecondsTwo_, return 1.
-        1. If _epochNanosecondsOne_ &lt; _epochNanosecondsTwo_, return -1.
+        1. If _xEpochNanoseconds_ > _yEpochNanoseconds_, return 1.
+        1. If _xEpochNanoseconds_ &lt; _yEpochNanoseconds_, return -1.
         1. Return 0.
       </emu-alg>
     </emu-clause>
@@ -1339,8 +1339,8 @@
     <emu-clause id="sec-differenceepochnanoseconds" type="abstract operation">
       <h1>
         DifferenceEpochNanoseconds (
-          _ns1_: an epoch nanoseconds count,
-          _ns2_: an epoch nanoseconds count,
+          _epochNanosecondsFrom_: an epoch nanoseconds count,
+          _epochNanosecondsTwo_: an epoch nanoseconds count,
           _roundingIncrement_: a positive integer,
           _smallestUnit_: a time unit,
           _roundingMode_: a rounding mode,
@@ -1348,10 +1348,10 @@
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It computes the difference between two epoch nanoseconds counts _ns1_ and _ns2_, and rounds the result according to the parameters _roundingIncrement_, _smallestUnit_, and _roundingMode_.</dd>
+        <dd>It computes the difference between two epoch nanoseconds counts _epochNanosecondsFrom_ and _epochNanosecondsTo_, and rounds the result according to the parameters _roundingIncrement_, _smallestUnit_, and _roundingMode_.</dd>
       </dl>
       <emu-alg>
-        1. Let _timeDuration_ be TimeDurationFromEpochNanosecondsDifference(_ns2_, _ns1_).
+        1. Let _timeDuration_ be TimeDurationFromEpochNanosecondsDifference(_epochNanosecondsTo_, _epochNanosecondsFrom_).
         1. Set _timeDuration_ to ! RoundTimeDuration(_timeDuration_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
         1. Return CombineDateAndTimeDuration(ZeroDateDuration(), _timeDuration_).
       </emu-alg>
@@ -1548,20 +1548,20 @@
           _months_: an integer,
           _weeks_: an integer,
           _days_: an integer,
-          _isoDate2_: an ISO Date Record,
+          _isoDateTo_: an ISO Date Record,
         ): a Boolean
       </h1>
       <dl class="header">
         <dt>description</dt>
         <dd>
-          The return value indicates whether the date _isoDate1_, the result of adding the duration denoted by _years_, _months_, _weeks_, and _days_ to _baseDate_, surpasses _isoDate2_ in the direction denoted by _sign_.
-          If _weeks_ and _days_ are both zero, then _isoDate1_ need not exist (for example, it could be February 30).
+          The return value indicates whether the date _isoDateFrom_, the result of adding the duration denoted by _years_, _months_, _weeks_, and _days_ to _baseDate_, surpasses _isoDateTo_ in the direction denoted by _sign_.
+          If _weeks_ and _days_ are both zero, then _isoDateFrom_ need not exist (for example, it could be February 30).
           Note that this operation is specific to date difference calculations and is not the same as CompareISODate.
         </dd>
       </dl>
       <emu-alg>
         1. Let _parts_ be CalendarISOToDate(*"iso8601"*, _baseDate_).
-        1. Let _target_ be CalendarISOToDate(*"iso8601"*, _isoDate2_).
+        1. Let _target_ be CalendarISOToDate(*"iso8601"*, _isoDateTo_).
         1. Let _y0_ be _parts_.[[Year]] + _years_.
         1. If CompareSurpasses(_sign_, _y0_, _parts_.[[MonthCode]], _parts_.[[Day]], _target_) is *true*, return *true*.
         1. If _months_ = 0, _weeks_ = 0, and _days_ = 0, return *false*.
@@ -1771,23 +1771,23 @@
     <emu-clause id="sec-compareisodate" type="abstract operation">
       <h1>
         CompareISODate (
-          _isoDate1_: an ISO Date Record,
-          _isoDate2_: an ISO Date Record,
+          _xISODate_: an ISO Date Record,
+          _yISODate_: an ISO Date Record,
         ): one of -1, 0, or 1
       </h1>
       <dl class="header">
         <dt>description</dt>
         <dd>
-          It performs a comparison of the two dates denoted by _isoDate1_ and _isoDate2_ according to ISO 8601 calendar arithmetic. A return value of 0 means _isoDate1_ and _isoDate2_ are equal, 1 means _isoDate1_ comes after _isoDate2_, and -1 means _isoDate2_ comes after _isoDate1_.
+          It performs a comparison of the two dates denoted by _xISODate_ and _yISODate_ according to ISO 8601 calendar arithmetic. A return value of 0 means _xISODate_ and _yISODate_ are equal, 1 means _xISODate_ comes after _yISODate_, and -1 means _yISODate_ comes after _xISODate_.
         </dd>
       </dl>
       <emu-alg>
-        1. If _isoDate1_.[[Year]] > _isoDate2_.[[Year]], return 1.
-        1. If _isoDate1_.[[Year]] &lt; _isoDate2_.[[Year]], return -1.
-        1. If _isoDate1_.[[Month]] > _isoDate2_.[[Month]], return 1.
-        1. If _isoDate1_.[[Month]] &lt; _isoDate2_.[[Month]], return -1.
-        1. If _isoDate1_.[[Day]] > _isoDate2_.[[Day]], return 1.
-        1. If _isoDate1_.[[Day]] &lt; _isoDate2_.[[Day]], return -1.
+        1. If _xISODate_.[[Year]] > _yISODate_.[[Year]], return 1.
+        1. If _xISODate_.[[Year]] &lt; _yISODate_.[[Year]], return -1.
+        1. If _xISODate_.[[Month]] > _yISODate_.[[Month]], return 1.
+        1. If _xISODate_.[[Month]] &lt; _yISODate_.[[Month]], return -1.
+        1. If _xISODate_.[[Day]] > _yISODate_.[[Day]], return 1.
+        1. If _xISODate_.[[Day]] &lt; _yISODate_.[[Day]], return -1.
         1. Return 0.
       </emu-alg>
     </emu-clause>
@@ -1978,26 +1978,26 @@
     <emu-clause id="sec-compareisodatetime" type="abstract operation">
       <h1>
         CompareISODateTime (
-          _isoDateTime1_: an ISO Date-Time Record,
-          _isoDateTime2_: an ISO Date-Time Record,
+          _xISODateTime_: an ISO Date-Time Record,
+          _yISODateTime_: an ISO Date-Time Record,
         ): one of -1, 0, or 1
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It performs a comparison of two date-times according to ISO 8601 calendar arithmetic. A return value of 0 means _isoDateTime1_ and _isoDateTime2_ are equal, 1 means _isoDateTime1_ comes after _isoDateTime2_, and -1 means _isoDateTime2_ comes after _isoDateTime1_.</dd>
+        <dd>It performs a comparison of two date-times according to ISO 8601 calendar arithmetic. A return value of 0 means _xISODateTime_ and _yISODateTime_ are equal, 1 means _xISODateTime_ comes after _yISODateTime_, and -1 means _yISODateTime_ comes after _xISODateTime_.</dd>
       </dl>
       <emu-alg>
-        1. Let _dateResult_ be CompareISODate(_isoDateTime1_.[[ISODate]], _isoDateTime2_.[[ISODate]]).
+        1. Let _dateResult_ be CompareISODate(_xISODateTime_.[[ISODate]], _yISODateTime_.[[ISODate]]).
         1. If _dateResult_ ≠ 0, return _dateResult_.
-        1. Return CompareTimeRecord(_isoDateTime1_.[[Time]], _isoDateTime2_.[[Time]]).
+        1. Return CompareTimeRecord(_xISODateTime_.[[Time]], _yISODateTime_.[[Time]]).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-differenceisodatetime" type="abstract operation">
       <h1>
         DifferenceISODateTime (
-          _isoDateTime1_: an ISO Date-Time Record,
-          _isoDateTime2_: an ISO Date-Time Record,
+          _xISODateTime_: an ISO Date-Time Record,
+          _yISODateTime_: an ISO Date-Time Record,
           _calendar_: a calendar type,
           _largestUnit_: a Temporal unit,
         ): an Internal Duration Record
@@ -2010,17 +2010,17 @@
         </dd>
       </dl>
       <emu-alg>
-        1. Assert: ISODateTimeWithinLimits(_isoDateTime1_) is *true*.
-        1. Assert: ISODateTimeWithinLimits(_isoDateTime2_) is *true*.
-        1. Let _timeDuration_ be DifferenceTime(_isoDateTime1_.[[Time]], _isoDateTime2_.[[Time]]).
+        1. Assert: ISODateTimeWithinLimits(_xISODateTime_) is *true*.
+        1. Assert: ISODateTimeWithinLimits(_yISODateTime_) is *true*.
+        1. Let _timeDuration_ be DifferenceTime(_xISODateTime_.[[Time]], _yISODateTime_.[[Time]]).
         1. Let _timeSign_ be TimeDurationSign(_timeDuration_).
-        1. Let _dateSign_ be CompareISODate(_isoDateTime1_.[[ISODate]], _isoDateTime2_.[[ISODate]]).
-        1. Let _adjustedDate_ be _isoDateTime2_.[[ISODate]].
+        1. Let _dateSign_ be CompareISODate(_xISODateTime_.[[ISODate]], _yISODateTime_.[[ISODate]]).
+        1. Let _adjustedDate_ be _yISODateTime_.[[ISODate]].
         1. If _timeSign_ = _dateSign_, then
           1. Set _adjustedDate_ to AddDaysToISODate(_adjustedDate_, _timeSign_).
           1. Set _timeDuration_ to ! Add24HourDaysToTimeDuration(_timeDuration_, -_timeSign_).
         1. Let _dateLargestUnit_ be LargerOfTwoTemporalUnits(~day~, _largestUnit_).
-        1. Let _dateDifference_ be CalendarDateUntil(_calendar_, _isoDateTime1_.[[ISODate]], _adjustedDate_, _dateLargestUnit_).
+        1. Let _dateDifference_ be CalendarDateUntil(_calendar_, _xISODateTime_.[[ISODate]], _adjustedDate_, _dateLargestUnit_).
         1. If _largestUnit_ is not _dateLargestUnit_, then
           1. Set _timeDuration_ to ! Add24HourDaysToTimeDuration(_timeDuration_, _dateDifference_.[[Days]]).
           1. Set _dateDifference_.[[Days]] to 0.
@@ -2759,31 +2759,31 @@
       <h1>
         ApplyUnsignedRoundingMode (
           _quantity_: a mathematical value,
-          _r1_: a mathematical value,
-          _r2_: a mathematical value,
+          _lowerBound_: a mathematical value,
+          _upperBound_: a mathematical value,
           _unsignedRoundingMode_: an unsigned rounding mode,
         ): a mathematical value
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It considers _quantity_, bounded below by _r1_ and above by _r2_, and returns either _r1_ or _r2_ according to _unsignedRoundingMode_.</dd>
+        <dd>It considers _quantity_, bounded below by _lowerBound_ and above by _upperBound_, and returns either _lowerBound_ or _upperBound_ according to _unsignedRoundingMode_.</dd>
       </dl>
       <emu-alg>
-        1. If _quantity_ = _r1_, return _r1_.
-        1. Assert: _r1_ &lt; _quantity_ &lt; _r2_.
-        1. If _unsignedRoundingMode_ is ~zero~, return _r1_.
-        1. If _unsignedRoundingMode_ is ~infinity~, return _r2_.
-        1. Let _d1_ be <emu-eqn>_quantity_ – _r1_</emu-eqn>.
-        1. Let _d2_ be <emu-eqn>_r2_ – _quantity_</emu-eqn>.
-        1. If _d1_ &lt; _d2_, return _r1_.
-        1. If _d2_ &lt; _d1_, return _r2_.
-        1. Assert: _d1_ is equal to _d2_.
-        1. If _unsignedRoundingMode_ is ~half-zero~, return _r1_.
-        1. If _unsignedRoundingMode_ is ~half-infinity~, return _r2_.
+        1. If _quantity_ = _lowerBound_, return _lowerBound_.
+        1. Assert: _lowerBound_ &lt; _quantity_ &lt; _upperBound_.
+        1. If _unsignedRoundingMode_ is ~zero~, return _lowerBound_.
+        1. If _unsignedRoundingMode_ is ~infinity~, return _upperBound_.
+        1. Let _distanceToLower_ be <emu-eqn>_quantity_ – _lowerBound_</emu-eqn>.
+        1. Let _distanceToUpper_ be <emu-eqn>_upperBound_ – _quantity_</emu-eqn>.
+        1. If _distanceToLower_ &lt; _distanceToUpper_, return _lowerBound_.
+        1. If _distanceToUpper_ &lt; _distanceToLower_, return _upperBound_.
+        1. Assert: _distanceToLower_ is equal to _distanceToUpper_.
+        1. If _unsignedRoundingMode_ is ~half-zero~, return _lowerBound_.
+        1. If _unsignedRoundingMode_ is ~half-infinity~, return _upperBound_.
         1. Assert: _unsignedRoundingMode_ is ~half-even~.
-        1. Let _cardinality_ be <emu-eqn>(_r1_ / (_r2_ – _r1_)) modulo 2</emu-eqn>.
-        1. If _cardinality_ = 0, return _r1_.
-        1. Return _r2_.
+        1. Let _cardinality_ be <emu-eqn>(_lowerBound_ / (_upperBound_ – _lowerBound_)) modulo 2</emu-eqn>.
+        1. If _cardinality_ = 0, return _lowerBound_.
+        1. Return _upperBound_.
       </emu-alg>
     </emu-clause>
 
@@ -2856,9 +2856,9 @@
           1. Set _sign_ to ~negative~.
           1. Set _quotient_ to -_quotient_.
         1. Let _unsignedRoundingMode_ be GetUnsignedRoundingMode(_roundingMode_, _sign_).
-        1. Let _r1_ be floor(_quotient_).
-        1. Let _r2_ be ceiling(_quotient_).
-        1. Let _rounded_ be ApplyUnsignedRoundingMode(_quotient_, _r1_, _r2_, _unsignedRoundingMode_).
+        1. Let _lowerBound_ be floor(_quotient_).
+        1. Let _upperBound_ be ceiling(_quotient_).
+        1. Let _rounded_ be ApplyUnsignedRoundingMode(_quotient_, _lowerBound_, _upperBound_, _unsignedRoundingMode_).
         1. If _sign_ is ~negative~, set _rounded_ to -_rounded_.
         1. Return _rounded_ × _increment_.
       </emu-alg>
@@ -2883,9 +2883,9 @@
       <emu-alg>
         1. Let _quotient_ be _quantity_ / _increment_.
         1. Let _unsignedRoundingMode_ be GetUnsignedRoundingMode(_roundingMode_, ~positive~).
-        1. Let _r1_ be floor(_quotient_).
-        1. Let _r2_ be ceiling(_quotient_).
-        1. Let _rounded_ be ApplyUnsignedRoundingMode(_quotient_, _r1_, _r2_, _unsignedRoundingMode_).
+        1. Let _lowerBound_ be floor(_quotient_).
+        1. Let _upperBound_ be ceiling(_quotient_).
+        1. Let _rounded_ be ApplyUnsignedRoundingMode(_quotient_, _lowerBound_, _upperBound_, _unsignedRoundingMode_).
         1. Return _rounded_ × _increment_.
       </emu-alg>
     </emu-clause>
@@ -2953,16 +2953,16 @@
     <emu-clause id="sec-addtimeduration" type="abstract operation">
       <h1>
         AddTimeDuration (
-          _one_: a time duration,
-          _two_: a time duration,
+          _xTimeDuration_: a time duration,
+          _yTimeDuration_: a time duration,
         ): either a normal completion containing a time duration or a throw completion
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It returns a time duration that is the sum of _one_ and _two_, throwing an error if the result is not within the range of a time duration.</dd>
+        <dd>It returns a time duration that is the sum of _xTimeDuration_ and _yTimeDuration_, throwing an error if the result is not within the range of a time duration.</dd>
       </dl>
       <emu-alg>
-        1. Let _result_ be _one_ + _two_.
+        1. Let _result_ be _xTimeDuration_ + _yTimeDuration_.
         1. If _result_ is not a time duration, throw a *RangeError* exception.
         1. Return _result_.
       </emu-alg>
@@ -3059,8 +3059,8 @@
     <emu-clause id="sec-timedurationfromepochnanosecondsdifference" type="abstract operation">
       <h1>
         TimeDurationFromEpochNanosecondsDifference (
-          _one_: an epoch nanoseconds count,
-          _two_: an epoch nanoseconds count,
+          _epochNanosecondsTo_: an epoch nanoseconds count,
+          _epochNanosecondsFrom_: an epoch nanoseconds count,
         ): a time duration
       </h1>
       <dl class="header">
@@ -3068,7 +3068,7 @@
         <dd>The returned time duration is the difference between two epoch nanoseconds counts, which must be within the range of a time duration.</dd>
       </dl>
       <emu-alg>
-        1. Let _result_ be _one_ - _two_.
+        1. Let _result_ be _epochNanosecondsTo_ - _epochNanosecondsFrom_.
         1. Assert: _result_ is a time duration.
         1. Return _result_.
       </emu-alg>
@@ -3216,27 +3216,27 @@
     <emu-clause id="sec-comparetimerecord" type="abstract operation">
       <h1>
         CompareTimeRecord (
-          _time1_: a Time Record,
-          _time2_: a Time Record,
+          _xTime_: a Time Record,
+          _yTime_: a Time Record,
         ): one of -1, 0, or 1
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It compares the two given times, returning -1 if _time2_ comes later in the day than _time1_, 1 if _time1_ comes later in the day than _time2_, and 0 if they are the same.</dd>
+        <dd>It compares the two given times, returning -1 if _yTime_ comes later in the day than _xTime_, 1 if _xTime_ comes later in the day than _yTime_, and 0 if they are the same.</dd>
       </dl>
       <emu-alg>
-        1. If _time1_.[[Hour]] > _time2_.[[Hour]], return 1.
-        1. If _time1_.[[Hour]] &lt; _time2_.[[Hour]], return -1.
-        1. If _time1_.[[Minute]] > _time2_.[[Minute]], return 1.
-        1. If _time1_.[[Minute]] &lt; _time2_.[[Minute]], return -1.
-        1. If _time1_.[[Second]] > _time2_.[[Second]], return 1.
-        1. If _time1_.[[Second]] &lt; _time2_.[[Second]], return -1.
-        1. If _time1_.[[Millisecond]] > _time2_.[[Millisecond]], return 1.
-        1. If _time1_.[[Millisecond]] &lt; _time2_.[[Millisecond]], return -1.
-        1. If _time1_.[[Microsecond]] > _time2_.[[Microsecond]], return 1.
-        1. If _time1_.[[Microsecond]] &lt; _time2_.[[Microsecond]], return -1.
-        1. If _time1_.[[Nanosecond]] > _time2_.[[Nanosecond]], return 1.
-        1. If _time1_.[[Nanosecond]] &lt; _time2_.[[Nanosecond]], return -1.
+        1. If _xTime_.[[Hour]] > _yTime_.[[Hour]], return 1.
+        1. If _xTime_.[[Hour]] &lt; _yTime_.[[Hour]], return -1.
+        1. If _xTime_.[[Minute]] > _yTime_.[[Minute]], return 1.
+        1. If _xTime_.[[Minute]] &lt; _yTime_.[[Minute]], return -1.
+        1. If _xTime_.[[Second]] > _yTime_.[[Second]], return 1.
+        1. If _xTime_.[[Second]] &lt; _yTime_.[[Second]], return -1.
+        1. If _xTime_.[[Millisecond]] > _yTime_.[[Millisecond]], return 1.
+        1. If _xTime_.[[Millisecond]] &lt; _yTime_.[[Millisecond]], return -1.
+        1. If _xTime_.[[Microsecond]] > _yTime_.[[Microsecond]], return 1.
+        1. If _xTime_.[[Microsecond]] &lt; _yTime_.[[Microsecond]], return -1.
+        1. If _xTime_.[[Nanosecond]] > _yTime_.[[Nanosecond]], return 1.
+        1. If _xTime_.[[Nanosecond]] &lt; _yTime_.[[Nanosecond]], return -1.
         1. Return 0.
       </emu-alg>
     </emu-clause>
@@ -3267,8 +3267,8 @@
     <emu-clause id="sec-differencetime" type="abstract operation">
       <h1>
         DifferenceTime (
-          _time1_: a Time Record,
-          _time2_: a Time Record,
+          _timeFrom_: a Time Record,
+          _timeTo_: a Time Record,
         ): a time duration
       </h1>
       <dl class="header">
@@ -3276,12 +3276,12 @@
         <dd>It returns the elapsed duration from a first wall-clock time, until a second wall-clock time.</dd>
       </dl>
       <emu-alg>
-        1. Let _hours_ be _time2_.[[Hour]] - _time1_.[[Hour]].
-        1. Let _minutes_ be _time2_.[[Minute]] - _time1_.[[Minute]].
-        1. Let _seconds_ be _time2_.[[Second]] - _time1_.[[Second]].
-        1. Let _milliseconds_ be _time2_.[[Millisecond]] - _time1_.[[Millisecond]].
-        1. Let _microseconds_ be _time2_.[[Microsecond]] - _time1_.[[Microsecond]].
-        1. Let _nanoseconds_ be _time2_.[[Nanosecond]] - _time1_.[[Nanosecond]].
+        1. Let _hours_ be _timeTo_.[[Hour]] - _timeFrom_.[[Hour]].
+        1. Let _minutes_ be _timeTo_.[[Minute]] - _timeFrom_.[[Minute]].
+        1. Let _seconds_ be _timeTo_.[[Second]] - _timeFrom_.[[Second]].
+        1. Let _milliseconds_ be _timeTo_.[[Millisecond]] - _timeFrom_.[[Millisecond]].
+        1. Let _microseconds_ be _timeTo_.[[Microsecond]] - _timeFrom_.[[Microsecond]].
+        1. Let _nanoseconds_ be _timeTo_.[[Nanosecond]] - _timeFrom_.[[Nanosecond]].
         1. Let _timeDuration_ be TimeDurationFromComponents(_hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
         1. Assert: _timeDuration_ is in the interval from -NanosecondsPerDay (exclusive) to NanosecondsPerDay (exclusive).
         1. Return _timeDuration_.
@@ -3717,8 +3717,8 @@
     <emu-clause id="sec-largeroftwotemporalunits" type="abstract operation">
       <h1>
         LargerOfTwoTemporalUnits (
-          _u1_: a Temporal unit,
-          _u2_: a Temporal unit,
+          _xUnit_: a Temporal unit,
+          _yUnit_: a Temporal unit,
         ): a Temporal unit
       </h1>
       <dl class="header">
@@ -3728,8 +3728,8 @@
       <emu-alg>
         1. For each row of <emu-xref href="#table-temporal-units"></emu-xref>, except the header row, in table order, do
           1. Let _unit_ be the value in the “Value” column of the row.
-          1. If _u1_ is _unit_, return _unit_.
-          1. If _u2_ is _unit_, return _unit_.
+          1. If _xUnit_ is _unit_, return _unit_.
+          1. If _yUnit_ is _unit_, return _unit_.
       </emu-alg>
     </emu-clause>
 

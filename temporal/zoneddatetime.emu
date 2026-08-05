@@ -66,12 +66,12 @@
     </emu-clause>
 
     <emu-clause id="sec-temporal.zoneddatetime.compare" type="built-in function">
-      <h1>Temporal.ZonedDateTime.compare ( _one_, _two_ )</h1>
+      <h1>Temporal.ZonedDateTime.compare ( _xZonedDateTime_, _yZonedDateTime_ )</h1>
       <p>This function performs the following steps when called:</p>
       <emu-alg>
-        1. Set _one_ to ? ToTemporalZonedDateTime(_one_).
-        1. Set _two_ to ? ToTemporalZonedDateTime(_two_).
-        1. Return 𝔽(CompareEpochNanoseconds(_one_.[[EpochNanoseconds]], _two_.[[EpochNanoseconds]])).
+        1. Set _xZonedDateTime_ to ? ToTemporalZonedDateTime(_xZonedDateTime_).
+        1. Set _yZonedDateTime_ to ? ToTemporalZonedDateTime(_yZonedDateTime_).
+        1. Return 𝔽(CompareEpochNanoseconds(_xZonedDateTime_.[[EpochNanoseconds]], _yZonedDateTime_.[[EpochNanoseconds]])).
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -1078,8 +1078,8 @@
     <emu-clause id="sec-differencezoneddatetime" type="abstract operation">
       <h1>
         DifferenceZonedDateTime (
-          _ns1_: an epoch nanoseconds count,
-          _ns2_: an epoch nanoseconds count,
+          _epochNanosecondsFrom_: an epoch nanoseconds count,
+          _epochNanosecondsTo_: an epoch nanoseconds count,
           _timeZone_: an available time zone identifier,
           _calendar_: a calendar type,
           _largestUnit_: a Temporal unit,
@@ -1092,13 +1092,13 @@
         </dd>
       </dl>
       <emu-alg>
-        1. If _ns1_ = _ns2_, return CombineDateAndTimeDuration(ZeroDateDuration(), 0).
-        1. Let _startDateTime_ be GetISODateTimeFor(_timeZone_, _ns1_).
-        1. Let _endDateTime_ be GetISODateTimeFor(_timeZone_, _ns2_).
+        1. If _epochNanosecondsFrom_ = _epochNanosecondsTo_, return CombineDateAndTimeDuration(ZeroDateDuration(), 0).
+        1. Let _startDateTime_ be GetISODateTimeFor(_timeZone_, _epochNanosecondsFrom_).
+        1. Let _endDateTime_ be GetISODateTimeFor(_timeZone_, _epochNanosecondsTo_).
         1. If CompareISODate(_startDateTime_.[[ISODate]], _endDateTime_.[[ISODate]]) = 0, then
-          1. Let _timeDuration_ be TimeDurationFromEpochNanosecondsDifference(_ns2_, _ns1_).
+          1. Let _timeDuration_ be TimeDurationFromEpochNanosecondsDifference(_epochNanosecondsTo_, _epochNanosecondsFrom_).
           1. Return CombineDateAndTimeDuration(ZeroDateDuration(), _timeDuration_).
-        1. If _ns2_ - _ns1_ &lt; 0, let _sign_ be 1; else let _sign_ be -1.
+        1. If _epochNanosecondsTo_ - _epochNanosecondsFrom_ &lt; 0, let _sign_ be 1; else let _sign_ be -1.
         1. If _sign_ = -1, let _maxDayCorrection_ be 2; else let _maxDayCorrection_ be 1.
         1. Let _dayCorrection_ be 0.
         1. Let _timeDuration_ be DifferenceTime(_startDateTime_.[[Time]], _endDateTime_.[[Time]]).
@@ -1108,7 +1108,7 @@
           1. Let _intermediateDate_ be AddDaysToISODate(_endDateTime_.[[ISODate]], _dayCorrection_ × _sign_).
           1. Let _intermediateDateTime_ be the ISO Date-Time Record { [[ISODate]]: _intermediateDate_, [[Time]]: _startDateTime_.[[Time]] }.
           1. Let _intermediateNanoseconds_ be ? GetEpochNanosecondsFor(_timeZone_, _intermediateDateTime_, ~compatible~).
-          1. Set _timeDuration_ to TimeDurationFromEpochNanosecondsDifference(_ns2_, _intermediateNanoseconds_).
+          1. Set _timeDuration_ to TimeDurationFromEpochNanosecondsDifference(_epochNanosecondsTo_, _intermediateNanoseconds_).
           1. Let _timeSign_ be TimeDurationSign(_timeDuration_).
           1. If _sign_ ≠ _timeSign_, then
             1. Set _success_ to *true*.
@@ -1123,8 +1123,8 @@
     <emu-clause id="sec-differencezoneddatetimewithrounding" type="abstract operation">
       <h1>
         DifferenceZonedDateTimeWithRounding (
-          _ns1_: an epoch nanoseconds count,
-          _ns2_: an epoch nanoseconds count,
+          _epochNanosecondsFrom_: an epoch nanoseconds count,
+          _epochNanosecondsTo_: an epoch nanoseconds count,
           _timeZone_: an available time zone identifier,
           _calendar_: a calendar type,
           _largestUnit_: a Temporal unit,
@@ -1138,19 +1138,19 @@
         <dd></dd>
       </dl>
       <emu-alg>
-        1. If _largestUnit_ is a time unit, return DifferenceEpochNanoseconds(_ns1_, _ns2_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
-        1. Let _difference_ be ? DifferenceZonedDateTime(_ns1_, _ns2_, _timeZone_, _calendar_, _largestUnit_).
+        1. If _largestUnit_ is a time unit, return DifferenceEpochNanoseconds(_epochNanosecondsFrom_, _epochNanosecondsTo_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
+        1. Let _difference_ be ? DifferenceZonedDateTime(_epochNanosecondsFrom_, _epochNanosecondsTo_, _timeZone_, _calendar_, _largestUnit_).
         1. If _smallestUnit_ is ~nanosecond~ and _roundingIncrement_ = 1, return _difference_.
-        1. Let _dateTime_ be GetISODateTimeFor(_timeZone_, _ns1_).
-        1. Return ? RoundRelativeDuration(_difference_, _ns1_, _ns2_, _dateTime_, _timeZone_, _calendar_, _largestUnit_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
+        1. Let _dateTime_ be GetISODateTimeFor(_timeZone_, _epochNanosecondsFrom_).
+        1. Return ? RoundRelativeDuration(_difference_, _epochNanosecondsFrom_, _epochNanosecondsTo_, _dateTime_, _timeZone_, _calendar_, _largestUnit_, _roundingIncrement_, _smallestUnit_, _roundingMode_).
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-differencezoneddatetimewithtotal" type="abstract operation">
       <h1>
         DifferenceZonedDateTimeWithTotal (
-          _ns1_: an epoch nanoseconds count,
-          _ns2_: an epoch nanoseconds count,
+          _epochNanosecondsFrom_: an epoch nanoseconds count,
+          _epochNanosecondsTo_: an epoch nanoseconds count,
           _timeZone_: an available time zone identifier,
           _calendar_: a calendar type,
           _unit_: a Temporal unit,
@@ -1162,11 +1162,11 @@
       </dl>
       <emu-alg>
         1. If _unit_ is a time unit, then
-          1. Let _difference_ be TimeDurationFromEpochNanosecondsDifference(_ns2_, _ns1_).
+          1. Let _difference_ be TimeDurationFromEpochNanosecondsDifference(_epochNanosecondsTo_, _epochNanosecondsFrom_).
           1. Return TotalTimeDuration(_difference_, _unit_).
-        1. Let _difference_ be ? DifferenceZonedDateTime(_ns1_, _ns2_, _timeZone_, _calendar_, _unit_).
-        1. Let _dateTime_ be GetISODateTimeFor(_timeZone_, _ns1_).
-        1. Return ? TotalRelativeDuration(_difference_, _ns1_, _ns2_, _dateTime_, _timeZone_, _calendar_, _unit_).
+        1. Let _difference_ be ? DifferenceZonedDateTime(_epochNanosecondsFrom_, _epochNanosecondsTo_, _timeZone_, _calendar_, _unit_).
+        1. Let _dateTime_ be GetISODateTimeFor(_timeZone_, _epochNanosecondsFrom_).
+        1. Return ? TotalRelativeDuration(_difference_, _epochNanosecondsFrom_, _epochNanosecondsTo_, _dateTime_, _timeZone_, _calendar_, _unit_).
       </emu-alg>
     </emu-clause>
 
