@@ -5725,8 +5725,8 @@
       </dl>
       <emu-alg>
         1. Let _length_ be ? ToIntegerOrInfinity(_arg_).
-        1. If _length_ ≤ 0, return *+0*<sub>𝔽</sub>.
-        1. Return 𝔽(min(_length_, 2<sup>53</sup> - 1)).
+        1. Let _clampedLen_ be the result of clamping _length_ between 0 and 2<sup>53</sup> - 1.
+        1. Return 𝔽(_clampedLen_).
       </emu-alg>
     </emu-clause>
 
@@ -5763,6 +5763,41 @@
         1. Let _int_ be ? ToIntegerOrInfinity(_arg_).
         1. If _int_ is not in the inclusive interval from 0 to 2<sup>53</sup> - 1, throw a *RangeError* exception.
         1. Return _int_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-toabsoluteindex" type="abstract operation">
+      <h1>
+        ToAbsoluteIndex (
+          _value_: an ECMAScript language value,
+          _length_: a non-negative integer,
+        ): either a normal completion containing either an integer, +&infin;, or -&infin;, or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _value_ to an integer, +∞, or -∞, interpreting negative values relative to _length_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _int_ be ? ToIntegerOrInfinity(_value_).
+        1. If _int_ is finite and _int_ &lt; 0, set _int_ to _length_ + _int_.
+        1. Return _int_.
+      </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-toclampedindex" type="abstract operation">
+      <h1>
+        ToClampedIndex (
+          _value_: an ECMAScript language value,
+          _length_: a non-negative integer,
+        ): either a normal completion containing a non-negative integer or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _value_ to an integer (interpreting negative values relative to _length_) and clamps the result to the inclusive interval from 0 to _length_.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _index_ be ? ToAbsoluteIndex(_value_, _length_).
+        1. Return the result of clamping _index_ between 0 and _length_.
       </emu-alg>
     </emu-clause>
   </emu-clause>
@@ -12357,13 +12392,13 @@
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It resumes _context_ (sending it _completionRecord_ as the resumption value), and waits for the result.</dd>
+        <dd>It resumes _context_ (passing it _completionRecord_ as the resumption value), and waits for the result.</dd>
       </dl>
       <emu-alg>
         1. Let _callerContext_ be the running execution context.
         1. Suspend _callerContext_.
         1. Push _context_ onto the execution context stack; _context_ is now the running execution context.
-        1. <emu-meta effects="user-code">Resume the suspended evaluation of _context_</emu-meta> using _completionRecord_ as the result of the operation that suspended it. Let _result_ be the Completion Record returned by the resumed computation.
+        1. <emu-meta effects="user-code">Resume the suspended evaluation of _context_</emu-meta> passing _completionRecord_ as the result of the operation that suspended it. Let _result_ be the Completion Record passed by the resumed computation.
         1. Assert: When we reach this step, _context_ has already been removed from the execution context stack and _callerContext_ is the running execution context again.
         1. Return Completion(_result_).
       </emu-alg>
@@ -12377,7 +12412,7 @@
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It resumes the caller context (sending it _value_ as the resumption value), and waits for the result, if any.</dd>
+        <dd>It resumes the caller context (passing it _value_ as the resumption value), and waits for the result, if any.</dd>
       </dl>
       <emu-alg>
         1. Let _genContext_ be the running execution context.
@@ -14093,7 +14128,7 @@
           _name_: a property key or Private Name,
           _closure_: a function object,
           _enumerable_: a Boolean,
-        ): either a normal completion containing either a PrivateElement or ~unused~, or an abrupt completion
+        ): either a normal completion containing either a PrivateElement or ~empty~, or an abrupt completion
       </h1>
       <dl class="header">
       </dl>
@@ -14103,7 +14138,7 @@
         1. Let _propertyDesc_ be the PropertyDescriptor { [[Value]]: _closure_, [[Writable]]: *true*, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
         1. Perform ? DefinePropertyOrThrow(_homeObj_, _name_, _propertyDesc_).
         1. NOTE: DefinePropertyOrThrow only returns an abrupt completion when attempting to define a class static method whose _name_ is *"prototype"*.
-        1. Return ~unused~.
+        1. Return ~empty~.
       </emu-alg>
     </emu-clause>
 
@@ -17019,7 +17054,7 @@
         </tr>
       </table>
     </emu-table>
-    <p>Only the Unicode code points in <emu-xref href="#table-line-terminator-code-points"></emu-xref> are treated as line terminators. Other new line or line breaking Unicode code points are not treated as line terminators but are treated as white space if they meet the requirements listed in <emu-xref href="#table-white-space-code-points"></emu-xref>. The sequence &lt;CR>&lt;LF> is commonly used as a line terminator. It should be considered a single |SourceCharacter| for the purpose of reporting line numbers.</p>
+    <p>Only the Unicode code points in <emu-xref href="#table-line-terminator-code-points"></emu-xref> are treated as line terminators. Other new line or line breaking Unicode code points are not treated as line terminators but are treated as white space if they meet the requirements listed in <emu-xref href="#table-white-space-code-points"></emu-xref>.</p>
     <h2>Syntax</h2>
     <emu-grammar type="definition">
       LineTerminator ::
@@ -17035,6 +17070,9 @@
         &lt;PS&gt;
         &lt;CR&gt; &lt;LF&gt;
     </emu-grammar>
+    <emu-note>
+      <p>The production <emu-grammar>LineTerminatorSequence :: &lt;CR&gt; &lt;LF&gt;</emu-grammar> matches a sequence of code points that should collectively operate as a single line terminator, such as when reporting line numbers in diagnostics.</p>
+    </emu-note>
   </emu-clause>
 
   <emu-clause id="sec-comments">
@@ -19193,7 +19231,8 @@
         </emu-alg>
         <emu-grammar>PropertyDefinition : MethodDefinition</emu-grammar>
         <emu-alg>
-          1. Perform ? MethodDefinitionEvaluation of |MethodDefinition| with arguments _obj_ and *true*.
+          1. Let _result_ be ? MethodDefinitionEvaluation of |MethodDefinition| with arguments _obj_ and *true*.
+          1. Assert: _result_ is ~empty~.
           1. Return ~unused~.
         </emu-alg>
       </emu-clause>
@@ -24594,7 +24633,7 @@
         Runtime Semantics: MethodDefinitionEvaluation (
           _obj_: an Object,
           _enumerable_: a Boolean,
-        ): either a normal completion containing either a PrivateElement or ~unused~, or an abrupt completion
+        ): either a normal completion containing either a PrivateElement or ~empty~, or an abrupt completion
       </h1>
       <dl class="header">
       </dl>
@@ -24618,7 +24657,7 @@
           1. Return PrivateElement { [[Key]]: _propertyKey_, [[Kind]]: ~accessor~, [[Getter]]: _closure_, [[Setter]]: *undefined* }.
         1. Let _propertyDesc_ be the PropertyDescriptor { [[Getter]]: _closure_, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
         1. Perform ? DefinePropertyOrThrow(_obj_, _propertyKey_, _propertyDesc_).
-        1. Return ~unused~.
+        1. Return ~empty~.
       </emu-alg>
       <emu-grammar>MethodDefinition : `set` ClassElementName `(` PropertySetParameterList `)` `{` FunctionBody `}`</emu-grammar>
       <emu-alg>
@@ -24633,7 +24672,7 @@
           1. Return PrivateElement { [[Key]]: _propertyKey_, [[Kind]]: ~accessor~, [[Getter]]: *undefined*, [[Setter]]: _closure_ }.
         1. Let _propertyDesc_ be the PropertyDescriptor { [[Setter]]: _closure_, [[Enumerable]]: _enumerable_, [[Configurable]]: *true* }.
         1. Perform ? DefinePropertyOrThrow(_obj_, _propertyKey_, _propertyDesc_).
-        1. Return ~unused~.
+        1. Return ~empty~.
       </emu-alg>
       <emu-grammar>GeneratorMethod : `*` ClassElementName `(` UniqueFormalParameters `)` `{` GeneratorBody `}`</emu-grammar>
       <emu-alg>
@@ -25641,7 +25680,7 @@
       <h1>
         Runtime Semantics: ClassElementEvaluation (
           _obj_: an Object,
-        ): either a normal completion containing either a ClassFieldDefinition Record, a ClassStaticBlockDefinition Record, a PrivateElement, or ~unused~, or an abrupt completion
+        ): either a normal completion containing either a ClassFieldDefinition Record, a ClassStaticBlockDefinition Record, a PrivateElement, or ~empty~, or an abrupt completion
       </h1>
       <dl class="header">
       </dl>
@@ -25673,7 +25712,7 @@
         ClassElement : `;`
       </emu-grammar>
       <emu-alg>
-        1. Return ~unused~.
+        1. Return ~empty~.
       </emu-alg>
     </emu-clause>
 
@@ -25789,6 +25828,8 @@
             1. Else, append _element_ to _staticElements_.
           1. Else if _element_ is a ClassStaticBlockDefinition Record, then
             1. Append _element_ to _staticElements_.
+          1. Else,
+            1. Assert: _element_ is ~empty~.
         1. Set the running execution context's LexicalEnvironment to _envRecord_.
         1. If _classBinding_ is not *undefined*, then
           1. Perform ! _classEnv_.InitializeBinding(_classBinding_, _ctorFunc_).
@@ -31882,13 +31923,12 @@
           1. If _targetHasLength_ is *true*, then
             1. Let _targetLength_ be ? Get(_target_, *"length"*).
             1. If _targetLength_ is a Number, then
-              1. If _targetLength_ is *+∞*<sub>𝔽</sub>, then
+              1. Let _targetLengthAsInt_ be ! ToIntegerOrInfinity(_targetLength_).
+              1. If _targetLengthAsInt_ = +∞, then
                 1. Set _length_ to +∞.
-              1. Else if _targetLength_ is *-∞*<sub>𝔽</sub>, then
+              1. Else if _targetLengthAsInt_ = -∞, then
                 1. Set _length_ to 0.
               1. Else,
-                1. Let _targetLengthAsInt_ be ! ToIntegerOrInfinity(_targetLength_).
-                1. Assert: _targetLengthAsInt_ is finite.
                 1. Let _argCount_ be the number of elements in _args_.
                 1. Set _length_ to max(_targetLengthAsInt_ - _argCount_, 0).
           1. Perform SetFunctionLength(_boundFunc_, _length_).
@@ -34027,7 +34067,7 @@
       <emu-clause id="sec-time-values-and-time-range">
         <h1>Time Values and Time Range</h1>
         <p>Time measurement in ECMAScript is analogous to time measurement in POSIX, in particular sharing definition in terms of the proleptic Gregorian calendar, an <dfn id="epoch">epoch</dfn> of midnight at the beginning of 1 January 1970 UTC, and an accounting of every day as comprising exactly 86,400 seconds (each of which is 1000 milliseconds long).</p>
-        <p>An ECMAScript <dfn variants="time values">time value</dfn> is a Number, either a finite integral Number representing an instant in time to millisecond precision or *NaN* representing no specific instant. A time value that is a multiple of <emu-eqn>24 × 60 × 60 × 1000 = 86,400,000</emu-eqn> (i.e., is 86,400,000 × _d_ for some integer _d_) represents the instant at the start of the UTC day that follows the epoch by _d_ whole UTC days (preceding the epoch for negative _d_). Every other finite time value _tv_ is defined relative to the greatest preceding time value _s_ that is such a multiple, and represents the instant that occurs within the same UTC day as _s_ but follows it by (_tv_ - _s_) milliseconds.</p>
+        <p>An ECMAScript <dfn variants="time values">time value</dfn> is a Number, either a finite integral Number representing an instant in time to millisecond precision or *NaN* representing no specific instant. A time value that is an integer multiple of msPerDay (i.e., is msPerDay × _d_ for some integer _d_) represents the instant at the start of the UTC day that follows the epoch by _d_ whole UTC days (preceding the epoch for negative _d_). Every other finite time value _tv_ is defined relative to the greatest preceding time value _s_ that is such a multiple, and represents the instant that occurs within the same UTC day as _s_ but follows it by (_tv_ - _s_) milliseconds.</p>
         <p>Time values do not account for UTC leap seconds—there are no time values representing instants within positive leap seconds, and there are time values representing instants removed from the UTC timeline by negative leap seconds. However, the definition of time values nonetheless yields piecewise alignment with UTC, with discontinuities only at leap second boundaries and zero difference outside of leap seconds.</p>
         <p>A Number can exactly represent all integers from -9,007,199,254,740,992 to 9,007,199,254,740,992 (<emu-xref href="#sec-number.min_safe_integer"></emu-xref> and <emu-xref href="#sec-number.max_safe_integer"></emu-xref>). A time value supports a slightly smaller range of -8,640,000,000,000,000 to 8,640,000,000,000,000 milliseconds. This yields a supported time value range of exactly -100,000,000 days to 100,000,000 days relative to midnight at the beginning of 1 January 1970 UTC.</p>
         <p>The exact moment of midnight at the beginning of 1 January 1970 UTC is represented by the time value *+0*<sub>𝔽</sub>.</p>
@@ -34047,6 +34087,9 @@
         <emu-eqn id="eqn-msPerMinute" aoid="msPerMinute">msPerMinute = *60000*<sub>𝔽</sub> = msPerSecond × 𝔽(SecondsPerMinute)</emu-eqn>
         <emu-eqn id="eqn-msPerHour" aoid="msPerHour">msPerHour = *3600000*<sub>𝔽</sub> = msPerMinute × 𝔽(MinutesPerHour)</emu-eqn>
         <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = *86400000*<sub>𝔽</sub> = msPerHour × 𝔽(HoursPerDay)</emu-eqn>
+        <emu-eqn id="eqn-nsPerSecond" aoid="nsPerSecond">nsPerSecond = 10<sup>6</sup> × ℝ(msPerSecond) = 10<sup>9</sup></emu-eqn>
+        <emu-eqn id="eqn-nsPerMillisecond" aoid="nsPerMillisecond">nsPerMillisecond = 10<sup>6</sup></emu-eqn>
+        <emu-eqn id="eqn-nsPerMicrosecond" aoid="nsPerMicrosecond">nsPerMicrosecond = 10<sup>3</sup></emu-eqn>
       </emu-clause>
 
       <emu-clause id="sec-day" type="abstract operation" oldids="eqn-Day,sec-day-number-and-time-within-day">
@@ -34335,7 +34378,7 @@
           1. Let _time_ be MakeTime(𝔽(_hour_), 𝔽(_minute_), 𝔽(_second_), 𝔽(_millisecond_)).
           1. Let _ms_ be MakeDate(_date_, _time_).
           1. Assert: _ms_ is an integral Number.
-          1. Return ℤ(ℝ(_ms_) × 10<sup>6</sup> + _microsecond_ × 10<sup>3</sup> + _nanosecond_).
+          1. Return ℤ(ℝ(_ms_) × nsPerMillisecond + _microsecond_ × nsPerMicrosecond + _nanosecond_).
         </emu-alg>
       </emu-clause>
 
@@ -34526,8 +34569,8 @@
           1. If IsTimeZoneOffsetString(_systemTimeZoneIdentifier_) is *true*, then
             1. Let _offsetNs_ be ParseTimeZoneOffsetString(_systemTimeZoneIdentifier_).
           1. Else,
-            1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℤ(ℝ(_tv_) × 10<sup>6</sup>)).
-          1. Let _offsetMs_ be truncate(_offsetNs_ / 10<sup>6</sup>).
+            1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℤ(ℝ(_tv_) × nsPerMillisecond)).
+          1. Let _offsetMs_ be truncate(_offsetNs_ / nsPerMillisecond).
           1. Return _tv_ + 𝔽(_offsetMs_).
         </emu-alg>
         <emu-note>
@@ -34570,7 +34613,7 @@
               1. [declared="tBefore"] Let _possibleInstantsBefore_ be GetNamedTimeZoneEpochNanoseconds(_systemTimeZoneIdentifier_, ℝ(YearFromTime(_tBefore_)), ℝ(MonthFromTime(_tBefore_)) + 1, ℝ(DateFromTime(_tBefore_)), ℝ(HourFromTime(_tBefore_)), ℝ(MinFromTime(_tBefore_)), ℝ(SecFromTime(_tBefore_)), ℝ(msFromTime(_tBefore_)), 0, 0), where _tBefore_ is the largest integral Number &lt; _t_ for which _possibleInstantsBefore_ is not empty (i.e., _tBefore_ represents the last local time before the transition).
               1. Let _disambiguatedInstant_ be the last element of _possibleInstantsBefore_.
             1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, _disambiguatedInstant_).
-          1. Let _offsetMs_ be truncate(_offsetNs_ / 10<sup>6</sup>).
+          1. Let _offsetMs_ be truncate(_offsetNs_ / nsPerMillisecond).
           1. Return _t_ - 𝔽(_offsetMs_).
         </emu-alg>
         <p>
@@ -34703,7 +34746,7 @@
 
       <emu-clause id="sec-date-time-string-format">
         <h1>Date Time String Format</h1>
-        <p>ECMAScript defines a string interchange format for date-times based upon a simplification of the ISO 8601 calendar date extended format. The format is as follows: `YYYY-MM-DDTHH:mm:ss.sssZ`</p>
+        <p>ECMAScript defines a string interchange format for date-times which is adapted from the ISO 8601 calendar date extended format. The format is as follows: `YYYY-MM-DDTHH:mm:ss.sssZ`</p>
         <p>Where the elements are as follows:</p>
         <figure>
           <table class="lightweight-table">
@@ -34712,7 +34755,7 @@
                 `YYYY`
               </td>
               <td>
-                is the year in the proleptic Gregorian calendar as four decimal digits from 0000 to 9999, or as an <emu-xref href="#sec-expanded-years">expanded year</emu-xref> of *"+"* or *"-"* followed by six decimal digits.
+                is the year in the proleptic Gregorian calendar as four decimal digits from 0000 to 9999, or as an expanded year of *"+"* or *"-"* followed by six decimal digits.
               </td>
             </tr>
             <tr>
@@ -34819,15 +34862,15 @@ THH:mm:ss.sss
         </pre>
         <p>A string containing out-of-bounds or nonconforming elements is not a valid instance of this format.</p>
         <emu-note>
-          <p>As every day both starts and ends with midnight, the two notations `00:00` and `24:00` are available to distinguish the two midnights that can be associated with one date. This means that the following two notations refer to exactly the same point in time: `1995-02-04T24:00` and `1995-02-05T00:00`. This interpretation of the latter form as “end of a calendar day” is consistent with ISO 8601, even though that specification reserves it for describing time intervals and does not permit it within representations of single points in time.</p>
+          <p>As every day both starts and ends with midnight, the two notations `00:00` and `24:00` are available to distinguish the two midnights that can be associated with one date. This means that the following two notations refer to exactly the same point in time: `1995-02-04T24:00` and `1995-02-05T00:00`.</p>
         </emu-note>
         <emu-note>
-          <p>There exists no international standard that specifies abbreviations for civil time zones like CET, EST, etc. and sometimes the same abbreviation is even used for two very different time zones. For this reason, both ISO 8601 and this format specify numeric representations of time zone offsets.</p>
+          <p>This format does not support annotations with a time zone name as defined in RFC 9557, only a numeric representation of the time zone offset.</p>
         </emu-note>
 
         <emu-clause id="sec-expanded-years" oldids="sec-extended-years">
           <h1>Expanded Years</h1>
-          <p>Covering the full time value range of approximately 273,790 years forward or backward from 1 January 1970 (<emu-xref href="#sec-time-values-and-time-range"></emu-xref>) requires representing years before 0 or after 9999. ISO 8601 permits expansion of the year representation, but only by mutual agreement of the partners in information interchange. In the simplified ECMAScript format, such an expanded year representation shall have 6 digits and is always prefixed with a + or - sign. The year 0 is considered positive and must be prefixed with a + sign. The representation of the year 0 as -000000 is invalid. Strings matching the <emu-xref href="#sec-date-time-string-format">Date Time String Format</emu-xref> with expanded years representing instants in time outside the range of a time value are treated as unrecognizable by <emu-xref href="#sec-date.parse">`Date.parse`</emu-xref> and cause that function to return *NaN* without falling back to implementation-specific behaviour or heuristics.</p>
+          <p>Covering the full time value range of approximately 273,790 years forward or backward from 1 January 1970 (<emu-xref href="#sec-time-values-and-time-range"></emu-xref>) requires representing years before 0 or after 9999. ISO 8601 permits expansion of the year representation, but only by mutual agreement of the partners in information interchange. In the simplified ECMAScript format, such an <dfn variants="expanded years">expanded year</dfn> representation shall have 6 digits and is always prefixed with a + or - sign. The year 0 is considered positive and must be prefixed with a + sign. The representation of the year 0 as -000000 is invalid. Strings matching the <emu-xref href="#sec-date-time-string-format">Date Time String Format</emu-xref> with expanded years representing instants in time outside the range of a time value are treated as unrecognizable by <emu-xref href="#sec-date.parse">`Date.parse`</emu-xref> and cause that function to return *NaN* without falling back to implementation-specific behaviour or heuristics.</p>
           <emu-note>
             <p>Examples of date-<emu-not-ref>time values</emu-not-ref> with expanded years:</p>
             <figure>
@@ -34980,7 +35023,7 @@ THH:mm:ss.sss
               1. Let _fraction_ be the string-concatenation of CodePointsToString(_parsedFraction_) and *"000000000"*.
               1. Let _nanosecondsString_ be the substring of _fraction_ from 1 to 10.
               1. Let _nanoseconds_ be ℝ(StringToNumber(_nanosecondsString_)).
-            1. Return _sign_ × (((_hours_ × 60 + _minutes_) × 60 + _seconds_) × 10<sup>9</sup> + _nanoseconds_).
+            1. Return _sign_ × (((_hours_ × MinutesPerHour + _minutes_) × SecondsPerMinute + _seconds_) × nsPerSecond + _nanoseconds_).
           </emu-alg>
         </emu-clause>
       </emu-clause>
@@ -35953,8 +35996,8 @@ THH:mm:ss.sss
             1. If IsTimeZoneOffsetString(_systemTimeZoneIdentifier_) is *true*, then
               1. Let _offsetNs_ be ParseTimeZoneOffsetString(_systemTimeZoneIdentifier_).
             1. Else,
-              1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℤ(ℝ(_tv_) × 10<sup>6</sup>)).
-            1. Let _offset_ be 𝔽(truncate(_offsetNs_ / 10<sup>6</sup>)).
+              1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℤ(ℝ(_tv_) × nsPerMillisecond)).
+            1. Let _offset_ be 𝔽(truncate(_offsetNs_ / nsPerMillisecond)).
             1. If _offset_ is *+0*<sub>𝔽</sub> or _offset_ > *+0*<sub>𝔽</sub>, then
               1. Let _offsetSign_ be *"+"*.
               1. Let _absOffset_ be _offset_.
@@ -36178,11 +36221,7 @@ THH:mm:ss.sss
           1. Perform ? RequireObjectCoercible(_thisValue_).
           1. Let _string_ be ? ToString(_thisValue_).
           1. Let _length_ be the length of _string_.
-          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
-          1. If _relativeIndex_ ≥ 0, then
-            1. Let _k_ be _relativeIndex_.
-          1. Else,
-            1. Let _k_ be _length_ + _relativeIndex_.
+          1. Let _k_ be ? ToAbsoluteIndex(_index_, _length_).
           1. If _k_ &lt; 0 or _k_ ≥ _length_, return *undefined*.
           1. Return the substring of _string_ from _k_ to _k_ + 1.
         </emu-alg>
@@ -36288,8 +36327,7 @@ THH:mm:ss.sss
           1. If _isRegexp_ is *true*, throw a *TypeError* exception.
           1. Set _searchString_ to ? ToString(_searchString_).
           1. Let _length_ be the length of _string_.
-          1. If _endPosition_ is *undefined*, let _position_ be _length_; else let _position_ be ? ToIntegerOrInfinity(_endPosition_).
-          1. Let _end_ be the result of clamping _position_ between 0 and _length_.
+          1. If _endPosition_ is *undefined*, let _end_ be _length_; else let _end_ be the result of clamping ? ToIntegerOrInfinity(_endPosition_) between 0 and _length_.
           1. Let _searchLength_ be the length of _searchString_.
           1. If _searchLength_ = 0, return *true*.
           1. Let _start_ be _end_ - _searchLength_.
@@ -36316,10 +36354,9 @@ THH:mm:ss.sss
           1. Let _isRegexp_ be ? IsRegExp(_searchString_).
           1. If _isRegexp_ is *true*, throw a *TypeError* exception.
           1. Set _searchString_ to ? ToString(_searchString_).
-          1. Let _positionInt_ be ? ToIntegerOrInfinity(_position_).
-          1. Assert: If _position_ is *undefined*, then _positionInt_ is 0.
           1. Let _length_ be the length of _string_.
-          1. Let _start_ be the result of clamping _positionInt_ between 0 and _length_.
+          1. Let _start_ be the result of clamping ? ToIntegerOrInfinity(_position_) between 0 and _length_.
+          1. Assert: If _position_ is *undefined*, then _start_ is 0.
           1. Let _index_ be StringIndexOf(_string_, _searchString_, _start_).
           1. If _index_ is ~not-found~, return *false*.
           1. Return *true*.
@@ -36346,10 +36383,9 @@ THH:mm:ss.sss
           1. Perform ? RequireObjectCoercible(_thisValue_).
           1. Let _string_ be ? ToString(_thisValue_).
           1. Set _searchString_ to ? ToString(_searchString_).
-          1. Let _positionInt_ be ? ToIntegerOrInfinity(_position_).
-          1. Assert: If _position_ is *undefined*, then _positionInt_ is 0.
           1. Let _length_ be the length of _string_.
-          1. Let _start_ be the result of clamping _positionInt_ between 0 and _length_.
+          1. Let _start_ be the result of clamping ? ToIntegerOrInfinity(_position_) between 0 and _length_.
+          1. Assert: If _position_ is *undefined*, then _start_ is 0.
           1. Let _result_ be StringIndexOf(_string_, _searchString_, _start_).
           1. If _result_ is ~not-found~, return *-1*<sub>𝔽</sub>.
           1. Return 𝔽(_result_).
@@ -36382,12 +36418,12 @@ THH:mm:ss.sss
           1. Let _string_ be ? ToString(_thisValue_).
           1. Set _searchString_ to ? ToString(_searchString_).
           1. Let _numberPosition_ be ? ToNumber(_position_).
-          1. Assert: If _position_ is *undefined*, then _numberPosition_ is *NaN*.
-          1. If _numberPosition_ is *NaN*, set _position_ to +∞; else set _position_ to ! ToIntegerOrInfinity(_numberPosition_).
           1. Let _length_ be the length of _string_.
           1. Let _searchLength_ be the length of _searchString_.
-          1. If _length_ &lt; _searchLength_, return *-1*<sub>𝔽</sub>.
-          1. Let _start_ be the result of clamping _position_ between 0 and _length_ - _searchLength_.
+          1. Let _maxStart_ be _length_ - _searchLength_.
+          1. If _maxStart_ &lt; 0, return *-1*<sub>𝔽</sub>.
+          1. If _numberPosition_ is *NaN*, let _start_ be _maxStart_; else let _start_ be the result of clamping ! ToIntegerOrInfinity(_numberPosition_) between 0 and _maxStart_.
+          1. Assert: If _position_ is *undefined*, then _start_ is _maxStart_.
           1. Let _result_ be StringLastIndexOf(_string_, _searchString_, _start_).
           1. If _result_ is ~not-found~, return *-1*<sub>𝔽</sub>.
           1. Return 𝔽(_result_).
@@ -36798,14 +36834,8 @@ THH:mm:ss.sss
           1. Perform ? RequireObjectCoercible(_thisValue_).
           1. Let _string_ be ? ToString(_thisValue_).
           1. Let _length_ be the length of _string_.
-          1. Let _intStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _intStart_ = -∞, let _from_ be 0.
-          1. Else if _intStart_ &lt; 0, let _from_ be max(_length_ + _intStart_, 0).
-          1. Else, let _from_ be min(_intStart_, _length_).
-          1. If _end_ is *undefined*, let _intEnd_ be _length_; else let _intEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _intEnd_ = -∞, let _to_ be 0.
-          1. Else if _intEnd_ &lt; 0, let _to_ be max(_length_ + _intEnd_, 0).
-          1. Else, let _to_ be min(_intEnd_, _length_).
+          1. Let _from_ be ? ToClampedIndex(_start_, _length_).
+          1. If _end_ is *undefined*, let _to_ be _length_; else let _to_ be ? ToClampedIndex(_end_, _length_).
           1. If _from_ ≥ _to_, return the empty String.
           1. Return the substring of _string_ from _from_ to _to_.
         </emu-alg>
@@ -36874,8 +36904,8 @@ THH:mm:ss.sss
           1. If _isRegexp_ is *true*, throw a *TypeError* exception.
           1. Set _searchString_ to ? ToString(_searchString_).
           1. Let _length_ be the length of _string_.
-          1. If _position_ is *undefined*, set _position_ to 0; else set _position_ to ? ToIntegerOrInfinity(_position_).
-          1. Let _start_ be the result of clamping _position_ between 0 and _length_.
+          1. Let _start_ be the result of clamping ? ToIntegerOrInfinity(_position_) between 0 and _length_.
+          1. Assert: If _position_ is *undefined*, then _start_ is 0.
           1. Let _searchLength_ be the length of _searchString_.
           1. If _searchLength_ = 0, return *true*.
           1. Let _end_ be _start_ + _searchLength_.
@@ -36903,10 +36933,9 @@ THH:mm:ss.sss
           1. Perform ? RequireObjectCoercible(_thisValue_).
           1. Let _string_ be ? ToString(_thisValue_).
           1. Let _length_ be the length of _string_.
-          1. Let _intStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _end_ is *undefined*, let _intEnd_ be _length_; else let _intEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. Let _finalStart_ be the result of clamping _intStart_ between 0 and _length_.
-          1. Let _finalEnd_ be the result of clamping _intEnd_ between 0 and _length_.
+          1. Let _finalStart_ be the result of clamping ? ToIntegerOrInfinity(_start_) between 0 and _length_.
+          1. Assert: If _start_ is *undefined*, then _finalStart_ is 0.
+          1. If _end_ is *undefined*, let _finalEnd_ be _length_; else let _finalEnd_ be the result of clamping ? ToIntegerOrInfinity(_end_) between 0 and _length_.
           1. Let _from_ be min(_finalStart_, _finalEnd_).
           1. Let _to_ be max(_finalStart_, _finalEnd_).
           1. Return the substring of _string_ from _from_ to _to_.
@@ -40710,11 +40739,7 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
-          1. If _relativeIndex_ ≥ 0, then
-            1. Let _k_ be _relativeIndex_.
-          1. Else,
-            1. Let _k_ be _length_ + _relativeIndex_.
+          1. Let _k_ be ? ToAbsoluteIndex(_index_, _length_).
           1. If _k_ &lt; 0 or _k_ ≥ _length_, return *undefined*.
           1. Return ? Get(_obj_, ! ToString(𝔽(_k_))).
         </emu-alg>
@@ -40793,18 +40818,9 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _relativeTarget_ be ? ToIntegerOrInfinity(_target_).
-          1. If _relativeTarget_ = -∞, let _to_ be 0.
-          1. Else if _relativeTarget_ &lt; 0, let _to_ be max(_length_ + _relativeTarget_, 0).
-          1. Else, let _to_ be min(_relativeTarget_, _length_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _from_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _from_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _from_ be min(_relativeStart_, _length_).
-          1. If _end_ is *undefined*, let _relativeEnd_ be _length_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _relativeEnd_ = -∞, let _final_ be 0.
-          1. Else if _relativeEnd_ &lt; 0, let _final_ be max(_length_ + _relativeEnd_, 0).
-          1. Else, let _final_ be min(_relativeEnd_, _length_).
+          1. Let _to_ be ? ToClampedIndex(_target_, _length_).
+          1. Let _from_ be ? ToClampedIndex(_start_, _length_).
+          1. If _end_ is *undefined*, let _final_ be _length_; else let _final_ be ? ToClampedIndex(_end_, _length_).
           1. Let _count_ be min(_final_ - _from_, _length_ - _to_).
           1. If _from_ &lt; _to_ and _to_ &lt; _from_ + _count_, then
             1. Let _direction_ be -1.
@@ -40884,14 +40900,8 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _k_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _k_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _k_ be min(_relativeStart_, _length_).
-          1. If _end_ is *undefined*, let _relativeEnd_ be _length_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _relativeEnd_ = -∞, let _final_ be 0.
-          1. Else if _relativeEnd_ &lt; 0, let _final_ be max(_length_ + _relativeEnd_, 0).
-          1. Else, let _final_ be min(_relativeEnd_, _length_).
+          1. Let _k_ be ? ToClampedIndex(_start_, _length_).
+          1. If _end_ is *undefined*, let _final_ be _length_; else let _final_ be ? ToClampedIndex(_end_, _length_).
           1. Repeat, while _k_ &lt; _final_,
             1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
             1. Perform ? Set(_obj_, _propertyKey_, _value_, *true*).
@@ -41156,15 +41166,7 @@ THH:mm:ss.sss
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
           1. If _length_ = 0, return *false*.
-          1. Let _startIndex_ be ? ToIntegerOrInfinity(_fromIndex_).
-          1. Assert: If _fromIndex_ is *undefined*, then _startIndex_ is 0.
-          1. If _startIndex_ = +∞, return *false*.
-          1. If _startIndex_ = -∞, set _startIndex_ to 0.
-          1. If _startIndex_ ≥ 0, then
-            1. Let _k_ be _startIndex_.
-          1. Else,
-            1. Let _k_ be _length_ + _startIndex_.
-            1. If _k_ &lt; 0, set _k_ to 0.
+          1. Let _k_ be ? ToClampedIndex(_fromIndex_, _length_).
           1. Repeat, while _k_ &lt; _length_,
             1. Let _elementK_ be ? Get(_obj_, ! ToString(𝔽(_k_))).
             1. If SameValueZero(_searchElement_, _elementK_) is *true*, return *true*.
@@ -41190,15 +41192,7 @@ THH:mm:ss.sss
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
           1. If _length_ = 0, return *-1*<sub>𝔽</sub>.
-          1. Let _startIndex_ be ? ToIntegerOrInfinity(_fromIndex_).
-          1. Assert: If _fromIndex_ is *undefined*, then _startIndex_ is 0.
-          1. If _startIndex_ = +∞, return *-1*<sub>𝔽</sub>.
-          1. If _startIndex_ = -∞, set _startIndex_ to 0.
-          1. If _startIndex_ ≥ 0, then
-            1. Let _k_ be _startIndex_.
-          1. Else,
-            1. Let _k_ be _length_ + _startIndex_.
-            1. If _k_ &lt; 0, set _k_ to 0.
+          1. Let _k_ be ? ToClampedIndex(_fromIndex_, _length_).
           1. Repeat, while _k_ &lt; _length_,
             1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
             1. Let _kPresent_ be ? HasProperty(_obj_, _propertyKey_).
@@ -41258,12 +41252,7 @@ THH:mm:ss.sss
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
           1. If _length_ = 0, return *-1*<sub>𝔽</sub>.
-          1. If _fromIndex_ is present, let _startIndex_ be ? ToIntegerOrInfinity(_fromIndex_); else let _startIndex_ be _length_ - 1.
-          1. If _startIndex_ = -∞, return *-1*<sub>𝔽</sub>.
-          1. If _startIndex_ ≥ 0, then
-            1. Let _k_ be min(_startIndex_, _length_ - 1).
-          1. Else,
-            1. Let _k_ be _length_ + _startIndex_.
+          1. If _fromIndex_ is not present, let _k_ be _length_ - 1; else let _k_ be min(? ToAbsoluteIndex(_fromIndex_, _length_), _length_ - 1).
           1. Repeat, while _k_ ≥ 0,
             1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
             1. Let _kPresent_ be ? HasProperty(_obj_, _propertyKey_).
@@ -41519,14 +41508,8 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _k_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _k_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _k_ be min(_relativeStart_, _length_).
-          1. If _end_ is *undefined*, let _relativeEnd_ be _length_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _relativeEnd_ = -∞, let _final_ be 0.
-          1. Else if _relativeEnd_ &lt; 0, let _final_ be max(_length_ + _relativeEnd_, 0).
-          1. Else, let _final_ be min(_relativeEnd_, _length_).
+          1. Let _k_ be ? ToClampedIndex(_start_, _length_).
+          1. If _end_ is *undefined*, let _final_ be _length_; else let _final_ be ? ToClampedIndex(_end_, _length_).
           1. Let _count_ be max(_final_ - _k_, 0).
           1. Let _array_ be ? ArraySpeciesCreate(_obj_, _count_).
           1. Let _resultIndex_ be 0.
@@ -41720,15 +41703,13 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _actualStart_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _actualStart_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _actualStart_ be min(_relativeStart_, _length_).
+          1. Let _actualStart_ be ? ToClampedIndex(_start_, _length_).
           1. Let _itemCount_ be the number of elements in _items_.
           1. If _start_ is not present, then
             1. Let _actualDeleteCount_ be 0.
           1. Else if _deleteCount_ is not present, then
             1. Let _actualDeleteCount_ be _length_ - _actualStart_.
+            1. Assert: _actualDeleteCount_ ≥ 0.
           1. Else,
             1. Let _dc_ be ? ToIntegerOrInfinity(_deleteCount_).
             1. Let _actualDeleteCount_ be the result of clamping _dc_ between 0 and _length_ - _actualStart_.
@@ -41857,19 +41838,17 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _actualStart_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _actualStart_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _actualStart_ be min(_relativeStart_, _length_).
+          1. Let _actualStart_ be ? ToClampedIndex(_start_, _length_).
           1. Let _insertCount_ be the number of elements in _items_.
+          1. Let _maxSkipCount_ be _length_ - _actualStart_.
           1. If _start_ is not present, then
             1. Let _actualSkipCount_ be 0.
           1. Else if _skipCount_ is not present, then
-            1. Let _actualSkipCount_ be _length_ - _actualStart_.
+            1. Let _actualSkipCount_ be _maxSkipCount_.
           1. Else,
-            1. Let _sc_ be ? ToIntegerOrInfinity(_skipCount_).
-            1. Let _actualSkipCount_ be the result of clamping _sc_ between 0 and _length_ - _actualStart_.
+            1. Let _actualSkipCount_ be the result of clamping ? ToIntegerOrInfinity(_skipCount_) between 0 and _maxSkipCount_.
           1. Let _newLength_ be _length_ + _insertCount_ - _actualSkipCount_.
+          1. Assert: _newLength_ ≥ 0.
           1. If _newLength_ > 2<sup>53</sup> - 1, throw a *TypeError* exception.
           1. Let _newArray_ be ? ArrayCreate(_newLength_).
           1. Let _writeIndex_ be 0.
@@ -41958,10 +41937,8 @@ THH:mm:ss.sss
         <emu-alg>
           1. Let _obj_ be ? ToObject(*this* value).
           1. Let _length_ be ? LengthOfArrayLike(_obj_).
-          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
-          1. If _relativeIndex_ ≥ 0, let _actualIndex_ be _relativeIndex_.
-          1. Else, let _actualIndex_ be _length_ + _relativeIndex_.
-          1. If _actualIndex_ ≥ _length_ or _actualIndex_ &lt; 0, throw a *RangeError* exception.
+          1. Let _actualIndex_ be ? ToAbsoluteIndex(_index_, _length_).
+          1. If _actualIndex_ &lt; 0 or _actualIndex_ ≥ _length_, throw a *RangeError* exception.
           1. Let _array_ be ? ArrayCreate(_length_).
           1. Let _k_ be 0.
           1. Repeat, while _k_ &lt; _length_,
@@ -42070,8 +42047,7 @@ THH:mm:ss.sss
             1. Let _index_ be _iteratorObj_.[[ArrayLikeNextIndex]].
             1. Let _kind_ be _iteratorObj_.[[ArrayLikeIterationKind]].
             1. If _array_ has a [[TypedArrayName]] internal slot, then
-              1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_array_, ~seq-cst~).
-              1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+              1. Let _taRecord_ be ? ValidateTypedArrayBounds(_array_, ~seq-cst~).
               1. Let _length_ be TypedArrayLength(_taRecord_).
             1. Else,
               1. Let _length_ be ? LengthOfArrayLike(_array_).
@@ -42527,11 +42503,7 @@ THH:mm:ss.sss
           1. Let _obj_ be the *this* value.
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
-          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
-          1. If _relativeIndex_ ≥ 0, then
-            1. Let _k_ be _relativeIndex_.
-          1. Else,
-            1. Let _k_ be _length_ + _relativeIndex_.
+          1. Let _k_ be ? ToAbsoluteIndex(_index_, _length_).
           1. If _k_ &lt; 0 or _k_ ≥ _length_, return *undefined*.
           1. Return ! Get(_obj_, ! ToString(𝔽(_k_))).
         </emu-alg>
@@ -42590,24 +42562,14 @@ THH:mm:ss.sss
           1. Let _obj_ be the *this* value.
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
-          1. Let _relativeTarget_ be ? ToIntegerOrInfinity(_target_).
-          1. If _relativeTarget_ = -∞, let _targetIndex_ be 0.
-          1. Else if _relativeTarget_ &lt; 0, let _targetIndex_ be max(_length_ + _relativeTarget_, 0).
-          1. Else, let _targetIndex_ be min(_relativeTarget_, _length_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _startIndex_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _startIndex_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _startIndex_ be min(_relativeStart_, _length_).
-          1. If _end_ is *undefined*, let _relativeEnd_ be _length_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _relativeEnd_ = -∞, let _endIndex_ be 0.
-          1. Else if _relativeEnd_ &lt; 0, let _endIndex_ be max(_length_ + _relativeEnd_, 0).
-          1. Else, let _endIndex_ be min(_relativeEnd_, _length_).
+          1. Let _targetIndex_ be ? ToClampedIndex(_target_, _length_).
+          1. Let _startIndex_ be ? ToClampedIndex(_start_, _length_).
+          1. If _end_ is *undefined*, let _endIndex_ be _length_; else let _endIndex_ be ? ToClampedIndex(_end_, _length_).
           1. Let _count_ be min(_endIndex_ - _startIndex_, _length_ - _targetIndex_).
           1. If _count_ > 0, then
             1. NOTE: The copying must be performed in a manner that preserves the bit-level encoding of the source data.
             1. Let _buffer_ be _obj_.[[ViewedArrayBuffer]].
-            1. Set _taRecord_ to MakeTypedArrayWithBufferWitnessRecord(_obj_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+            1. Set _taRecord_ to ? ValidateTypedArrayBounds(_obj_, ~seq-cst~).
             1. Set _length_ to TypedArrayLength(_taRecord_).
             1. NOTE: Side-effects of the above steps may have reduced the size of _obj_, in which case copying should proceed with the longest still-applicable prefix.
             1. Set _count_ to min(_count_, _length_ - _startIndex_, _length_ - _targetIndex_).
@@ -42623,6 +42585,7 @@ THH:mm:ss.sss
             1. Else,
               1. Let _direction_ be 1.
             1. Repeat, while _countBytes_ > 0,
+              1. Assert: _fromByteIndex_ ≥ 0 and _toByteIndex_ ≥ 0.
               1. Let _value_ be GetValueFromBuffer(_buffer_, _fromByteIndex_, ~uint8~, *true*, ~unordered~).
               1. Perform SetValueInBuffer(_buffer_, _toByteIndex_, ~uint8~, _value_, *true*, ~unordered~).
               1. Set _fromByteIndex_ to _fromByteIndex_ + _direction_.
@@ -42673,16 +42636,9 @@ THH:mm:ss.sss
           1. Let _length_ be TypedArrayLength(_taRecord_).
           1. If _obj_.[[ContentType]] is ~bigint~, set _value_ to ? ToBigInt(_value_).
           1. Else, set _value_ to ? ToNumber(_value_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _startIndex_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _startIndex_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _startIndex_ be min(_relativeStart_, _length_).
-          1. If _end_ is *undefined*, let _relativeEnd_ be _length_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _relativeEnd_ = -∞, let _endIndex_ be 0.
-          1. Else if _relativeEnd_ &lt; 0, let _endIndex_ be max(_length_ + _relativeEnd_, 0).
-          1. Else, let _endIndex_ be min(_relativeEnd_, _length_).
-          1. Set _taRecord_ to MakeTypedArrayWithBufferWitnessRecord(_obj_, ~seq-cst~).
-          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+          1. Let _startIndex_ be ? ToClampedIndex(_start_, _length_).
+          1. If _end_ is *undefined*, let _endIndex_ be _length_; else let _endIndex_ be ? ToClampedIndex(_end_, _length_).
+          1. Set _taRecord_ to ? ValidateTypedArrayBounds(_obj_, ~seq-cst~).
           1. Set _length_ to TypedArrayLength(_taRecord_).
           1. Set _endIndex_ to min(_endIndex_, _length_).
           1. Let _k_ be _startIndex_.
@@ -42809,15 +42765,7 @@ THH:mm:ss.sss
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
           1. If _length_ = 0, return *false*.
-          1. Let _n_ be ? ToIntegerOrInfinity(_fromIndex_).
-          1. Assert: If _fromIndex_ is *undefined*, then _n_ is 0.
-          1. If _n_ = +∞, return *false*.
-          1. If _n_ = -∞, set _n_ to 0.
-          1. If _n_ ≥ 0, then
-            1. Let _k_ be _n_.
-          1. Else,
-            1. Let _k_ be _length_ + _n_.
-            1. If _k_ &lt; 0, set _k_ to 0.
+          1. Let _k_ be ? ToClampedIndex(_fromIndex_, _length_).
           1. Repeat, while _k_ &lt; _length_,
             1. Let _elementK_ be ! Get(_obj_, ! ToString(𝔽(_k_))).
             1. If SameValueZero(_searchElement_, _elementK_) is *true*, return *true*.
@@ -42836,15 +42784,7 @@ THH:mm:ss.sss
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
           1. If _length_ = 0, return *-1*<sub>𝔽</sub>.
-          1. Let _n_ be ? ToIntegerOrInfinity(_fromIndex_).
-          1. Assert: If _fromIndex_ is *undefined*, then _n_ is 0.
-          1. If _n_ = +∞, return *-1*<sub>𝔽</sub>.
-          1. If _n_ = -∞, set _n_ to 0.
-          1. If _n_ ≥ 0, then
-            1. Let _k_ be _n_.
-          1. Else,
-            1. Let _k_ be _length_ + _n_.
-            1. If _k_ &lt; 0, set _k_ to 0.
+          1. Let _k_ be ? ToClampedIndex(_fromIndex_, _length_).
           1. Repeat, while _k_ &lt; _length_,
             1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
             1. Let _kPresent_ be ! HasProperty(_obj_, _propertyKey_).
@@ -42900,12 +42840,7 @@ THH:mm:ss.sss
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
           1. If _length_ = 0, return *-1*<sub>𝔽</sub>.
-          1. If _fromIndex_ is present, let _n_ be ? ToIntegerOrInfinity(_fromIndex_); else let _n_ be _length_ - 1.
-          1. If _n_ = -∞, return *-1*<sub>𝔽</sub>.
-          1. If _n_ ≥ 0, then
-            1. Let _k_ be min(_n_, _length_ - 1).
-          1. Else,
-            1. Let _k_ be _length_ + _n_.
+          1. If _fromIndex_ is not present, let _k_ be _length_ - 1; else let _k_ be min(? ToAbsoluteIndex(_fromIndex_, _length_), _length_ - 1).
           1. Repeat, while _k_ ≥ 0,
             1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
             1. Let _kPresent_ be ! HasProperty(_obj_, _propertyKey_).
@@ -43066,8 +43001,7 @@ THH:mm:ss.sss
             <dd>It sets multiple values in _target_, starting at index _targetOffset_, reading the values from _source_.</dd>
           </dl>
           <emu-alg>
-            1. Let _targetRecord_ be MakeTypedArrayWithBufferWitnessRecord(_target_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_targetRecord_) is *true*, throw a *TypeError* exception.
+            1. Let _targetRecord_ be ? ValidateTypedArrayBounds(_target_, ~seq-cst~).
             1. Let _targetLength_ be TypedArrayLength(_targetRecord_).
             1. Set _source_ to ? ToObject(_source_).
             1. Let _sourceLength_ be ? LengthOfArrayLike(_source_).
@@ -43098,12 +43032,10 @@ THH:mm:ss.sss
           </dl>
           <emu-alg>
             1. Let _targetBuffer_ be _target_.[[ViewedArrayBuffer]].
-            1. Let _targetRecord_ be MakeTypedArrayWithBufferWitnessRecord(_target_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_targetRecord_) is *true*, throw a *TypeError* exception.
+            1. Let _targetRecord_ be ? ValidateTypedArrayBounds(_target_, ~seq-cst~).
             1. Let _targetLength_ be TypedArrayLength(_targetRecord_).
             1. Let _sourceBuffer_ be _source_.[[ViewedArrayBuffer]].
-            1. Let _sourceRecord_ be MakeTypedArrayWithBufferWitnessRecord(_source_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_sourceRecord_) is *true*, throw a *TypeError* exception.
+            1. Let _sourceRecord_ be ? ValidateTypedArrayBounds(_source_, ~seq-cst~).
             1. Let _sourceLength_ be TypedArrayLength(_sourceRecord_).
             1. Let _targetType_ be TypedArrayElementType(_target_).
             1. Let _targetElementSize_ be TypedArrayElementSize(_target_).
@@ -43149,19 +43081,12 @@ THH:mm:ss.sss
           1. Let _obj_ be the *this* value.
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _sourceArrayLength_ be TypedArrayLength(_taRecord_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _startIndex_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _startIndex_ be max(_sourceArrayLength_ + _relativeStart_, 0).
-          1. Else, let _startIndex_ be min(_relativeStart_, _sourceArrayLength_).
-          1. If _end_ is *undefined*, let _relativeEnd_ be _sourceArrayLength_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _relativeEnd_ = -∞, let _endIndex_ be 0.
-          1. Else if _relativeEnd_ &lt; 0, let _endIndex_ be max(_sourceArrayLength_ + _relativeEnd_, 0).
-          1. Else, let _endIndex_ be min(_relativeEnd_, _sourceArrayLength_).
+          1. Let _startIndex_ be ? ToClampedIndex(_start_, _sourceArrayLength_).
+          1. If _end_ is *undefined*, let _endIndex_ be _sourceArrayLength_; else let _endIndex_ be ? ToClampedIndex(_end_, _sourceArrayLength_).
           1. Let _countBytes_ be max(_endIndex_ - _startIndex_, 0).
           1. Let _resultArray_ be ? TypedArraySpeciesCreate(_obj_, « 𝔽(_countBytes_) »).
           1. If _countBytes_ > 0, then
-            1. Set _taRecord_ to MakeTypedArrayWithBufferWitnessRecord(_obj_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+            1. Set _taRecord_ to ? ValidateTypedArrayBounds(_obj_, ~seq-cst~).
             1. Set _endIndex_ to min(_endIndex_, TypedArrayLength(_taRecord_)).
             1. Set _countBytes_ to max(_endIndex_ - _startIndex_, 0).
             1. Let _sourceType_ be TypedArrayElementType(_obj_).
@@ -43254,23 +43179,15 @@ THH:mm:ss.sss
             1. Let _sourceLength_ be 0.
           1. Else,
             1. Let _sourceLength_ be TypedArrayLength(_sourceRecord_).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _startIndex_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _startIndex_ be max(_sourceLength_ + _relativeStart_, 0).
-          1. Else, let _startIndex_ be min(_relativeStart_, _sourceLength_).
+          1. Let _startIndex_ be ? ToClampedIndex(_start_, _sourceLength_).
           1. Let _elementSize_ be TypedArrayElementSize(_obj_).
           1. Let _sourceByteOffset_ be _obj_.[[ByteOffset]].
           1. Let _beginByteOffset_ be _sourceByteOffset_ + (_startIndex_ × _elementSize_).
           1. If _obj_.[[ArrayLength]] is ~auto~ and _end_ is *undefined*, then
-            1. Let _argList_ be « _buffer_, 𝔽(_beginByteOffset_) ».
-          1. Else,
-            1. If _end_ is *undefined*, let _relativeEnd_ be _sourceLength_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-            1. If _relativeEnd_ = -∞, let _endIndex_ be 0.
-            1. Else if _relativeEnd_ &lt; 0, let _endIndex_ be max(_sourceLength_ + _relativeEnd_, 0).
-            1. Else, let _endIndex_ be min(_relativeEnd_, _sourceLength_).
-            1. Let _newLength_ be max(_endIndex_ - _startIndex_, 0).
-            1. Let _argList_ be « _buffer_, 𝔽(_beginByteOffset_), 𝔽(_newLength_) ».
-          1. Return ? TypedArraySpeciesCreate(_obj_, _argList_).
+            1. Return ? TypedArraySpeciesCreate(_obj_, « _buffer_, 𝔽(_beginByteOffset_) »).
+          1. If _end_ is *undefined*, let _endIndex_ be _sourceLength_; else let _endIndex_ be ? ToClampedIndex(_end_, _sourceLength_).
+          1. Let _newLength_ be max(_endIndex_ - _startIndex_, 0).
+          1. Return ? TypedArraySpeciesCreate(_obj_, « _buffer_, 𝔽(_beginByteOffset_), 𝔽(_newLength_) »).
         </emu-alg>
         <p>This method is not generic. The *this* value must be an object with a [[TypedArrayName]] internal slot.</p>
       </emu-clause>
@@ -43346,9 +43263,7 @@ THH:mm:ss.sss
           1. Let _obj_ be the *this* value.
           1. Let _taRecord_ be ? ValidateTypedArray(_obj_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
-          1. Let _relativeIndex_ be ? ToIntegerOrInfinity(_index_).
-          1. If _relativeIndex_ ≥ 0, let _actualIndex_ be _relativeIndex_.
-          1. Else, let _actualIndex_ be _length_ + _relativeIndex_.
+          1. Let _actualIndex_ be ? ToAbsoluteIndex(_index_, _length_).
           1. If _obj_.[[ContentType]] is ~bigint~, let _numericValue_ be ? ToBigInt(_value_).
           1. Else, let _numericValue_ be ? ToNumber(_value_).
           1. If IsValidIntegerIndex(_obj_, 𝔽(_actualIndex_)) is *false*, throw a *RangeError* exception.
@@ -43463,7 +43378,23 @@ THH:mm:ss.sss
         <emu-alg>
           1. Perform ? RequireInternalSlot(_obj_, [[TypedArrayName]]).
           1. Assert: _obj_ has a [[ViewedArrayBuffer]] internal slot.
-          1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_obj_, _order_).
+          1. Return ? ValidateTypedArrayBounds(_obj_, _order_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-validatetypedarraybounds" type="abstract operation">
+        <h1>
+          ValidateTypedArrayBounds (
+            _ta_: a TypedArray,
+            _order_: ~seq-cst~ or ~unordered~,
+          ): either a normal completion containing a TypedArray With Buffer Witness Record or a throw completion
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It validates that _ta_ does not exceed the bounds of its backing buffer.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_ta_, _order_).
           1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
           1. Return _taRecord_.
         </emu-alg>
@@ -43615,8 +43546,7 @@ THH:mm:ss.sss
             1. Let _sourceType_ be TypedArrayElementType(_sourceArray_).
             1. Let _sourceElementSize_ be TypedArrayElementSize(_sourceArray_).
             1. Let _sourceByteOffset_ be _sourceArray_.[[ByteOffset]].
-            1. Let _sourceRecord_ be MakeTypedArrayWithBufferWitnessRecord(_sourceArray_, ~seq-cst~).
-            1. If IsTypedArrayOutOfBounds(_sourceRecord_) is *true*, throw a *TypeError* exception.
+            1. Let _sourceRecord_ be ? ValidateTypedArrayBounds(_sourceArray_, ~seq-cst~).
             1. Let _elementLength_ be TypedArrayLength(_sourceRecord_).
             1. Let _byteLength_ be _elementSize_ × _elementLength_.
             1. If _elementType_ is _sourceType_, then
@@ -43864,8 +43794,7 @@ THH:mm:ss.sss
           1. Let _lastChunkHandling_ be ? Get(_opts_, *"lastChunkHandling"*).
           1. If _lastChunkHandling_ is *undefined*, set _lastChunkHandling_ to *"loose"*.
           1. If _lastChunkHandling_ is not one of *"loose"*, *"strict"*, or *"stop-before-partial"*, throw a *TypeError* exception.
-          1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_into_, ~seq-cst~).
-          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+          1. Let _taRecord_ be ? ValidateTypedArrayBounds(_into_, ~seq-cst~).
           1. Let _byteLength_ be TypedArrayLength(_taRecord_).
           1. Let _result_ be FromBase64(_string_, _alphabet_, _lastChunkHandling_, _byteLength_).
           1. Let _bytes_ be _result_.[[Bytes]].
@@ -43888,8 +43817,7 @@ THH:mm:ss.sss
           1. Let _into_ be the *this* value.
           1. Perform ? ValidateUint8Array(_into_).
           1. If _string_ is not a String, throw a *TypeError* exception.
-          1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_into_, ~seq-cst~).
-          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+          1. Let _taRecord_ be ? ValidateTypedArrayBounds(_into_, ~seq-cst~).
           1. Let _byteLength_ be TypedArrayLength(_taRecord_).
           1. Let _result_ be FromHex(_string_, _byteLength_).
           1. Let _bytes_ be _result_.[[Bytes]].
@@ -43918,10 +43846,10 @@ THH:mm:ss.sss
           1. Let _omitPadding_ be ToBoolean(? Get(_opts_, *"omitPadding"*)).
           1. Let _toEncode_ be ? GetUint8ArrayBytes(_obj_).
           1. If _alphabet_ is *"base64"*, then
-            1. Let _outAscii_ be the sequence of code points which results from encoding _toEncode_ according to the base64 encoding specified in section 4 of <a href="https://datatracker.ietf.org/doc/html/rfc4648">RFC 4648</a>. Padding is included if and only if _omitPadding_ is *false*.
+            1. Let _outAscii_ be the sequence of code points which results from encoding _toEncode_ according to the base64 encoding specified in section 4 of <a href="https://rfc-editor.org/info/rfc4648">RFC 4648</a>. Padding is included if and only if _omitPadding_ is *false*.
           1. Else,
             1. Assert: _alphabet_ is *"base64url"*.
-            1. Let _outAscii_ be the sequence of code points which results from encoding _toEncode_ according to the base64url encoding specified in section 5 of <a href="https://datatracker.ietf.org/doc/html/rfc4648">RFC 4648</a>. Padding is included if and only if _omitPadding_ is *false*.
+            1. Let _outAscii_ be the sequence of code points which results from encoding _toEncode_ according to the base64url encoding specified in section 5 of <a href="https://rfc-editor.org/info/rfc4648">RFC 4648</a>. Padding is included if and only if _omitPadding_ is *false*.
           1. Return CodePointsToString(_outAscii_).
         </emu-alg>
       </emu-clause>
@@ -43968,8 +43896,7 @@ THH:mm:ss.sss
         <dl class="header"></dl>
         <emu-alg>
           1. Let _buffer_ be _ta_.[[ViewedArrayBuffer]].
-          1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_ta_, ~seq-cst~).
-          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+          1. Let _taRecord_ be ? ValidateTypedArrayBounds(_ta_, ~seq-cst~).
           1. Let _length_ be TypedArrayLength(_taRecord_).
           1. Let _byteOffset_ be _ta_.[[ByteOffset]].
           1. Let _bytes_ be a new empty List.
@@ -44059,7 +43986,7 @@ THH:mm:ss.sss
         </dl>
         <p>The <dfn id="standard-base64-alphabet">standard base64 alphabet</dfn> is *"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"*, i.e., the String whose elements are the code units corresponding to every letter and number in the Unicode Basic Latin block along with *"+"* and *"/"*.</p>
         <emu-alg>
-          1. Let _byteSequence_ be the unique sequence of 3 bytes resulting from decoding _chunk_ as base64 (i.e., the sequence such that applying the base64 encoding specified in section 4 of <a href="https://datatracker.ietf.org/doc/html/rfc4648">RFC 4648</a> to _byteSequence_ would produce _chunk_).
+          1. Let _byteSequence_ be the unique sequence of 3 bytes resulting from decoding _chunk_ as base64 (i.e., the sequence such that applying the base64 encoding specified in section 4 of <a href="https://rfc-editor.org/info/rfc4648">RFC 4648</a> to _byteSequence_ would produce _chunk_).
           1. Return a List whose elements are the elements of _byteSequence_, in order.
         </emu-alg>
       </emu-clause>
@@ -45832,7 +45759,7 @@ THH:mm:ss.sss
         </dl>
         <emu-alg>
           1. If IsUnclampedIntegerElementType(_type_) is *true*, return *true*.
-          1. If IsBigIntElementType(_type_) is *true* and _order_ is neither ~init~ nor ~unordered~, return *true*.
+          1. If IsBigIntElementType(_type_) is *true* and _order_ is ~seq-cst~, return *true*.
           1. Return *false*.
         </emu-alg>
       </emu-clause>
@@ -46191,14 +46118,8 @@ THH:mm:ss.sss
           1. If IsSharedArrayBuffer(_obj_) is *true*, throw a *TypeError* exception.
           1. If IsDetachedBuffer(_obj_) is *true*, throw a *TypeError* exception.
           1. Let _length_ be _obj_.[[ArrayBufferByteLength]].
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _first_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _first_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _first_ be min(_relativeStart_, _length_).
-          1. If _end_ is *undefined*, let _relativeEnd_ be _length_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _relativeEnd_ = -∞, let _final_ be 0.
-          1. Else if _relativeEnd_ &lt; 0, let _final_ be max(_length_ + _relativeEnd_, 0).
-          1. Else, let _final_ be min(_relativeEnd_, _length_).
+          1. Let _first_ be ? ToClampedIndex(_start_, _length_).
+          1. If _end_ is *undefined*, let _final_ be _length_; else let _final_ be ? ToClampedIndex(_end_, _length_).
           1. Let _newLength_ be max(_final_ - _first_, 0).
           1. Let _ctor_ be ? SpeciesConstructor(_obj_, %ArrayBuffer%).
           1. Let _new_ be ? Construct(_ctor_, « 𝔽(_newLength_) »).
@@ -46212,8 +46133,9 @@ THH:mm:ss.sss
           1. Let _fromBuf_ be _obj_.[[ArrayBufferData]].
           1. Let _toBuf_ be _new_.[[ArrayBufferData]].
           1. Let _currentLength_ be _obj_.[[ArrayBufferByteLength]].
-          1. If _first_ &lt; _currentLength_, then
-            1. Let _count_ be min(_newLength_, _currentLength_ - _first_).
+          1. Let _maxCount_ be _currentLength_ - _first_.
+          1. If _maxCount_ > 0, then
+            1. Let _count_ be min(_newLength_, _maxCount_).
             1. Perform CopyDataBlockBytes(_toBuf_, 0, _fromBuf_, _first_, _count_).
           1. Return _new_.
         </emu-alg>
@@ -46524,14 +46446,8 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_obj_, [[ArrayBufferData]]).
           1. If IsSharedArrayBuffer(_obj_) is *false*, throw a *TypeError* exception.
           1. Let _length_ be ArrayBufferByteLength(_obj_, ~seq-cst~).
-          1. Let _relativeStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _relativeStart_ = -∞, let _first_ be 0.
-          1. Else if _relativeStart_ &lt; 0, let _first_ be max(_length_ + _relativeStart_, 0).
-          1. Else, let _first_ be min(_relativeStart_, _length_).
-          1. If _end_ is *undefined*, let _relativeEnd_ be _length_; else let _relativeEnd_ be ? ToIntegerOrInfinity(_end_).
-          1. If _relativeEnd_ = -∞, let _final_ be 0.
-          1. Else if _relativeEnd_ &lt; 0, let _final_ be max(_length_ + _relativeEnd_, 0).
-          1. Else, let _final_ be min(_relativeEnd_, _length_).
+          1. Let _first_ be ? ToClampedIndex(_start_, _length_).
+          1. If _end_ is *undefined*, let _final_ be _length_; else let _final_ be ? ToClampedIndex(_end_, _length_).
           1. Let _newLength_ be max(_final_ - _first_, 0).
           1. Let _ctor_ be ? SpeciesConstructor(_obj_, %SharedArrayBuffer%).
           1. Let _new_ be ? Construct(_ctor_, « 𝔽(_newLength_) »).
@@ -47248,15 +47164,15 @@ THH:mm:ss.sss
           ): either a normal completion containing a TypedArray With Buffer Witness Record, or a throw completion
         </h1>
         <dl class="header">
+          <dt>description</dt>
+          <dd>It is used to constrain the TypedArrays that can be used with %Atomics% functions, particularly those that can guarantee atomic interactions with shared memory.</dd>
         </dl>
         <emu-alg>
-          1. Let _taRecord_ be ? ValidateTypedArray(_ta_, ~unordered~).
           1. NOTE: Bounds checking is not a synchronizing operation when _ta_'s backing buffer is a growable SharedArrayBuffer.
-          1. If _waitable_ is *true*, then
-            1. If _ta_.[[TypedArrayName]] is neither *"Int32Array"* nor *"BigInt64Array"*, throw a *TypeError* exception.
-          1. Else,
-            1. Let _type_ be TypedArrayElementType(_ta_).
-            1. If IsUnclampedIntegerElementType(_type_) is *false* and IsBigIntElementType(_type_) is *false*, throw a *TypeError* exception.
+          1. Let _taRecord_ be ? ValidateTypedArray(_ta_, ~unordered~).
+          1. Let _elementType_ be TypedArrayElementType(_ta_).
+          1. If IsNoTearConfiguration(_elementType_, ~seq-cst~) is *false*, throw a *TypeError* exception.
+          1. If _waitable_ is *true* and _elementType_ is neither ~int32~ nor ~bigint64~, throw a *TypeError* exception.
           1. Return _taRecord_.
         </emu-alg>
       </emu-clause>
@@ -47309,9 +47225,8 @@ THH:mm:ss.sss
           <dd>This operation revalidates the index within the backing buffer for atomic operations after all argument coercions are performed in Atomics methods, as argument coercions can have arbitrary side effects, which could cause the buffer to become out of bounds. This operation does not throw when _ta_'s backing buffer is a SharedArrayBuffer.</dd>
         </dl>
         <emu-alg>
-          1. Let _taRecord_ be MakeTypedArrayWithBufferWitnessRecord(_ta_, ~unordered~).
           1. NOTE: Bounds checking is not a synchronizing operation when _ta_'s backing buffer is a growable SharedArrayBuffer.
-          1. If IsTypedArrayOutOfBounds(_taRecord_) is *true*, throw a *TypeError* exception.
+          1. Let _taRecord_ be ? ValidateTypedArrayBounds(_ta_, ~unordered~).
           1. Assert: _byteIndexInBuffer_ ≥ _ta_.[[ByteOffset]].
           1. If _byteIndexInBuffer_ ≥ _taRecord_.[[CachedBufferByteLength]], throw a *RangeError* exception.
           1. Return ~unused~.
@@ -47518,9 +47433,9 @@ THH:mm:ss.sss
           1. Let _buffer_ be _taRecord_.[[Object]].[[ViewedArrayBuffer]].
           1. If IsSharedArrayBuffer(_buffer_) is *false*, throw a *TypeError* exception.
           1. Let _byteIndexInBuffer_ be ? ValidateAtomicAccess(_taRecord_, _index_).
-          1. Let _arrayTypeName_ be _ta_.[[TypedArrayName]].
-          1. If _arrayTypeName_ is *"BigInt64Array"*, let _expected_ be ? ToBigInt64(_value_).
-          1. Else, let _expected_ be ? ToInt32(_value_).
+          1. Let _elementType_ be TypedArrayElementType(_ta_).
+          1. Assert: _elementType_ is either ~bigint64~ or ~int32~.
+          1. If _elementType_ is ~bigint64~, let _expected_ be ? ToBigInt64(_value_); else let _expected_ be ? ToInt32(_value_).
           1. Let _timeoutNumber_ be ? ToNumber(_timeout_).
           1. If _timeoutNumber_ is either *NaN* or *+∞*<sub>𝔽</sub>, let _realTimeout_ be +∞.
           1. Else if _timeoutNumber_ is *-∞*<sub>𝔽</sub>, let _realTimeout_ be 0.
@@ -47535,7 +47450,6 @@ THH:mm:ss.sss
             1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
             1. Let _resultObj_ be OrdinaryObjectCreate(%Object.prototype%).
           1. Perform EnterCriticalSection(_waiterList_).
-          1. Let _elementType_ be TypedArrayElementType(_ta_).
           1. Let _witness_ be GetValueFromBuffer(_buffer_, _byteIndexInBuffer_, _elementType_, *true*, ~seq-cst~).
           1. If _expected_ ≠ _witness_, then
             1. Perform LeaveCriticalSection(_waiterList_).
@@ -51975,14 +51889,17 @@ THH:mm:ss.sss
             1. Remove _acGenContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
             1. Set _acGen_.[[GeneratorState]] to ~completed~.
             1. NOTE: Once a generator enters the ~completed~ state it never leaves it and its associated execution context is never resumed. Any execution state associated with _acGen_ can be discarded at this point.
-            1. If _result_ is a normal completion, then
-              1. Let _resultValue_ be *undefined*.
-            1. Else if _result_ is a return completion, then
-              1. Let _resultValue_ be _result_.[[Value]].
+            1. If _result_ is a throw completion, then
+              1. Let _resumption_ be _result_.
             1. Else,
-              1. Assert: _result_ is a throw completion.
-              1. Return ? _result_.
-            1. Return NormalCompletion(CreateIteratorResultObject(_resultValue_, *true*)).
+              1. If _result_ is a normal completion, then
+                1. Let _resultValue_ be *undefined*.
+              1. Else if _result_ is a return completion, then
+                1. Let _resultValue_ be _result_.[[Value]].
+              1. Let _resumption_ be NormalCompletion(CreateIteratorResultObject(_resultValue_, *true*)).
+            1. Let _callerContext_ be the running execution context.
+            1. Resume _callerContext_, passing _resumption_.
+            1. Assert: This step is never reached.
           1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
           1. Set _gen_.[[GeneratorContext]] to _genContext_.
           1. Return ~unused~.
@@ -52326,7 +52243,9 @@ THH:mm:ss.sss
             1. If _result_ is a return completion, set _result_ to NormalCompletion(_result_.[[Value]]).
             1. Perform AsyncGeneratorCompleteStep(_acGen_, _result_, *true*).
             1. Perform AsyncGeneratorDrainQueue(_acGen_).
-            1. Return NormalCompletion(*undefined*).
+            1. Let _callerContext_ be the running execution context.
+            1. Resume _callerContext_, passing NormalCompletion(*undefined*).
+            1. Assert: This step is never reached.
           1. Set the code evaluation state of _genContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
           1. Set _gen_.[[AsyncGeneratorContext]] to _genContext_.
           1. Set _gen_.[[AsyncGeneratorQueue]] to a new empty List.
@@ -52679,7 +52598,9 @@ THH:mm:ss.sss
             1. Else,
               1. Assert: _result_ is a throw completion.
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « _result_.[[Value]] »).
-            1. [id="step-asyncblockstart-return-undefined"] Return NormalCompletion(~unused~).
+            1. Let _callerContext_ be the running execution context.
+            1. [id="step-asyncblockstart-return-undefined"] Resume _callerContext_, passing NormalCompletion(~unused~).
+            1. Assert: This step is never reached.
           1. Set the code evaluation state of _asyncContext_ such that when evaluation is resumed for that execution context, _closure_ will be called with no arguments.
           1. Let _result_ be ! RunSuspendedContext(_asyncContext_, NormalCompletion(~empty~)).
           1. Assert: _result_ is ~unused~.
@@ -54523,12 +54444,8 @@ THH:mm:ss.sss
           1. Perform ? RequireObjectCoercible(_obj_).
           1. Let _string_ be ? ToString(_obj_).
           1. Let _size_ be the length of _string_.
-          1. Let _intStart_ be ? ToIntegerOrInfinity(_start_).
-          1. If _intStart_ = -∞, set _intStart_ to 0.
-          1. Else if _intStart_ &lt; 0, set _intStart_ to max(_size_ + _intStart_, 0).
-          1. Else, set _intStart_ to min(_intStart_, _size_).
-          1. If _length_ is *undefined*, let _intLength_ be _size_; else let _intLength_ be ? ToIntegerOrInfinity(_length_).
-          1. Set _intLength_ to the result of clamping _intLength_ between 0 and _size_.
+          1. Let _intStart_ be ? ToClampedIndex(_start_, _size_).
+          1. If _length_ is *undefined*, let _intLength_ be _size_; else let _intLength_ be the result of clamping ? ToIntegerOrInfinity(_length_) between 0 and _size_.
           1. Let _intEnd_ be min(_intStart_ + _intLength_, _size_).
           1. Return the substring of _string_ from _intStart_ to _intEnd_.
         </emu-alg>
@@ -55188,19 +55105,22 @@ THH:mm:ss.sss
       <i>IANA Time Zone Database</i>, available at &lt;<a href="https://www.iana.org/time-zones">https://www.iana.org/time-zones</a>>
     </li>
     <li>
-      ISO 8601:2004(E) <i>Data elements and interchange formats — Information interchange — Representation of dates and times</i>
+      ISO 8601-1:2019(E) <i>Date and time — Representations for information interchange — Part 1: Basic rules</i> plus Amendment 1:2022.
     </li>
     <li>
-      <i>RFC 1738 “Uniform Resource Locators (URL)”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc1738">https://tools.ietf.org/html/rfc1738</a>>
+      <i>RFC 1738 “Uniform Resource Locators (URL)”</i>, available at &lt;<a href="https://rfc-editor.org/info/rfc1738">https://rfc-editor.org/info/rfc1738</a>>
     </li>
     <li>
-      <i>RFC 2396 “Uniform Resource Identifiers (URI): Generic Syntax”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc2396">https://tools.ietf.org/html/rfc2396</a>>
+      <i>RFC 2396 “Uniform Resource Identifiers (URI): Generic Syntax”</i>, available at &lt;<a href="https://rfc-editor.org/info/rfc2396">https://rfc-editor.org/info/rfc2396</a>>
     </li>
     <li>
-      <i>RFC 3629 “UTF-8, a transformation format of ISO 10646”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc3629">https://tools.ietf.org/html/rfc3629</a>>
+      <i>RFC 3629 “UTF-8, a transformation format of ISO 10646”</i>, available at &lt;<a href="https://rfc-editor.org/info/rfc3629">https://rfc-editor.org/info/rfc3629</a>>
     </li>
     <li>
-      <i>RFC 7231 “Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content”</i>, available at &lt;<a href="https://tools.ietf.org/html/rfc7231">https://tools.ietf.org/html/rfc7231</a>>
+      <i>RFC 7231 “Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content”</i>, available at &lt;<a href="https://rfc-editor.org/info/rfc7231">https://rfc-editor.org/info/rfc7231</a>>
+    </li>
+    <li>
+      <i>RFC 9557 “Date and Time on the Internet: Timestamps with Additional Information”</i>, available at &lt;<a href="https://rfc-editor.org/info/rfc9557">https://rfc-editor.org/info/rfc9557</a>>
     </li>
   </ol>
 </emu-annex>
