@@ -1211,7 +1211,7 @@
 
   <emu-clause id="sec-ecmascript-language-types">
     <h1>ECMAScript Language Types</h1>
-    <p>An <dfn variants="ECMAScript language types">ECMAScript language type</dfn> corresponds to values that are directly manipulated by an ECMAScript programmer using the ECMAScript language. The ECMAScript language types are Undefined, Null, Boolean, String, Symbol, Number, BigInt, and Object. An <dfn variants="ECMAScript language values">ECMAScript language value</dfn> is a value that is characterized by an ECMAScript language type.</p>
+    <p>An <dfn variants="ECMAScript language types">ECMAScript language type</dfn> corresponds to values that are directly manipulated by an ECMAScript programmer using the ECMAScript language. The ECMAScript language types are Undefined, Null, Boolean, String, Symbol, Number, BigInt, and Object. An <dfn variants="ECMAScript language values">ECMAScript language value</dfn> is a value that is characterized by an ECMAScript language type. A <dfn variants="primitive values">primitive value</dfn> is an ECMAScript language value that is not an Object.</p>
 
     <emu-clause id="sec-ecmascript-language-types-undefined-type">
       <h1>The Undefined Type</h1>
@@ -5051,7 +5051,7 @@
         ToPrimitive (
           _input_: an ECMAScript language value,
           optional _preferredType_: ~string~ or ~number~,
-        ): either a normal completion containing an ECMAScript language value or a throw completion
+        ): either a normal completion containing a primitive value or a throw completion
       </h1>
       <dl class="header">
         <dt>description</dt>
@@ -5084,7 +5084,7 @@
           OrdinaryToPrimitive (
             _obj_: an Object,
             _hint_: ~string~ or ~number~,
-          ): either a normal completion containing an ECMAScript language value or a throw completion
+          ): either a normal completion containing a primitive value or a throw completion
         </h1>
         <dl class="header">
         </dl>
@@ -5514,86 +5514,35 @@
       </h1>
       <dl class="header">
         <dt>description</dt>
-        <dd>It converts _arg_ to a BigInt value, or throws if an implicit conversion from Number would be required.</dd>
+        <dd>It converts _arg_ to a BigInt value, or throws if implicit conversion is not supported.</dd>
       </dl>
       <emu-alg>
         1. Let _primitive_ be ? ToPrimitive(_arg_, ~number~).
-        1. Return the value that _primitive_ corresponds to in <emu-xref href="#table-tobigint"></emu-xref>.
+        1. Let _converted_ be PrimitiveToBigIntOrUndefined(_primitive_).
+        1. If _converted_ is not *undefined*, return _converted_.
+        1. If _primitive_ is a String, throw a *SyntaxError* exception.
+        1. Throw a *TypeError* exception.
       </emu-alg>
-      <emu-table id="table-tobigint" caption="BigInt Conversions">
-        <table>
-          <thead>
-            <tr>
-              <th>
-                Argument Type
-              </th>
-              <th>
-                Result
-              </th>
-            </tr>
-          </thead>
-          <tr>
-            <td>
-              Undefined
-            </td>
-            <td>
-              Throw a *TypeError* exception.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              Null
-            </td>
-            <td>
-              Throw a *TypeError* exception.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              Boolean
-            </td>
-            <td>
-              Return `1n` if _primitive_ is *true* and `0n` if _primitive_ is *false*.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              BigInt
-            </td>
-            <td>
-              Return _primitive_.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              Number
-            </td>
-            <td>
-              Throw a *TypeError* exception.
-            </td>
-          </tr>
-          <tr>
-            <td>
-              String
-            </td>
-            <td>
-              <emu-alg>
-                1. Let _n_ be StringToBigInt(_primitive_).
-                1. If _n_ is *undefined*, throw a *SyntaxError* exception.
-                1. Return _n_.
-              </emu-alg>
-            </td>
-          </tr>
-          <tr>
-            <td>
-              Symbol
-            </td>
-            <td>
-              Throw a *TypeError* exception.
-            </td>
-          </tr>
-        </table>
-      </emu-table>
+    </emu-clause>
+
+    <emu-clause id="sec-primitivetobigintorundefined" type="abstract operation" oldids="table-tobigint">
+      <h1>
+        PrimitiveToBigIntOrUndefined (
+          _primitive_: a primitive value,
+        ): a BigInt or *undefined*
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _primitive_ to a BigInt value, or to *undefined* if implicit conversion is not supported.</dd>
+      </dl>
+      <emu-alg>
+        1. If _primitive_ is a BigInt, return _primitive_.
+        1. If _primitive_ is either a Number, a Symbol, *undefined*, or *null*, return *undefined*.
+        1. If _primitive_ is *false*, return *0*<sub>ℤ</sub>.
+        1. If _primitive_ is *true*, return *1*<sub>ℤ</sub>.
+        1. Assert: _primitive_ is a String.
+        1. Return StringToBigInt(_primitive_).
+      </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-stringtobigint" type="abstract operation">
@@ -5693,7 +5642,6 @@
         1. If _arg_ is a BigInt, return BigInt::toString(_arg_, 10).
         1. Assert: _arg_ is an Object.
         1. Let _primitiveValue_ be ? ToPrimitive(_arg_, ~string~).
-        1. Assert: _primitiveValue_ is not an Object.
         1. Return ? ToString(_primitiveValue_).
       </emu-alg>
     </emu-clause>
@@ -6127,26 +6075,22 @@
       <emu-alg>
         1. If SameType(_x_, _y_) is *true*, then
           1. Return IsStrictlyEqual(_x_, _y_).
-        1. If _x_ is *null* and _y_ is *undefined*, return *true*.
-        1. If _x_ is *undefined* and _y_ is *null*, return *true*.
+        1. If _x_ is either *undefined* or *null* and _y_ is either *undefined* or *null*, then
+          1. Return *true*.
         1. [id="step-abstract-equality-comparison-web-compat-insertion-point", normative-optional] If the host is a web browser or otherwise supports <emu-xref href="#sec-IsHTMLDDA-internal-slot" title></emu-xref>, then
           1. If _x_ is an Object, _x_ has an [[IsHTMLDDA]] internal slot, and _y_ is either *undefined* or *null*, return *true*.
           1. If _x_ is either *undefined* or *null*, _y_ is an Object, and _y_ has an [[IsHTMLDDA]] internal slot, return *true*.
-        1. If _x_ is a Number and _y_ is a String, return ! IsLooselyEqual(_x_, ! ToNumber(_y_)).
-        1. If _x_ is a String and _y_ is a Number, return ! IsLooselyEqual(! ToNumber(_x_), _y_).
-        1. If _x_ is a BigInt and _y_ is a String, then
-          1. Let _n_ be StringToBigInt(_y_).
-          1. If _n_ is *undefined*, return *false*.
-          1. Return ! IsLooselyEqual(_x_, _n_).
-        1. If _x_ is a String and _y_ is a BigInt, return ! IsLooselyEqual(_y_, _x_).
         1. If _x_ is a Boolean, return ! IsLooselyEqual(! ToNumber(_x_), _y_).
         1. If _y_ is a Boolean, return ! IsLooselyEqual(_x_, ! ToNumber(_y_)).
         1. If _x_ is either a String, a Number, a BigInt, or a Symbol and _y_ is an Object, return ! IsLooselyEqual(_x_, ? ToPrimitive(_y_)).
         1. If _x_ is an Object and _y_ is either a String, a Number, a BigInt, or a Symbol, return ! IsLooselyEqual(? ToPrimitive(_x_), _y_).
-        1. If _x_ is a BigInt and _y_ is a Number, or if _x_ is a Number and _y_ is a BigInt, then
-          1. If _x_ is not finite or _y_ is not finite, return *false*.
+        1. If _x_ is either a Number or a String and _y_ is either a Number or a String, then
+          1. Return IsStrictlyEqual(! ToNumber(_x_), ! ToNumber(_y_)).
+        1. If _x_ is either a BigInt or a String and _y_ is either a BigInt or a String, then
+          1. Return IsStrictlyEqual(PrimitiveToBigIntOrUndefined(_x_), PrimitiveToBigIntOrUndefined(_y_)).
+        1. If _x_ is either a BigInt or a Number and _y_ is either a BigInt or a Number, then
+          1. If _x_ is not a finite Number and _y_ is not a finite Number, return *false*.
           1. If ℝ(_x_) = ℝ(_y_), return *true*.
-          1. Return *false*.
         1. Return *false*.
       </emu-alg>
     </emu-clause>
