@@ -634,26 +634,10 @@
       <p>Starting from a sentence consisting of a single distinguished nonterminal, called the <dfn variants="goal symbols">goal symbol</dfn>, a given context-free grammar specifies a <em>language</em>, namely, the (perhaps infinite) set of possible sequences of terminal symbols that can result from repeatedly replacing any nonterminal in the sequence with a right-hand side of a production for which the nonterminal is the left-hand side.</p>
     </emu-clause>
 
-    <emu-clause id="sec-lexical-and-regexp-grammars">
-      <h1>The Lexical and RegExp Grammars</h1>
-      <p>A <em>lexical grammar</em> for ECMAScript is given in clause <emu-xref href="#sec-ecmascript-language-lexical-grammar"></emu-xref>. This grammar has as its terminal symbols Unicode code points that conform to the rules for |SourceCharacter| defined in <emu-xref href="#sec-source-text"></emu-xref>. It defines a set of productions, starting from the goal symbol |InputElementDiv|, |InputElementTemplateTail|, |InputElementRegExp|, |InputElementRegExpOrTemplateTail|, or |InputElementHashbangOrRegExp|, that describe how sequences of such code points are translated into a sequence of input elements.</p>
-      <p>Input elements other than white space and comments form the terminal symbols for the syntactic grammar for ECMAScript and are called ECMAScript <em>tokens</em>. These tokens are the reserved words, identifiers, literals, and punctuators of the ECMAScript language. Moreover, line terminators, although not considered to be tokens, also become part of the stream of input elements and guide the process of automatic semicolon insertion (<emu-xref href="#sec-automatic-semicolon-insertion"></emu-xref>). Simple white space and single-line comments are discarded and do not appear in the stream of input elements for the syntactic grammar. A |MultiLineComment| (that is, a comment of the form `/*`…`*/` regardless of whether it spans more than one line) is likewise simply discarded if it contains no line terminator; but if a |MultiLineComment| contains one or more line terminators, then it is replaced by a single line terminator, which becomes part of the stream of input elements for the syntactic grammar.</p>
-      <p>A <em>RegExp grammar</em> for ECMAScript is given in <emu-xref href="#sec-patterns"></emu-xref>. This grammar also has as its terminal symbols the code points as defined by |SourceCharacter|. It defines a set of productions, starting from the goal symbol |Pattern|, that describe how sequences of code points are translated into regular expression patterns.</p>
-      <p>Productions of the lexical and RegExp grammars are distinguished by having two colons “<b>::</b>” as separating punctuation. The lexical and RegExp grammars share some productions.</p>
-    </emu-clause>
-
-    <emu-clause id="sec-numeric-string-grammar">
-      <h1>The Numeric String Grammar</h1>
-      <p>A <em>numeric string grammar</em> appears in <emu-xref href="#sec-tonumber-applied-to-the-string-type"></emu-xref>. It has as its terminal symbols |SourceCharacter|, and is used for translating Strings into numeric values starting from the goal symbol |StringNumericLiteral| (which is similar to but distinct from the <emu-xref href="#sec-literals-numeric-literals">lexical grammar for numeric literals</emu-xref>).</p>
-      <p>Productions of the numeric string grammar are distinguished by having three colons “<b>:::</b>” as punctuation, and are never used for parsing source text.</p>
-    </emu-clause>
-
-    <emu-clause id="sec-syntactic-grammar">
-      <h1>The Syntactic Grammar</h1>
-      <p>The <em>syntactic grammar</em> for ECMAScript is given in clauses <emu-xref href="#sec-ecmascript-language-expressions"></emu-xref> through <emu-xref href="#sec-ecmascript-language-scripts-and-modules"></emu-xref>. This grammar has ECMAScript tokens defined by the lexical grammar as its terminal symbols (<emu-xref href="#sec-lexical-and-regexp-grammars"></emu-xref>). It defines a set of productions, starting from two alternative goal symbols |Script| and |Module|, that describe how sequences of tokens form syntactically correct independent components of ECMAScript programs.</p>
-      <p>When a stream of code points is to be parsed as an ECMAScript |Script| or |Module|, it is first converted to a stream of input elements by repeated application of the lexical grammar; this stream of input elements is then parsed by a single application of the syntactic grammar. The input stream is syntactically in error if the tokens in the stream of input elements cannot be parsed as a single instance of the goal nonterminal (|Script| or |Module|), with no tokens left over.</p>
-      <p>When a parse is successful, it constructs a <em>parse tree</em>, a rooted tree structure in which each node is a <dfn variants="Parse Nodes">Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the grammar; it represents a span of the source text that can be derived from that symbol. The root node of the parse tree, representing the whole of the source text, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol.</p>
-      <p>New Parse Nodes are instantiated for each invocation of the parser and never reused between parses even of identical source text. Parse Nodes are considered <dfn>the same Parse Node</dfn> if and only if they represent the same span of source text, are instances of the same grammar symbol, and resulted from the same parser invocation.</p>
+    <emu-clause id="sec-parsing">
+      <h1>Parsing</h1>
+      <p>An input stream of terminal symbols can be <em>parsed</em> using a goal symbol when it is matched by that goal symbol with no terminal symbols left over. When a parse is successful, it constructs a <dfn>parse tree</dfn>, a rooted tree structure in which each node is a <dfn variants="Parse Nodes">Parse Node</dfn>. Each Parse Node is an <em>instance</em> of a symbol in the containing grammar; it represents a span of the input that can be derived from that symbol. The root node of the parse tree, representing the whole of the input, is an instance of the parse's goal symbol. When a Parse Node is an instance of a nonterminal, it is also an instance of some production that has that nonterminal as its left-hand side. Moreover, it has zero or more <em>children</em>, one for each symbol on the production's right-hand side: each child is a Parse Node that is an instance of the corresponding symbol.</p>
+      <p>New Parse Nodes are instantiated for each parse and never reused between parses even of identical input. Parse Nodes are considered <dfn>the same Parse Node</dfn> if and only if they represent the same span of input, are instances of the same grammar symbol, and resulted from the same parser invocation.</p>
       <emu-note>
         <p>Parsing the same String multiple times will lead to different Parse Nodes. For example, consider:</p>
         <pre><code class="javascript">
@@ -664,7 +648,27 @@
         <p>Each call to `eval` converts the value of `str` into ECMAScript source text and performs an independent parse that creates its own separate tree of Parse Nodes. The trees are distinct even though each parse operates upon a source text that was derived from the same String value.</p>
       </emu-note>
       <emu-note>Parse Nodes are specification artefacts, and implementations are not required to use an analogous data structure.</emu-note>
-      <p>Productions of the syntactic grammar are distinguished by having just one colon “<b>:</b>” as punctuation.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-lexical-and-regexp-grammars">
+      <h1>The Lexical and RegExp Grammars</h1>
+      <p>A <em>lexical grammar</em> for ECMAScript is given in clause <emu-xref href="#sec-ecmascript-language-lexical-grammar"></emu-xref>. This grammar has as its terminal symbols Unicode code points that conform to the rules for |SourceCharacter| defined in <emu-xref href="#sec-source-text"></emu-xref>. It defines a set of productions, starting from the goal symbol |InputElementDiv|, |InputElementTemplateTail|, |InputElementRegExp|, |InputElementRegExpOrTemplateTail|, or |InputElementHashbangOrRegExp|, that describe how sequences of such code points are translated into a sequence of input elements.</p>
+      <p>Input elements other than white space and comments form the terminal symbols for the syntactic grammar for ECMAScript and are called ECMAScript <em>tokens</em>. These tokens are the reserved words, identifiers, literals, and punctuators of the ECMAScript language. Moreover, line terminators, although not considered to be tokens, also become part of the stream of input elements and guide the process of automatic semicolon insertion (<emu-xref href="#sec-automatic-semicolon-insertion"></emu-xref>). Simple white space and single-line comments are discarded and do not appear in the stream of input elements for the syntactic grammar. A |MultiLineComment| (that is, a comment of the form `/*`…`*/` regardless of whether it spans more than one line) is likewise simply discarded if it contains no line terminator; but if a |MultiLineComment| contains one or more line terminators, then it is replaced by a single line terminator, which becomes part of the stream of input elements for the syntactic grammar.</p>
+      <p>A <em>RegExp grammar</em> for ECMAScript is given in <emu-xref href="#sec-patterns"></emu-xref>. This grammar also has as its terminal symbols the code points as defined by |SourceCharacter|. It defines a set of productions, starting from the goal symbol |Pattern|, that describe how sequences of code points are translated into regular expression patterns.</p>
+      <p>Productions of the lexical and RegExp grammars are distinguished by having two colons “<b>::</b>” after the nonterminal being defined. The lexical and RegExp grammars share some productions.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-runtime-grammars" oldids="sec-numeric-string-grammar">
+      <h1>Runtime Grammars</h1>
+      <p>A grammar used exclusively for runtime semantics rather than parsing source text is referred to as a <dfn variants="runtime grammars">runtime grammar</dfn>. Unless otherwise specified, each runtime grammar has as its terminal symbols the code points as defined by |SourceCharacter|. Runtime grammars appear in <emu-xref href="#sec-tonumber-applied-to-the-string-type"></emu-xref> (used for translating Strings into Numbers starting from the goal symbol |StringNumericLiteral| or |StrDecimalLiteral|), <emu-xref href="#sec-stringintegerliteral-grammar"></emu-xref> (used for translating Strings into BigInts starting from the goal symbol |StringIntegerLiteral|), and <emu-xref href="#sec-time-zone-offset-strings"></emu-xref> (used for mapping time values to and from offset time zones starting from the goal symbol |UTCOffset|).</p>
+      <p>Productions of runtime grammars are distinguished by having three colons “<b>:::</b>” after the nonterminal being defined.</p>
+    </emu-clause>
+
+    <emu-clause id="sec-syntactic-grammar">
+      <h1>The Syntactic Grammar</h1>
+      <p>The <em>syntactic grammar</em> for ECMAScript is given in clauses <emu-xref href="#sec-ecmascript-language-expressions"></emu-xref> through <emu-xref href="#sec-ecmascript-language-scripts-and-modules"></emu-xref>. This grammar has ECMAScript tokens defined by the lexical grammar as its terminal symbols (<emu-xref href="#sec-lexical-and-regexp-grammars"></emu-xref>). It defines a set of productions, starting from two alternative goal symbols |Script| and |Module|, that describe how sequences of tokens form syntactically correct independent components of ECMAScript programs.</p>
+      <p>When a stream of code points is to be parsed as an ECMAScript |Script| or |Module|, it is first converted to a stream of input elements by repeated application of the lexical grammar; this stream of input elements is then parsed by a single application of the syntactic grammar. The input stream is syntactically in error if the tokens in the stream of input elements cannot be parsed as a single instance of the goal nonterminal (|Script| or |Module|), with no tokens left over.</p>
+      <p>Productions of the syntactic grammar are distinguished by having just one colon “<b>:</b>” after the nonterminal being defined.</p>
       <p>The syntactic grammar as presented in clauses <emu-xref href="#sec-ecmascript-language-expressions"></emu-xref> through <emu-xref href="#sec-ecmascript-language-scripts-and-modules"></emu-xref> is not a complete account of which token sequences are accepted as a correct ECMAScript |Script| or |Module|. Certain additional token sequences are also accepted, namely, those that would be described by the grammar if only semicolons were added to the sequence in certain places (such as before line terminator characters). Furthermore, certain token sequences that are described by the grammar are not considered acceptable if a line terminator character appears in certain “awkward” places.</p>
       <p>In certain cases, in order to avoid ambiguities, the syntactic grammar uses generalized productions that permit token sequences that do not form a valid ECMAScript |Script| or |Module|. For example, this technique is used for object literals and object destructuring patterns. In such cases a more restrictive <em>supplemental grammar</em> is provided that further restricts the acceptable token sequences. Typically, an early error rule will then state that, in certain contexts, “_p_ <dfn id="must-cover">must cover</dfn> an _n_”, where _p_ is a Parse Node (an instance of the generalized production) and _n_ is a nonterminal from the supplemental grammar. This means:</p>
       <ol>
@@ -686,8 +690,8 @@
       <emu-clause id="sec-terminal-symbols">
         <h1>Terminal Symbols</h1>
         <p>In the ECMAScript grammars, some terminal symbols are shown in `fixed-width` font. These are to appear in a source text exactly as written. All terminal symbol code points specified in this way are to be understood as the appropriate Unicode code points from the Basic Latin block, as opposed to any similar-looking code points from other Unicode ranges. A code point in a terminal symbol cannot be expressed by a `\\` |UnicodeEscapeSequence|.</p>
-        <p>In grammars whose terminal symbols are individual Unicode code points (i.e., the lexical, RegExp, and numeric string grammars), a contiguous run of multiple fixed-width code points appearing in a production is a simple shorthand for the same sequence of code points, written as standalone terminal symbols.</p>
-        <p>For example, the production:</p>
+        <p>In grammars whose terminal symbols are individual Unicode code points (e.g., the lexical, RegExp, and numeric string grammars), a contiguous run of multiple fixed-width code points appearing in a production is a simple shorthand for the same sequence of code points, written as standalone terminal symbols.</p>
+        <p>For example, the lexical grammar production:</p>
         <emu-grammar type="definition" example>
           HexIntegerLiteral :: `0x` HexDigits
         </emu-grammar>
@@ -696,9 +700,14 @@
           HexIntegerLiteral :: `0` `x` HexDigits
         </emu-grammar>
         <p>In contrast, in the syntactic grammar, a contiguous run of fixed-width code points is a single terminal symbol.</p>
+        <p>For example, in the syntactic grammar production:</p>
+        <emu-grammar type="definition" example>
+          NewTarget : `new` `.` `target`
+        </emu-grammar>
+        <p>the right-hand side is a sequence of three terminal symbols (`new`, `.`, and `target`). Because it is applied to a stream of input elements that does not include |WhiteSpace|, it matches input source text like <code>new .target</code>, but not <code>new .tar get</code> (because `tar` and `get` are independent tokens in the stream derived from that source text).</p>
         <p>Terminal symbols come in two other forms:</p>
         <ul>
-          <li>In the lexical and RegExp grammars, Unicode code points without a conventional printed representation are instead shown in the form “&lt;ABBREV>” where “ABBREV” is a mnemonic for the code point or set of code points. These forms are defined in <emu-xref href="#sec-unicode-format-control-characters" title></emu-xref>, <emu-xref href="#sec-white-space" title></emu-xref>, and <emu-xref href="#sec-line-terminators" title></emu-xref>.</li>
+          <li>In grammars whose terminal symbols are individual Unicode code points, those without a conventional printed representation are instead shown in the form “&lt;ABBREV>” where “ABBREV” is a mnemonic for the code point or set of code points. These forms are defined in <emu-xref href="#sec-unicode-format-control-characters" title></emu-xref>, <emu-xref href="#sec-white-space" title></emu-xref>, and <emu-xref href="#sec-line-terminators" title></emu-xref>.</li>
           <li>In the syntactic grammar, certain terminal symbols (e.g. |IdentifierName| and |RegularExpressionLiteral|) are shown in italics, as they refer to the nonterminals of the same name in the lexical grammar.</li>
         </ul>
       </emu-clause>
@@ -16749,7 +16758,8 @@
       </dl>
       <emu-alg>
         1. If _sourceText_ is a String, set _sourceText_ to StringToCodePoints(_sourceText_).
-        1. Attempt to parse _sourceText_ using _goalSymbol_ as the goal symbol, and analyse the parse result for any early error conditions. Parsing and early error detection may be interleaved in an implementation-defined manner.
+        1. Attempt to <emu-xref href="#sec-parsing">parse</emu-xref> _sourceText_ using _goalSymbol_ as the goal symbol, and analyse the parse result for any early error conditions. Parsing and early error detection may be interleaved in an implementation-defined manner.
+        1. NOTE: When _goalSymbol_ is a nonterminal of the syntactic grammar, parsing includes conversion of _sourceText_ from code points to a stream of input elements as described in <emu-xref href="#sec-syntactic-grammar"></emu-xref>.
         1. If the parse succeeded and no early errors were found, return the Parse Node (an instance of _goalSymbol_) at the root of the parse tree resulting from the parse.
         1. Return a List of one or more *SyntaxError* objects representing the parsing errors and/or early errors. If more than one parsing error or early error is present, the number and ordering of error objects in the list is implementation-defined, but at least one must be present.
       </emu-alg>
