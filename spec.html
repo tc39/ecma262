@@ -46397,7 +46397,7 @@ THH:mm:ss.sss
             1. If _newByteLength_ &lt; _currentByteLength_ or _newByteLength_ > _obj_.[[ArrayBufferMaxByteLength]], throw a *RangeError* exception.
             1. Let _byteLengthDelta_ be _newByteLength_ - _currentByteLength_.
             1. If it is impossible to create a new Shared Data Block value consisting of _byteLengthDelta_ bytes, throw a *RangeError* exception.
-            1. NOTE: No new Shared Data Block is constructed and used here. The observable behaviour of growable SharedArrayBuffers is specified by allocating a max-sized Shared Data Block at construction time, and this step captures the requirement that implementations that run out of memory must throw a *RangeError*.
+            1. NOTE: No new Shared Data Block is constructed and used here. The observable behaviour of growable SharedArrayBuffers is specified to allocate a Shared Data Block of the maximum applicable size at construction time, and this step captures the requirement that implementations that run out of memory must throw a *RangeError*.
             1. Let _readByteLengthRawBytes_ be AtomicCompareExchangeInSharedBlock(_byteLengthBlock_, 0, 8, _currentByteLengthRawBytes_, _newByteLengthRawBytes_).
             1. If ByteListEqual(_readByteLengthRawBytes_, _currentByteLengthRawBytes_) is *true*, return *undefined*.
             1. Set _currentByteLengthRawBytes_ to _readByteLengthRawBytes_.
@@ -53003,10 +53003,10 @@ THH:mm:ss.sss
       </table>
     </emu-table>
 
-    <p>Shared Data Block events are introduced to candidate execution Agent Events Records by abstract operations or by methods on the Atomics object. Some operations also introduce <dfn variants="Synchronize,Synchronize event">Synchronize events</dfn>, which have no fields and exist purely to directly constrain the permitted orderings of other events. And finally, there are host-specific events. A <dfn variants="Memory events">Memory event</dfn> is either a Shared Data Block event, Synchronize event, or such a host-specific event.</p>
+    <p>Shared Data Block events are introduced to candidate execution Agent Events Records by abstract operations or by methods on the Atomics object. Some operations also introduce <dfn variants="Synchronize,Synchronize event">Synchronize events</dfn>, which have no fields and exist purely to directly constrain the permitted orderings of other events. Hosts can also introduce their own <dfn variants="Host memory event">Host memory events</dfn> for similar synchronization purposes. A <dfn variants="Memory events">Memory event</dfn> is either a Shared Data Block event, Synchronize event, or Host memory event.</p>
     <p>Let the <dfn variants="memory ranges">memory range</dfn> of a Shared Data Block event _e_ be the Set of all integers in the interval from _e_.[[ByteIndex]] (inclusive) to _e_.[[ByteIndex]] + _e_.[[ElementSize]] (exclusive). Two events' memory ranges are equal when the events have the same [[Block]], [[ByteIndex]], and [[ElementSize]]. Two events' memory ranges are overlapping when the events have the same [[Block]], the ranges are not equal, and their intersection is non-empty. Two events' memory ranges are disjoint when the events do not have the same [[Block]] or their ranges are neither equal nor overlapping.</p>
     <emu-note>
-      <p>Examples of host-specific synchronizing events that should be accounted for are: sending a SharedArrayBuffer from one agent to another (e.g., by `postMessage` in a browser), starting and stopping agents, and communicating within the agent cluster via channels other than shared memory. For a particular execution _execution_, those events are provided by the host via the host-synchronizes-with strict partial order. Additionally, hosts can add host-specific synchronizing events to _execution_.[[EventList]] so as to participate in the is-agent-order-before Relation.</p>
+      <p>Examples of Host memory events that should be accounted for are: sending a SharedArrayBuffer from one agent to another (e.g., by `postMessage` in a browser), starting and stopping agents, and communicating within the agent cluster via channels other than shared memory. For a particular execution _execution_, those events are provided by the host via the host-synchronizes-with strict partial order. Additionally, hosts can add Host memory events to _execution_.[[EventList]] for participation in the is-agent-order-before Relation.</p>
     </emu-note>
     <p>Events are ordered within candidate executions by the relations defined below.</p>
   </emu-clause>
@@ -53132,19 +53132,6 @@ THH:mm:ss.sss
       </emu-alg>
     </emu-clause>
 
-    <emu-clause id="sec-hosteventset" type="abstract operation">
-      <h1>
-        HostEventSet (
-          _execution_: a candidate execution,
-        ): a Set of Memory events
-      </h1>
-      <dl class="header">
-      </dl>
-      <emu-alg>
-        1. Return a new Set containing all elements of EventSet(_execution_) that are not in SharedDataBlockEventSet(_execution_).
-      </emu-alg>
-    </emu-clause>
-
     <emu-clause id="sec-composewriteeventbytes" type="abstract operation">
       <h1>
         ComposeWriteEventBytes (
@@ -53237,16 +53224,16 @@ THH:mm:ss.sss
       </ul>
     </emu-clause>
 
-    <emu-clause id="sec-host-synchronizes-with">
+    <emu-clause id="sec-host-synchronizes-with" oldids="sec-hosteventset">
       <h1>host-synchronizes-with</h1>
-      <p>For a candidate execution _execution_, its <dfn>host-synchronizes-with</dfn> Relation is a host-provided strict partial order on host-specific Memory events that satisfies at least the following.</p>
+      <p>For a candidate execution _execution_, its <dfn>host-synchronizes-with</dfn> Relation is a host-defined strict partial order on Memory events that satisfies at least the following.</p>
       <ul>
-        <li>If _eventA_ host-synchronizes-with _eventB_ in _execution_, HostEventSet(_execution_) contains _eventA_ and _eventB_.</li>
-        <li>There is no cycle in the union of host-synchronizes-with and is-agent-order-before in _execution_.</li>
+        <li>If _eventA_ host-synchronizes-with _eventB_ in _execution_, _eventA_ and _eventB_ are both Host memory events and elements of EventSet(_execution_).</li>
+        <li>The union of host-synchronizes-with and is-agent-order-before in _execution_ is cycle-free. In particular, if (_eventA_, _eventB_) is a member of that union, then (_eventB_, _eventA_) is not.</li>
       </ul>
 
       <emu-note>
-        <p>For two host-specific events _eventA_ and _eventB_ in a candidate execution _execution_, _eventA_ host-synchronizes-with _eventB_ in _execution_ implies _eventA_ happens-before _eventB_ in _execution_.</p>
+        <p>For two Host memory events _eventA_ and _eventB_ in a candidate execution _execution_, _eventA_ host-synchronizes-with _eventB_ in _execution_ implies _eventA_ happens-before _eventB_ in _execution_.</p>
       </emu-note>
       <emu-note>
         <p>This Relation allows the host to provide additional synchronization mechanisms, such as `postMessage` between HTML workers.</p>
@@ -53303,7 +53290,7 @@ THH:mm:ss.sss
       </ul>
 
       <emu-note>
-        <p>Because happens-before is a superset of agent-order, a candidate execution is consistent with the single-thread evaluation semantics of ECMAScript.</p>
+        <p>Because happens-before is a superset of is-agent-order-before, a candidate execution is consistent with the single-thread evaluation semantics of ECMAScript.</p>
       </emu-note>
     </emu-clause>
   </emu-clause>
@@ -53313,7 +53300,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-valid-chosen-reads">
       <h1>Valid Chosen Reads</h1>
-      <p>A candidate execution _execution_ has valid chosen reads if the following algorithm returns *true*.</p>
+      <p>A candidate execution _execution_ has <dfn>valid chosen reads</dfn> if the following algorithm returns *true*.</p>
       <emu-alg>
         1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _readEvent_ of SharedDataBlockEventSet(_execution_), do
           1. Let _chosenValueRecord_ be the element of _execution_.[[ChosenValues]] whose [[Event]] field is _readEvent_.
@@ -53331,7 +53318,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-coherent-reads">
       <h1>Coherent Reads</h1>
-      <p>A candidate execution _execution_ has coherent reads if the following algorithm returns *true*.</p>
+      <p>A candidate execution _execution_ has <dfn>coherent reads</dfn> if the following algorithm returns *true*.</p>
       <emu-alg>
         1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _readEvent_ of SharedDataBlockEventSet(_execution_), do
           1. Let _writes_ be reads-bytes-from(_readEvent_) in _execution_.
@@ -53348,14 +53335,13 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-tear-free-aligned-reads">
       <h1>Tear Free Reads</h1>
-      <p>A candidate execution _execution_ has tear free reads if the following algorithm returns *true*.</p>
+      <p>A candidate execution _execution_ has <dfn>tear free reads</dfn> if the following algorithm returns *true*.</p>
       <emu-alg>
-        1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _readEvent_ of SharedDataBlockEventSet(_execution_), do
-          1. If _readEvent_.[[NoTear]] is *true*, then
-            1. Assert: The remainder of dividing _readEvent_.[[ByteIndex]] by _readEvent_.[[ElementSize]] is 0.
-            1. For each Memory event _writeEvent_ such that _readEvent_ reads-from _writeEvent_ in _execution_ and _writeEvent_.[[NoTear]] is *true*, do
-              1. If _readEvent_ and _writeEvent_ have equal memory ranges and there exists a Memory event _value_ such that _value_ and _writeEvent_ have equal memory ranges, _value_.[[NoTear]] is *true*, _writeEvent_ and _value_ are not the same Shared Data Block event, and _readEvent_ reads-from _value_ in _execution_, then
-                1. Return *false*.
+        1. For each ReadSharedMemory or ReadModifyWriteSharedMemory event _readEvent_ of SharedDataBlockEventSet(_execution_) such that _readEvent_.[[NoTear]] is *true*, do
+          1. Assert: The remainder of dividing _readEvent_.[[ByteIndex]] by _readEvent_.[[ElementSize]] is 0.
+          1. For each WriteSharedMemory or ReadModifyWriteSharedMemory event _writeEvent_ such that _readEvent_ reads-from _writeEvent_ in _execution_, _readEvent_ and _writeEvent_ have equal memory ranges, and _writeEvent_.[[NoTear]] is *true*, do
+            1. If there exists a WriteSharedMemory or ReadModifyWriteSharedMemory event _otherWriteEvent_ such that _readEvent_ reads-from _otherWriteEvent_ in _execution_, _readEvent_ and _otherWriteEvent_ have equal memory ranges, _otherWriteEvent_.[[NoTear]] is *true*, and _otherWriteEvent_ and _writeEvent_ are not the same Shared Data Block event, then
+              1. Return *false*.
         1. Return *true*.
       </emu-alg>
 
@@ -53382,13 +53368,13 @@ THH:mm:ss.sss
           </emu-note>
         </li>
         <li>
-          <p>For each WriteSharedMemory or ReadModifyWriteSharedMemory event _writeEvent_ in SharedDataBlockEventSet(_execution_), if _writeEvent_.[[Order]] is ~seq-cst~, then it is not the case that there is an infinite number of ReadSharedMemory or ReadModifyWriteSharedMemory events in SharedDataBlockEventSet(_execution_) with equal memory range that is memory-order before _writeEvent_.</p>
+          <p>For each WriteSharedMemory or ReadModifyWriteSharedMemory event _writeEvent_ in SharedDataBlockEventSet(_execution_), if _writeEvent_.[[Order]] is ~seq-cst~, then there are at most a finite count of ReadSharedMemory or ReadModifyWriteSharedMemory events _readEvent_ in SharedDataBlockEventSet(_execution_) such that _writeEvent_ and _readEvent_ have equal memory ranges and _readEvent_ is-memory-order-before _writeEvent_.</p>
           <emu-note>
             <p>This clause together with the forward progress guarantee on agents ensure the liveness condition that ~seq-cst~ <emu-xref href="#sec-memory-model-fundamentals">writes</emu-xref> become visible to ~seq-cst~ <emu-xref href="#sec-memory-model-fundamentals">reads</emu-xref> with equal memory range in finite time.</p>
           </emu-note>
         </li>
       </ul>
-      <p>A candidate execution has sequentially consistent atomics if it admits an is-memory-order-before Relation.</p>
+      <p>A candidate execution has <dfn>sequentially consistent atomics</dfn> if it admits an is-memory-order-before Relation.</p>
 
       <emu-note>
         <p>While is-memory-order-before includes all events in EventSet(_execution_), those that are not constrained by happens-before or synchronizes-with in _execution_ are allowed to occur anywhere in the order.</p>
@@ -54991,6 +54977,11 @@ THH:mm:ss.sss
   <emu-annex id="sec-host-running-jobs">
     <h1>Running Jobs</h1>
     <p>Preparation steps before, and cleanup steps after, invocation of Job Abstract Closures. See <emu-xref href="#sec-jobs"></emu-xref>.</p>
+  </emu-annex>
+
+  <emu-annex id="sec-host-relations">
+    <h1>Relations</h1>
+    <p>host-synchronizes-with</p>
   </emu-annex>
 
   <emu-annex id="sec-host-internal-methods-of-exotic-objects">
