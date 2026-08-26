@@ -1354,8 +1354,7 @@
         <dd>It rounds a an epoch nanoseconds count to the given rounding increment.</dd>
       </dl>
       <emu-alg>
-        1. Let _unitLength_ be the “Length in Nanoseconds” associated with “Value” _unit_ in <emu-xref href="#table-temporal-units"></emu-xref>.
-        1. Let _incrementNanoseconds_ be _increment_ × _unitLength_.
+        1. Let _incrementNanoseconds_ be _increment_ × TemporalUnitLength(_unit_).
         1. Return RoundNumberToIncrementAsIfPositive(_epochNanoseconds_, _incrementNanoseconds_, _roundingMode_).
       </emu-alg>
     </emu-clause>
@@ -2872,8 +2871,7 @@
         </dd>
       </dl>
       <emu-alg>
-        1. Let _divisor_ be the “Length in Nanoseconds” associated with “Value” _unit_ in <emu-xref href="#table-temporal-units"></emu-xref>.
-        1. Return ? RoundTimeDurationToIncrement(_timeDuration_, _divisor_ × _increment_, _roundingMode_).
+        1. Return ? RoundTimeDurationToIncrement(_timeDuration_, TemporalUnitLength(_unit_) × _increment_, _roundingMode_).
       </emu-alg>
     </emu-clause>
 
@@ -2973,8 +2971,7 @@
         <dd>It returns the total number of _unit_ in _duration_.</dd>
       </dl>
       <emu-alg>
-        1. Let _divisor_ be the “Length in Nanoseconds” associated with “Value” _unit_ in <emu-xref href="#table-temporal-units"></emu-xref>.
-        1. Return _timeDuration_ / _divisor_.
+        1. Return _timeDuration_ / TemporalUnitLength(_unit_).
       </emu-alg>
       <emu-note>
         This operation cannot be implemented directly using floating-point arithmetic when 𝔽(_timeDuration_) is not a safe integer. The division can be implemented in C++ with the `__float128` type if the compiler supports it, or with software emulation such as in the <a href="https://bellard.org/softfp/">SoftFP</a> library.
@@ -3285,7 +3282,7 @@
         1. If _unit_ is one of *"day"*, *"hour"*, *"minute"*, *"second"*, *"millisecond"*, or *"microsecond"*, then
           1. Set _quantity_ to _quantity_ + _time_.[[Microsecond]] × NanosecondsPerMicrosecond.
         1. Set _quantity_ to _quantity_ + _time_.[[Nanosecond]].
-        1. Let _unitLength_ be the “Length in Nanoseconds” associated with “Value” _unit_ in <emu-xref href="#table-temporal-units"></emu-xref>.
+        1. Let _unitLength_ be TemporalUnitLength(_unit_).
         1. Let _result_ be RoundNumberToIncrement(_quantity_, _increment_ × _unitLength_, _roundingMode_) / _unitLength_.
         1. If _unit_ is *"day"*, return ! CreateTimeRecord(0, 0, 0, 0, 0, 0, _result_).
         1. If _unit_ is *"hour"*, return BalanceTime(_result_, 0, 0, 0, 0, 0).
@@ -3469,74 +3466,59 @@
           <tr>
             <th>Value</th>
             <th>Plural name</th>
-            <th>Length in nanoseconds</th>
           </tr>
         </thead>
         <tr>
           <td>*"year"*</td>
           <td>*"years"*</td>
-          <td>calendar-dependent</td>
         </tr>
 
         <tr>
           <td>*"month"*</td>
           <td>*"months"*</td>
-          <td>calendar-dependent</td>
         </tr>
 
         <tr>
           <td>*"week"*</td>
           <td>*"weeks"*</td>
-          <td>calendar-dependent</td>
         </tr>
 
         <tr>
           <td>*"day"*</td>
           <td>*"days"*</td>
-          <td>NanosecondsPerDay</td>
         </tr>
 
         <tr>
           <td>*"hour"*</td>
           <td>*"hours"*</td>
-          <td>NanosecondsPerHour</td>
         </tr>
 
         <tr>
           <td>*"minute"*</td>
           <td>*"minutes"*</td>
-          <td>NanosecondsPerMinute</td>
         </tr>
 
         <tr>
           <td>*"second"*</td>
           <td>*"seconds"*</td>
-          <td>NanosecondsPerSecond</td>
         </tr>
 
         <tr>
           <td>*"millisecond"*</td>
           <td>*"milliseconds"*</td>
-          <td>NanosecondsPerMillisecond</td>
         </tr>
 
         <tr>
           <td>*"microsecond"*</td>
           <td>*"microseconds"*</td>
-          <td>NanosecondsPerMicrosecond</td>
         </tr>
 
         <tr>
           <td>*"nanosecond"*</td>
           <td>*"nanoseconds"*</td>
-          <td>1</td>
         </tr>
       </table>
     </emu-table>
-    <emu-note>
-      The length of a day is given as NanosecondsPerDay in the table.
-      Note that changes in the UTC offset of a time zone may result in longer or shorter days, so care should be taken when using this value in the context of `Temporal.ZonedDateTime`.
-    </emu-note>
 
     <emu-clause id="sec-defaulttemporallargestunit" type="abstract operation">
       <h1>
@@ -3579,6 +3561,32 @@
           1. If _xUnit_ is _unit_, return _unit_.
           1. If _yUnit_ is _unit_, return _unit_.
       </emu-alg>
+    </emu-clause>
+
+    <emu-clause id="sec-temporalunitlength" type="abstract operation">
+      <h1>
+        TemporalUnitLength (
+          _unit_: a time unit or *"day"*,
+        ): a mathematical value
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It returns the length of _unit_ in nanoseconds.</dd>
+      </dl>
+      <emu-alg>
+        1. If _unit_ is *"day"*, return NanosecondsPerDay.
+        1. If _unit_ is *"hour"*, return NanosecondsPerHour.
+        1. If _unit_ is *"minute"*, return NanosecondsPerMinute.
+        1. If _unit_ is *"second"*, return NanosecondsPerSecond.
+        1. If _unit_ is *"millisecond"*, return NanosecondsPerMillisecond.
+        1. If _unit_ is *"microsecond"*, return NanosecondsPerMicrosecond.
+        1. Assert: _unit_ is *"nanosecond"*.
+        1. Return 1.
+      </emu-alg>
+      <emu-note>
+        The length of the *"day"* _unit_ is considered to be NanosecondsPerDay.
+        Note that changes in the UTC offset of a time zone may result in longer or shorter days, so care should be taken when using this value in the context of `Temporal.ZonedDateTime`.
+      </emu-note>
     </emu-clause>
 
     <emu-clause id="sec-validatetemporalunitvalue" type="abstract operation">
