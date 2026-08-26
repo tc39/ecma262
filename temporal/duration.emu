@@ -1395,7 +1395,7 @@
           _timeZone_: either an available time zone identifier or ~no-time-zone~,
           _calendar_: a calendar type,
           _largestUnit_: a Temporal unit,
-          _smallestUnit_: a date unit,
+          _startUnit_: *"month"* or *"day"*,
         ): either a normal completion containing an Internal Duration Record or a throw completion
       </h1>
       <dl class="header">
@@ -1405,37 +1405,33 @@
         </dd>
       </dl>
       <emu-alg>
-        1. If _smallestUnit_ is _largestUnit_, return _duration_.
-        1. Let _largestUnitIndex_ be the ordinal index of the row of <emu-xref href="#table-temporal-units"></emu-xref> whose “Value” column contains _largestUnit_.
-        1. Let _smallestUnitIndex_ be the ordinal index of the row of <emu-xref href="#table-temporal-units"></emu-xref> whose “Value” column contains _smallestUnit_.
-        1. Let _unitIndex_ be _smallestUnitIndex_ - 1.
-        1. Let _done_ be *false*.
-        1. Repeat, while _unitIndex_ ≥ _largestUnitIndex_ and _done_ is *false*,
-          1. Let _unit_ be the value in the “Value” column of <emu-xref href="#table-temporal-units"></emu-xref> in the row whose ordinal index is _unitIndex_.
-          1. If _unit_ is not *"week"*, or _largestUnit_ is *"week"*, then
-            1. If _unit_ is *"year"*, then
-              1. Let _years_ be _duration_.[[Date]].[[Years]] + _sign_.
-              1. Let _endDuration_ be ? CreateDateDurationRecord(_years_, 0, 0, 0).
-            1. Else if _unit_ is *"month"*, then
-              1. Let _months_ be _duration_.[[Date]].[[Months]] + _sign_.
-              1. Let _endDuration_ be ? AdjustDateDurationRecord(_duration_.[[Date]], 0, 0, _months_).
-            1. Else,
-              1. Assert: _unit_ is *"week"*.
-              1. Let _weeks_ be _duration_.[[Date]].[[Weeks]] + _sign_.
-              1. Let _endDuration_ be ? AdjustDateDurationRecord(_duration_.[[Date]], 0, _weeks_).
-            1. Let _end_ be ? CalendarDateAdd(_calendar_, _isoDateTime_.[[ISODate]], _endDuration_, *"constrain"*).
-            1. Let _endDateTime_ be the ISO Date-Time Record { [[ISODate]]: _end_, [[Time]]: _isoDateTime_.[[Time]] }.
-            1. If _timeZone_ is ~no-time-zone~, then
-              1. Let _endEpochNanoseconds_ be GetUTCEpochNanoseconds(_endDateTime_).
-            1. Else,
-              1. Let _endEpochNanoseconds_ be ? GetEpochNanosecondsFor(_timeZone_, _endDateTime_, *"compatible"*).
-            1. Let _beyondEnd_ be _nudgedEpochNanoseconds_ - _endEpochNanoseconds_.
-            1. If _beyondEnd_ &lt; 0, let _beyondEndSign_ be -1; else if _beyondEnd_ > 0, let _beyondEndSign_ be 1; else let _beyondEndSign_ be 0.
-            1. If _beyondEndSign_ ≠ -_sign_, then
-              1. Set _duration_ to CombineDateAndTimeDuration(_endDuration_, 0).
-            1. Else,
-              1. Set _done_ to *true*.
-          1. Set _unitIndex_ to _unitIndex_ - 1.
+        1. If LargerOfTwoTemporalUnits(_startUnit_, _largestUnit_) is _startUnit_, return _duration_.
+        1. Let _bubbleUnits_ be a new empty List.
+        1. If _largestUnit_ is *"year"*, prepend *"year"* to _bubbleUnits_.
+        1. If _startUnit_ is *"day"*, then
+          1. If _largestUnit_ is either *"year"* or *"month"*, prepend *"month"* to _bubbleUnits_.
+          1. If _largestUnit_ is *"week"*, prepend *"week"* to _bubbleUnits_.
+        1. For each element _unit_ of _bubbleUnits_, do
+          1. If _unit_ is *"year"*, then
+            1. Let _years_ be _duration_.[[Date]].[[Years]] + _sign_.
+            1. Let _endDuration_ be ? CreateDateDurationRecord(_years_, 0, 0, 0).
+          1. Else if _unit_ is *"month"*, then
+            1. Let _months_ be _duration_.[[Date]].[[Months]] + _sign_.
+            1. Let _endDuration_ be ? AdjustDateDurationRecord(_duration_.[[Date]], 0, 0, _months_).
+          1. Else,
+            1. Assert: _unit_ is *"week"*.
+            1. Let _weeks_ be _duration_.[[Date]].[[Weeks]] + _sign_.
+            1. Let _endDuration_ be ? AdjustDateDurationRecord(_duration_.[[Date]], 0, _weeks_).
+          1. Let _end_ be ? CalendarDateAdd(_calendar_, _isoDateTime_.[[ISODate]], _endDuration_, *"constrain"*).
+          1. Let _endDateTime_ be the ISO Date-Time Record { [[ISODate]]: _end_, [[Time]]: _isoDateTime_.[[Time]] }.
+          1. If _timeZone_ is ~no-time-zone~, then
+            1. Let _endEpochNanoseconds_ be GetUTCEpochNanoseconds(_endDateTime_).
+          1. Else,
+            1. Let _endEpochNanoseconds_ be ? GetEpochNanosecondsFor(_timeZone_, _endDateTime_, *"compatible"*).
+          1. Let _beyondEnd_ be _nudgedEpochNanoseconds_ - _endEpochNanoseconds_.
+          1. If _beyondEnd_ &lt; 0, let _beyondEndSign_ be -1; else if _beyondEnd_ > 0, let _beyondEndSign_ be 1; else let _beyondEndSign_ be 0.
+          1. If _beyondEndSign_ = -_sign_, return _duration_.
+          1. Set _duration_ to CombineDateAndTimeDuration(_endDuration_, 0).
         1. Return _duration_.
       </emu-alg>
     </emu-clause>
@@ -1474,7 +1470,7 @@
         1. Else,
           1. Let _nudgeResult_ be ? NudgeToDayOrTime(_duration_, _destEpochNanoseconds_, _largestUnit_, _increment_, _smallestUnit_, _roundingMode_).
         1. Set _duration_ to _nudgeResult_.[[Duration]].
-        1. If _nudgeResult_.[[DidExpandCalendarUnit]] is *true* and _smallestUnit_ is not *"week"*, then
+        1. If _nudgeResult_.[[DidExpandCalendarUnit]] is *true* and _smallestUnit_ is not *"year"* or *"week"*, then
           1. Let _startUnit_ be LargerOfTwoTemporalUnits(_smallestUnit_, *"day"*).
           1. Set _duration_ to ? BubbleRelativeDuration(_sign_, _duration_, _nudgeResult_.[[NudgedEpochNanoseconds]], _isoDateTime_, _timeZone_, _calendar_, _largestUnit_, _startUnit_).
         1. Return _duration_.
