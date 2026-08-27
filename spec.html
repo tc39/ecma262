@@ -5335,6 +5335,31 @@
       </emu-note>
     </emu-clause>
 
+    <emu-clause id="sec-snaptointeger" type="abstract operation">
+      <h1>
+        SnapToInteger (
+          _arg_: an ECMAScript language value,
+          _nonIntHandling_: ~reject~ or ~truncate~,
+          optional _minimum_: an integer,
+          optional _maximum_: an integer,
+        ): either a normal completion containing an integer or a throw completion
+      </h1>
+      <dl class="header">
+        <dt>description</dt>
+        <dd>It converts _arg_ to an integer representing its Number value, rejecting a non-finite value and handling a finite non-<emu-xref href="#integral-number">integral</emu-xref> value by either rejecting or truncating it, and optionally imposes inclusive constraining bounds.</dd>
+      </dl>
+      <emu-alg>
+        1. Let _number_ be ? ToNumber(_arg_).
+        1. If _number_ is one of *NaN*, *+∞*<sub>𝔽</sub>, or *-∞*<sub>𝔽</sub>, throw a *RangeError* exception.
+        1. Let _mv_ be ℝ(_number_).
+        1. If _nonIntHandling_ is ~truncate~, set _mv_ to truncate(_mv_).
+        1. If _mv_ is not an integer, throw a *RangeError* exception.
+        1. If _minimum_ is present and _mv_ &lt; _minimum_, throw a *RangeError* exception.
+        1. If _maximum_ is present and _mv_ > _maximum_, throw a *RangeError* exception.
+        1. Return _mv_.
+      </emu-alg>
+    </emu-clause>
+
     <emu-clause id="sec-tofixedsizeinteger" type="abstract operation">
       <h1>
         ToFixedSizeInteger (
@@ -5725,8 +5750,8 @@
       </dl>
       <emu-alg>
         1. Let _length_ be ? ToIntegerOrInfinity(_arg_).
-        1. Let _clampedLen_ be the result of clamping _length_ between 0 and 2<sup>53</sup> - 1.
-        1. Return 𝔽(_clampedLen_).
+        1. Let _clampedLength_ be the result of clamping _length_ between 0 and 2<sup>53</sup> - 1.
+        1. Return 𝔽(_clampedLength_).
       </emu-alg>
     </emu-clause>
 
@@ -10046,11 +10071,7 @@
       <emu-alg>
         1. Return ~unused~.
       </emu-alg>
-      <emu-grammar>
-        ObjectBindingPattern :
-          `{` BindingPropertyList `}`
-          `{` BindingPropertyList `,` `}`
-      </emu-grammar>
+      <emu-grammar>ObjectBindingPattern : `{` BindingPropertyList `,`? `}`</emu-grammar>
       <emu-alg>
         1. Perform ? PropertyBindingInitialization of |BindingPropertyList| with arguments _value_ and _envRecord_.
         1. Return ~unused~.
@@ -13799,9 +13820,9 @@
         1. Perform OrdinaryCallBindThis(_func_, _calleeContext_, _thisArg_).
         1. Let _result_ be Completion(OrdinaryCallEvaluateBody(_func_, _argList_)).
         1. [id="step-call-pop-context-stack"] Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
-        1. If _result_ is a return completion, return _result_.[[Value]].
-        1. Assert: _result_ is a throw completion.
-        1. Return ? _result_.
+        1. If _result_ is a throw completion, return ? _result_.
+        1. Assert: _result_ is a return completion.
+        1. Return _result_.[[Value]].
       </emu-alg>
       <emu-note>
         <p>When _calleeContext_ is removed from the execution context stack in step <emu-xref href="#step-call-pop-context-stack"></emu-xref> it must not be destroyed if it is suspended and retained for later resumption by an accessible Generator.</p>
@@ -13973,8 +13994,7 @@
         1. Let _ctorEnv_ be the LexicalEnvironment of _calleeContext_.
         1. Let _result_ be Completion(OrdinaryCallEvaluateBody(_func_, _argList_)).
         1. Remove _calleeContext_ from the execution context stack and restore _callerContext_ as the running execution context.
-        1. If _result_ is a throw completion, then
-          1. Return ? _result_.
+        1. If _result_ is a throw completion, return ? _result_.
         1. Assert: _result_ is a return completion.
         1. If _result_.[[Value]] is an Object, return _result_.[[Value]].
         1. If _kind_ is ~base~, return _thisArg_.
@@ -18802,9 +18822,8 @@
         CoverParenthesizedExpressionAndArrowParameterList[?Yield, ?Await] #parencover
 
       CoverParenthesizedExpressionAndArrowParameterList[Yield, Await] :
-        `(` Expression[+In, ?Yield, ?Await] `)`
-        `(` Expression[+In, ?Yield, ?Await] `,` `)`
         `(` `)`
+        `(` Expression[+In, ?Yield, ?Await] `,`? `)`
         `(` `...` BindingIdentifier[?Yield, ?Await] `)`
         `(` `...` BindingPattern[?Yield, ?Await] `)`
         `(` Expression[+In, ?Yield, ?Await] `,` `...` BindingIdentifier[?Yield, ?Await] `)`
@@ -19001,8 +19020,7 @@
       <emu-grammar type="definition">
         ObjectLiteral[Yield, Await] :
           `{` `}`
-          `{` PropertyDefinitionList[?Yield, ?Await] `}`
-          `{` PropertyDefinitionList[?Yield, ?Await] `,` `}`
+          `{` PropertyDefinitionList[?Yield, ?Await] `,`? `}`
 
         PropertyDefinitionList[Yield, Await] :
           PropertyDefinition[?Yield, ?Await]
@@ -19042,11 +19060,7 @@
 
       <emu-clause id="sec-object-initializer-static-semantics-early-errors" oldids="sec-__proto__-property-names-in-object-initializers">
         <h1>Static Semantics: Early Errors</h1>
-        <emu-grammar>
-          ObjectLiteral :
-            `{` PropertyDefinitionList `}`
-            `{` PropertyDefinitionList `,` `}`
-        </emu-grammar>
+        <emu-grammar>ObjectLiteral : `{` PropertyDefinitionList `,`? `}`</emu-grammar>
         <ul>
           <li>
             It is a Syntax Error if the PropertyNameList of |PropertyDefinitionList| contains any duplicate entries for *"__proto__"* and at least two of those entries were obtained from productions of the form <emu-grammar>PropertyDefinition : PropertyName `:` AssignmentExpression</emu-grammar>.
@@ -19147,11 +19161,7 @@
         <emu-alg>
           1. Return OrdinaryObjectCreate(%Object.prototype%).
         </emu-alg>
-        <emu-grammar>
-          ObjectLiteral :
-            `{` PropertyDefinitionList `}`
-            `{` PropertyDefinitionList `,` `}`
-        </emu-grammar>
+        <emu-grammar>ObjectLiteral : `{` PropertyDefinitionList `,`? `}`</emu-grammar>
         <emu-alg>
           1. Let _obj_ be OrdinaryObjectCreate(%Object.prototype%).
           1. Perform ? PropertyDefinitionEvaluation of |PropertyDefinitionList| with argument _obj_.
@@ -19639,8 +19649,7 @@
 
       Arguments[Yield, Await] :
         `(` `)`
-        `(` ArgumentList[?Yield, ?Await] `)`
-        `(` ArgumentList[?Yield, ?Await] `,` `)`
+        `(` ArgumentList[?Yield, ?Await] `,`? `)`
 
       ArgumentList[Yield, Await] :
         AssignmentExpression[+In, ?Yield, ?Await]
@@ -21443,8 +21452,8 @@
         ObjectAssignmentPattern[Yield, Await] :
           `{` `}`
           `{` AssignmentRestProperty[?Yield, ?Await] `}`
-          `{` AssignmentPropertyList[?Yield, ?Await] `}`
-          `{` AssignmentPropertyList[?Yield, ?Await] `,` AssignmentRestProperty[?Yield, ?Await]? `}`
+          `{` AssignmentPropertyList[?Yield, ?Await] `,`? `}`
+          `{` AssignmentPropertyList[?Yield, ?Await] `,` AssignmentRestProperty[?Yield, ?Await] `}`
 
         ArrayAssignmentPattern[Yield, Await] :
           `[` Elision? AssignmentRestElement[?Yield, ?Await]? `]`
@@ -21517,11 +21526,7 @@
           1. Perform ? RequireObjectCoercible(_value_).
           1. Return ~unused~.
         </emu-alg>
-        <emu-grammar>
-          ObjectAssignmentPattern :
-            `{` AssignmentPropertyList `}`
-            `{` AssignmentPropertyList `,` `}`
-        </emu-grammar>
+        <emu-grammar>ObjectAssignmentPattern : `{` AssignmentPropertyList `,`? `}`</emu-grammar>
         <emu-alg>
           1. Perform ? RequireObjectCoercible(_value_).
           1. Perform ? PropertyDestructuringAssignmentEvaluation of |AssignmentPropertyList| with argument _value_.
@@ -22200,8 +22205,8 @@
         ObjectBindingPattern[Yield, Await] :
           `{` `}`
           `{` BindingRestProperty[?Yield, ?Await] `}`
-          `{` BindingPropertyList[?Yield, ?Await] `}`
-          `{` BindingPropertyList[?Yield, ?Await] `,` BindingRestProperty[?Yield, ?Await]? `}`
+          `{` BindingPropertyList[?Yield, ?Await] `,`? `}`
+          `{` BindingPropertyList[?Yield, ?Await] `,` BindingRestProperty[?Yield, ?Await] `}`
 
         ArrayBindingPattern[Yield, Await] :
           `[` Elision? BindingRestElement[?Yield, ?Await]? `]`
@@ -29729,8 +29734,7 @@
 
         NamedImports :
           `{` `}`
-          `{` ImportsList `}`
-          `{` ImportsList `,` `}`
+          `{` ImportsList `,`? `}`
 
         FromClause :
           `from` ModuleSpecifier
@@ -29927,8 +29931,7 @@
 
         NamedExports :
           `{` `}`
-          `{` ExportsList `}`
-          `{` ExportsList `,` `}`
+          `{` ExportsList `,`? `}`
 
         ExportsList :
           ExportSpecifier
@@ -33195,8 +33198,7 @@
         <emu-alg>
           1. Let _x_ be ? ThisNumberValue(*this* value).
           1. If _radix_ is *undefined*, let _radixMV_ be 10.
-          1. Else, let _radixMV_ be ? ToIntegerOrInfinity(_radix_).
-          1. If _radixMV_ is not in the inclusive interval from 2 to 36, throw a *RangeError* exception.
+          1. Else, let _radixMV_ be ? SnapToInteger(_radix_, ~truncate~, 2, 36).
           1. Return Number::toString(_x_, _radixMV_).
         </emu-alg>
         <p>This method is not generic; it throws a *TypeError* exception if its *this* value is not a Number or a Number object. Therefore, it cannot be transferred to other kinds of objects for use as a method.</p>
@@ -33343,8 +33345,7 @@
         <emu-alg>
           1. Let _x_ be ? ThisBigIntValue(*this* value).
           1. If _radix_ is *undefined*, let _radixMV_ be 10.
-          1. Else, let _radixMV_ be ? ToIntegerOrInfinity(_radix_).
-          1. If _radixMV_ is not in the inclusive interval from 2 to 36, throw a *RangeError* exception.
+          1. Else, let _radixMV_ be ? SnapToInteger(_radix_, ~truncate~, 2, 36).
           1. Return BigInt::toString(_x_, _radixMV_).
         </emu-alg>
         <p>This method is not generic; it throws a *TypeError* exception if its *this* value is not a BigInt or a BigInt object. Therefore, it cannot be transferred to other kinds of objects for use as a method.</p>
@@ -34083,27 +34084,30 @@
         <emu-eqn id="eqn-HoursPerDay" aoid="HoursPerDay">HoursPerDay = 24</emu-eqn>
         <emu-eqn id="eqn-MinutesPerHour" aoid="MinutesPerHour">MinutesPerHour = 60</emu-eqn>
         <emu-eqn id="eqn-SecondsPerMinute" aoid="SecondsPerMinute">SecondsPerMinute = 60</emu-eqn>
-        <emu-eqn id="eqn-msPerSecond" aoid="msPerSecond">msPerSecond = *1000*<sub>𝔽</sub></emu-eqn>
-        <emu-eqn id="eqn-msPerMinute" aoid="msPerMinute">msPerMinute = *60000*<sub>𝔽</sub> = msPerSecond × 𝔽(SecondsPerMinute)</emu-eqn>
-        <emu-eqn id="eqn-msPerHour" aoid="msPerHour">msPerHour = *3600000*<sub>𝔽</sub> = msPerMinute × 𝔽(MinutesPerHour)</emu-eqn>
-        <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = *86400000*<sub>𝔽</sub> = msPerHour × 𝔽(HoursPerDay)</emu-eqn>
-        <emu-eqn id="eqn-nsPerSecond" aoid="nsPerSecond">nsPerSecond = 10<sup>6</sup> × ℝ(msPerSecond) = 10<sup>9</sup></emu-eqn>
+        <emu-eqn id="eqn-msPerSecond" aoid="msPerSecond">msPerSecond = 1000</emu-eqn>
+        <emu-eqn id="eqn-msPerMinute" aoid="msPerMinute">msPerMinute = 60000 = msPerSecond × SecondsPerMinute</emu-eqn>
+        <emu-eqn id="eqn-msPerHour" aoid="msPerHour">msPerHour = 3600000 = msPerMinute × MinutesPerHour</emu-eqn>
+        <emu-eqn id="eqn-msPerDay" aoid="msPerDay">msPerDay = 86400000 = msPerHour × HoursPerDay</emu-eqn>
+        <emu-eqn id="eqn-NanosecondsPerDay" aoid="NanosecondsPerDay">NanosecondsPerDay = 10<sup>6</sup> × msPerDay = 8.64 × 10<sup>13</sup></emu-eqn>
+        <emu-eqn id="eqn-nsPerSecond" aoid="nsPerSecond">nsPerSecond = 10<sup>6</sup> × msPerSecond = 10<sup>9</sup></emu-eqn>
         <emu-eqn id="eqn-nsPerMillisecond" aoid="nsPerMillisecond">nsPerMillisecond = 10<sup>6</sup></emu-eqn>
         <emu-eqn id="eqn-nsPerMicrosecond" aoid="nsPerMicrosecond">nsPerMicrosecond = 10<sup>3</sup></emu-eqn>
+        <emu-eqn id="eqn-MaxEpochNanoseconds" aoid="MaxEpochNanoseconds">MaxEpochNanoseconds = 10<sup>8</sup> × NanosecondsPerDay = 8.64 × 10<sup>21</sup></emu-eqn>
+        <emu-eqn id="eqn-MinEpochNanoseconds" aoid="MinEpochNanoseconds">MinEpochNanoseconds = -MaxEpochNanoseconds = -8.64 × 10<sup>21</sup></emu-eqn>
       </emu-clause>
 
       <emu-clause id="sec-day" type="abstract operation" oldids="eqn-Day,sec-day-number-and-time-within-day">
         <h1>
           Day (
             _tv_: a finite time value,
-          ): an integral Number
+          ): an integer
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It returns the day number of the day in which _tv_ falls.</dd>
         </dl>
         <emu-alg>
-          1. Return 𝔽(floor(ℝ(_tv_ / msPerDay))).
+          1. Return floor(ℝ(_tv_) / msPerDay).
         </emu-alg>
       </emu-clause>
 
@@ -34111,61 +34115,41 @@
         <h1>
           TimeWithinDay (
             _tv_: a finite time value,
-          ): an integral Number in the interval from *+0*<sub>𝔽</sub> (inclusive) to msPerDay (exclusive)
+          ): an integer in the interval from 0 (inclusive) to msPerDay (exclusive)
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It returns the number of milliseconds since the start of the day in which _tv_ falls.</dd>
         </dl>
         <emu-alg>
-          1. Return 𝔽(ℝ(_tv_) modulo ℝ(msPerDay)).
+          1. Return ℝ(_tv_) modulo msPerDay.
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-daysinyear" type="abstract operation" oldids="eqn-DaysInYear,sec-year-number">
-        <h1>
-          DaysInYear (
-            _y_: an integral Number,
-          ): *365*<sub>𝔽</sub> or *366*<sub>𝔽</sub>
-        </h1>
-        <dl class="header">
-          <dt>description</dt>
-          <dd>It returns the number of days in year _y_. Leap years have 366 days; all other years have 365.</dd>
-        </dl>
-        <emu-alg>
-          1. Let _ry_ be ℝ(_y_).
-          1. If (_ry_ modulo 400) = 0, return *366*<sub>𝔽</sub>.
-          1. If (_ry_ modulo 100) = 0, return *365*<sub>𝔽</sub>.
-          1. If (_ry_ modulo 4) = 0, return *366*<sub>𝔽</sub>.
-          1. Return *365*<sub>𝔽</sub>.
-        </emu-alg>
-      </emu-clause>
-
-      <emu-clause id="sec-dayfromyear" type="abstract operation" oldids="eqn-DaysFromYear">
+      <emu-clause id="sec-dayfromyear" type="abstract operation" oldids="eqn-DaysFromYear,sec-year-number">
         <h1>
           DayFromYear (
-            _y_: an integral Number,
-          ): an integral Number
+            _y_: an integer,
+          ): an integer
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It returns the day number of the first day of year _y_.</dd>
         </dl>
         <emu-alg>
-          1. Let _ry_ be ℝ(_y_).
           1. [declared="numberYears1,numberYears4,numberYears100,numberYears400"] NOTE: In the following steps, _numberYears1_, _numberYears4_, _numberYears100_, and _numberYears400_ represent the number of years divisible by 1, 4, 100, and 400, respectively, that occur between the epoch and the start of year _y_. The number is negative if _y_ is before the epoch.
-          1. Let _numberYears1_ be (_ry_ - 1970).
-          1. Let _numberYears4_ be floor((_ry_ - 1969) / 4).
-          1. Let _numberYears100_ be floor((_ry_ - 1901) / 100).
-          1. Let _numberYears400_ be floor((_ry_ - 1601) / 400).
-          1. Return 𝔽(365 × _numberYears1_ + _numberYears4_ - _numberYears100_ + _numberYears400_).
+          1. Let _numberYears1_ be (_y_ - 1970).
+          1. Let _numberYears4_ be floor((_y_ - 1969) / 4).
+          1. Let _numberYears100_ be floor((_y_ - 1901) / 100).
+          1. Let _numberYears400_ be floor((_y_ - 1601) / 400).
+          1. Return 365 × _numberYears1_ + _numberYears4_ - _numberYears100_ + _numberYears400_.
         </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-timefromyear" type="abstract operation" oldids="eqn-TimeFromYear">
         <h1>
           TimeFromYear (
-            _y_: an integral Number,
+            _y_: an integer,
           ): a time value
         </h1>
         <dl class="header">
@@ -34173,7 +34157,7 @@
           <dd>It returns the time value of the start of year _y_.</dd>
         </dl>
         <emu-alg>
-          1. Return msPerDay × DayFromYear(_y_).
+          1. Return 𝔽(msPerDay × DayFromYear(_y_)).
         </emu-alg>
       </emu-clause>
 
@@ -34181,14 +34165,14 @@
         <h1>
           YearFromTime (
             _tv_: a finite time value,
-          ): an integral Number
+          ): an integer
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It returns the year in which _tv_ falls.</dd>
         </dl>
         <emu-alg>
-          1. [declared="y"] Return the largest integral Number _y_ (closest to +∞) such that TimeFromYear(_y_) ≤ _tv_.
+          1. [declared="y"] Return the largest integer _y_ (closest to +∞) such that TimeFromYear(_y_) ≤ _tv_.
         </emu-alg>
       </emu-clause>
 
@@ -34196,7 +34180,7 @@
         <h1>
           DayWithinYear (
             _tv_: a finite time value,
-          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *365*<sub>𝔽</sub>
+          ): an integer in the inclusive interval from 0 to 365
         </h1>
         <dl class="header">
         </dl>
@@ -34205,19 +34189,22 @@
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-inleapyear" type="abstract operation" oldids="eqn-InLeapYear">
+      <emu-clause id="sec-inleapyear" type="abstract operation" oldids="eqn-InLeapYear,sec-daysinyear,eqn-DaysInYear">
         <h1>
           InLeapYear (
             _tv_: a finite time value,
-          ): *+0*<sub>𝔽</sub> or *1*<sub>𝔽</sub>
+          ): 0 or 1
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>It returns *1*<sub>𝔽</sub> if _tv_ is within a leap year and *+0*<sub>𝔽</sub> otherwise.</dd>
+          <dd>It returns 1 if _tv_ is within a leap year and 0 otherwise.</dd>
         </dl>
         <emu-alg>
-          1. If DaysInYear(YearFromTime(_tv_)) is *366*<sub>𝔽</sub>, return *1*<sub>𝔽</sub>.
-          1. Return *+0*<sub>𝔽</sub>.
+          1. Let _y_ be YearFromTime(_tv_).
+          1. If (_y_ modulo 400) = 0, return 1.
+          1. If (_y_ modulo 100) = 0, return 0.
+          1. If (_y_ modulo 4) = 0, return 1.
+          1. Return 0.
         </emu-alg>
       </emu-clause>
 
@@ -34225,28 +34212,28 @@
         <h1>
           MonthFromTime (
             _tv_: a finite time value,
-          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *11*<sub>𝔽</sub>
+          ): an integer in the inclusive interval from 0 to 11
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>It returns a Number identifying the month in which _tv_ falls. A month value of *+0*<sub>𝔽</sub> specifies January; *1*<sub>𝔽</sub> specifies February; *2*<sub>𝔽</sub> specifies March; *3*<sub>𝔽</sub> specifies April; *4*<sub>𝔽</sub> specifies May; *5*<sub>𝔽</sub> specifies June; *6*<sub>𝔽</sub> specifies July; *7*<sub>𝔽</sub> specifies August; *8*<sub>𝔽</sub> specifies September; *9*<sub>𝔽</sub> specifies October; *10*<sub>𝔽</sub> specifies November; and *11*<sub>𝔽</sub> specifies December. Note that <emu-eqn>MonthFromTime(*+0*<sub>𝔽</sub>) = *+0*<sub>𝔽</sub></emu-eqn>, corresponding to Thursday, 1 January 1970.</dd>
+          <dd>It returns an integer identifying the month in which _tv_ falls. A month value of 0 specifies January; 1 specifies February; 2 specifies March; 3 specifies April; 4 specifies May; 5 specifies June; 6 specifies July; 7 specifies August; 8 specifies September; 9 specifies October; 10 specifies November; and 11 specifies December. Note that <emu-eqn>MonthFromTime(*+0*<sub>𝔽</sub>) = 0</emu-eqn>, corresponding to Thursday, 1 January 1970.</dd>
         </dl>
         <emu-alg>
           1. Let _inLeapYear_ be InLeapYear(_tv_).
           1. Let _dayWithinYear_ be DayWithinYear(_tv_).
-          1. If _dayWithinYear_ &lt; *31*<sub>𝔽</sub>, return *+0*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *59*<sub>𝔽</sub> + _inLeapYear_, return *1*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *90*<sub>𝔽</sub> + _inLeapYear_, return *2*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *120*<sub>𝔽</sub> + _inLeapYear_, return *3*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *151*<sub>𝔽</sub> + _inLeapYear_, return *4*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *181*<sub>𝔽</sub> + _inLeapYear_, return *5*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *212*<sub>𝔽</sub> + _inLeapYear_, return *6*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *243*<sub>𝔽</sub> + _inLeapYear_, return *7*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *273*<sub>𝔽</sub> + _inLeapYear_, return *8*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *304*<sub>𝔽</sub> + _inLeapYear_, return *9*<sub>𝔽</sub>.
-          1. If _dayWithinYear_ &lt; *334*<sub>𝔽</sub> + _inLeapYear_, return *10*<sub>𝔽</sub>.
-          1. Assert: _dayWithinYear_ &lt; *365*<sub>𝔽</sub> + _inLeapYear_.
-          1. Return *11*<sub>𝔽</sub>.
+          1. If _dayWithinYear_ &lt; 31, return 0.
+          1. If _dayWithinYear_ &lt; 59 + _inLeapYear_, return 1.
+          1. If _dayWithinYear_ &lt; 90 + _inLeapYear_, return 2.
+          1. If _dayWithinYear_ &lt; 120 + _inLeapYear_, return 3.
+          1. If _dayWithinYear_ &lt; 151 + _inLeapYear_, return 4.
+          1. If _dayWithinYear_ &lt; 181 + _inLeapYear_, return 5.
+          1. If _dayWithinYear_ &lt; 212 + _inLeapYear_, return 6.
+          1. If _dayWithinYear_ &lt; 243 + _inLeapYear_, return 7.
+          1. If _dayWithinYear_ &lt; 273 + _inLeapYear_, return 8.
+          1. If _dayWithinYear_ &lt; 304 + _inLeapYear_, return 9.
+          1. If _dayWithinYear_ &lt; 334 + _inLeapYear_, return 10.
+          1. Assert: _dayWithinYear_ &lt; 365 + _inLeapYear_.
+          1. Return 11.
         </emu-alg>
       </emu-clause>
 
@@ -34254,7 +34241,7 @@
         <h1>
           DateFromTime (
             _tv_: a finite time value,
-          ): an integral Number in the inclusive interval from *1*<sub>𝔽</sub> to *31*<sub>𝔽</sub>
+          ): an integer in the inclusive interval from 1 to 31
         </h1>
         <dl class="header">
           <dt>description</dt>
@@ -34264,19 +34251,19 @@
           1. Let _inLeapYear_ be InLeapYear(_tv_).
           1. Let _dayWithinYear_ be DayWithinYear(_tv_).
           1. Let _month_ be MonthFromTime(_tv_).
-          1. If _month_ is *+0*<sub>𝔽</sub>, return _dayWithinYear_ + *1*<sub>𝔽</sub>.
-          1. If _month_ is *1*<sub>𝔽</sub>, return _dayWithinYear_ - *30*<sub>𝔽</sub>.
-          1. If _month_ is *2*<sub>𝔽</sub>, return _dayWithinYear_ - *58*<sub>𝔽</sub> - _inLeapYear_.
-          1. If _month_ is *3*<sub>𝔽</sub>, return _dayWithinYear_ - *89*<sub>𝔽</sub> - _inLeapYear_.
-          1. If _month_ is *4*<sub>𝔽</sub>, return _dayWithinYear_ - *119*<sub>𝔽</sub> - _inLeapYear_.
-          1. If _month_ is *5*<sub>𝔽</sub>, return _dayWithinYear_ - *150*<sub>𝔽</sub> - _inLeapYear_.
-          1. If _month_ is *6*<sub>𝔽</sub>, return _dayWithinYear_ - *180*<sub>𝔽</sub> - _inLeapYear_.
-          1. If _month_ is *7*<sub>𝔽</sub>, return _dayWithinYear_ - *211*<sub>𝔽</sub> - _inLeapYear_.
-          1. If _month_ is *8*<sub>𝔽</sub>, return _dayWithinYear_ - *242*<sub>𝔽</sub> - _inLeapYear_.
-          1. If _month_ is *9*<sub>𝔽</sub>, return _dayWithinYear_ - *272*<sub>𝔽</sub> - _inLeapYear_.
-          1. If _month_ is *10*<sub>𝔽</sub>, return _dayWithinYear_ - *303*<sub>𝔽</sub> - _inLeapYear_.
-          1. Assert: _month_ is *11*<sub>𝔽</sub>.
-          1. Return _dayWithinYear_ - *333*<sub>𝔽</sub> - _inLeapYear_.
+          1. If _month_ = 0, return _dayWithinYear_ + 1.
+          1. If _month_ = 1, return _dayWithinYear_ - 30.
+          1. If _month_ = 2, return _dayWithinYear_ - 58 - _inLeapYear_.
+          1. If _month_ = 3, return _dayWithinYear_ - 89 - _inLeapYear_.
+          1. If _month_ = 4, return _dayWithinYear_ - 119 - _inLeapYear_.
+          1. If _month_ = 5, return _dayWithinYear_ - 150 - _inLeapYear_.
+          1. If _month_ = 6, return _dayWithinYear_ - 180 - _inLeapYear_.
+          1. If _month_ = 7, return _dayWithinYear_ - 211 - _inLeapYear_.
+          1. If _month_ = 8, return _dayWithinYear_ - 242 - _inLeapYear_.
+          1. If _month_ = 9, return _dayWithinYear_ - 272 - _inLeapYear_.
+          1. If _month_ = 10, return _dayWithinYear_ - 303 - _inLeapYear_.
+          1. Assert: _month_ = 11.
+          1. Return _dayWithinYear_ - 333 - _inLeapYear_.
         </emu-alg>
       </emu-clause>
 
@@ -34284,14 +34271,14 @@
         <h1>
           WeekDay (
             _tv_: a finite time value,
-          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *6*<sub>𝔽</sub>
+          ): an integer in the inclusive interval from 0 to 6
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>It returns a Number identifying the day of the week in which _tv_ falls. A weekday value of *+0*<sub>𝔽</sub> specifies Sunday; *1*<sub>𝔽</sub> specifies Monday; *2*<sub>𝔽</sub> specifies Tuesday; *3*<sub>𝔽</sub> specifies Wednesday; *4*<sub>𝔽</sub> specifies Thursday; *5*<sub>𝔽</sub> specifies Friday; and *6*<sub>𝔽</sub> specifies Saturday. Note that <emu-eqn>WeekDay(*+0*<sub>𝔽</sub>) = *4*<sub>𝔽</sub></emu-eqn>, corresponding to Thursday, 1 January 1970.</dd>
+          <dd>It returns an integer identifying the day of the week in which _tv_ falls. A weekday value of 0 specifies Sunday; 1 specifies Monday; 2 specifies Tuesday; 3 specifies Wednesday; 4 specifies Thursday; 5 specifies Friday; and 6 specifies Saturday. Note that <emu-eqn>WeekDay(*+0*<sub>𝔽</sub>) = 4</emu-eqn>, corresponding to Thursday, 1 January 1970.</dd>
         </dl>
         <emu-alg>
-          1. Return 𝔽(ℝ(Day(_tv_) + *4*<sub>𝔽</sub>) modulo 7).
+          1. Return (Day(_tv_) + 4) modulo 7.
         </emu-alg>
       </emu-clause>
 
@@ -34299,14 +34286,14 @@
         <h1>
           HourFromTime (
             _tv_: a finite time value,
-          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *23*<sub>𝔽</sub>
+          ): an integer in the inclusive interval from 0 to 23
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It returns the hour of the day in which _tv_ falls.</dd>
         </dl>
         <emu-alg>
-          1. Return 𝔽(floor(ℝ(_tv_ / msPerHour)) modulo HoursPerDay).
+          1. Return floor(ℝ(_tv_) / msPerHour) modulo HoursPerDay.
         </emu-alg>
       </emu-clause>
 
@@ -34314,14 +34301,14 @@
         <h1>
           MinFromTime (
             _tv_: a finite time value,
-          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *59*<sub>𝔽</sub>
+          ): an integer in the inclusive interval from 0 to 59
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It returns the minute of the hour in which _tv_ falls.</dd>
         </dl>
         <emu-alg>
-          1. Return 𝔽(floor(ℝ(_tv_ / msPerMinute)) modulo MinutesPerHour).
+          1. Return floor(ℝ(_tv_) / msPerMinute) modulo MinutesPerHour.
         </emu-alg>
       </emu-clause>
 
@@ -34329,30 +34316,38 @@
         <h1>
           SecFromTime (
             _tv_: a finite time value,
-          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *59*<sub>𝔽</sub>
+          ): an integer in the inclusive interval from 0 to 59
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It returns the second of the minute in which _tv_ falls.</dd>
         </dl>
         <emu-alg>
-          1. Return 𝔽(floor(ℝ(_tv_ / msPerSecond)) modulo SecondsPerMinute).
+          1. Return floor(ℝ(_tv_) / msPerSecond) modulo SecondsPerMinute.
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-msfromtime" type="abstract operation" oldids="eqn-msFromTime">
+      <emu-clause id="sec-millisecfromtime" type="abstract operation" oldids="sec-msfromtime,eqn-msFromTime">
         <h1>
-          msFromTime (
+          MillisecFromTime (
             _tv_: a finite time value,
-          ): an integral Number in the inclusive interval from *+0*<sub>𝔽</sub> to *999*<sub>𝔽</sub>
+          ): an integer in the inclusive interval from 0 to 999
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It returns the millisecond of the second in which _tv_ falls.</dd>
         </dl>
         <emu-alg>
-          1. Return 𝔽(ℝ(_tv_) modulo ℝ(msPerSecond)).
+          1. Return ℝ(_tv_) modulo msPerSecond.
         </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-epoch-nanoseconds">
+        <h1>Epoch Nanoseconds and Range</h1>
+
+        <p>An <dfn variants="epoch nanoseconds counts">epoch nanoseconds count</dfn> is an integer that represents an instant in time to nanosecond precision. It supports the same range as a time value but expressed in nanoseconds, from MinEpochNanoseconds to MaxEpochNanoseconds. There is no nanosecond equivalent of the time value *NaN*; there is no representation for no specific instant.</p>
+
+        <p>The exact moment of midnight at the beginning of 1 January 1970 UTC is represented by the value 0. The maximum value is MaxEpochNanoseconds, and the minimum value is MinEpochNanoseconds.</p>
       </emu-clause>
 
       <emu-clause id="sec-getutcepochnanoseconds" type="abstract operation">
@@ -34367,18 +34362,18 @@
             _millisecond_: an integer in the inclusive interval from 0 to 999,
             _microsecond_: an integer in the inclusive interval from 0 to 999,
             _nanosecond_: an integer in the inclusive interval from 0 to 999,
-          ): a BigInt
+          ): an epoch nanoseconds count
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>The returned value represents a number of nanoseconds since the epoch that corresponds to the given ISO 8601 calendar date and wall-clock time in UTC.</dd>
+          <dd>The returned value is the epoch nanoseconds count that corresponds to the given ISO 8601 calendar date and wall-clock time in UTC.</dd>
         </dl>
         <emu-alg>
           1. Let _date_ be MakeDay(𝔽(_year_), 𝔽(_month_ - 1), 𝔽(_day_)).
           1. Let _time_ be MakeTime(𝔽(_hour_), 𝔽(_minute_), 𝔽(_second_), 𝔽(_millisecond_)).
           1. Let _ms_ be MakeDate(_date_, _time_).
           1. Assert: _ms_ is an integral Number.
-          1. Return ℤ(ℝ(_ms_) × nsPerMillisecond + _microsecond_ × nsPerMicrosecond + _nanosecond_).
+          1. Return ℝ(_ms_) × nsPerMillisecond + _microsecond_ × nsPerMicrosecond + _nanosecond_.
         </emu-alg>
       </emu-clause>
 
@@ -34402,8 +34397,8 @@
         </p>
         <p>
           Implementations that follow the requirements for time zones as described in the ECMA-402 Internationalization API specification are called <dfn>time zone aware</dfn>.
-          Time zone aware implementations must support available named time zones corresponding to the Zone and Link names of the IANA Time Zone Database, and only such names.
-          In time zone aware implementations, a primary time zone identifier is a Zone name, and a non-primary time zone identifier is a Link name, respectively, in the IANA Time Zone Database except as specifically overridden by AvailableNamedTimeZoneIdentifiers as specified in the ECMA-402 specification.
+          Time zone aware implementations must support available named time zones corresponding to the “Zone” and “<emu-not-ref>Link</emu-not-ref>” names of the <a href="https://www.iana.org/time-zones">IANA Time Zone Database</a>, and only such names.
+          In time zone aware implementations, a primary time zone identifier is a “Zone” name, and a non-primary time zone identifier is a “<emu-not-ref>Link</emu-not-ref>” name, respectively, in the IANA Time Zone Database except as specifically overridden by AvailableNamedTimeZoneIdentifiers as specified in the ECMA-402 specification.
           Implementations that do not support the entire IANA Time Zone Database are still recommended to use IANA Time Zone Database names as identifiers to represent time zones.
         </p>
       </emu-clause>
@@ -34421,12 +34416,12 @@
             _millisecond_: an integer in the inclusive interval from 0 to 999,
             _microsecond_: an integer in the inclusive interval from 0 to 999,
             _nanosecond_: an integer in the inclusive interval from 0 to 999,
-          ): a List of BigInts
+          ): a List of epoch nanoseconds counts
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>
-            Each value in the returned List represents a number of nanoseconds since the epoch that corresponds to the given ISO 8601 calendar date and wall-clock time in the named time zone identified by _timeZoneIdentifier_.
+            Each value in the returned List represents an epoch nanoseconds count that corresponds to the given ISO 8601 calendar date and wall-clock time in the named time zone identified by _timeZoneIdentifier_.
           </dd>
         </dl>
         <p>
@@ -34441,7 +34436,7 @@
           1. Return « _epochNanoseconds_ ».
         </emu-alg>
         <emu-note>
-          <p>It is required for time zone aware implementations (and recommended for all others) to use the time zone information of the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a>.</p>
+          <p>It is required for time zone aware implementations (and recommended for all others) to use the time zone information of the <a href="https://www.iana.org/time-zones">IANA Time Zone Database</a>.</p>
           <p>1:30 AM on 5 November 2017 in America/New_York is repeated twice, so GetNamedTimeZoneEpochNanoseconds(*"America/New_York"*, 2017, 11, 5, 1, 30, 0, 0, 0, 0) would return a List of length 2 in which the first element represents 05:30 UTC (corresponding with 01:30 US Eastern Daylight Time at UTC offset -04:00) and the second element represents 06:30 UTC (corresponding with 01:30 US Eastern Standard Time at UTC offset -05:00).</p>
           <p>2:30 AM on 12 March 2017 in America/New_York does not exist, so GetNamedTimeZoneEpochNanoseconds(*"America/New_York"*, 2017, 3, 12, 2, 30, 0, 0, 0, 0) would return an empty List.</p>
         </emu-note>
@@ -34451,12 +34446,12 @@
         <h1>
           GetNamedTimeZoneOffsetNanoseconds (
             _timeZoneIdentifier_: a String,
-            _epochNanoseconds_: a BigInt,
+            _epochNanoseconds_: an epoch nanoseconds count,
           ): an integer
         </h1>
         <dl class="header">
         </dl>
-        <p>The returned integer represents the offset from UTC of the named time zone identified by _timeZoneIdentifier_, at the instant corresponding with _epochNanoseconds_ relative to the epoch, both in nanoseconds.</p>
+        <p>The returned integer represents the offset from UTC, in nanoseconds, of the named time zone identified by _timeZoneIdentifier_, at the instant corresponding with the epoch nanoseconds count _epochNanoseconds_.</p>
         <p>The default implementation of GetNamedTimeZoneOffsetNanoseconds, to be used for ECMAScript implementations that do not include local political rules for any time zones, performs the following steps when called:</p>
         <emu-alg>
           1. Assert: _timeZoneIdentifier_ is *"UTC"*.
@@ -34569,7 +34564,7 @@
           1. If IsTimeZoneOffsetString(_systemTimeZoneIdentifier_) is *true*, then
             1. Let _offsetNs_ be ParseTimeZoneOffsetString(_systemTimeZoneIdentifier_).
           1. Else,
-            1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℤ(ℝ(_tv_) × nsPerMillisecond)).
+            1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℝ(_tv_) × nsPerMillisecond).
           1. Let _offsetMs_ be truncate(_offsetNs_ / nsPerMillisecond).
           1. Return _tv_ + 𝔽(_offsetMs_).
         </emu-alg>
@@ -34604,13 +34599,13 @@
           1. If IsTimeZoneOffsetString(_systemTimeZoneIdentifier_) is *true*, then
             1. Let _offsetNs_ be ParseTimeZoneOffsetString(_systemTimeZoneIdentifier_).
           1. Else,
-            1. Let _possibleInstants_ be GetNamedTimeZoneEpochNanoseconds(_systemTimeZoneIdentifier_, ℝ(YearFromTime(_t_)), ℝ(MonthFromTime(_t_)) + 1, ℝ(DateFromTime(_t_)), ℝ(HourFromTime(_t_)), ℝ(MinFromTime(_t_)), ℝ(SecFromTime(_t_)), ℝ(msFromTime(_t_)), 0, 0).
+            1. Let _possibleInstants_ be GetNamedTimeZoneEpochNanoseconds(_systemTimeZoneIdentifier_, YearFromTime(_t_), MonthFromTime(_t_) + 1, DateFromTime(_t_), HourFromTime(_t_), MinFromTime(_t_), SecFromTime(_t_), MillisecFromTime(_t_), 0, 0).
             1. NOTE: The following steps ensure that when _t_ represents local time repeating multiple times at a negative time zone transition (e.g. when the daylight saving time ends or the time zone offset is decreased due to a time zone rule change) or skipped local time at a positive time zone transition (e.g. when the daylight saving time starts or the time zone offset is increased due to a time zone rule change), _t_ is interpreted using the time zone offset before the transition.
             1. If _possibleInstants_ is not empty, then
               1. Let _disambiguatedInstant_ be _possibleInstants_[0].
             1. Else,
               1. NOTE: _t_ represents a local time skipped at a positive time zone transition (e.g. due to daylight saving time starting or a time zone rule change increasing the UTC offset).
-              1. [declared="tBefore"] Let _possibleInstantsBefore_ be GetNamedTimeZoneEpochNanoseconds(_systemTimeZoneIdentifier_, ℝ(YearFromTime(_tBefore_)), ℝ(MonthFromTime(_tBefore_)) + 1, ℝ(DateFromTime(_tBefore_)), ℝ(HourFromTime(_tBefore_)), ℝ(MinFromTime(_tBefore_)), ℝ(SecFromTime(_tBefore_)), ℝ(msFromTime(_tBefore_)), 0, 0), where _tBefore_ is the largest integral Number &lt; _t_ for which _possibleInstantsBefore_ is not empty (i.e., _tBefore_ represents the last local time before the transition).
+              1. [declared="tBefore"] Let _possibleInstantsBefore_ be GetNamedTimeZoneEpochNanoseconds(_systemTimeZoneIdentifier_, YearFromTime(_tBefore_), MonthFromTime(_tBefore_) + 1, DateFromTime(_tBefore_), HourFromTime(_tBefore_), MinFromTime(_tBefore_), SecFromTime(_tBefore_), MillisecFromTime(_tBefore_), 0, 0), where _tBefore_ is the largest integral Number &lt; _t_ for which _possibleInstantsBefore_ is not empty (i.e., _tBefore_ represents the last local time before the transition).
               1. Let _disambiguatedInstant_ be the last element of _possibleInstantsBefore_.
             1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, _disambiguatedInstant_).
           1. Let _offsetMs_ be truncate(_offsetNs_ / nsPerMillisecond).
@@ -34624,7 +34619,7 @@
         </p>
         <p>If political rules for the local time _t_ are not available within the implementation, the result is _t_ because SystemTimeZoneIdentifier returns *"UTC"* and GetNamedTimeZoneOffsetNanoseconds returns 0.</p>
         <emu-note>
-          <p>It is required for time zone aware implementations (and recommended for all others) to use the time zone information of the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a>.</p>
+          <p>It is required for time zone aware implementations (and recommended for all others) to use the time zone information of the <a href="https://www.iana.org/time-zones">IANA Time Zone Database</a>.</p>
           <p>
             1:30 AM on 5 November 2017 in America/New_York is repeated twice (fall backward), but it must be interpreted as 1:30 AM UTC-04 instead of 1:30 AM UTC-05.
             In UTC(TimeClip(MakeDate(MakeDay(2017, 10, 5), MakeTime(1, 30, 0, 0)))), the value of _offsetMs_ is <emu-eqn>-4 × msPerHour</emu-eqn>.
@@ -34654,11 +34649,11 @@
         </dl>
         <emu-alg>
           1. If _hour_ is not finite, _min_ is not finite, _sec_ is not finite, or _ms_ is not finite, return *NaN*.
-          1. Let _h_ be 𝔽(! ToIntegerOrInfinity(_hour_)).
-          1. Let _m_ be 𝔽(! ToIntegerOrInfinity(_min_)).
-          1. Let _s_ be 𝔽(! ToIntegerOrInfinity(_sec_)).
-          1. Let _milli_ be 𝔽(! ToIntegerOrInfinity(_ms_)).
-          1. Return ((_h_ × msPerHour + _m_ × msPerMinute) + _s_ × msPerSecond) + _milli_.
+          1. Let _h_ be ! ToIntegerOrInfinity(_hour_).
+          1. Let _m_ be ! ToIntegerOrInfinity(_min_).
+          1. Let _s_ be ! ToIntegerOrInfinity(_sec_).
+          1. Let _milli_ be ! ToIntegerOrInfinity(_ms_).
+          1. Return ((𝔽(_h_) × 𝔽(msPerHour) + 𝔽(_m_) × 𝔽(msPerMinute)) + 𝔽(_s_) × 𝔽(msPerSecond)) + 𝔽(_milli_).
         </emu-alg>
         <emu-note>
           <p>The arithmetic in MakeTime is floating-point arithmetic, which is not associative, so the operations must be performed in the correct order.</p>
@@ -34679,14 +34674,14 @@
         </dl>
         <emu-alg>
           1. If _year_ is not finite, _month_ is not finite, or _date_ is not finite, return *NaN*.
-          1. Let _y_ be 𝔽(! ToIntegerOrInfinity(_year_)).
-          1. Let _m_ be 𝔽(! ToIntegerOrInfinity(_month_)).
-          1. Let _dt_ be 𝔽(! ToIntegerOrInfinity(_date_)).
-          1. Let _ym_ be _y_ + 𝔽(floor(ℝ(_m_) / 12)).
+          1. Let _y_ be ! ToIntegerOrInfinity(_year_).
+          1. Let _m_ be ! ToIntegerOrInfinity(_month_).
+          1. Let _dt_ be ! ToIntegerOrInfinity(_date_).
+          1. Let _ym_ be 𝔽(_y_) + 𝔽(floor(_m_ / 12)).
           1. If _ym_ is not finite, return *NaN*.
-          1. Let _mn_ be 𝔽(ℝ(_m_) modulo 12).
-          1. Find a finite time value _tv_ such that YearFromTime(_tv_) is _ym_, MonthFromTime(_tv_) is _mn_, and DateFromTime(_tv_) is *1*<sub>𝔽</sub>; but if this is not possible (because some argument is out of range), return *NaN*.
-          1. Return Day(_tv_) + _dt_ - *1*<sub>𝔽</sub>.
+          1. Let _mn_ be _m_ modulo 12.
+          1. Find a finite time value _tv_ such that YearFromTime(_tv_) = ℝ(_ym_), MonthFromTime(_tv_) = _mn_, and DateFromTime(_tv_) = 1; but if this is not possible (because some argument is out of range), return *NaN*.
+          1. Return 𝔽(Day(_tv_)) + 𝔽(_dt_) - *1*<sub>𝔽</sub>.
         </emu-alg>
       </emu-clause>
 
@@ -34703,7 +34698,7 @@
         </dl>
         <emu-alg>
           1. If _day_ is not finite or _time_ is not finite, return *NaN*.
-          1. Let _tv_ be _day_ × msPerDay + _time_.
+          1. Let _tv_ be _day_ × 𝔽(msPerDay) + _time_.
           1. If _tv_ is not finite, return *NaN*.
           1. Return _tv_.
         </emu-alg>
@@ -35165,7 +35160,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return DateFromTime(LocalTime(_tv_)).
+          1. Return 𝔽(DateFromTime(LocalTime(_tv_))).
         </emu-alg>
       </emu-clause>
 
@@ -35177,7 +35172,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return WeekDay(LocalTime(_tv_)).
+          1. Return 𝔽(WeekDay(LocalTime(_tv_))).
         </emu-alg>
       </emu-clause>
 
@@ -35189,7 +35184,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return YearFromTime(LocalTime(_tv_)).
+          1. Return 𝔽(YearFromTime(LocalTime(_tv_))).
         </emu-alg>
       </emu-clause>
 
@@ -35201,7 +35196,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return HourFromTime(LocalTime(_tv_)).
+          1. Return 𝔽(HourFromTime(LocalTime(_tv_))).
         </emu-alg>
       </emu-clause>
 
@@ -35213,7 +35208,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return msFromTime(LocalTime(_tv_)).
+          1. Return 𝔽(MillisecFromTime(LocalTime(_tv_))).
         </emu-alg>
       </emu-clause>
 
@@ -35225,7 +35220,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return MinFromTime(LocalTime(_tv_)).
+          1. Return 𝔽(MinFromTime(LocalTime(_tv_))).
         </emu-alg>
       </emu-clause>
 
@@ -35237,7 +35232,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return MonthFromTime(LocalTime(_tv_)).
+          1. Return 𝔽(MonthFromTime(LocalTime(_tv_))).
         </emu-alg>
       </emu-clause>
 
@@ -35249,7 +35244,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return SecFromTime(LocalTime(_tv_)).
+          1. Return 𝔽(SecFromTime(LocalTime(_tv_))).
         </emu-alg>
       </emu-clause>
 
@@ -35271,7 +35266,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return (_tv_ - LocalTime(_tv_)) / msPerMinute.
+          1. Return (_tv_ - LocalTime(_tv_)) / 𝔽(msPerMinute).
         </emu-alg>
       </emu-clause>
 
@@ -35283,7 +35278,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return DateFromTime(_tv_).
+          1. Return 𝔽(DateFromTime(_tv_)).
         </emu-alg>
       </emu-clause>
 
@@ -35295,7 +35290,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return WeekDay(_tv_).
+          1. Return 𝔽(WeekDay(_tv_)).
         </emu-alg>
       </emu-clause>
 
@@ -35307,7 +35302,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return YearFromTime(_tv_).
+          1. Return 𝔽(YearFromTime(_tv_)).
         </emu-alg>
       </emu-clause>
 
@@ -35319,7 +35314,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return HourFromTime(_tv_).
+          1. Return 𝔽(HourFromTime(_tv_)).
         </emu-alg>
       </emu-clause>
 
@@ -35331,7 +35326,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return msFromTime(_tv_).
+          1. Return 𝔽(MillisecFromTime(_tv_)).
         </emu-alg>
       </emu-clause>
 
@@ -35343,7 +35338,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return MinFromTime(_tv_).
+          1. Return 𝔽(MinFromTime(_tv_)).
         </emu-alg>
       </emu-clause>
 
@@ -35355,7 +35350,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return MonthFromTime(_tv_).
+          1. Return 𝔽(MonthFromTime(_tv_)).
         </emu-alg>
       </emu-clause>
 
@@ -35367,7 +35362,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return SecFromTime(_tv_).
+          1. Return 𝔽(SecFromTime(_tv_)).
         </emu-alg>
       </emu-clause>
 
@@ -35381,7 +35376,7 @@ THH:mm:ss.sss
           1. Let _dt_ be ? ToNumber(_date_).
           1. If _tv_ is *NaN*, return *NaN*.
           1. Set _tv_ to LocalTime(_tv_).
-          1. Let _newDate_ be MakeDate(MakeDay(YearFromTime(_tv_), MonthFromTime(_tv_), _dt_), TimeWithinDay(_tv_)).
+          1. Let _newDate_ be MakeDate(MakeDay(𝔽(YearFromTime(_tv_)), 𝔽(MonthFromTime(_tv_)), _dt_), 𝔽(TimeWithinDay(_tv_))).
           1. Let _u_ be TimeClip(UTC(_newDate_)).
           1. Set _dateObj_.[[DateValue]] to _u_.
           1. Return _u_.
@@ -35397,9 +35392,9 @@ THH:mm:ss.sss
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. Let _y_ be ? ToNumber(_year_).
           1. If _tv_ is *NaN*, set _tv_ to *+0*<sub>𝔽</sub>; else set _tv_ to LocalTime(_tv_).
-          1. If _month_ is present, let _m_ be ? ToNumber(_month_); else let _m_ be MonthFromTime(_tv_).
-          1. If _date_ is present, let _dt_ be ? ToNumber(_date_); else let _dt_ be DateFromTime(_tv_).
-          1. Let _newDate_ be MakeDate(MakeDay(_y_, _m_, _dt_), TimeWithinDay(_tv_)).
+          1. If _month_ is present, let _m_ be ? ToNumber(_month_); else let _m_ be 𝔽(MonthFromTime(_tv_)).
+          1. If _date_ is present, let _dt_ be ? ToNumber(_date_); else let _dt_ be 𝔽(DateFromTime(_tv_)).
+          1. Let _newDate_ be MakeDate(MakeDay(_y_, _m_, _dt_), 𝔽(TimeWithinDay(_tv_))).
           1. Let _u_ be TimeClip(UTC(_newDate_)).
           1. Set _dateObj_.[[DateValue]] to _u_.
           1. Return _u_.
@@ -35423,10 +35418,10 @@ THH:mm:ss.sss
           1. If _ms_ is present, let _milli_ be ? ToNumber(_ms_).
           1. If _tv_ is *NaN*, return *NaN*.
           1. Set _tv_ to LocalTime(_tv_).
-          1. If _min_ is not present, let _m_ be MinFromTime(_tv_).
-          1. If _sec_ is not present, let _s_ be SecFromTime(_tv_).
-          1. If _ms_ is not present, let _milli_ be msFromTime(_tv_).
-          1. Let _date_ be MakeDate(Day(_tv_), MakeTime(_h_, _m_, _s_, _milli_)).
+          1. If _min_ is not present, let _m_ be 𝔽(MinFromTime(_tv_)).
+          1. If _sec_ is not present, let _s_ be 𝔽(SecFromTime(_tv_)).
+          1. If _ms_ is not present, let _milli_ be 𝔽(MillisecFromTime(_tv_)).
+          1. Let _date_ be MakeDate(𝔽(Day(_tv_)), MakeTime(_h_, _m_, _s_, _milli_)).
           1. Let _u_ be TimeClip(UTC(_date_)).
           1. Set _dateObj_.[[DateValue]] to _u_.
           1. Return _u_.
@@ -35447,8 +35442,8 @@ THH:mm:ss.sss
           1. Set _ms_ to ? ToNumber(_ms_).
           1. If _tv_ is *NaN*, return *NaN*.
           1. Set _tv_ to LocalTime(_tv_).
-          1. Let _time_ be MakeTime(HourFromTime(_tv_), MinFromTime(_tv_), SecFromTime(_tv_), _ms_).
-          1. Let _u_ be TimeClip(UTC(MakeDate(Day(_tv_), _time_))).
+          1. Let _time_ be MakeTime(𝔽(HourFromTime(_tv_)), 𝔽(MinFromTime(_tv_)), 𝔽(SecFromTime(_tv_)), _ms_).
+          1. Let _u_ be TimeClip(UTC(MakeDate(𝔽(Day(_tv_)), _time_))).
           1. Set _dateObj_.[[DateValue]] to _u_.
           1. Return _u_.
         </emu-alg>
@@ -35466,9 +35461,9 @@ THH:mm:ss.sss
           1. If _ms_ is present, let _milli_ be ? ToNumber(_ms_).
           1. If _tv_ is *NaN*, return *NaN*.
           1. Set _tv_ to LocalTime(_tv_).
-          1. If _sec_ is not present, let _s_ be SecFromTime(_tv_).
-          1. If _ms_ is not present, let _milli_ be msFromTime(_tv_).
-          1. Let _date_ be MakeDate(Day(_tv_), MakeTime(HourFromTime(_tv_), _m_, _s_, _milli_)).
+          1. If _sec_ is not present, let _s_ be 𝔽(SecFromTime(_tv_)).
+          1. If _ms_ is not present, let _milli_ be 𝔽(MillisecFromTime(_tv_)).
+          1. Let _date_ be MakeDate(𝔽(Day(_tv_)), MakeTime(𝔽(HourFromTime(_tv_)), _m_, _s_, _milli_)).
           1. Let _u_ be TimeClip(UTC(_date_)).
           1. Set _dateObj_.[[DateValue]] to _u_.
           1. Return _u_.
@@ -35490,8 +35485,8 @@ THH:mm:ss.sss
           1. If _date_ is present, let _dt_ be ? ToNumber(_date_).
           1. If _tv_ is *NaN*, return *NaN*.
           1. Set _tv_ to LocalTime(_tv_).
-          1. If _date_ is not present, let _dt_ be DateFromTime(_tv_).
-          1. Let _newDate_ be MakeDate(MakeDay(YearFromTime(_tv_), _m_, _dt_), TimeWithinDay(_tv_)).
+          1. If _date_ is not present, let _dt_ be 𝔽(DateFromTime(_tv_)).
+          1. Let _newDate_ be MakeDate(MakeDay(𝔽(YearFromTime(_tv_)), _m_, _dt_), 𝔽(TimeWithinDay(_tv_))).
           1. Let _u_ be TimeClip(UTC(_newDate_)).
           1. Set _dateObj_.[[DateValue]] to _u_.
           1. Return _u_.
@@ -35513,8 +35508,8 @@ THH:mm:ss.sss
           1. If _ms_ is present, let _milli_ be ? ToNumber(_ms_).
           1. If _tv_ is *NaN*, return *NaN*.
           1. Set _tv_ to LocalTime(_tv_).
-          1. If _ms_ is not present, let _milli_ be msFromTime(_tv_).
-          1. Let _date_ be MakeDate(Day(_tv_), MakeTime(HourFromTime(_tv_), MinFromTime(_tv_), _s_, _milli_)).
+          1. If _ms_ is not present, let _milli_ be 𝔽(MillisecFromTime(_tv_)).
+          1. Let _date_ be MakeDate(𝔽(Day(_tv_)), MakeTime(𝔽(HourFromTime(_tv_)), 𝔽(MinFromTime(_tv_)), _s_, _milli_)).
           1. Let _u_ be TimeClip(UTC(_date_)).
           1. Set _dateObj_.[[DateValue]] to _u_.
           1. Return _u_.
@@ -35547,7 +35542,7 @@ THH:mm:ss.sss
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. Let _dt_ be ? ToNumber(_date_).
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Let _newDate_ be MakeDate(MakeDay(YearFromTime(_tv_), MonthFromTime(_tv_), _dt_), TimeWithinDay(_tv_)).
+          1. Let _newDate_ be MakeDate(MakeDay(𝔽(YearFromTime(_tv_)), 𝔽(MonthFromTime(_tv_)), _dt_), 𝔽(TimeWithinDay(_tv_))).
           1. Let _v_ be TimeClip(_newDate_).
           1. Set _dateObj_.[[DateValue]] to _v_.
           1. Return _v_.
@@ -35563,9 +35558,9 @@ THH:mm:ss.sss
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, set _tv_ to *+0*<sub>𝔽</sub>.
           1. Let _y_ be ? ToNumber(_year_).
-          1. If _month_ is present, let _m_ be ? ToNumber(_month_); else let _m_ be MonthFromTime(_tv_).
-          1. If _date_ is present, let _dt_ be ? ToNumber(_date_); else let _dt_ be DateFromTime(_tv_).
-          1. Let _newDate_ be MakeDate(MakeDay(_y_, _m_, _dt_), TimeWithinDay(_tv_)).
+          1. If _month_ is present, let _m_ be ? ToNumber(_month_); else let _m_ be 𝔽(MonthFromTime(_tv_)).
+          1. If _date_ is present, let _dt_ be ? ToNumber(_date_); else let _dt_ be 𝔽(DateFromTime(_tv_)).
+          1. Let _newDate_ be MakeDate(MakeDay(_y_, _m_, _dt_), 𝔽(TimeWithinDay(_tv_))).
           1. Let _v_ be TimeClip(_newDate_).
           1. Set _dateObj_.[[DateValue]] to _v_.
           1. Return _v_.
@@ -35588,10 +35583,10 @@ THH:mm:ss.sss
           1. If _sec_ is present, let _s_ be ? ToNumber(_sec_).
           1. If _ms_ is present, let _milli_ be ? ToNumber(_ms_).
           1. If _tv_ is *NaN*, return *NaN*.
-          1. If _min_ is not present, let _m_ be MinFromTime(_tv_).
-          1. If _sec_ is not present, let _s_ be SecFromTime(_tv_).
-          1. If _ms_ is not present, let _milli_ be msFromTime(_tv_).
-          1. Let _date_ be MakeDate(Day(_tv_), MakeTime(_h_, _m_, _s_, _milli_)).
+          1. If _min_ is not present, let _m_ be 𝔽(MinFromTime(_tv_)).
+          1. If _sec_ is not present, let _s_ be 𝔽(SecFromTime(_tv_)).
+          1. If _ms_ is not present, let _milli_ be 𝔽(MillisecFromTime(_tv_)).
+          1. Let _date_ be MakeDate(𝔽(Day(_tv_)), MakeTime(_h_, _m_, _s_, _milli_)).
           1. Let _v_ be TimeClip(_date_).
           1. Set _dateObj_.[[DateValue]] to _v_.
           1. Return _v_.
@@ -35611,8 +35606,8 @@ THH:mm:ss.sss
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. Set _ms_ to ? ToNumber(_ms_).
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Let _time_ be MakeTime(HourFromTime(_tv_), MinFromTime(_tv_), SecFromTime(_tv_), _ms_).
-          1. Let _v_ be TimeClip(MakeDate(Day(_tv_), _time_)).
+          1. Let _time_ be MakeTime(𝔽(HourFromTime(_tv_)), 𝔽(MinFromTime(_tv_)), 𝔽(SecFromTime(_tv_)), _ms_).
+          1. Let _v_ be TimeClip(MakeDate(𝔽(Day(_tv_)), _time_)).
           1. Set _dateObj_.[[DateValue]] to _v_.
           1. Return _v_.
         </emu-alg>
@@ -35629,9 +35624,9 @@ THH:mm:ss.sss
           1. If _sec_ is present, let _s_ be ? ToNumber(_sec_).
           1. If _ms_ is present, let _milli_ be ? ToNumber(_ms_).
           1. If _tv_ is *NaN*, return *NaN*.
-          1. If _sec_ is not present, let _s_ be SecFromTime(_tv_).
-          1. If _ms_ is not present, let _milli_ be msFromTime(_tv_).
-          1. Let _date_ be MakeDate(Day(_tv_), MakeTime(HourFromTime(_tv_), _m_, _s_, _milli_)).
+          1. If _sec_ is not present, let _s_ be 𝔽(SecFromTime(_tv_)).
+          1. If _ms_ is not present, let _milli_ be 𝔽(MillisecFromTime(_tv_)).
+          1. Let _date_ be MakeDate(𝔽(Day(_tv_)), MakeTime(𝔽(HourFromTime(_tv_)), _m_, _s_, _milli_)).
           1. Let _v_ be TimeClip(_date_).
           1. Set _dateObj_.[[DateValue]] to _v_.
           1. Return _v_.
@@ -35652,8 +35647,8 @@ THH:mm:ss.sss
           1. Let _m_ be ? ToNumber(_month_).
           1. If _date_ is present, let _dt_ be ? ToNumber(_date_).
           1. If _tv_ is *NaN*, return *NaN*.
-          1. If _date_ is not present, let _dt_ be DateFromTime(_tv_).
-          1. Let _newDate_ be MakeDate(MakeDay(YearFromTime(_tv_), _m_, _dt_), TimeWithinDay(_tv_)).
+          1. If _date_ is not present, let _dt_ be 𝔽(DateFromTime(_tv_)).
+          1. Let _newDate_ be MakeDate(MakeDay(𝔽(YearFromTime(_tv_)), _m_, _dt_), 𝔽(TimeWithinDay(_tv_))).
           1. Let _v_ be TimeClip(_newDate_).
           1. Set _dateObj_.[[DateValue]] to _v_.
           1. Return _v_.
@@ -35674,8 +35669,8 @@ THH:mm:ss.sss
           1. Let _s_ be ? ToNumber(_sec_).
           1. If _ms_ is present, let _milli_ be ? ToNumber(_ms_).
           1. If _tv_ is *NaN*, return *NaN*.
-          1. If _ms_ is not present, let _milli_ be msFromTime(_tv_).
-          1. Let _date_ be MakeDate(Day(_tv_), MakeTime(HourFromTime(_tv_), MinFromTime(_tv_), _s_, _milli_)).
+          1. If _ms_ is not present, let _milli_ be 𝔽(MillisecFromTime(_tv_)).
+          1. Let _date_ be MakeDate(𝔽(Day(_tv_)), MakeTime(𝔽(HourFromTime(_tv_)), 𝔽(MinFromTime(_tv_)), _s_, _milli_)).
           1. Let _v_ be TimeClip(_date_).
           1. Set _dateObj_.[[DateValue]] to _v_.
           1. Return _v_.
@@ -35777,9 +35772,9 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Let _hour_ be ToZeroPaddedDecimalString(ℝ(HourFromTime(_tv_)), 2).
-            1. Let _minute_ be ToZeroPaddedDecimalString(ℝ(MinFromTime(_tv_)), 2).
-            1. Let _second_ be ToZeroPaddedDecimalString(ℝ(SecFromTime(_tv_)), 2).
+            1. Let _hour_ be ToZeroPaddedDecimalString(HourFromTime(_tv_), 2).
+            1. Let _minute_ be ToZeroPaddedDecimalString(MinFromTime(_tv_), 2).
+            1. Let _second_ be ToZeroPaddedDecimalString(SecFromTime(_tv_), 2).
             1. Return the string-concatenation of _hour_, *":"*, _minute_, *":"*, _second_, the code unit 0x0020 (SPACE), and *"GMT"*.
           </emu-alg>
         </emu-clause>
@@ -35793,12 +35788,12 @@ THH:mm:ss.sss
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Let _weekday_ be the Name of the entry in <emu-xref href="#sec-todatestring-day-names"></emu-xref> with the Number WeekDay(_tv_).
-            1. Let _month_ be the Name of the entry in <emu-xref href="#sec-todatestring-month-names"></emu-xref> with the Number MonthFromTime(_tv_).
-            1. Let _day_ be ToZeroPaddedDecimalString(ℝ(DateFromTime(_tv_)), 2).
+            1. Let _weekday_ be the Name of the entry in <emu-xref href="#sec-todatestring-day-names"></emu-xref> whose WeekDay Index = WeekDay(_tv_).
+            1. Let _month_ be the Name of the entry in <emu-xref href="#sec-todatestring-month-names"></emu-xref> whose Month Index = MonthFromTime(_tv_).
+            1. Let _day_ be ToZeroPaddedDecimalString(DateFromTime(_tv_), 2).
             1. Let _yv_ be YearFromTime(_tv_).
-            1. If _yv_ is *+0*<sub>𝔽</sub> or _yv_ > *+0*<sub>𝔽</sub>, let _yearSign_ be the empty String; else let _yearSign_ be *"-"*.
-            1. Let _paddedYear_ be ToZeroPaddedDecimalString(abs(ℝ(_yv_)), 4).
+            1. If _yv_ ≥ 0, let _yearSign_ be the empty String; else let _yearSign_ be *"-"*.
+            1. Let _paddedYear_ be ToZeroPaddedDecimalString(abs(_yv_), 4).
             1. Return the string-concatenation of _weekday_, the code unit 0x0020 (SPACE), _month_, the code unit 0x0020 (SPACE), _day_, the code unit 0x0020 (SPACE), _yearSign_, and _paddedYear_.
           </emu-alg>
           <emu-table id="sec-todatestring-day-names" caption="Names of days of the week">
@@ -35806,7 +35801,7 @@ THH:mm:ss.sss
               <thead>
                 <tr>
                   <th>
-                    Number
+                    WeekDay Index
                   </th>
                   <th>
                     Name
@@ -35815,7 +35810,7 @@ THH:mm:ss.sss
               </thead>
               <tr>
                 <td>
-                  *+0*<sub>𝔽</sub>
+                  0
                 </td>
                 <td>
                   *"Sun"*
@@ -35823,7 +35818,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *1*<sub>𝔽</sub>
+                  1
                 </td>
                 <td>
                   *"Mon"*
@@ -35831,7 +35826,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *2*<sub>𝔽</sub>
+                  2
                 </td>
                 <td>
                   *"Tue"*
@@ -35839,7 +35834,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *3*<sub>𝔽</sub>
+                  3
                 </td>
                 <td>
                   *"Wed"*
@@ -35847,7 +35842,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *4*<sub>𝔽</sub>
+                  4
                 </td>
                 <td>
                   *"Thu"*
@@ -35855,7 +35850,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *5*<sub>𝔽</sub>
+                  5
                 </td>
                 <td>
                   *"Fri"*
@@ -35863,7 +35858,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *6*<sub>𝔽</sub>
+                  6
                 </td>
                 <td>
                   *"Sat"*
@@ -35876,7 +35871,7 @@ THH:mm:ss.sss
               <thead>
                 <tr>
                   <th>
-                    Number
+                    Month Index
                   </th>
                   <th>
                     Name
@@ -35885,7 +35880,7 @@ THH:mm:ss.sss
               </thead>
               <tr>
                 <td>
-                  *+0*<sub>𝔽</sub>
+                  0
                 </td>
                 <td>
                   *"Jan"*
@@ -35893,7 +35888,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *1*<sub>𝔽</sub>
+                  1
                 </td>
                 <td>
                   *"Feb"*
@@ -35901,7 +35896,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *2*<sub>𝔽</sub>
+                  2
                 </td>
                 <td>
                   *"Mar"*
@@ -35909,7 +35904,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *3*<sub>𝔽</sub>
+                  3
                 </td>
                 <td>
                   *"Apr"*
@@ -35917,7 +35912,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *4*<sub>𝔽</sub>
+                  4
                 </td>
                 <td>
                   *"May"*
@@ -35925,7 +35920,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *5*<sub>𝔽</sub>
+                  5
                 </td>
                 <td>
                   *"Jun"*
@@ -35933,7 +35928,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *6*<sub>𝔽</sub>
+                  6
                 </td>
                 <td>
                   *"Jul"*
@@ -35941,7 +35936,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *7*<sub>𝔽</sub>
+                  7
                 </td>
                 <td>
                   *"Aug"*
@@ -35949,7 +35944,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *8*<sub>𝔽</sub>
+                  8
                 </td>
                 <td>
                   *"Sep"*
@@ -35957,7 +35952,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *9*<sub>𝔽</sub>
+                  9
                 </td>
                 <td>
                   *"Oct"*
@@ -35965,7 +35960,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *10*<sub>𝔽</sub>
+                  10
                 </td>
                 <td>
                   *"Nov"*
@@ -35973,7 +35968,7 @@ THH:mm:ss.sss
               </tr>
               <tr>
                 <td>
-                  *11*<sub>𝔽</sub>
+                  11
                 </td>
                 <td>
                   *"Dec"*
@@ -35996,16 +35991,16 @@ THH:mm:ss.sss
             1. If IsTimeZoneOffsetString(_systemTimeZoneIdentifier_) is *true*, then
               1. Let _offsetNs_ be ParseTimeZoneOffsetString(_systemTimeZoneIdentifier_).
             1. Else,
-              1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℤ(ℝ(_tv_) × nsPerMillisecond)).
-            1. Let _offset_ be 𝔽(truncate(_offsetNs_ / nsPerMillisecond)).
-            1. If _offset_ is *+0*<sub>𝔽</sub> or _offset_ > *+0*<sub>𝔽</sub>, then
+              1. Let _offsetNs_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℝ(_tv_) × nsPerMillisecond).
+            1. Let _offset_ be truncate(_offsetNs_ / nsPerMillisecond).
+            1. If _offset_ ≥ 0, then
               1. Let _offsetSign_ be *"+"*.
               1. Let _absOffset_ be _offset_.
             1. Else,
               1. Let _offsetSign_ be *"-"*.
               1. Let _absOffset_ be -_offset_.
-            1. Let _offsetMin_ be ToZeroPaddedDecimalString(ℝ(MinFromTime(_absOffset_)), 2).
-            1. Let _offsetHour_ be ToZeroPaddedDecimalString(ℝ(HourFromTime(_absOffset_)), 2).
+            1. Let _offsetMin_ be ToZeroPaddedDecimalString(MinFromTime(𝔽(_absOffset_)), 2).
+            1. Let _offsetHour_ be ToZeroPaddedDecimalString(HourFromTime(𝔽(_absOffset_)), 2).
             1. Let _tzName_ be an implementation-defined string that is either the empty String or the string-concatenation of the code unit 0x0020 (SPACE), the code unit 0x0028 (LEFT PARENTHESIS), an implementation-defined timezone name, and the code unit 0x0029 (RIGHT PARENTHESIS).
             1. Return the string-concatenation of _offsetSign_, _offsetHour_, _offsetMin_, and _tzName_.
           </emu-alg>
@@ -36049,12 +36044,12 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *"Invalid Date"*.
-          1. Let _weekday_ be the Name of the entry in <emu-xref href="#sec-todatestring-day-names"></emu-xref> with the Number WeekDay(_tv_).
-          1. Let _month_ be the Name of the entry in <emu-xref href="#sec-todatestring-month-names"></emu-xref> with the Number MonthFromTime(_tv_).
-          1. Let _day_ be ToZeroPaddedDecimalString(ℝ(DateFromTime(_tv_)), 2).
+          1. Let _weekday_ be the Name of the entry in <emu-xref href="#sec-todatestring-day-names"></emu-xref> whose WeekDay Index = WeekDay(_tv_).
+          1. Let _month_ be the Name of the entry in <emu-xref href="#sec-todatestring-month-names"></emu-xref> whose Month Index = MonthFromTime(_tv_).
+          1. Let _day_ be ToZeroPaddedDecimalString(DateFromTime(_tv_), 2).
           1. Let _yv_ be YearFromTime(_tv_).
-          1. If _yv_ is *+0*<sub>𝔽</sub> or _yv_ > *+0*<sub>𝔽</sub>, let _yearSign_ be the empty String; else let _yearSign_ be *"-"*.
-          1. Let _paddedYear_ be ToZeroPaddedDecimalString(abs(ℝ(_yv_)), 4).
+          1. If _yv_ ≥ 0, let _yearSign_ be the empty String; else let _yearSign_ be *"-"*.
+          1. Let _paddedYear_ be ToZeroPaddedDecimalString(abs(_yv_), 4).
           1. Return the string-concatenation of _weekday_, *","*, the code unit 0x0020 (SPACE), _day_, the code unit 0x0020 (SPACE), _month_, the code unit 0x0020 (SPACE), _yearSign_, _paddedYear_, the code unit 0x0020 (SPACE), and TimeString(_tv_).
         </emu-alg>
       </emu-clause>
@@ -38880,12 +38875,12 @@ THH:mm:ss.sss
             1. If _regexpRecord_.[[IgnoreCase]] is *false*, return _char_.
             1. Assert: _char_ is a UTF-16 code unit.
             1. Let _codePoint_ be the code point whose numeric value is the numeric value of _char_.
-            1. Let _u_ be toUppercase(« _codePoint_ »), according to the Unicode Default Case Conversion algorithm.
-            1. Let _uString_ be CodePointsToString(_u_).
-            1. If the length of _uString_ ≠ 1, return _char_.
-            1. Let _codeUnit_ be _uString_'s single code unit element.
-            1. If the numeric value of _char_ ≥ 128 and the numeric value of _codeUnit_ &lt; 128, return _char_.
-            1. Return _codeUnit_.
+            1. Let _mappedCodePoints_ be toUppercase(« _codePoint_ »), according to the Unicode Default Case Conversion algorithm.
+            1. If the length of CodePointsToString(_mappedCodePoints_) ≠ 1, return _char_.
+            1. Assert: The number of elements in _mappedCodePoints_ is 1.
+            1. Let _mappedCodePoint_ be the single code point element of _mappedCodePoints_.
+            1. If the numeric value of _char_ ≥ 128 and the numeric value of _mappedCodePoint_ &lt; 128, return _char_.
+            1. Return the code unit whose numeric value is the numeric value of _mappedCodePoint_.
           </emu-alg>
           <emu-note>
             <p>In case-insignificant matches when HasEitherUnicodeFlag(_regexpRecord_) is *true*, all characters are implicitly case-folded using the simple mapping provided by the Unicode Standard immediately before they are compared. The simple mapping always maps to a single code point, so it does not map, for example, `ß` (U+00DF LATIN SMALL LETTER SHARP S) to `ss` or `SS`. It may however map code points outside the Basic Latin block to code points within it—for example, `ſ` (U+017F LATIN SMALL LETTER LONG S) case-folds to `s` (U+0073 LATIN SMALL LETTER S) and `K` (U+212A KELVIN SIGN) case-folds to `k` (U+006B LATIN SMALL LETTER K). Strings containing those code points are matched by regular expressions such as `/[a-z]/ui`.</p>
@@ -49408,16 +49403,18 @@ THH:mm:ss.sss
             1. If _numberLimit_ is *NaN*, then
               1. Let _error_ be ThrowCompletion(a newly created *RangeError* object).
               1. Return ? IteratorClose(_iterated_, _error_).
+            1. If _numberLimit_ is finite and _numberLimit_ > 𝔽(2<sup>53</sup> - 1), then
+              1. Let _error_ be ThrowCompletion(a newly created *RangeError* object).
+              1. Return ? IteratorClose(_iterated_, _error_).
             1. Let _intLimit_ be ! ToIntegerOrInfinity(_numberLimit_).
             1. If _intLimit_ &lt; 0, then
               1. Let _error_ be ThrowCompletion(a newly created *RangeError* object).
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
             1. Let _closure_ be a new Abstract Closure with no parameters that captures _iterated_ and _intLimit_ and performs the following steps when called:
-              1. Let _remaining_ be _intLimit_.
-              1. Repeat, while _remaining_ > 0,
-                1. If _remaining_ ≠ +∞, then
-                  1. Set _remaining_ to _remaining_ - 1.
+              1. Let _remaining_ be 𝔽(_intLimit_).
+              1. Repeat, while _remaining_ > *+0*<sub>𝔽</sub>,
+                1. Set _remaining_ to _remaining_ - *1*<sub>𝔽</sub>.
                 1. Let _next_ be ? IteratorStep(_iterated_).
                 1. If _next_ is ~done~, return ReturnCompletion(*undefined*).
               1. Repeat,
@@ -49442,14 +49439,15 @@ THH:mm:ss.sss
               1. Let _error_ be ThrowCompletion(a newly created *TypeError* object).
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
-            1. Let _counter_ be 0.
+            1. Let _counter_ be *+0*<sub>𝔽</sub>.
             1. Repeat,
               1. Let _value_ be ? IteratorStepValue(_iterated_).
               1. If _value_ is ~done~, return *true*.
-              1. Let _result_ be Completion(Call(_predicate_, *undefined*, « _value_, 𝔽(_counter_) »)).
+              1. Let _result_ be Completion(Call(_predicate_, *undefined*, « _value_, _counter_ »)).
               1. IfAbruptCloseIterator(_result_, _iterated_).
               1. If ToBoolean(_result_) is *false*, return ? IteratorClose(_iterated_, NormalCompletion(*false*)).
-              1. Set _counter_ to _counter_ + 1.
+              1. NOTE: The following step will not change _counter_ once it reaches *2<sup>53</sup>*<sub>𝔽</sub>.
+              1. Set _counter_ to _counter_ + *1*<sub>𝔽</sub>.
           </emu-alg>
         </emu-clause>
 
@@ -49465,16 +49463,17 @@ THH:mm:ss.sss
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
             1. Let _closure_ be a new Abstract Closure with no parameters that captures _iterated_ and _predicate_ and performs the following steps when called:
-              1. Let _counter_ be 0.
+              1. Let _counter_ be *+0*<sub>𝔽</sub>.
               1. Repeat,
                 1. Let _value_ be ? IteratorStepValue(_iterated_).
                 1. If _value_ is ~done~, return ReturnCompletion(*undefined*).
-                1. Let _selected_ be Completion(Call(_predicate_, *undefined*, « _value_, 𝔽(_counter_) »)).
+                1. Let _selected_ be Completion(Call(_predicate_, *undefined*, « _value_, _counter_ »)).
                 1. IfAbruptCloseIterator(_selected_, _iterated_).
                 1. If ToBoolean(_selected_) is *true*, then
                   1. Let _completion_ be Completion(Yield(_value_)).
                   1. IfAbruptCloseIterator(_completion_, _iterated_).
-                1. Set _counter_ to _counter_ + 1.
+                1. NOTE: The following step will not change _counter_ once it reaches *2<sup>53</sup>*<sub>𝔽</sub>.
+                1. Set _counter_ to _counter_ + *1*<sub>𝔽</sub>.
             1. Let _result_ be CreateIteratorFromClosure(_closure_, *"Iterator Helper"*, %IteratorHelperPrototype%, « [[UnderlyingIterators]] »).
             1. Set _result_.[[UnderlyingIterators]] to « _iterated_ ».
             1. Return _result_.
@@ -49492,14 +49491,15 @@ THH:mm:ss.sss
               1. Let _error_ be ThrowCompletion(a newly created *TypeError* object).
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
-            1. Let _counter_ be 0.
+            1. Let _counter_ be *+0*<sub>𝔽</sub>.
             1. Repeat,
               1. Let _value_ be ? IteratorStepValue(_iterated_).
               1. If _value_ is ~done~, return *undefined*.
-              1. Let _result_ be Completion(Call(_predicate_, *undefined*, « _value_, 𝔽(_counter_) »)).
+              1. Let _result_ be Completion(Call(_predicate_, *undefined*, « _value_, _counter_ »)).
               1. IfAbruptCloseIterator(_result_, _iterated_).
               1. If ToBoolean(_result_) is *true*, return ? IteratorClose(_iterated_, NormalCompletion(_value_)).
-              1. Set _counter_ to _counter_ + 1.
+              1. NOTE: The following step will not change _counter_ once it reaches *2<sup>53</sup>*<sub>𝔽</sub>.
+              1. Set _counter_ to _counter_ + *1*<sub>𝔽</sub>.
           </emu-alg>
         </emu-clause>
 
@@ -49515,11 +49515,11 @@ THH:mm:ss.sss
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
             1. Let _closure_ be a new Abstract Closure with no parameters that captures _iterated_ and _mapper_ and performs the following steps when called:
-              1. Let _counter_ be 0.
+              1. Let _counter_ be *+0*<sub>𝔽</sub>.
               1. Repeat,
                 1. Let _value_ be ? IteratorStepValue(_iterated_).
                 1. If _value_ is ~done~, return ReturnCompletion(*undefined*).
-                1. Let _mapped_ be Completion(Call(_mapper_, *undefined*, « _value_, 𝔽(_counter_) »)).
+                1. Let _mapped_ be Completion(Call(_mapper_, *undefined*, « _value_, _counter_ »)).
                 1. IfAbruptCloseIterator(_mapped_, _iterated_).
                 1. Let _innerIterator_ be Completion(GetIteratorFlattenable(_mapped_, ~reject-primitives~)).
                 1. IfAbruptCloseIterator(_innerIterator_, _iterated_).
@@ -49535,7 +49535,8 @@ THH:mm:ss.sss
                       1. Let _backupCompletion_ be Completion(IteratorClose(_innerIterator_, _completion_)).
                       1. IfAbruptCloseIterator(_backupCompletion_, _iterated_).
                       1. Return ? IteratorClose(_iterated_, _completion_).
-                1. Set _counter_ to _counter_ + 1.
+                1. NOTE: The following step will not change _counter_ once it reaches *2<sup>53</sup>*<sub>𝔽</sub>.
+                1. Set _counter_ to _counter_ + *1*<sub>𝔽</sub>.
             1. Let _result_ be CreateIteratorFromClosure(_closure_, *"Iterator Helper"*, %IteratorHelperPrototype%, « [[UnderlyingIterators]] »).
             1. Set _result_.[[UnderlyingIterators]] to « _iterated_ ».
             1. Return _result_.
@@ -49553,13 +49554,14 @@ THH:mm:ss.sss
               1. Let _error_ be ThrowCompletion(a newly created *TypeError* object).
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
-            1. Let _counter_ be 0.
+            1. Let _counter_ be *+0*<sub>𝔽</sub>.
             1. Repeat,
               1. Let _value_ be ? IteratorStepValue(_iterated_).
               1. If _value_ is ~done~, return *undefined*.
-              1. Let _result_ be Completion(Call(_procedure_, *undefined*, « _value_, 𝔽(_counter_) »)).
+              1. Let _result_ be Completion(Call(_procedure_, *undefined*, « _value_, _counter_ »)).
               1. IfAbruptCloseIterator(_result_, _iterated_).
-              1. Set _counter_ to _counter_ + 1.
+              1. NOTE: The following step will not change _counter_ once it reaches *2<sup>53</sup>*<sub>𝔽</sub>.
+              1. Set _counter_ to _counter_ + *1*<sub>𝔽</sub>.
           </emu-alg>
         </emu-clause>
 
@@ -49575,15 +49577,16 @@ THH:mm:ss.sss
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
             1. Let _closure_ be a new Abstract Closure with no parameters that captures _iterated_ and _mapper_ and performs the following steps when called:
-              1. Let _counter_ be 0.
+              1. Let _counter_ be *+0*<sub>𝔽</sub>.
               1. Repeat,
                 1. Let _value_ be ? IteratorStepValue(_iterated_).
                 1. If _value_ is ~done~, return ReturnCompletion(*undefined*).
-                1. Let _mapped_ be Completion(Call(_mapper_, *undefined*, « _value_, 𝔽(_counter_) »)).
+                1. Let _mapped_ be Completion(Call(_mapper_, *undefined*, « _value_, _counter_ »)).
                 1. IfAbruptCloseIterator(_mapped_, _iterated_).
                 1. Let _completion_ be Completion(Yield(_mapped_)).
                 1. IfAbruptCloseIterator(_completion_, _iterated_).
-                1. Set _counter_ to _counter_ + 1.
+                1. NOTE: The following step will not change _counter_ once it reaches *2<sup>53</sup>*<sub>𝔽</sub>.
+                1. Set _counter_ to _counter_ + *1*<sub>𝔽</sub>.
             1. Let _result_ be CreateIteratorFromClosure(_closure_, *"Iterator Helper"*, %IteratorHelperPrototype%, « [[UnderlyingIterators]] »).
             1. Set _result_.[[UnderlyingIterators]] to « _iterated_ ».
             1. Return _result_.
@@ -49604,17 +49607,18 @@ THH:mm:ss.sss
             1. If _initialValue_ is not present, then
               1. Let _accumulator_ be ? IteratorStepValue(_iterated_).
               1. If _accumulator_ is ~done~, throw a *TypeError* exception.
-              1. Let _counter_ be 1.
+              1. Let _counter_ be *1*<sub>𝔽</sub>.
             1. Else,
               1. Let _accumulator_ be _initialValue_.
-              1. Let _counter_ be 0.
+              1. Let _counter_ be *+0*<sub>𝔽</sub>.
             1. Repeat,
               1. Let _value_ be ? IteratorStepValue(_iterated_).
               1. If _value_ is ~done~, return _accumulator_.
-              1. Let _result_ be Completion(Call(_reducer_, *undefined*, « _accumulator_, _value_, 𝔽(_counter_) »)).
+              1. Let _result_ be Completion(Call(_reducer_, *undefined*, « _accumulator_, _value_, _counter_ »)).
               1. IfAbruptCloseIterator(_result_, _iterated_).
               1. Set _accumulator_ to _result_.
-              1. Set _counter_ to _counter_ + 1.
+              1. NOTE: The following step will not change _counter_ once it reaches *2<sup>53</sup>*<sub>𝔽</sub>.
+              1. Set _counter_ to _counter_ + *1*<sub>𝔽</sub>.
           </emu-alg>
         </emu-clause>
 
@@ -49629,14 +49633,15 @@ THH:mm:ss.sss
               1. Let _error_ be ThrowCompletion(a newly created *TypeError* object).
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
-            1. Let _counter_ be 0.
+            1. Let _counter_ be *+0*<sub>𝔽</sub>.
             1. Repeat,
               1. Let _value_ be ? IteratorStepValue(_iterated_).
               1. If _value_ is ~done~, return *false*.
-              1. Let _result_ be Completion(Call(_predicate_, *undefined*, « _value_, 𝔽(_counter_) »)).
+              1. Let _result_ be Completion(Call(_predicate_, *undefined*, « _value_, _counter_ »)).
               1. IfAbruptCloseIterator(_result_, _iterated_).
               1. If ToBoolean(_result_) is *true*, return ? IteratorClose(_iterated_, NormalCompletion(*true*)).
-              1. Set _counter_ to _counter_ + 1.
+              1. NOTE: The following step will not change _counter_ once it reaches *2<sup>53</sup>*<sub>𝔽</sub>.
+              1. Set _counter_ to _counter_ + *1*<sub>𝔽</sub>.
           </emu-alg>
         </emu-clause>
 
@@ -49652,18 +49657,20 @@ THH:mm:ss.sss
             1. If _numberLimit_ is *NaN*, then
               1. Let _error_ be ThrowCompletion(a newly created *RangeError* object).
               1. Return ? IteratorClose(_iterated_, _error_).
+            1. If _numberLimit_ is finite and _numberLimit_ > 𝔽(2<sup>53</sup> - 1), then
+              1. Let _error_ be ThrowCompletion(a newly created *RangeError* object).
+              1. Return ? IteratorClose(_iterated_, _error_).
             1. Let _intLimit_ be ! ToIntegerOrInfinity(_numberLimit_).
             1. If _intLimit_ &lt; 0, then
               1. Let _error_ be ThrowCompletion(a newly created *RangeError* object).
               1. Return ? IteratorClose(_iterated_, _error_).
             1. Set _iterated_ to ? GetIteratorDirect(_obj_).
             1. Let _closure_ be a new Abstract Closure with no parameters that captures _iterated_ and _intLimit_ and performs the following steps when called:
-              1. Let _remaining_ be _intLimit_.
+              1. Let _remaining_ be 𝔽(_intLimit_).
               1. Repeat,
-                1. If _remaining_ = 0, then
+                1. If _remaining_ is *+0*<sub>𝔽</sub>, then
                   1. Return ? IteratorClose(_iterated_, ReturnCompletion(*undefined*)).
-                1. If _remaining_ ≠ +∞, then
-                  1. Set _remaining_ to _remaining_ - 1.
+                1. Set _remaining_ to _remaining_ - *1*<sub>𝔽</sub>.
                 1. Let _value_ be ? IteratorStepValue(_iterated_).
                 1. If _value_ is ~done~, return ReturnCompletion(*undefined*).
                 1. Let _completion_ be Completion(Yield(_value_)).
@@ -54175,7 +54182,7 @@ THH:mm:ss.sss
 
       <emu-annex id="sec-patterns-static-semantics-is-character-class-annexb">
         <h1>Static Semantics: IsCharacterClass</h1>
-        <p>The semantics of <emu-xref href="#sec-patterns-static-semantics-is-character-class"></emu-xref> is extended as follows:</p>
+        <p>The semantics of IsCharacterClass is extended as follows:</p>
         <emu-grammar>
           ClassAtomNoDash :: `\` [lookahead == `c`]
         </emu-grammar>
@@ -54186,7 +54193,7 @@ THH:mm:ss.sss
 
       <emu-annex id="sec-patterns-static-semantics-character-value-annexb">
         <h1>Static Semantics: CharacterValue</h1>
-        <p>The semantics of <emu-xref href="#sec-patterns-static-semantics-character-value"></emu-xref> is extended as follows:</p>
+        <p>The semantics of CharacterValue is extended as follows:</p>
         <emu-grammar>
           ClassAtomNoDash :: `\` [lookahead == `c`]
         </emu-grammar>
@@ -54207,8 +54214,7 @@ THH:mm:ss.sss
 
       <emu-annex id="sec-compilesubpattern-annexb" oldids="sec-regular-expression-patterns-semantics">
         <h1>Runtime Semantics: CompileSubpattern</h1>
-        <p>The semantics of CompileSubpattern is extended as follows:</p>
-
+        <p>The semantics of CompileSubpattern with arguments _regexpRecord_ and _direction_ is extended as follows:</p>
         <p>The rule for <emu-grammar>Term :: QuantifiableAssertion Quantifier</emu-grammar> is the same as for <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
         <p>The rule for <emu-grammar>Term :: ExtendedAtom Quantifier</emu-grammar> is the same as for <emu-grammar>Term :: Atom Quantifier</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
         <p>The rule for <emu-grammar>Term :: ExtendedAtom</emu-grammar> is the same as for <emu-grammar>Term :: Atom</emu-grammar> but with |ExtendedAtom| substituted for |Atom|.</p>
@@ -54216,12 +54222,16 @@ THH:mm:ss.sss
 
       <emu-annex id="sec-compileassertion-annexb">
         <h1>Runtime Semantics: CompileAssertion</h1>
-        <p>CompileAssertion rules for the <emu-grammar>Assertion :: `(?=` Disjunction `)`</emu-grammar> and <emu-grammar>Assertion :: `(?!` Disjunction `)`</emu-grammar> productions are also used for the |QuantifiableAssertion| productions, but with |QuantifiableAssertion| substituted for |Assertion|.</p>
+        <p>The semantics of CompileAssertion with argument _regexpRecord_ is extended as follows:</p>
+        <p>The rule for <emu-grammar>QuantifiableAssertion :: `(?=` Disjunction `)`</emu-grammar> is the same as for <emu-grammar>Assertion :: `(?=` Disjunction `)`</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
+        <p>The rule for <emu-grammar>QuantifiableAssertion :: `(?!` Disjunction `)`</emu-grammar> is the same as for <emu-grammar>Assertion :: `(?!` Disjunction `)`</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
       </emu-annex>
 
       <emu-annex id="sec-compileatom-annexb">
         <h1>Runtime Semantics: CompileAtom</h1>
-        <p>CompileAtom rules for the |Atom| productions except for <emu-grammar>Atom :: PatternCharacter</emu-grammar> are also used for the |ExtendedAtom| productions, but with |ExtendedAtom| substituted for |Atom|. The following rules, with parameter _direction_, are also added:</p>
+        <p>The semantics of CompileAtom with arguments _regexpRecord_ and _direction_ is extended as follows:</p>
+        <p>Rules for the |Atom| productions except for <emu-grammar>Atom :: PatternCharacter</emu-grammar> are also used for the |ExtendedAtom| productions, but with |ExtendedAtom| substituted for |Atom|.</p>
+        <p>The following rules are also added:</p>
         <emu-grammar>ExtendedAtom :: `\` [lookahead == `c`]</emu-grammar>
         <emu-alg>
           1. Let _charSet_ be the CharSet containing the single character `\\` U+005C (REVERSE SOLIDUS).
@@ -54237,9 +54247,8 @@ THH:mm:ss.sss
 
       <emu-annex id="sec-compiletocharset-annexb">
         <h1>Runtime Semantics: CompileToCharSet</h1>
-        <p>The semantics of <emu-xref href="#sec-compiletocharset"></emu-xref> is extended as follows:</p>
-
-        <p>The following two rules replace the corresponding rules of CompileToCharSet.</p>
+        <p>The semantics of CompileToCharSet with argument _regexpRecord_ is extended as follows:</p>
+        <p>Two rules are replaced:</p>
         <emu-grammar>NonemptyClassRanges :: ClassAtom `-` ClassAtom ClassContents</emu-grammar>
         <emu-alg>
           1. Let _charSet_ be CompileToCharSet of the first |ClassAtom| with argument _regexpRecord_.
@@ -54256,8 +54265,7 @@ THH:mm:ss.sss
           1. Let _rangeSet_ be CharacterRangeOrUnion(_regexpRecord_, _charSet_, _otherSet_).
           1. Return the union of _rangeSet_ and _remainingSet_.
         </emu-alg>
-
-        <p>In addition, the following rules are added to CompileToCharSet.</p>
+        <p>The following rules are also added:</p>
         <emu-grammar>ClassEscape :: `c` ClassControlLetter</emu-grammar>
         <emu-alg>
           1. Let _charValue_ be the CharacterValue of this |ClassEscape|.
@@ -54293,8 +54301,7 @@ THH:mm:ss.sss
 
       <emu-annex id="sec-parsepattern-annexb">
         <h1>Static Semantics: ParsePattern ( _patternText_, _u_, _v_ )</h1>
-        <p>The semantics of <emu-xref href="#sec-parsepattern"></emu-xref> is extended as follows:</p>
-        <p>The abstract operation ParsePattern takes arguments _patternText_ (a sequence of Unicode code points), _u_ (a Boolean), and _v_ (a Boolean). It performs the following steps when called:</p>
+        <p>The semantics of ParsePattern with arguments _patternText_, _u_, and _v_ is extended as follows, with modifications <ins>highlighted</ins>:</p>
         <emu-alg>
           1. If _v_ is *true* and _u_ is *true*, then
             1. Let _parseResult_ be a List containing one or more *SyntaxError* objects.
@@ -54303,8 +54310,8 @@ THH:mm:ss.sss
           1. Else if _u_ is *true*, then
             1. Let _parseResult_ be ParseText(_patternText_, |Pattern[+UnicodeMode, ~UnicodeSetsMode, +NamedCaptureGroups]|).
           1. Else,
-            1. Let _parseResult_ be ParseText(_patternText_, |Pattern[~UnicodeMode, ~UnicodeSetsMode, ~NamedCaptureGroups]|).
-            1. If _parseResult_ is a Parse Node and _parseResult_ contains a |GroupName|, then
+            1. <ins>Let _parseResult_ be ParseText(_patternText_, |Pattern[~UnicodeMode, ~UnicodeSetsMode, ~NamedCaptureGroups]|).</ins>
+            1. <ins>If _parseResult_ is a Parse Node and _parseResult_ contains a |GroupName|, then</ins>
               1. Set _parseResult_ to ParseText(_patternText_, |Pattern[~UnicodeMode, ~UnicodeSetsMode, +NamedCaptureGroups]|).
           1. Return _parseResult_.
         </emu-alg>
@@ -54628,7 +54635,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _tv_ be _dateObj_.[[DateValue]].
           1. If _tv_ is *NaN*, return *NaN*.
-          1. Return YearFromTime(LocalTime(_tv_)) - *1900*<sub>𝔽</sub>.
+          1. Return 𝔽(YearFromTime(LocalTime(_tv_))) - *1900*<sub>𝔽</sub>.
         </emu-alg>
       </emu-annex>
 
@@ -54642,11 +54649,10 @@ THH:mm:ss.sss
           1. Let _dateObj_ be the *this* value.
           1. Perform ? RequireInternalSlot(_dateObj_, [[DateValue]]).
           1. Let _time_ be _dateObj_.[[DateValue]].
-          1. Let _year_ be ? ToNumber(_year_).
           1. If _time_ is *NaN*, set _time_ to *+0*<sub>𝔽</sub>; else set _time_ to LocalTime(_time_).
-          1. Let _fullYear_ be MakeFullYear(_year_).
-          1. Let _day_ be MakeDay(_fullYear_, MonthFromTime(_time_), DateFromTime(_time_)).
-          1. Let _date_ be MakeDate(_day_, TimeWithinDay(_time_)).
+          1. Let _fullYear_ be MakeFullYear(? ToNumber(_year_)).
+          1. Let _day_ be MakeDay(_fullYear_, 𝔽(MonthFromTime(_time_)), 𝔽(DateFromTime(_time_))).
+          1. Let _date_ be MakeDate(_day_, 𝔽(TimeWithinDay(_time_))).
           1. Let _utcTimestamp_ be TimeClip(UTC(_date_)).
           1. Set _dateObj_.[[DateValue]] to _utcTimestamp_.
           1. Return _utcTimestamp_.
@@ -54796,22 +54802,26 @@ THH:mm:ss.sss
           `for` `(` `var` BindingIdentifier[?Yield, ?Await] Initializer[~In, ?Yield, ?Await] `in` Expression[+In, ?Yield, ?Await] `)` Statement[?Yield, ?Await, ?Return]
       </emu-grammar>
       <p>This production only applies when parsing non-strict code.</p>
-      <p>The static semantics of ContainsDuplicateLabels in <emu-xref href="#sec-static-semantics-containsduplicatelabels"></emu-xref> are augmented with the following:</p>
+
+      <p>The static semantics of ContainsDuplicateLabels with argument _labelSet_ are augmented with the following:</p>
       <emu-grammar>ForInOfStatement : `for` `(` `var` BindingIdentifier Initializer `in` Expression `)` Statement</emu-grammar>
       <emu-alg>
         1. Return ContainsDuplicateLabels of |Statement| with argument _labelSet_.
       </emu-alg>
-      <p>The static semantics of ContainsUndefinedBreakTarget in <emu-xref href="#sec-static-semantics-containsundefinedbreaktarget"></emu-xref> are augmented with the following:</p>
+
+      <p>The static semantics of ContainsUndefinedBreakTarget with argument _labelSet_ are augmented with the following:</p>
       <emu-grammar>ForInOfStatement : `for` `(` `var` BindingIdentifier Initializer `in` Expression `)` Statement</emu-grammar>
       <emu-alg>
         1. Return ContainsUndefinedBreakTarget of |Statement| with argument _labelSet_.
       </emu-alg>
-      <p>The static semantics of ContainsUndefinedContinueTarget in <emu-xref href="#sec-static-semantics-containsundefinedcontinuetarget"></emu-xref> are augmented with the following:</p>
+
+      <p>The static semantics of ContainsUndefinedContinueTarget with arguments _iterationSet_ and _labelSet_ are augmented with the following:</p>
       <emu-grammar>ForInOfStatement : `for` `(` `var` BindingIdentifier Initializer `in` Expression `)` Statement</emu-grammar>
       <emu-alg>
         1. Return ContainsUndefinedContinueTarget of |Statement| with arguments _iterationSet_ and « ».
       </emu-alg>
-      <p>The static semantics of IsDestructuring in <emu-xref href="#sec-static-semantics-isdestructuring"></emu-xref> are augmented with the following:</p>
+
+      <p>The static semantics of IsDestructuring are augmented with the following:</p>
       <emu-grammar>
         BindingIdentifier :
           Identifier
@@ -54821,21 +54831,24 @@ THH:mm:ss.sss
       <emu-alg>
         1. Return *false*.
       </emu-alg>
-      <p>The static semantics of VarDeclaredNames in <emu-xref href="#sec-static-semantics-vardeclarednames"></emu-xref> are augmented with the following:</p>
+
+      <p>The static semantics of VarDeclaredNames are augmented with the following:</p>
       <emu-grammar>ForInOfStatement : `for` `(` `var` BindingIdentifier Initializer `in` Expression `)` Statement</emu-grammar>
       <emu-alg>
         1. Let _names1_ be the BoundNames of |BindingIdentifier|.
         1. Let _names2_ be the VarDeclaredNames of |Statement|.
         1. Return the list-concatenation of _names1_ and _names2_.
       </emu-alg>
-      <p>The static semantics of VarScopedDeclarations in <emu-xref href="#sec-static-semantics-varscopeddeclarations"></emu-xref> are augmented with the following:</p>
+
+      <p>The static semantics of VarScopedDeclarations are augmented with the following:</p>
       <emu-grammar>ForInOfStatement : `for` `(` `var` BindingIdentifier Initializer `in` Expression `)` Statement</emu-grammar>
       <emu-alg>
         1. Let _decls1_ be « |BindingIdentifier| ».
         1. Let _decls2_ be the VarScopedDeclarations of |Statement|.
         1. Return the list-concatenation of _decls1_ and _decls2_.
       </emu-alg>
-      <p>The runtime semantics of ForInOfLoopEvaluation in <emu-xref href="#sec-runtime-semantics-forinofloopevaluation"></emu-xref> are augmented with the following:</p>
+
+      <p>The runtime semantics of ForInOfLoopEvaluation with argument _labelSet_ are augmented with the following:</p>
       <emu-grammar>ForInOfStatement : `for` `(` `var` BindingIdentifier Initializer `in` Expression `)` Statement</emu-grammar>
       <emu-alg>
         1. Let _bindingId_ be the StringValue of |BindingIdentifier|.
