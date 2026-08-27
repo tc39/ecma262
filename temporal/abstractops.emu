@@ -1447,7 +1447,7 @@
       </dl>
       <emu-alg>
         1. Let _dateDuration_ be ! CreateDateDurationRecord(_duration_.[[Years]], _duration_.[[Months]], _duration_.[[Weeks]], _duration_.[[Days]]).
-        1. Let _timeDuration_ be TimeDurationFromComponents(_duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]]).
+        1. Let _timeDuration_ be ! TimeDurationFromComponents(_duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]]).
         1. Return CombineDateAndTimeDuration(_dateDuration_, _timeDuration_).
       </emu-alg>
     </emu-clause>
@@ -1463,7 +1463,7 @@
         <dd>It converts _duration_ into its internal form, for use in duration calculations that do not involve time zones. The duration's days are assumed to be uniformly 24 hours. The [[Days]] field of the Date Duration Record in the [[Date]] field of the returned Internal Duration Record is set to 0, and the [[Time]] field of the returned Internal Duration Record includes the days.</dd>
       </dl>
       <emu-alg>
-        1. Let _timeDuration_ be TimeDurationFromComponents(_duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]]).
+        1. Let _timeDuration_ be ! TimeDurationFromComponents(_duration_.[[Hours]], _duration_.[[Minutes]], _duration_.[[Seconds]], _duration_.[[Milliseconds]], _duration_.[[Microseconds]], _duration_.[[Nanoseconds]]).
         1. Set _timeDuration_ to ! Add24HourDaysToTimeDuration(_timeDuration_, _duration_.[[Days]]).
         1. Let _dateDuration_ be ! CreateDateDurationRecord(_duration_.[[Years]], _duration_.[[Months]], _duration_.[[Weeks]], 0).
         1. Return CombineDateAndTimeDuration(_dateDuration_, _timeDuration_).
@@ -2911,7 +2911,7 @@
           _milliseconds_: an integer,
           _microseconds_: an integer,
           _nanoseconds_: an integer,
-        ): a time duration
+        ): either a normal completion containing a time duration, or a throw completion
       </h1>
       <dl class="header">
         <dt>description</dt>
@@ -2920,6 +2920,9 @@
           The time duration can be stored losslessly in two 64-bit floating point numbers consisting of truncate(_nanoseconds_ / NanosecondsPerSecond) and remainder(_nanoseconds_, NanosecondsPerSecond).
           Alternatively, _nanoseconds_ can be stored as a 96-bit integer.
         </dd>
+        <!-- The throw completion is never actually reachable, but we can only know that from examining the call sites -->
+        <dt>skip global checks</dt>
+        <dd>true</dd>
       </dl>
       <emu-alg>
         1. Set _minutes_ to _minutes_ + _hours_ × 60.
@@ -2927,7 +2930,7 @@
         1. Set _milliseconds_ to _milliseconds_ + _seconds_ × 1000.
         1. Set _microseconds_ to _microseconds_ + _milliseconds_ × 1000.
         1. Set _nanoseconds_ to _nanoseconds_ + _microseconds_ × 1000.
-        1. Assert: _nanoseconds_ is a time duration.
+        1. If _nanoseconds_ is not a time duration, throw a *RangeError* exception.
         1. Return _nanoseconds_.
       </emu-alg>
     </emu-clause>
@@ -3157,7 +3160,7 @@
         1. Let _milliseconds_ be _timeTo_.[[Millisecond]] - _timeFrom_.[[Millisecond]].
         1. Let _microseconds_ be _timeTo_.[[Microsecond]] - _timeFrom_.[[Microsecond]].
         1. Let _nanoseconds_ be _timeTo_.[[Nanosecond]] - _timeFrom_.[[Nanosecond]].
-        1. Let _timeDuration_ be TimeDurationFromComponents(_hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
+        1. Let _timeDuration_ be ! TimeDurationFromComponents(_hours_, _minutes_, _seconds_, _milliseconds_, _microseconds_, _nanoseconds_).
         1. Assert: _timeDuration_ is in the interval from -NanosecondsPerDay (exclusive) to NanosecondsPerDay (exclusive).
         1. Return _timeDuration_.
       </emu-alg>
