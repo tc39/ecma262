@@ -193,6 +193,9 @@
       1. Assert: _result_ contains a Time Zone Identifier Record _record_ such that _record_.[[Identifier]] is *"UTC"* and _record_.[[PrimaryIdentifier]] is *"UTC"*.
       1. Return _result_.
     </emu-alg>
+    <emu-note>
+      <p>Due to the complexity of supporting the requirements of GetAvailableNamedTimeZoneIdentifier, it is recommended that the result of every call to AvailableNamedTimeZoneIdentifiers be the same for the lifetime of the surrounding agent.</p>
+    </emu-note>
   </emu-clause>
 
   <emu-clause id="sec-systemtimezoneidentifier" oldids="sec-defaulttimezone" type="implementation-defined abstract operation">
@@ -219,6 +222,33 @@
     </emu-note>
   </emu-clause>
 
+  <emu-clause id="sec-available-named-time-zone-identifier-return-record">
+    <h1>Available Named Time Zone Identifier Return Record</h1>
+    <p>An <dfn variants="Available Named Time Zone Identifier Return Records">Available Named Time Zone Identifier Return Record</dfn> is a Record used to memoize returns from the GetAvailableNamedTimeZoneIdentifier abstract operation.</p>
+    <p>Available Named Time Zone Identifier Return Records have the fields listed in <emu-xref href="#table-available-named-time-zone-identifier-return-record-fields"></emu-xref>.</p>
+    <emu-table id="table-available-named-time-zone-identifier-return-record-fields" caption="Available Named Time Zone Identifier Return Record Fields">
+      <table>
+        <thead>
+          <tr>
+            <th>Field Name</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>[[Identifier]]</td>
+          <td>a String</td>
+          <td>A named time zone identifier.</td>
+        </tr>
+        <tr>
+          <td>[[Result]]</td>
+          <td>a Time Zone Identifier Record or ~empty~</td>
+          <td>The previously computed result of GetAvailableNamedTimeZoneIdentifier, given the [[Identifier]] field as input.</td>
+        </tr>
+      </table>
+    </emu-table>
+  </emu-clause>
+
   <emu-clause id="sec-getavailablenamedtimezoneidentifier" type="abstract operation">
     <h1>
       GetAvailableNamedTimeZoneIdentifier (
@@ -233,17 +263,24 @@
       </dd>
     </dl>
     <emu-alg>
+      1. Let _agentRecord_ be the Agent Record of the surrounding agent.
+      1. Let _previousReturns_ be _agentRecord_.[[GetAvailableNamedTimeZoneIdentifierReturns]].
+      1. For each element _previousReturn_ of _previousReturns_, do
+        1. If _previousReturn_.[[Identifier]] is an ASCII-case-insensitive match for _timeZoneIdentifier_, then
+          1. Return _previousReturn_.[[Result]].
+        1. If _previousReturn_.[[PrimaryIdentifier]] is an ASCII-case-insensitive match for _timeZoneIdentifier_, then
+          1. Let _record_ be Time Zone Identifier Record { [[Identifier]]: _timeZoneIdentifier_, [[PrimaryIdentifier]]: _timeZoneIdentifier_ }.
+          1. Append Available Named Time Zone Identifier Return Record { [[Identifier]]: _timeZoneIdentifier_, [[Result]]: _record_ } to _previousReturns_.
+          1. Return _record_.
       1. For each element _record_ of AvailableNamedTimeZoneIdentifiers(), do
-        1. If _record_.[[Identifier]] is an ASCII-case-insensitive match for _timeZoneIdentifier_, return _record_.
+        1. If _record_.[[Identifier]] is an ASCII-case-insensitive match for _timeZoneIdentifier_, then
+          1. Append Available Named Time Zone Identifier Return Record { [[Identifier]]: _timeZoneIdentifier_, [[Result]]: _record_ } to _previousReturns_.
+          1. Return _record_.
+      1. Append Available Named Time Zone Identifier Return Record { [[Identifier]]: _timeZoneIdentifier_, [[Result]]: ~empty~ } to _previousReturns_.
       1. Return ~empty~.
     </emu-alg>
     <emu-note>
-      <p>
-        If this operation is called multiple times with the same value for _timeZoneIdentifier_, or any value that is an ASCII-case-insensitive match for it, the result must be the same for each such call for the lifetime of the surrounding agent.
-        Specifically, if that result is a Time Zone Identifier Record, its fields must contain the same values.
-      </p>
-      <p>Time zone identifiers must not dynamically change from primary to non-primary during the lifetime of the surrounding agent, meaning that if this operation is called with a value for _timeZoneIdentifier_ that is an ASCII-case-insensitive match for the [[PrimaryIdentifier]] field of the result of a previous call to this operation, then the result must be a record where [[Identifier]] is [[PrimaryIdentifier]].</p>
-      <p>Due to the complexity of supporting these requirements, it is recommended that the result of every call to AvailableNamedTimeZoneIdentifiers be the same for the lifetime of the surrounding agent.</p>
+      <p>The use of _agentRecord_.[[GetAvailableNamedTimeZoneIdentifierReturns]] expresses that calling this operation with equivalent time zone identifiers must produce the same results, and that time zone identifiers must not change from primary to non-primary, during the lifetime of the surrounding agent. See the note in AvailableNamedTimeZoneIdentifiers.</p>
     </emu-note>
   </emu-clause>
 
