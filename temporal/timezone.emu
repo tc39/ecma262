@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<meta charset="utf8">
+
+<emu-clause id="sec-time-zone-identifiers">
+  <h1>Time Zone Identifiers</h1>
+
+  <p>
+    Time zones in ECMAScript are represented by <dfn variants="time zone identifier">time zone identifiers</dfn>, which are Strings composed entirely of code units in the inclusive interval from 0x0021 to 0x007E, described by |TimeZoneIdentifier| in the grammar below.
+    Time zones supported by an ECMAScript implementation may be <dfn variants="available named time zone">available named time zones</dfn>, represented by the [[Identifier]] field of the Time Zone Identifier Records returned by AvailableNamedTimeZoneIdentifiers, or <dfn variants="offset time zone">offset time zones</dfn>, represented by Strings for which IsOffsetTimeZoneIdentifier returns *true*.
+  </p>
+  <p>
+    A <dfn variants="primary time zone identifiers">primary time zone identifier</dfn> is the preferred identifier for an available named time zone.
+    A <dfn variants="non-primary time zone identifiers">non-primary time zone identifier</dfn> is an identifier for an available named time zone that is not a primary time zone identifier.
+    An <dfn variants="available named time zone identifiers">available named time zone identifier</dfn> is either a primary time zone identifier or a non-primary time zone identifier.
+    Each available named time zone identifier is associated with exactly one available named time zone.
+    Each available named time zone is associated with exactly one primary time zone identifier and zero or more non-primary time zone identifiers.
+  </p>
+  <p>An <dfn variants="available time zone identifiers">available time zone identifier</dfn> is either an available named time zone identifier or an offset time zone identifier.</p>
+  <p>
+    Time zone identifiers are compared using ASCII-case-insensitive comparisons, and are accepted as input in any variation of letter case.
+    Offset time zone identifiers are compared using the number of minutes represented (not as a String), and are accepted as input in any of the formats specified by |UTCOffset[~SubMinutePrecision]|.
+    However, ECMAScript built-in objects will only output the <dfn variants="normalized time zone identifier">normalized format of a time zone identifier</dfn>.
+    The normalized format of an available named time zone identifier is the preferred letter case for that identifier.
+    The normalized format of an offset time zone identifier is specified by |NormalizedUTCOffset| in the grammar below, and produced by FormatOffsetTimeZoneIdentifier with _style_ either not present or set to ~separated~.
+  </p>
+  <p>
+    ECMAScript implementations must support an available named time zone with the identifier *"UTC"*, which must be the primary time zone identifier for the UTC time zone.
+    In addition, implementations may support any number of other available named time zones.
+  </p>
+  <p>
+    Implementations that follow the requirements for time zones as described in the ECMA-402 Internationalization API specification are called <dfn>time zone aware</dfn>.
+    Time zone aware implementations must support available named time zones corresponding to the “Zone” and “<emu-not-ref>Link</emu-not-ref>” names of the <a href="https://www.iana.org/time-zones">IANA Time Zone Database</a>, and only such names.
+    In time zone aware implementations, a primary time zone identifier is a “Zone” name, and a non-primary time zone identifier is a “<emu-not-ref>Link</emu-not-ref>” name, respectively, in the <a href="https://www.iana.org/time-zones">IANA Time Zone Database</a> except as specifically overridden by AvailableNamedTimeZoneIdentifiers as specified in ECMA-402.
+    Implementations that do not support the entire <a href="https://www.iana.org/time-zones">IANA Time Zone Database</a> are still recommended to use <a href="https://www.iana.org/time-zones">IANA Time Zone Database</a> names as identifiers to represent time zones.
+  </p>
+  <p>Time zone identifiers are described by the grammar in <emu-xref href="#sec-rfc9557-grammar"></emu-xref>.</p>
+
+  <emu-clause id="sec-getnamedtimezoneepochnanoseconds" type="implementation-defined abstract operation">
+    <h1>
+      GetNamedTimeZoneEpochNanoseconds (
+        _timeZoneIdentifier_: an available named time zone identifier,
+        _isoDateTime_: an ISO Date-Time Record,
+      ): a List of epoch nanoseconds values
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        Each value in the returned List represents an epoch nanoseconds count that corresponds to the given ISO 8601 calendar date and wall-clock time in the named time zone identified by _timeZoneIdentifier_.
+      </dd>
+    </dl>
+    <p>
+      When the input represents a local time occurring more than once because of a negative time zone transition (e.g. when daylight saving time ends or the time zone offset is decreased due to a time zone rule change), the returned List will have more than one element and will be sorted by ascending numerical value.
+      When the input represents a local time skipped because of a positive time zone transition (e.g. when daylight saving time begins or the time zone offset is increased due to a time zone rule change), the returned List will be empty.
+      Otherwise, the returned List will have one element.
+    </p>
+    <p>The default implementation of GetNamedTimeZoneEpochNanoseconds, to be used for ECMAScript implementations that do not include local political rules for any time zones, performs the following steps when called:</p>
+    <emu-alg>
+      1. Assert: _timeZoneIdentifier_ is *"UTC"*.
+      1. Let _epochNanoseconds_ be GetUTCEpochNanoseconds(_isoDateTime_).
+      1. Return « _epochNanoseconds_ ».
+    </emu-alg>
+    <emu-note>
+      <p>It is required for time zone aware implementations (and recommended for all others) to use the time zone information of the <a href="https://www.iana.org/time-zones">IANA Time Zone Database</a>.</p>
+      <p>1:30 AM on 5 November 2017 in America/New_York is repeated twice, so GetNamedTimeZoneEpochNanoseconds for that time zone and ISO date-time would return a List of length 2 in which the first element represents 05:30 UTC (corresponding with 01:30 US Eastern Daylight Time at UTC offset -04:00) and the second element represents 06:30 UTC (corresponding with 01:30 US Eastern Standard Time at UTC offset -05:00).</p>
+      <p>2:30 AM on 12 March 2017 in America/New_York does not exist, so GetNamedTimeZoneEpochNanoseconds for that time zone and ISO date-time would return an empty List.</p>
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-getnamedtimezoneoffsetnanoseconds" oldids="sec-local-time-zone-adjustment" type="implementation-defined abstract operation">
+    <h1>
+      GetNamedTimeZoneOffsetNanoseconds (
+        _timeZoneIdentifier_: an available named time zone identifier,
+        _epochNanoseconds_: an epoch nanoseconds count,
+      ): an integer
+    </h1>
+    <dl class="header">
+    </dl>
+    <p>The returned integer represents the offset from UTC in nanoseconds of the named time zone identified by _timeZoneIdentifier_, at the epoch nanoseconds count _epochNanoseconds_. Time zone offset values may be positive or negative.</p>
+    <p>The default implementation of GetNamedTimeZoneOffsetNanoseconds, to be used for ECMAScript implementations that do not include local political rules for any time zones, performs the following steps when called:</p>
+    <emu-alg>
+      1. Assert: _timeZoneIdentifier_ is *"UTC"*.
+      1. Return 0.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-getnamedtimezonenexttransition" type="implementation-defined abstract operation">
+    <h1>
+      GetNamedTimeZoneNextTransition (
+        _timeZoneIdentifier_: an available named time zone identifier,
+        _epochNanoseconds_: an epoch nanoseconds count,
+      ): either an epoch nanoseconds count or *null*
+    </h1>
+    <dl class="header">
+    </dl>
+    <p>
+      The returned value _transition_ is the epoch nanoseconds count that corresponds to the first time zone UTC offset transition strictly after _epochNanoseconds_ in the IANA time zone identified by _timeZoneIdentifier_.
+      The operation returns *null* if no such transition exists for which _transition_ ≤ MaxEpochNanoseconds.
+    </p>
+    <p>
+      A transition is a point in time where the UTC offset of a time zone changes, for example when daylight saving time starts or stops.
+      The returned value _transition_ represents the first epoch nanoseconds count where the new UTC offset is used in this time zone, not the last epoch nanoseconds count where the previous UTC offset is used.
+      In other words, GetOffsetNanosecondsFor(_timeZone_, _transition_) ≠ GetOffsetNanosecondsFor(_timeZone_, _transition_ - 1).
+    </p>
+    <p>If this operation is called multiple times with the same values for _timeZoneIdentifier_ and _epochNanoseconds_, the result must be the same for each such call for the lifetime of the surrounding agent.</p>
+    <p>The default implementation of GetNamedTimeZoneNextTransition for ECMAScript implementations that do not include local political rules for any time zones performs the following steps when called:</p>
+    <emu-alg>
+      1. Assert: _timeZoneIdentifier_ is *"UTC"*.
+      1. Return *null*.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-getnamedtimezoneprevioustransition" type="implementation-defined abstract operation">
+    <h1>
+      GetNamedTimeZonePreviousTransition (
+        _timeZoneIdentifier_: an available named time zone identifier,
+        _epochNanoseconds_: an epoch nanoseconds count,
+      ): either an epoch nanoseconds count or *null*
+    </h1>
+    <dl class="header">
+    </dl>
+    <p>
+      The returned value _transition_ is the epoch nanoseconds count that corresponds to the last time zone UTC offset transition strictly before _epochNanoseconds_ in the IANA time zone identified by _timeZoneIdentifier_.
+      The operation returns *null* if no such transition exists for which _transition_ ≥ MinEpochNanoseconds.
+    </p>
+    <p>
+      A transition is a point in time where the UTC offset of a time zone changes, for example when daylight saving time starts or stops.
+      The returned value _transition_ represents the first epoch nanoseconds count where the new UTC offset is used in this time zone, not the last epoch nanoseconds count where the previous UTC offset is used.
+      In other words, GetOffsetNanosecondsFor(_timeZone_, _transition_) ≠ GetOffsetNanosecondsFor(_timeZone_, _transition_ - 1).
+    </p>
+    <p>If this operation is called multiple times with the same values for _timeZoneIdentifier_ and _epochNanoseconds_, the result must be the same for each such call for the lifetime of the surrounding agent.</p>
+    <p>The default implementation of GetNamedTimeZonePreviousTransition for ECMAScript implementations that do not include local political rules for any time zones performs the following steps when called:</p>
+    <emu-alg>
+      1. Assert: _timeZoneIdentifier_ is *"UTC"*.
+      1. Return *null*.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-time-zone-identifier-record">
+    <h1>Time Zone Identifier Record</h1>
+    <p>A <dfn variants="Time Zone Identifier Records">Time Zone Identifier Record</dfn> is a Record used to describe an available named time zone identifier and its corresponding primary time zone identifier.</p>
+    <p>Time Zone Identifier Records have the fields listed in <emu-xref href="#table-time-zone-identifier-record-fields"></emu-xref>.</p>
+    <emu-table id="table-time-zone-identifier-record-fields" caption="Time Zone Identifier Record Fields">
+      <table>
+        <thead>
+          <tr>
+            <th>Field Name</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>[[Identifier]]</td>
+          <td>a String</td>
+          <td>An available named time zone identifier that is supported by the implementation.</td>
+        </tr>
+        <tr>
+          <td>[[PrimaryIdentifier]]</td>
+          <td>a String</td>
+          <td>The primary time zone identifier that [[Identifier]] resolves to.</td>
+        </tr>
+      </table>
+    </emu-table>
+    <emu-note>
+      <p>If [[Identifier]] is a primary time zone identifier, then [[Identifier]] is [[PrimaryIdentifier]].</p>
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-availablenamedtimezoneidentifiers" type="implementation-defined abstract operation">
+    <h1>AvailableNamedTimeZoneIdentifiers ( ): a List of Time Zone Identifier Records</h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        Its result describes all available named time zone identifiers in this implementation, as well as the primary time zone identifier corresponding to each available named time zone identifier.
+        The List is ordered according to the [[Identifier]] field of each Time Zone Identifier Record.
+      </dd>
+    </dl>
+    <p>
+      Time zone aware implementations, including all implementations that implement the ECMA-402 Internationalization API, must implement the AvailableNamedTimeZoneIdentifiers abstract operation as specified in ECMA-402.
+      Otherwise, AvailableNamedTimeZoneIdentifiers performs the following steps when called:
+    </p>
+    <emu-alg>
+      1. If the implementation does not include local political rules for any time zones, then
+        1. Return « the Time Zone Identifier Record { [[Identifier]]: *"UTC"*, [[PrimaryIdentifier]]: *"UTC"* } ».
+      1. Let _identifiers_ be the List of unique available named time zone identifiers, sorted according to lexicographic code unit order.
+      1. Let _result_ be a new empty List.
+      1. For each element _identifier_ of _identifiers_, do
+        1. Let _primary_ be _identifier_.
+        1. If _identifier_ is a non-primary time zone identifier in this implementation and _identifier_ is not *"UTC"*, then
+          1. Set _primary_ to the primary time zone identifier associated with _identifier_.
+          1. NOTE: An implementation may need to resolve _identifier_ iteratively to obtain the primary time zone identifier.
+        1. Let _record_ be the Time Zone Identifier Record { [[Identifier]]: _identifier_, [[PrimaryIdentifier]]: _primary_ }.
+        1. Append _record_ to _result_.
+      1. Assert: _result_ contains a Time Zone Identifier Record _record_ such that _record_.[[Identifier]] is *"UTC"* and _record_.[[PrimaryIdentifier]] is *"UTC"*.
+      1. Return _result_.
+    </emu-alg>
+    <emu-note>
+      <p>Due to the complexity of supporting the requirements of GetAvailableNamedTimeZoneIdentifier, it is recommended that the result of every call to AvailableNamedTimeZoneIdentifiers be the same for the lifetime of the surrounding agent.</p>
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-systemtimezoneidentifier" oldids="sec-defaulttimezone" type="implementation-defined abstract operation">
+    <h1>SystemTimeZoneIdentifier ( ): an available time zone identifier</h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It returns a String representing the host environment's current time zone, which is either a primary time zone identifier or an offset time zone identifier.
+      </dd>
+    </dl>
+
+    <emu-alg>
+      1. If the implementation only supports the UTC time zone, return *"UTC"*.
+      1. Let _systemTimeZoneString_ be the primary time zone identifier or offset time zone identifier representing the host environment's current time zone in normalized time zone identifier format.
+      1. Return _systemTimeZoneString_.
+    </emu-alg>
+
+    <emu-note>
+      <p>
+        To ensure the level of functionality that implementations commonly provide in the methods of the Date object, it is recommended that SystemTimeZoneIdentifier return an IANA time zone name corresponding to the host environment's time zone setting, if such a thing exists.
+        GetNamedTimeZoneEpochNanoseconds and GetNamedTimeZoneOffsetNanoseconds must reflect the local political rules for standard time and daylight saving time in that time zone, if such rules exist.
+      </p>
+      <p>For example, if the host environment is a browser on a system where the user has chosen US Eastern Time as their time zone, SystemTimeZoneIdentifier returns *"America/New_York"*.</p>
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-available-named-time-zone-identifier-return-record">
+    <h1>Available Named Time Zone Identifier Return Record</h1>
+    <p>An <dfn variants="Available Named Time Zone Identifier Return Records">Available Named Time Zone Identifier Return Record</dfn> is a Record used to memoize returns from the GetAvailableNamedTimeZoneIdentifier abstract operation.</p>
+    <p>Available Named Time Zone Identifier Return Records have the fields listed in <emu-xref href="#table-available-named-time-zone-identifier-return-record-fields"></emu-xref>.</p>
+    <emu-table id="table-available-named-time-zone-identifier-return-record-fields" caption="Available Named Time Zone Identifier Return Record Fields">
+      <table>
+        <thead>
+          <tr>
+            <th>Field Name</th>
+            <th>Value</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>[[Identifier]]</td>
+          <td>a String</td>
+          <td>A named time zone identifier.</td>
+        </tr>
+        <tr>
+          <td>[[Result]]</td>
+          <td>a Time Zone Identifier Record or ~empty~</td>
+          <td>The previously computed result of GetAvailableNamedTimeZoneIdentifier, given the [[Identifier]] field as input.</td>
+        </tr>
+      </table>
+    </emu-table>
+  </emu-clause>
+
+  <emu-clause id="sec-getavailablenamedtimezoneidentifier" type="abstract operation">
+    <h1>
+      GetAvailableNamedTimeZoneIdentifier (
+        _timeZoneIdentifier_: a named time zone identifier,
+      ): either a Time Zone Identifier Record or ~empty~
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        If _timeZoneIdentifier_ is an available named time zone identifier, then it returns one of the records in the List returned by AvailableNamedTimeZoneIdentifiers.
+        Otherwise, ~empty~ will be returned.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. Let _agentRecord_ be the Agent Record of the surrounding agent.
+      1. Let _previousReturns_ be _agentRecord_.[[GetAvailableNamedTimeZoneIdentifierReturns]].
+      1. For each element _previousReturn_ of _previousReturns_, do
+        1. If _previousReturn_.[[Identifier]] is an ASCII-case-insensitive match for _timeZoneIdentifier_, then
+          1. Return _previousReturn_.[[Result]].
+        1. If _previousReturn_.[[PrimaryIdentifier]] is an ASCII-case-insensitive match for _timeZoneIdentifier_, then
+          1. Let _record_ be Time Zone Identifier Record { [[Identifier]]: _timeZoneIdentifier_, [[PrimaryIdentifier]]: _timeZoneIdentifier_ }.
+          1. Append Available Named Time Zone Identifier Return Record { [[Identifier]]: _timeZoneIdentifier_, [[Result]]: _record_ } to _previousReturns_.
+          1. Return _record_.
+      1. For each element _record_ of AvailableNamedTimeZoneIdentifiers(), do
+        1. If _record_.[[Identifier]] is an ASCII-case-insensitive match for _timeZoneIdentifier_, then
+          1. Append Available Named Time Zone Identifier Return Record { [[Identifier]]: _timeZoneIdentifier_, [[Result]]: _record_ } to _previousReturns_.
+          1. Return _record_.
+      1. Append Available Named Time Zone Identifier Return Record { [[Identifier]]: _timeZoneIdentifier_, [[Result]]: ~empty~ } to _previousReturns_.
+      1. Return ~empty~.
+    </emu-alg>
+    <emu-note>
+      <p>The use of _agentRecord_.[[GetAvailableNamedTimeZoneIdentifierReturns]] expresses that calling this operation with equivalent time zone identifiers must produce the same results, and that time zone identifiers must not change from primary to non-primary, during the lifetime of the surrounding agent. See the note in AvailableNamedTimeZoneIdentifiers.</p>
+    </emu-note>
+  </emu-clause>
+
+  <emu-clause id="sec-totemporaltimezoneidentifier" type="abstract operation">
+    <h1>
+      ToTemporalTimeZoneIdentifier (
+        _temporalTimeZoneLike_: an ECMAScript language value,
+      ): either a normal completion containing an available time zone identifier or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It attempts to derive an available time zone identifier from _temporalTimeZoneLike_.</dd>
+    </dl>
+    <emu-alg>
+      1. If _temporalTimeZoneLike_ is an Object and _temporalTimeZoneLike_ has an [[InitializedTemporalZonedDateTime]] internal slot, return _temporalTimeZoneLike_.[[TimeZone]].
+      1. If _temporalTimeZoneLike_ is not a String, throw a *TypeError* exception.
+      1. Let _parseResult_ be ? ParseTemporalTimeZoneString(_temporalTimeZoneLike_).
+      1. Let _offsetMinutes_ be _parseResult_.[[OffsetMinutes]].
+      1. If _offsetMinutes_ is not ~empty~, return FormatOffsetTimeZoneIdentifier(_offsetMinutes_).
+      1. Let _name_ be _parseResult_.[[Name]].
+      1. Assert: _name_ is not ~empty~.
+      1. Let _timeZoneIdentifierRecord_ be GetAvailableNamedTimeZoneIdentifier(_name_).
+      1. If _timeZoneIdentifierRecord_ is ~empty~, throw a *RangeError* exception.
+      1. Return _timeZoneIdentifierRecord_.[[Identifier]].
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-getoffsetnanosecondsfor" type="abstract operation">
+    <h1>
+      GetOffsetNanosecondsFor (
+        _timeZone_: an available time zone identifier,
+        _epochNanoseconds_: an epoch nanoseconds count,
+      ): an integer in the interval from -NanosecondsPerDay (exclusive) to NanosecondsPerDay (exclusive)
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It determines the UTC offset in nanoseconds of an epoch nanoseconds count.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. Let _parseResult_ be ! ParseTimeZoneIdentifier(_timeZone_).
+      1. If _parseResult_.[[OffsetMinutes]] is not ~empty~, return _parseResult_.[[OffsetMinutes]] × NanosecondsPerMinute.
+      1. Assert: _parseResult_.[[Name]] is not ~empty~.
+      1. Return GetNamedTimeZoneOffsetNanoseconds(_parseResult_.[[Name]], _epochNanoseconds_).
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-getisodatetimefor" type="abstract operation">
+    <h1>
+      GetISODateTimeFor (
+        _timeZone_: an available time zone identifier,
+        _epochNanoseconds_: an epoch nanoseconds count,
+      ): an ISO Date-Time Record
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It returns the components of a wall-clock time in the given _timeZone_, corresponding to the given epoch nanoseconds count.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. Assert: IsWithinEpochNanosecondsInterval(_epochNanoseconds_) is *true*.
+      1. Let _offsetNanoseconds_ be GetOffsetNanosecondsFor(_timeZone_, _epochNanoseconds_).
+      1. Let _remainderNanoseconds_ be _epochNanoseconds_ modulo NanosecondsPerMillisecond.
+      1. Let _epochMilliseconds_ be (_epochNanoseconds_ - _remainderNanoseconds_) / NanosecondsPerMillisecond.
+      1. Let _year_ be YearFromTime(𝔽(_epochMilliseconds_)).
+      1. Let _month_ be MonthFromTime(𝔽(_epochMilliseconds_)) + 1.
+      1. Let _day_ be DateFromTime(𝔽(_epochMilliseconds_)).
+      1. Let _hour_ be HourFromTime(𝔽(_epochMilliseconds_)).
+      1. Let _minute_ be MinuteFromTime(𝔽(_epochMilliseconds_)).
+      1. Let _second_ be SecondFromTime(𝔽(_epochMilliseconds_)).
+      1. Let _millisecond_ be MillisecondFromTime(𝔽(_epochMilliseconds_)).
+      1. Let _microsecond_ be floor(_remainderNanoseconds_ / 1000).
+      1. Assert: _microsecond_ &lt; 1000.
+      1. Let _nanosecond_ be _remainderNanoseconds_ modulo 1000.
+      1. Return BalanceISODateTime(_year_, _month_, _day_, _hour_, _minute_, _second_, _millisecond_, _microsecond_, _nanosecond_ + _offsetNanoseconds_).
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-getepochnanosecondsfor" type="abstract operation">
+    <h1>
+      GetEpochNanosecondsFor (
+        _timeZone_: an available time zone identifier,
+        _isoDateTime_: an ISO Date-Time Record,
+        _disambiguation_: *"compatible"*, *"earlier"*, *"later"*, or *"reject"*,
+      ): either a normal completion containing an epoch nanoseconds count or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+      </dd>
+    </dl>
+    <emu-alg>
+      1. Let _possibleEpochNanoseconds_ be ? GetPossibleEpochNanoseconds(_timeZone_, _isoDateTime_).
+      1. Return ? DisambiguatePossibleEpochNanoseconds(_possibleEpochNanoseconds_, _timeZone_, _isoDateTime_, _disambiguation_).
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-disambiguatepossibleepochnanoseconds" type="abstract operation">
+    <h1>
+      DisambiguatePossibleEpochNanoseconds (
+        _possibleEpochNanoseconds_: a List of epoch nanoseconds counts,
+        _timeZone_: an available time zone identifier,
+        _isoDateTime_: an ISO Date-Time Record,
+        _disambiguation_: *"compatible"*, *"earlier"*, *"later"*, or *"reject"*,
+      ): either a normal completion containing an epoch nanoseconds count or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It chooses from a List of possible epoch nanoseconds counts the one indicated by the _disambiguation_ parameter.</dd>
+    </dl>
+    <emu-alg>
+      1. Let _count_ be the number of elements in _possibleEpochNanoseconds_.
+      1. If _count_ = 1, return the sole element of _possibleEpochNanoseconds_.
+      1. If _count_ ≠ 0, then
+        1. If _disambiguation_ is either *"earlier"* or *"compatible"*, return _possibleEpochNanoseconds_[0].
+        1. If _disambiguation_ is *"later"*, return _possibleEpochNanoseconds_[_count_ - 1].
+        1. Assert: _disambiguation_ is *"reject"*.
+        1. Throw a *RangeError* exception.
+      1. Assert: _count_ = 0.
+      1. If _disambiguation_ is *"reject"*, throw a *RangeError* exception.
+      1. Let _before_ be the latest possible ISO Date-Time Record which is earlier than _isoDateTime_ and for which ! GetPossibleEpochNanoseconds(_timeZone_, _before_) is not empty.
+      1. Let _after_ be the earliest possible ISO Date-Time Record which is later than _isoDateTime_ and for which ! GetPossibleEpochNanoseconds(_timeZone_, _after_) is not empty.
+      1. Let _beforePossible_ be ! GetPossibleEpochNanoseconds(_timeZone_, _before_).
+      1. Assert: The number of elements in _beforePossible_ = 1.
+      1. Let _afterPossible_ be ! GetPossibleEpochNanoseconds(_timeZone_, _after_).
+      1. Assert: The number of elements in _afterPossible_ = 1.
+      1. Let _offsetBefore_ be GetOffsetNanosecondsFor(_timeZone_, the sole element of _beforePossible_).
+      1. Let _offsetAfter_ be GetOffsetNanosecondsFor(_timeZone_, the sole element of _afterPossible_).
+      1. Let _nanoseconds_ be _offsetAfter_ - _offsetBefore_.
+      1. Assert: _nanoseconds_ is in the inclusive interval from -NanosecondsPerDay to NanosecondsPerDay.
+      1. If _disambiguation_ is *"earlier"*, then
+        1. Let _timeDuration_ be ! TimeDurationFromComponents(0, 0, 0, 0, 0, -_nanoseconds_).
+        1. Let _earlierTime_ be AddTime(_isoDateTime_.[[Time]], _timeDuration_).
+        1. Let _earlierDate_ be AddDaysToISODate(_isoDateTime_.[[ISODate]], _earlierTime_.[[Days]]).
+        1. Let _earlierDateTime_ be the ISO Date-Time Record { [[ISODate]]: _earlierDate_, [[Time]]: _earlierTime_ }.
+        1. Set _possibleEpochNanoseconds_ to ? GetPossibleEpochNanoseconds(_timeZone_, _earlierDateTime_).
+        1. Assert: _possibleEpochNanoseconds_ is not empty.
+        1. Return _possibleEpochNanoseconds_[0].
+      1. Assert: _disambiguation_ is *"compatible"* or *"later"*.
+      1. Let _timeDuration_ be ! TimeDurationFromComponents(0, 0, 0, 0, 0, _nanoseconds_).
+      1. Let _laterTime_ be AddTime(_isoDateTime_.[[Time]], _timeDuration_).
+      1. Let _laterDate_ be AddDaysToISODate(_isoDateTime_.[[ISODate]], _laterTime_.[[Days]]).
+      1. Let _laterDateTime_ be the ISO Date-Time Record { [[ISODate]]: _laterDate_, [[Time]]: _laterTime_ }.
+      1. Set _possibleEpochNanoseconds_ to ? GetPossibleEpochNanoseconds(_timeZone_, _laterDateTime_).
+      1. Set _count_ to the number of elements in _possibleEpochNanoseconds_.
+      1. Assert: _count_ ≠ 0.
+      1. Return _possibleEpochNanoseconds_[_count_ - 1].
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-getpossibleepochnanoseconds" type="abstract operation">
+    <h1>
+      GetPossibleEpochNanoseconds (
+        _timeZone_: an available time zone identifier,
+        _isoDateTime_: an ISO Date-Time Record,
+      ): either a normal completion containing a List of epoch nanoseconds counts or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>
+        It determines the possible epoch nanoseconds counts that may correspond to _isoDateTime_.
+      </dd>
+    </dl>
+    <emu-alg>
+      1. Let _parseResult_ be ! ParseTimeZoneIdentifier(_timeZone_).
+      1. If _parseResult_.[[OffsetMinutes]] is not ~empty~, then
+        1. Let _balanced_ be BalanceISODateTime(_isoDateTime_.[[ISODate]].[[Year]], _isoDateTime_.[[ISODate]].[[Month]], _isoDateTime_.[[ISODate]].[[Day]], _isoDateTime_.[[Time]].[[Hour]], _isoDateTime_.[[Time]].[[Minute]] - _parseResult_.[[OffsetMinutes]], _isoDateTime_.[[Time]].[[Second]], _isoDateTime_.[[Time]].[[Millisecond]], _isoDateTime_.[[Time]].[[Microsecond]], _isoDateTime_.[[Time]].[[Nanosecond]]).
+        1. Perform ? ValidateISODaysRange(_balanced_.[[ISODate]]).
+        1. Let _epochNanoseconds_ be GetUTCEpochNanoseconds(_balanced_).
+        1. Let _possibleEpochNanoseconds_ be « _epochNanoseconds_ ».
+      1. Else,
+        1. Assert: _parseResult_.[[Name]] is not ~empty~.
+        1. Let _possibleEpochNanoseconds_ be GetNamedTimeZoneEpochNanoseconds(_parseResult_.[[Name]], _isoDateTime_).
+      1. For each value _epochNanoseconds_ of _possibleEpochNanoseconds_, do
+        1. If IsWithinEpochNanosecondsInterval(_epochNanoseconds_) is *false*, throw a *RangeError* exception.
+      1. Return _possibleEpochNanoseconds_.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-getstartofday" type="abstract operation">
+    <h1>
+      GetStartOfDay (
+        _timeZone_: an available time zone identifier,
+        _isoDate_: an ISO Date Record,
+      ): either a normal completion containing an epoch nanoseconds count or a throw completion
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It determines the epoch nanoseconds count that corresponds to the first valid wall-clock time in the calendar date _isoDate_ in _timeZone_.</dd>
+    </dl>
+    <emu-alg>
+      1. Let _isoDateTime_ be the ISO Date-Time Record { [[ISODate]]: _isoDate_, [[Time]]: MidnightTimeRecord() }.
+      1. Let _possibleEpochNanoseconds_ be ? GetPossibleEpochNanoseconds(_timeZone_, _isoDateTime_).
+      1. If _possibleEpochNanoseconds_ is not empty, return _possibleEpochNanoseconds_[0].
+      1. Assert: IsOffsetTimeZoneIdentifier(_timeZone_) is *false*.
+      1. Let _wallClockAdvance_ be 1.
+      1. Repeat,
+        1. Let _timeAfter_ be AddTime(_isoDateTime_.[[Time]], _wallClockAdvance_).
+        1. Let _isoDateAfter_ be AddDaysToISODate(_isoDate_, _timeAfter_.[[Days]]).
+        1. Let _isoDateTimeAfter_ be the ISO Date-Time Record { [[ISODate]]: _isoDateAfter_, [[Time]]: _timeAfter_ }.
+        1. Let _possibleEpochNanosecondsAfter_ be GetNamedTimeZoneEpochNanoseconds(_timeZone_, _isoDateTimeAfter_).
+        1. If _possibleEpochNanosecondsAfter_ is not empty, then
+          1. Assert: The number of elements in _possibleEpochNanosecondsAfter_ = 1.
+          1. Let _result_ be the sole element of _possibleEpochNanosecondsAfter_.
+          1. If IsWithinEpochNanosecondsInterval(_result_) is *false*, throw a *RangeError* exception.
+          1. Return _result_.
+        1. Set _wallClockAdvance_ to _wallClockAdvance_ + 1.
+    </emu-alg>
+  </emu-clause>
+
+  <emu-clause id="sec-timezoneequals" type="abstract operation">
+    <h1>
+      TimeZoneEquals (
+        _xTimeZone_: an available time zone identifier,
+        _yTimeZone_: an available time zone identifier,
+      ): a Boolean
+    </h1>
+    <dl class="header">
+      <dt>description</dt>
+      <dd>It returns *true* if its arguments represent time zones using the same identifier.</dd>
+    </dl>
+    <emu-alg>
+      1. If _xTimeZone_ is _yTimeZone_, return *true*.
+      1. If IsOffsetTimeZoneIdentifier(_xTimeZone_) is *false* and IsOffsetTimeZoneIdentifier(_yTimeZone_) is *false*, then
+        1. Let _xRecord_ be GetAvailableNamedTimeZoneIdentifier(_xTimeZone_).
+        1. Let _yRecord_ be GetAvailableNamedTimeZoneIdentifier(_yTimeZone_).
+        1. Assert: _xRecord_ is not ~empty~.
+        1. Assert: _yRecord_ is not ~empty~.
+        1. If _xRecord_.[[PrimaryIdentifier]] is _yRecord_.[[PrimaryIdentifier]], return *true*.
+      1. Assert: If _xTimeZone_ and _yTimeZone_ are both offset time zone identifiers, they do not represent the same number of offset minutes.
+      1. Return *false*.
+    </emu-alg>
+  </emu-clause>
+</emu-clause>
