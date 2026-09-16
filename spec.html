@@ -12723,8 +12723,8 @@
         </tr>
         <tr>
           <td>[[KeptAlive]]</td>
-          <td>a List of either Objects or Symbols</td>
-          <td>Initially a new empty List, representing the list of objects and/or symbols to be kept alive until the end of the current Job</td>
+          <td>a List of WeakRefs</td>
+          <td>Initially a new empty List, representing the list of WeakRefs whose referents are to be kept alive until the end of the current Job</td>
         </tr>
         <tr>
           <td>[[ModuleAsyncEvaluationCount]]</td>
@@ -12900,10 +12900,27 @@
     <emu-clause id="sec-liveness">
       <h1>Liveness</h1>
 
-      <p>For some set of objects and/or symbols _objSet_ a <dfn>hypothetical WeakRef-oblivious</dfn> execution with respect to _objSet_ is an execution whereby the abstract operation WeakRefDeref of a WeakRef whose referent is an element of _objSet_ always returns *undefined*.</p>
+      <p>For some set of objects and/or symbols _objSet_ a <dfn>hypothetical WeakRef-oblivious</dfn> execution with respect to _objSet_ is an execution whereby the abstract operation WeakRefDeref is replaced by the following:</p>
+
+      <emu-clause id="sec-weakrefderefhypothetical" type="abstract operation">
+        <h1>
+          WeakRefDerefHypothetical (
+            _weakRef_: a WeakRef,
+          ): an ECMAScript language value
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Let _target_ be _weakRef_.[[WeakRefTarget]].
+          1. Let _agentRecord_ be the surrounding agent's Agent Record.
+          1. If _target_ is not ~empty~, then
+            1. [declared="objSet"] If _objSet_ does not contain _target_, or _agentRecord_.[[KeptAlive]] contains _weakRef_, return _target_.
+          1. Return *undefined*.
+        </emu-alg>
+      </emu-clause>
 
       <emu-note>
-        WeakRef-obliviousness, together with liveness, capture two notions. One, that a WeakRef itself does not keep its referent alive. Two, that cycles in liveness does not imply that a value is live. To be concrete, if determining _v_'s liveness depends on determining the liveness of a WeakRef referent, _r_, _r_'s liveness cannot assume _v_'s liveness, which would be circular reasoning.
+        WeakRef-obliviousness, together with liveness, capture two notions. One, that a WeakRef that is not in a [[KeptAlive]] List does not keep its referent alive. Two, that cycles in liveness does not imply that a value is live. To be concrete, if determining _v_'s liveness depends on determining the liveness of a WeakRef referent, _r_, _r_'s liveness cannot assume _v_'s liveness, which would be circular reasoning.
       </emu-note>
       <emu-note>
         WeakRef-obliviousness is defined on sets of objects or symbols instead of individual values to account for cycles. If it were defined on individual values, then a WeakRef referent in a cycle will be considered live even though its identity is only observed via other WeakRef referents in the cycle.
@@ -12912,18 +12929,15 @@
         Colloquially, we say that an individual object or symbol is live if every set containing it is live.
       </emu-note>
 
-      <p>At any point during evaluation, a set of objects and/or symbols _objSet_ is considered <dfn>live</dfn> if either of the following conditions is met:</p>
+      <p>At any point during evaluation, a set of objects and/or symbols _objSet_ is considered <dfn>live</dfn> if there exists a valid future hypothetical WeakRef-oblivious execution with respect to _objSet_ that observes the identity of any value in _objSet_.</p>
 
-      <ul>
-        <li>
-          Any element in _objSet_ is included in any agent's [[KeptAlive]] List.
-        </li>
-        <li>
-          There exists a valid future hypothetical WeakRef-oblivious execution with respect to _objSet_ that observes the identity of any value in _objSet_.
-        </li>
-      </ul>
+      <p>If WeakRefDerefHypothetical returns a value, the execution observes that value's identity.</p>
+
       <emu-note>
-        The second condition above intends to capture the intuition that a value is live if its identity is observable via non-WeakRef means. A value's identity may be observed by observing a strict equality comparison or observing the value being used as key in a Map.
+        The above intends to capture the intuition that a value is live if its identity is observable via non-WeakRef means. A value's identity may be observed by observing a strict equality comparison or observing the value being used as key in a Map.
+      </emu-note>
+      <emu-note>
+        WeakRefDerefHypothetical returns a value in _objSet_ only for a WeakRef in the surrounding agent's [[KeptAlive]] List, so a value in _objSet_ is live whenever a call to WeakRefDeref on such a WeakRef could still return it.
       </emu-note>
       <emu-note>
         <p>Presence of an object or a symbol in a field, an internal slot, or a property does not imply that the value is live. For example if the value in question is never passed back to the program, then it cannot be observed.</p>
@@ -13010,18 +13024,18 @@
   <emu-clause id="sec-addtokeptobjects" type="abstract operation">
     <h1>
       AddToKeptObjects (
-        _value_: an Object or a Symbol,
+        _weakRef_: a WeakRef,
       ): ~unused~
     </h1>
     <dl class="header">
     </dl>
     <emu-alg>
       1. Let _agentRecord_ be the surrounding agent's Agent Record.
-      1. Append _value_ to _agentRecord_.[[KeptAlive]].
+      1. Append _weakRef_ to _agentRecord_.[[KeptAlive]].
       1. Return ~unused~.
     </emu-alg>
     <emu-note>
-      When the abstract operation AddToKeptObjects is called with a target object or symbol, it adds the target to a list that will point strongly at the target until ClearKeptObjects is called.
+      When the abstract operation AddToKeptObjects is called with a target WeakRef, it makes that WeakRef strong until ClearKeptObjects is called.
     </emu-note>
   </emu-clause>
 
@@ -48586,10 +48600,14 @@ THH:mm:ss.sss
           1. If NewTarget is *undefined*, throw a *TypeError* exception.
           1. If CanBeHeldWeakly(_target_) is *false*, throw a *TypeError* exception.
           1. Let _weakRef_ be ? OrdinaryCreateFromConstructor(NewTarget, *"%WeakRef.prototype%"*, « [[WeakRefTarget]] »).
-          1. Perform AddToKeptObjects(_target_).
+          1. Perform AddToKeptObjects(_weakRef_).
           1. Set _weakRef_.[[WeakRefTarget]] to _target_.
           1. Return _weakRef_.
         </emu-alg>
+
+        <emu-note>
+          <p>The order of the last two steps before returning is not observable. AddToKeptObjects is performed first so that _weakRef_ is in the surrounding agent's [[KeptAlive]] List before any WeakRef refers to _target_; in the opposite order, _target_ is still live whenever a later call to WeakRefDeref on _weakRef_ could return it.</p>
+        </emu-note>
       </emu-clause>
     </emu-clause>
 
@@ -48674,14 +48692,16 @@ THH:mm:ss.sss
         <dl class="header">
         </dl>
         <emu-alg>
+          1. Perform AddToKeptObjects(_weakRef_).
           1. Let _target_ be _weakRef_.[[WeakRefTarget]].
-          1. If _target_ is not ~empty~, then
-            1. Perform AddToKeptObjects(_target_).
-            1. Return _target_.
+          1. If _target_ is not ~empty~, return _target_.
           1. Return *undefined*.
         </emu-alg>
         <emu-note>
           <p>This abstract operation is defined separately from WeakRef.prototype.deref strictly to make it possible to succinctly define liveness.</p>
+        </emu-note>
+        <emu-note>
+          <p>The order of the first two steps is not observable. AddToKeptObjects is performed first so that _weakRef_ is in the surrounding agent's [[KeptAlive]] List before _weakRef_.[[WeakRefTarget]] is read; in the opposite order, _target_ is still live whenever a later call to WeakRefDeref on _weakRef_ could return it.</p>
         </emu-note>
       </emu-clause>
     </emu-clause>
