@@ -45466,6 +45466,7 @@ THH:mm:ss.sss
           1. Let _block_ be ? CreateByteDataBlock(_byteLength_).
           1. Set _obj_.[[ArrayBufferData]] to _block_.
           1. Set _obj_.[[ArrayBufferByteLength]] to _byteLength_.
+          1. Set _obj_.[[ArrayBufferDetachKey]] to ~empty~.
           1. If _allocatingResizableBuffer_ is *true*, then
             1. If it is not possible to create a Data Block _block_ consisting of _maxByteLength_ bytes, throw a *RangeError* exception.
             1. NOTE: Resizable ArrayBuffers are designed to be implementable with in-place growth. Implementations may throw if, for example, virtual memory cannot be reserved up front.
@@ -45517,7 +45518,7 @@ THH:mm:ss.sss
             1. Let _newMaxByteLength_ be _arrayBuffer_.[[ArrayBufferMaxByteLength]].
           1. Else,
             1. Let _newMaxByteLength_ be ~empty~.
-          1. If _arrayBuffer_.[[ArrayBufferDetachKey]] is not *undefined*, throw a *TypeError* exception.
+          1. If _arrayBuffer_.[[ArrayBufferDetachKey]] is not ~empty~, throw a *TypeError* exception.
           1. Let _newBuffer_ be ? <emu-meta suppress-effects="user-code">AllocateArrayBuffer(%ArrayBuffer%, _newByteLength_, _newMaxByteLength_)</emu-meta>.
           1. Let _copyLength_ be min(_newByteLength_, _arrayBuffer_.[[ArrayBufferByteLength]]).
           1. Let _fromBlock_ be _arrayBuffer_.[[ArrayBufferData]].
@@ -45547,7 +45548,7 @@ THH:mm:ss.sss
         <h1>
           DetachArrayBuffer (
             _arrayBuffer_: an ArrayBuffer,
-            optional _key_: anything,
+            optional _key_: an ECMAScript language value,
           ): either a normal completion containing ~unused~ or a throw completion
         </h1>
         <dl class="header">
@@ -45556,8 +45557,11 @@ THH:mm:ss.sss
         </dl>
         <emu-alg>
           1. Assert: IsSharedArrayBuffer(_arrayBuffer_) is *false*.
-          1. If _key_ is not present, set _key_ to *undefined*.
-          1. If _arrayBuffer_.[[ArrayBufferDetachKey]] is not _key_, throw a *TypeError* exception.
+          1. Let _expectedKey_ be _arrayBuffer_.[[ArrayBufferDetachKey]].
+          1. If _key_ is present, then
+            1. If _expectedKey_ is ~empty~ or SameValue(_key_, _expectedKey_) is *false*, throw a *TypeError* exception.
+          1. Else,
+            1. If _expectedKey_ is not ~empty~, throw a *TypeError* exception.
           1. Set _arrayBuffer_.[[ArrayBufferData]] to *null*.
           1. Set _arrayBuffer_.[[ArrayBufferByteLength]] to 0.
           1. Return ~unused~.
@@ -46110,7 +46114,7 @@ THH:mm:ss.sss
       <h1>Properties of ArrayBuffer Instances</h1>
       <p>ArrayBuffer instances inherit properties from the ArrayBuffer prototype object. ArrayBuffer instances each have an [[ArrayBufferData]] internal slot, an [[ArrayBufferByteLength]] internal slot, and an [[ArrayBufferDetachKey]] internal slot. ArrayBuffer instances which are resizable each have an [[ArrayBufferMaxByteLength]] internal slot.</p>
       <p>ArrayBuffer instances whose [[ArrayBufferData]] is *null* are considered to be detached and all operators to access or modify data contained in the ArrayBuffer instance will fail.</p>
-      <p>ArrayBuffer instances whose [[ArrayBufferDetachKey]] is set to a value other than *undefined* need to have all DetachArrayBuffer calls passing that same “detach key” as an argument, otherwise a TypeError will result. This internal slot is only ever set by certain embedding environments, not by algorithms in this specification.</p>
+      <p>For ArrayBuffer instances whose [[ArrayBufferDetachKey]] is not ~empty~, DetachArrayBuffer must be passed that same “detach key” as the optional second argument, otherwise a TypeError will be thrown. This internal slot is only ever set to a value other than ~empty~ by certain embedding environments, not by algorithms in this specification.</p>
     </emu-clause>
 
     <emu-clause id="sec-resizable-arraybuffer-guidelines">
