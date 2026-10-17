@@ -4,7 +4,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
-const DEFAULT_SPEC_PATH = fileURLToPath(new URL('../spec.html', import.meta.url));
+const DEFAULT_SPEC_PATHS = [
+  '../spec.html',
+  ...fs.globSync('../temporal/*.emu', { cwd: path.dirname(fileURLToPath(import.meta.url)), absolute: true })
+].map(rel => fileURLToPath(new URL(rel, import.meta.url)));
 const ROOT_WORD_REPLACEMENTS_PATH = new URL('./check-alias-abbreviations.csv', import.meta.url);
 
 const aliasPattern = /\b_([A-Za-z][A-Za-z0-9]*)_\b/g;
@@ -21,40 +24,47 @@ const allowedAliases = new Set([
 const rootWordReplacements = readRootWordReplacements(ROOT_WORD_REPLACEMENTS_PATH);
 
 const args = parseArgs(process.argv.slice(2));
-const source = fs.readFileSync(args.specPath, 'utf8');
-const relativeSpecPath = path.relative(process.cwd(), args.specPath) || path.basename(args.specPath);
 const warnings = [];
 
-for (const [lineIndex, line] of source.split(/\r?\n/).entries()) {
-  for (const match of line.matchAll(aliasPattern)) {
-    const alias = match[1];
-    if (allowedAliases.has(alias)) {
-      continue;
-    }
+const specPathsWithRelative = args.specPaths.map(specPath => ({
+  absolute: specPath,
+  relative: path.relative(process.cwd(), specPath) || path.basename(specPath),
+}));
 
-    const underscoreOffset = match.index;
-    const hits = findDisallowedRootWords(alias);
-    if (hits.length === 0) {
-      continue;
-    }
+for (const specPath of specPathsWithRelative) {
+  const source = fs.readFileSync(specPath.absolute, 'utf8');
+  for (const [lineIndex, line] of source.split(/\r?\n/).entries()) {
+    for (const match of line.matchAll(aliasPattern)) {
+      const alias = match[1];
+      if (allowedAliases.has(alias)) {
+        continue;
+      }
 
-    const suggestedAlias = suggestAlias(alias, hits);
-    for (const hit of hits) {
-      const column = underscoreOffset + hit.start + 2;
-      warnings.push({
-        alias,
-        column,
-        endColumn: column + hit.matchedText.length,
-        hit,
-        lineNumber: lineIndex + 1,
-        suggestedAlias,
-      });
+      const underscoreOffset = match.index;
+      const hits = findDisallowedRootWords(alias);
+      if (hits.length === 0) {
+        continue;
+      }
+
+      const suggestedAlias = suggestAlias(alias, hits);
+      for (const hit of hits) {
+        const column = underscoreOffset + hit.start + 2;
+        warnings.push({
+          alias,
+          column,
+          endColumn: column + hit.matchedText.length,
+          hit,
+          lineNumber: lineIndex + 1,
+          relativeSpecPath: specPath.relative,
+          suggestedAlias,
+        });
+      }
     }
   }
 }
 
 for (const warning of warnings) {
-  const {alias, column, endColumn, hit, lineNumber, suggestedAlias} = warning;
+  const {alias, column, endColumn, hit, lineNumber, suggestedAlias, relativeSpecPath} = warning;
   const title = 'Disallowed Alias Root Word';
   const message =
     `Alias _${alias}_ contains disallowed component ${JSON.stringify(hit.matchedText)}; ` +
@@ -66,28 +76,27 @@ for (const warning of warnings) {
 }
 
 if (warnings.length === 0) {
-  console.log(`No disallowed alias root words found in ${relativeSpecPath}.`);
+  console.log(`No disallowed alias root words found in ${specPathsWithRelative.map(specPath => specPath.relative).join(', ')}.`);
 }
 
 function parseArgs(argv) {
-  let specPath = undefined;
+  const specPaths = [];
 
   for (const arg of argv) {
     if (arg === '--help') {
-      console.log('Usage: node scripts/check-alias-abbreviations.mjs [path/to/spec.html]');
+      console.log('Usage: node scripts/check-alias-abbreviations.mjs [path/to/spec1.html] [path/to/spec2.html] ...');
       process.exit(1);
     }
     if (arg.startsWith('-')) {
       throw new Error(`Unknown option: ${arg}`);
     }
-    if (specPath !== undefined) {
-      throw new Error(`Unexpected argument: ${arg}`);
-    }
-    specPath = path.resolve(arg);
+    specPaths.push(path.resolve(arg));
   }
 
-  specPath ||= DEFAULT_SPEC_PATH;
-  return {specPath};
+  if (specPaths.length === 0) {
+    specPaths.push(...DEFAULT_SPEC_PATHS);
+  }
+  return {specPaths};
 }
 
 function readRootWordReplacements(csvPath) {
