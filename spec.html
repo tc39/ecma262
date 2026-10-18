@@ -19891,7 +19891,7 @@
               1. If _argList_ has no elements, return *undefined*.
               1. Let _evalArg_ be the first element of _argList_.
               1. If IsStrict(this |CallExpression|) is *true*, let _strictCaller_ be *true*; else let _strictCaller_ be *false*.
-              1. [id="step-callexpression-evaluation-direct-eval"] Return ? PerformEval(_evalArg_, _strictCaller_, *true*).
+              1. [id="step-callexpression-evaluation-direct-eval"] Return ? PerformEval(_evalArg_, _strictCaller_, ~direct-eval~).
           1. Let _thisCall_ be this |CallExpression|.
           1. Let _tailCall_ be IsInTailPosition(_thisCall_).
           1. Return ? EvaluateCall(_func_, _ref_, _args_, _tailCall_).
@@ -30422,7 +30422,7 @@
       <p>This function is the <dfn>%eval%</dfn> intrinsic object.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
-        1. Return ? PerformEval(_source_, *false*, *false*).
+        1. Return ? PerformEval(_source_, *false*, ~indirect-eval~).
       </emu-alg>
 
       <emu-clause id="sec-performeval" type="abstract operation" oldids="sec-performeval-rules-outside-functions,sec-performeval-rules-outside-methods,sec-performeval-rules-outside-constructors">
@@ -30430,13 +30430,13 @@
           PerformEval (
             _source_: an ECMAScript language value,
             _strictCaller_: a Boolean,
-            _direct_: a Boolean,
+            _direct_: ~direct-eval~ or ~indirect-eval~,
           ): either a normal completion containing an ECMAScript language value or a throw completion
         </h1>
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Assert: If _direct_ is *false*, then _strictCaller_ is also *false*.
+          1. Assert: If _direct_ is ~indirect-eval~, then _strictCaller_ is *false*.
           1. If _source_ is not a String, return _source_.
           1. Let _evalRealm_ be the current Realm Record.
           1. NOTE: In the case of a direct eval, _evalRealm_ is the realm of both the caller of `eval` and of the `eval` function itself.
@@ -30445,7 +30445,7 @@
           1. Let _inMethod_ be *false*.
           1. Let _inDerivedCtor_ be *false*.
           1. Let _inClassFieldInitializer_ be *false*.
-          1. If _direct_ is *true*, then
+          1. If _direct_ is ~direct-eval~, then
             1. Let _thisEnvRecord_ be GetThisEnvironment().
             1. If _thisEnvRecord_ is a Function Environment Record, then
               1. Let _func_ be _thisEnvRecord_.[[FunctionObject]].
@@ -30466,8 +30466,8 @@
           1. If _strictCaller_ is *true*, let _strictEval_ be *true*.
           1. Else, let _strictEval_ be ScriptIsStrict of _script_.
           1. Let _runningContext_ be the running execution context.
-          1. NOTE: If _direct_ is *true*, _runningContext_ will be the execution context that performed the direct eval. If _direct_ is *false*, _runningContext_ will be the execution context for the invocation of the `eval` function.
-          1. If _direct_ is *true*, then
+          1. NOTE: If _direct_ is ~direct-eval~, _runningContext_ will be the execution context that performed the direct eval. If _direct_ is ~indirect-eval~, _runningContext_ will be the execution context for the invocation of the `eval` function.
+          1. If _direct_ is ~direct-eval~, then
             1. Let _lexicalEnv_ be NewDeclarativeEnvironment(_runningContext_'s LexicalEnvironment).
             1. Let _variableEnv_ be _runningContext_'s VariableEnvironment.
             1. Let _privateEnv_ be _runningContext_'s PrivateEnvironment.
@@ -30505,18 +30505,23 @@
             _calleeRealm_: a Realm Record,
             _paramStrings_: a List of Strings,
             _bodyString_: a String,
-            _direct_: a Boolean,
+            _compilationType_: ~direct-eval~, ~indirect-eval~, or ~function~,
           ): either a normal completion containing ~unused~ or a throw completion
         </h1>
         <dl class="header">
           <dt>description</dt>
           <dd>It allows host environments to block certain ECMAScript functions which allow developers to interpret and evaluate strings as ECMAScript code.</dd>
+          <dt>skip return checks</dt>
+          <dd>true</dd>
         </dl>
         <p>
           _paramStrings_ represents the strings that, when using one of the function constructors, will be concatenated together to build the parameters list. _bodyString_ represents the function body or the string passed to an `eval` call.
-          _direct_ signifies whether the evaluation is a direct eval.
+          _compilationType_ describes whether the compilation is happening due to a direct `eval` call, an indirect `eval` call, or one of the function constructors.
         </p>
-        <p>The default implementation of HostEnsureCanCompileStrings is to return NormalCompletion(~unused~).</p>
+        <p>The default implementation of HostEnsureCanCompileStrings performs the following steps when called:</p>
+        <emu-alg>
+          1. Return ~unused~.
+        </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-evaldeclarationinstantiation" type="abstract operation" oldids="sec-web-compat-evaldeclarationinstantiation">
@@ -31806,7 +31811,7 @@
               1. Append ? ToString(_arg_) to _paramStrings_.
             1. Let _bodyString_ be ? ToString(_bodyArg_).
             1. Let _currentRealm_ be the current Realm Record.
-            1. Perform ? HostEnsureCanCompileStrings(_currentRealm_, _paramStrings_, _bodyString_, *false*).
+            1. Perform ? HostEnsureCanCompileStrings(_currentRealm_, _paramStrings_, _bodyString_, ~function~).
             1. Let _paramString_ be the empty String.
             1. If _argCount_ > 0, then
               1. Set _paramString_ to _paramStrings_[0].
