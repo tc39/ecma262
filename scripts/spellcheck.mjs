@@ -18,7 +18,7 @@ const ASPELL_OPTS = [
 ].join(' ');
 
 function makeDict(words) {
-  return `personal_ws-1.1 en ${words.length}\n${words.join('\n')}`;
+  return `personal_ws-1.1 en ${words.length} utf-8\n${words.join('\n')}`;
 }
 
 function lines(text) {
