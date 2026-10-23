@@ -7401,7 +7401,7 @@
 
     <emu-clause id="sec-disposableresource-records">
       <h1>DisposableResource Records</h1>
-      <p>A <dfn variants="DisposableResource Records">DisposableResource Record</dfn> is a Record value used to encapsulate a disposable object along with the method used to dispose the object. DisposableResource Records are produced by the CreateDisposableResource abstract operation.</p>
+      <p>A <dfn variants="DisposableResource Records">DisposableResource Record</dfn> is a Record value used to encapsulate a disposable object along with the method used to dispose the object. DisposableResource Records are created by the AddDisposableResource abstract operation.</p>
       <p>DisposableResource Records have the fields listed in <emu-xref href="#table-disposableresource-record-fields"></emu-xref>:</p>
       <emu-table id="table-disposableresource-record-fields" caption="DisposableResource Record Fields">
         <table>
@@ -7453,7 +7453,7 @@
       </emu-table>
     </emu-clause>
 
-    <emu-clause id="sec-adddisposableresource" type="abstract operation">
+    <emu-clause id="sec-adddisposableresource" type="abstract operation" oldids="sec-createdisposableresource">
       <h1>
         AddDisposableResource (
           _disposableResourceStack_: a List of DisposableResource Records,
@@ -7467,35 +7467,17 @@
       <emu-alg>
         1. If _method_ is present, then
           1. Assert: _value_ is *undefined*.
-          1. Let _resource_ be ? CreateDisposableResource(*undefined*, _kind_, _method_).
-        1. Else,
-          1. If _value_ is either *null* or *undefined* and _kind_ is ~sync-dispose~, return ~unused~.
+          1. Let _resource_ be the DisposableResource Record { [[ResourceValue]]: *undefined*, [[Kind]]: _kind_, [[DisposeMethod]]: _method_ }.
+        1. Else if _value_ is either *null* or *undefined*, then
+          1. If _kind_ is ~sync-dispose~, return ~unused~.
           1. NOTE: When _value_ is either *null* or *undefined* and _kind_ is ~async-dispose~, we record that the resource was evaluated to ensure we will still perform an Await when resources are later disposed.
-          1. Let _resource_ be ? CreateDisposableResource(_value_, _kind_).
+          1. Let _resource_ be the DisposableResource Record { [[ResourceValue]]: *undefined*, [[Kind]]: ~async-dispose~, [[DisposeMethod]]: *undefined* }.
+        1. Else,
+          1. Set _method_ to ? GetDisposeMethod(_value_, _kind_).
+          1. If _method_ is *undefined*, throw a *TypeError* exception.
+          1. Let _resource_ be the DisposableResource Record { [[ResourceValue]]: _value_, [[Kind]]: _kind_, [[DisposeMethod]]: _method_ }.
         1. Append _resource_ to _disposableResourceStack_.
         1. Return ~unused~.
-      </emu-alg>
-    </emu-clause>
-
-    <emu-clause id="sec-createdisposableresource" type="abstract operation">
-      <h1>
-        CreateDisposableResource (
-          _value_: an ECMAScript language value,
-          _kind_: ~sync-dispose~ or ~async-dispose~,
-          optional _method_: a function object,
-        ): either a normal completion containing a DisposableResource Record or a throw completion
-      </h1>
-      <dl class="header">
-      </dl>
-      <emu-alg>
-        1. If _method_ is not present, then
-          1. If _value_ is either *null* or *undefined*, then
-            1. Set _value_ to *undefined*.
-            1. Set _method_ to *undefined*.
-          1. Else,
-            1. Set _method_ to ? GetDisposeMethod(_value_, _kind_).
-            1. If _method_ is *undefined*, throw a *TypeError* exception.
-        1. Return the DisposableResource Record { [[ResourceValue]]: _value_, [[Kind]]: _kind_, [[DisposeMethod]]: _method_ }.
       </emu-alg>
     </emu-clause>
 
@@ -30582,9 +30564,9 @@
             1. NOTE: Lexically declared names are only instantiated here but not initialized.
             1. For each element _name_ of the BoundNames of _lexicalDecl_, do
               1. If IsConstantDeclaration of _lexicalDecl_ is *true*, then
-                1. Perform ? _lexicalEnv_.CreateImmutableBinding(_name_, *true*).
+                1. Perform ! _lexicalEnv_.CreateImmutableBinding(_name_, *true*).
               1. Else,
-                1. Perform ? _lexicalEnv_.CreateMutableBinding(_name_, *false*).
+                1. Perform ! _lexicalEnv_.CreateMutableBinding(_name_, *false*).
           1. For each Parse Node _funcDecl_ of _funcsToInitialize_, do
             1. Let _funcName_ be the sole element of the BoundNames of _funcDecl_.
             1. Let _funcObj_ be InstantiateFunctionObject of _funcDecl_ with arguments _lexicalEnv_ and _privateEnv_.
@@ -50232,7 +50214,7 @@ THH:mm:ss.sss
           1. Let _closure_ be a new Abstract Closure with no parameters that captures _value_ and _onDispose_ and performs the following steps when called:
             1. Return ? Call(_onDispose_, *undefined*, « _value_ »).
           1. Let _func_ be CreateBuiltinFunction(_closure_, 0, *""*, « »).
-          1. Perform ? AddDisposableResource(_disposableStack_.[[DisposableResourceStack]], *undefined*, ~sync-dispose~, _func_).
+          1. Perform ! AddDisposableResource(_disposableStack_.[[DisposableResourceStack]], *undefined*, ~sync-dispose~, _func_).
           1. Return _value_.
         </emu-alg>
       </emu-clause>
@@ -50250,7 +50232,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_disposableStack_, [[DisposableState]]).
           1. If _disposableStack_.[[DisposableState]] is ~disposed~, throw a *ReferenceError* exception.
           1. If IsCallable(_onDispose_) is *false*, throw a *TypeError* exception.
-          1. Perform ? AddDisposableResource(_disposableStack_.[[DisposableResourceStack]], *undefined*, ~sync-dispose~, _onDispose_).
+          1. Perform ! AddDisposableResource(_disposableStack_.[[DisposableResourceStack]], *undefined*, ~sync-dispose~, _onDispose_).
           1. Return *undefined*.
         </emu-alg>
       </emu-clause>
@@ -50426,7 +50408,7 @@ THH:mm:ss.sss
           1. Let _closure_ be a new Abstract Closure with no parameters that captures _value_ and _onDisposeAsync_ and performs the following steps when called:
             1. Return ? Call(_onDisposeAsync_, *undefined*, « _value_ »).
           1. Let _func_ be CreateBuiltinFunction(_closure_, 0, *""*, « »).
-          1. Perform ? AddDisposableResource(_asyncDisposableStack_.[[DisposableResourceStack]], *undefined*, ~async-dispose~, _func_).
+          1. Perform ! AddDisposableResource(_asyncDisposableStack_.[[DisposableResourceStack]], *undefined*, ~async-dispose~, _func_).
           1. Return _value_.
         </emu-alg>
       </emu-clause>
@@ -50444,7 +50426,7 @@ THH:mm:ss.sss
           1. Perform ? RequireInternalSlot(_asyncDisposableStack_, [[AsyncDisposableState]]).
           1. If _asyncDisposableStack_.[[AsyncDisposableState]] is ~disposed~, throw a *ReferenceError* exception.
           1. If IsCallable(_onDisposeAsync_) is *false*, throw a *TypeError* exception.
-          1. Perform ? AddDisposableResource(_asyncDisposableStack_.[[DisposableResourceStack]], *undefined*, ~async-dispose~, _onDisposeAsync_).
+          1. Perform ! AddDisposableResource(_asyncDisposableStack_.[[DisposableResourceStack]], *undefined*, ~async-dispose~, _onDisposeAsync_).
           1. Return *undefined*.
         </emu-alg>
       </emu-clause>
@@ -50949,7 +50931,7 @@ THH:mm:ss.sss
             1. Let _resolvingFuncs_ be CreateResolvingFunctions(_promiseToResolve_).
             1. Let _thenCallResult_ be Completion(HostCallJobCallback(_then_, _thenable_, « _resolvingFuncs_.[[Resolve]], _resolvingFuncs_.[[Reject]] »)).
             1. If _thenCallResult_ is an abrupt completion, then
-              1. Return ? Call(_resolvingFuncs_.[[Reject]], *undefined*, « _thenCallResult_.[[Value]] »).
+              1. Return ! Call(_resolvingFuncs_.[[Reject]], *undefined*, « _thenCallResult_.[[Value]] »).
             1. Return ! _thenCallResult_.
           1. Let _getThenRealmResult_ be Completion(GetFunctionRealm(_then_.[[Callback]])).
           1. If _getThenRealmResult_ is a normal completion, let _thenRealm_ be _getThenRealmResult_.[[Value]].
@@ -50989,7 +50971,7 @@ THH:mm:ss.sss
           1. Let _resolvingFuncs_ be CreateResolvingFunctions(_promise_).
           1. Let _completion_ be Completion(Call(_executor_, *undefined*, « _resolvingFuncs_.[[Resolve]], _resolvingFuncs_.[[Reject]] »)).
           1. If _completion_ is an abrupt completion, then
-            1. Perform ? Call(_resolvingFuncs_.[[Reject]], *undefined*, « _completion_.[[Value]] »).
+            1. Perform ! Call(_resolvingFuncs_.[[Reject]], *undefined*, « _completion_.[[Value]] »).
           1. Return _promise_.
         </emu-alg>
         <emu-note>
