@@ -116,6 +116,7 @@ const legacyCommitsWithUnknownAuthors = new Set([
 	'94c6c6be7e694083393ac8cf1ee8dc8189ce8005', // https://github.com/tc39/ecma262/pull/2331, user account deactivated
 	'4895a117eb54edd829f2010092bae8f41c2b174a', // hriztam, https://github.com/tc39/ecma262/pull/3760
 	'1355a23e48aaf2b1d7b6cbfad0fb98bce999cfd1', // https://github.com/tc39/ecma262/pull/2869, rewritten by nicolo
+	'c1c192cedd305564561a0afeacbaa34cd2ab457c', // maddhruv (signed) renamed their account to dhruvjainin
 ]);
 
 function getAuthorFromCommit(commitObj) {
