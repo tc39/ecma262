@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 
 const DEFAULT_SPEC_PATHS = [
   '../spec.html',
-  ...fs.globSync('../temporal/*.emu', { cwd: path.dirname(fileURLToPath(import.meta.url)), absolute: true })
+  ...fs.globSync('../*/*.emu', { cwd: path.dirname(fileURLToPath(import.meta.url)), absolute: true })
 ].map(rel => fileURLToPath(new URL(rel, import.meta.url)));
 const ROOT_WORD_REPLACEMENTS_PATH = new URL('./check-alias-abbreviations.csv', import.meta.url);
 
