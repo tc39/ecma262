@@ -24,6 +24,12 @@ fi
 mkdir -p "$DEST_DIR"
 cp -r out/* "$DEST_DIR"
 
+if [[ "${1:-}" == "--pr" ]]; then
+  node scripts/externalize-preview-tocs.js "$DEST_DIR"
+else
+  node scripts/externalize-preview-tocs.js gh-pages/pr/*
+fi
+
 cd gh-pages
 git config user.email "${GH_USER_EMAIL}"
 git config user.name "${GH_USER_NAME}"
