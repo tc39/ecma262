@@ -1,6 +1,6 @@
 # Contributing to ECMAScript
 
-Contributors to ECMAScript and TC39 are expected to follow our [Code of Conduct](https://tc39.es/code-of-conduct/).
+Contributors to ECMAScript and TC39 are expected to follow our [Code of Conduct](https://tc39.es/code-of-conduct/) and [AI policy](https://github.com/tc39/how-we-work/blob/main/AI_POLICY.md).
 
 **Please do not open issues or pull requests in this repository to suggest new features.** See the [new feature proposals](#new-feature-proposals) section below for more details.
 
