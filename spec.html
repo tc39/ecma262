@@ -43407,13 +43407,7 @@ THH:mm:ss.sss
               1. Perform ? InitializeTypedArrayFromArrayBuffer(_obj_, _firstArg_, _byteOffset_, _length_).
             1. Else,
               1. Assert: _firstArg_ is an Object and _firstArg_ does not have either a [[TypedArrayName]] or an [[ArrayBufferData]] internal slot.
-              1. Let _usingIterator_ be ? GetMethod(_firstArg_, %Symbol.iterator%).
-              1. If _usingIterator_ is not *undefined*, then
-                1. Let _values_ be ? IteratorToList(? GetIteratorFromMethod(_firstArg_, _usingIterator_)).
-                1. Perform ? InitializeTypedArrayFromList(_obj_, _values_).
-              1. Else,
-                1. NOTE: _firstArg_ is not an iterable object, so assume it is already an array-like object.
-                1. Perform ? InitializeTypedArrayFromArrayLike(_obj_, _firstArg_).
+              1. Perform ? InitializeTypedArrayFromElements(_obj_, _firstArg_).
             1. Return _obj_.
           1. Assert: _firstArg_ is not an Object.
           1. Let _elementLength_ be ? ToIndex(_firstArg_).
@@ -43531,43 +43525,31 @@ THH:mm:ss.sss
           </emu-alg>
         </emu-clause>
 
-        <emu-clause id="sec-initializetypedarrayfromlist" type="abstract operation">
+        <emu-clause id="sec-initializetypedarrayfromelements" type="abstract operation" oldids="sec-initializetypedarrayfromarraylike,sec-initializetypedarrayfromlist">
           <h1>
-            InitializeTypedArrayFromList (
+            InitializeTypedArrayFromElements (
               _obj_: a TypedArray,
-              _values_: a List of ECMAScript language values,
+              _source_: an Object,
             ): either a normal completion containing ~unused~ or a throw completion
           </h1>
           <dl class="header">
           </dl>
           <emu-alg>
-            1. Let _length_ be the number of elements in _values_.
+            1. Let _usingIterator_ be ? GetMethod(_source_, %Symbol.iterator%).
+            1. If _usingIterator_ is not *undefined*, then
+              1. Let _list_ be ? IteratorToList(? GetIteratorFromMethod(_source_, _usingIterator_)).
+              1. Let _length_ be the number of elements in _list_.
+            1. Else,
+              1. NOTE: _source_ is not iterable, so assume it is an array-like object.
+              1. Let _length_ be ? LengthOfArrayLike(_source_).
             1. Perform ? AllocateTypedArrayBuffer(_obj_, _length_).
             1. Let _k_ be 0.
             1. Repeat, while _k_ &lt; _length_,
-              1. Let _kValue_ be _values_[_k_].
-              1. Perform ? TypedArraySetElement(_obj_, 𝔽(_k_), _kValue_).
-              1. Set _k_ to _k_ + 1.
-            1. Return ~unused~.
-          </emu-alg>
-        </emu-clause>
-
-        <emu-clause id="sec-initializetypedarrayfromarraylike" type="abstract operation">
-          <h1>
-            InitializeTypedArrayFromArrayLike (
-              _obj_: a TypedArray,
-              _arrayLike_: an Object, but not a TypedArray or an ArrayBuffer,
-            ): either a normal completion containing ~unused~ or a throw completion
-          </h1>
-          <dl class="header">
-          </dl>
-          <emu-alg>
-            1. Let _length_ be ? LengthOfArrayLike(_arrayLike_).
-            1. Perform ? AllocateTypedArrayBuffer(_obj_, _length_).
-            1. Let _k_ be 0.
-            1. Repeat, while _k_ &lt; _length_,
-              1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
-              1. Let _kValue_ be ? Get(_arrayLike_, _propertyKey_).
+              1. If _usingIterator_ is not *undefined*, then
+                1. Let _kValue_ be _list_[_k_].
+              1. Else,
+                1. Let _propertyKey_ be ! ToString(𝔽(_k_)).
+                1. Let _kValue_ be ? Get(_source_, _propertyKey_).
               1. Perform ? TypedArraySetElement(_obj_, 𝔽(_k_), _kValue_).
               1. Set _k_ to _k_ + 1.
             1. Return ~unused~.
