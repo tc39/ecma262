@@ -2925,14 +2925,7 @@
           </li>
         </ul>
         <h2>Return value:</h2>
-        <p>The value returned by any internal method must be a Completion Record with either:</p>
-        <ul>
-          <li>[[Type]] = ~normal~, [[Target]] = ~empty~, and [[Value]] = a value of the “normal return type” shown below for that internal method, or</li>
-          <li>[[Type]] = ~throw~, [[Target]] = ~empty~, and [[Value]] = any ECMAScript language value.</li>
-        </ul>
-        <emu-note>
-          <p>An internal method must not return a continue completion, a break completion, or a return completion.</p>
-        </emu-note>
+        <p>The value returned by an internal method must be either a normal completion containing a value of the “normal return type” shown below for that internal method or a throw completion whose [[Value]] is an ECMAScript language value.</p>
         <h2>[[GetPrototypeOf]] ( )</h2>
         <ul>
           <li>
@@ -4033,7 +4026,7 @@
               a String or ~empty~
             </td>
             <td>
-              The target label for directed control transfers.
+              The target label for directed control transfers. It must be ~empty~ when [[Type]] is neither ~break~ nor ~continue~.
             </td>
           </tr>
         </table>
@@ -5853,8 +5846,8 @@
           1. If _n_ is *undefined*, return *false*.
           1. Return ! IsLooselyEqual(_x_, _n_).
         1. If _x_ is a String and _y_ is a BigInt, return ! IsLooselyEqual(_y_, _x_).
-        1. If _x_ is a Boolean, return ! IsLooselyEqual(! ToNumber(_x_), _y_).
-        1. If _y_ is a Boolean, return ! IsLooselyEqual(_x_, ! ToNumber(_y_)).
+        1. If _x_ is a Boolean, return ? IsLooselyEqual(! ToNumber(_x_), _y_).
+        1. If _y_ is a Boolean, return ? IsLooselyEqual(_x_, ! ToNumber(_y_)).
         1. If _x_ is either a String, a Number, a BigInt, or a Symbol and _y_ is an Object, return ! IsLooselyEqual(_x_, ? ToPrimitive(_y_)).
         1. If _x_ is an Object and _y_ is either a String, a Number, a BigInt, or a Symbol, return ! IsLooselyEqual(? ToPrimitive(_x_), _y_).
         1. If _x_ is a BigInt and _y_ is a finite Number, or if _x_ is a finite Number and _y_ is a BigInt, then
@@ -23342,19 +23335,17 @@
       <emu-grammar>BreakableStatement : IterationStatement</emu-grammar>
       <emu-alg>
         1. Let _stmtResult_ be Completion(LoopEvaluation of |IterationStatement| with argument _labelSet_).
-        1. If _stmtResult_ is a break completion, then
-          1. If _stmtResult_.[[Target]] is ~empty~, then
-            1. If _stmtResult_.[[Value]] is ~empty~, set _stmtResult_ to NormalCompletion(*undefined*).
-            1. Else, set _stmtResult_ to NormalCompletion(_stmtResult_.[[Value]]).
+        1. If _stmtResult_ is a break completion and _stmtResult_.[[Target]] is ~empty~, then
+          1. If _stmtResult_.[[Value]] is not ~empty~, return _stmtResult_.[[Value]].
+          1. Return *undefined*.
         1. Return ? _stmtResult_.
       </emu-alg>
       <emu-grammar>BreakableStatement : SwitchStatement</emu-grammar>
       <emu-alg>
         1. Let _stmtResult_ be Completion(Evaluation of |SwitchStatement|).
-        1. If _stmtResult_ is a break completion, then
-          1. If _stmtResult_.[[Target]] is ~empty~, then
-            1. If _stmtResult_.[[Value]] is ~empty~, set _stmtResult_ to NormalCompletion(*undefined*).
-            1. Else, set _stmtResult_ to NormalCompletion(_stmtResult_.[[Value]]).
+        1. If _stmtResult_ is a break completion and _stmtResult_.[[Target]] is ~empty~, then
+          1. If _stmtResult_.[[Value]] is not ~empty~, return _stmtResult_.[[Value]].
+          1. Return *undefined*.
         1. Return ? _stmtResult_.
       </emu-alg>
       <emu-note>
@@ -23365,8 +23356,7 @@
         1. Let _label_ be the StringValue of |LabelIdentifier|.
         1. Let _newLabelSet_ be the list-concatenation of _labelSet_ and « _label_ ».
         1. Let _stmtResult_ be Completion(LabelledEvaluation of |LabelledItem| with argument _newLabelSet_).
-        1. If _stmtResult_ is a break completion and _stmtResult_.[[Target]] is _label_, then
-          1. Set _stmtResult_ to NormalCompletion(_stmtResult_.[[Value]]).
+        1. If _stmtResult_ is a break completion and _stmtResult_.[[Target]] is _label_, return _stmtResult_.[[Value]].
         1. Return ? _stmtResult_.
       </emu-alg>
       <emu-grammar>LabelledItem : FunctionDeclaration</emu-grammar>
@@ -30452,7 +30442,7 @@
 
       <emu-clause id="sec-decodeuri-encodeduri" type="built-in function">
         <h1>decodeURI ( _encodedURI_ )</h1>
-        <p>This function computes a new version of a URI in which each escape sequence and UTF-8 encoding of the sort that might be introduced by the `encodeURI` function is replaced with the UTF-16 encoding of the code point that it represents. Escape sequences that could not have been introduced by `encodeURI` are not replaced.</p>
+        <p>This function computes a new version of a URI in which each escape sequence and UTF-8 encoding of the sort that might be introduced by the `encodeURI` function is replaced with the UTF-16 encoding of the code point that it represents. Escape sequences that represent characters in *";/?:@&=+$,#"* are not replaced.</p>
         <p>It is the <dfn>%decodeURI%</dfn> intrinsic object.</p>
         <p>It performs the following steps when called:</p>
         <emu-alg>
@@ -31642,7 +31632,7 @@
           <p>Function objects created using `Function.prototype.bind` are exotic objects. They also do not have a *"prototype"* property.</p>
         </emu-note>
         <emu-note>
-          <p>If _target_ is either an arrow function or a bound function exotic object, then the _thisArg_ passed to this method will not be used by subsequent calls to _func_.</p>
+          <p>If _target_ is either an arrow function or a bound function exotic object, then the _thisArg_ passed to this method will not be used by subsequent calls to _boundFunc_.</p>
         </emu-note>
       </emu-clause>
 
@@ -33378,7 +33368,7 @@
           1. Return an implementation-approximated Number value representing the hyperbolic cosine of ℝ(_n_).
         </emu-alg>
         <emu-note>
-          <p>The value of `Math.cosh(x)` is the same as the value of `(Math.exp(x) + Math.exp(-x)) / 2`.</p>
+          <p>For a real number _x_, the hyperbolic cosine is (e<sup>_x_</sup> + e<sup>-_x_</sup>) / 2. Computing this expression using `Math.exp` may produce a different result from `Math.cosh` because of rounding or overflow.</p>
         </emu-note>
       </emu-clause>
 
@@ -33658,7 +33648,7 @@
           1. Return an implementation-approximated Number value representing the hyperbolic sine of ℝ(_n_).
         </emu-alg>
         <emu-note>
-          <p>The value of `Math.sinh(x)` is the same as the value of `(Math.exp(x) - Math.exp(-x)) / 2`.</p>
+          <p>For a real number _x_, the hyperbolic sine is (e<sup>_x_</sup> - e<sup>-_x_</sup>) / 2. Computing this expression using `Math.exp` may produce a different result from `Math.sinh` because of rounding or overflow.</p>
         </emu-note>
       </emu-clause>
 
@@ -33744,7 +33734,7 @@
           1. Return an implementation-approximated Number value representing the hyperbolic tangent of ℝ(_n_).
         </emu-alg>
         <emu-note>
-          <p>The value of `Math.tanh(x)` is the same as the value of `(Math.exp(x) - Math.exp(-x)) / (Math.exp(x) + Math.exp(-x))`.</p>
+          <p>For a real number _x_, the hyperbolic tangent is (e<sup>_x_</sup> - e<sup>-_x_</sup>) / (e<sup>_x_</sup> + e<sup>-_x_</sup>). Computing this expression using `Math.exp` may produce a different result from `Math.tanh` because of rounding or overflow.</p>
         </emu-note>
       </emu-clause>
 
@@ -33894,22 +33884,21 @@
         </emu-alg>
       </emu-clause>
 
-      <emu-clause id="sec-inleapyear" type="abstract operation" oldids="eqn-InLeapYear,sec-daysinyear,eqn-DaysInYear">
+      <emu-clause id="sec-isleapyear" type="abstract operation" oldids="eqn-InLeapYear,sec-daysinyear,eqn-DaysInYear,sec-inleapyear">
         <h1>
-          InLeapYear (
-            _tv_: a finite time value,
-          ): 0 or 1
+          IsLeapYear (
+            _y_: an integer,
+          ): a Boolean
         </h1>
         <dl class="header">
           <dt>description</dt>
-          <dd>It returns 1 if _tv_ is within a leap year and 0 otherwise.</dd>
+          <dd>It returns whether _y_ is a leap year.</dd>
         </dl>
         <emu-alg>
-          1. Let _y_ be YearFromTime(_tv_).
-          1. If (_y_ modulo 400) = 0, return 1.
-          1. If (_y_ modulo 100) = 0, return 0.
-          1. If (_y_ modulo 4) = 0, return 1.
-          1. Return 0.
+          1. If (_y_ modulo 400) = 0, return *true*.
+          1. If (_y_ modulo 100) = 0, return *false*.
+          1. If (_y_ modulo 4) = 0, return *true*.
+          1. Return *false*.
         </emu-alg>
       </emu-clause>
 
@@ -33924,20 +33913,21 @@
           <dd>It returns an integer identifying the month in which _tv_ falls. A month value of 0 specifies January; 1 specifies February; 2 specifies March; 3 specifies April; 4 specifies May; 5 specifies June; 6 specifies July; 7 specifies August; 8 specifies September; 9 specifies October; 10 specifies November; and 11 specifies December. Note that <emu-eqn>MonthFromTime(*+0*<sub>𝔽</sub>) = 0</emu-eqn>, corresponding to Thursday, 1 January 1970.</dd>
         </dl>
         <emu-alg>
-          1. Let _inLeapYear_ be InLeapYear(_tv_).
+          1. Let _y_ be YearFromTime(_tv_).
+          1. If IsLeapYear(_y_) is *true*, let _leapYearOffset_ be 1; else let _leapYearOffset_ be 0.
           1. Let _dayWithinYear_ be DayWithinYear(_tv_).
           1. If _dayWithinYear_ &lt; 31, return 0.
-          1. If _dayWithinYear_ &lt; 59 + _inLeapYear_, return 1.
-          1. If _dayWithinYear_ &lt; 90 + _inLeapYear_, return 2.
-          1. If _dayWithinYear_ &lt; 120 + _inLeapYear_, return 3.
-          1. If _dayWithinYear_ &lt; 151 + _inLeapYear_, return 4.
-          1. If _dayWithinYear_ &lt; 181 + _inLeapYear_, return 5.
-          1. If _dayWithinYear_ &lt; 212 + _inLeapYear_, return 6.
-          1. If _dayWithinYear_ &lt; 243 + _inLeapYear_, return 7.
-          1. If _dayWithinYear_ &lt; 273 + _inLeapYear_, return 8.
-          1. If _dayWithinYear_ &lt; 304 + _inLeapYear_, return 9.
-          1. If _dayWithinYear_ &lt; 334 + _inLeapYear_, return 10.
-          1. Assert: _dayWithinYear_ &lt; 365 + _inLeapYear_.
+          1. If _dayWithinYear_ &lt; 59 + _leapYearOffset_, return 1.
+          1. If _dayWithinYear_ &lt; 90 + _leapYearOffset_, return 2.
+          1. If _dayWithinYear_ &lt; 120 + _leapYearOffset_, return 3.
+          1. If _dayWithinYear_ &lt; 151 + _leapYearOffset_, return 4.
+          1. If _dayWithinYear_ &lt; 181 + _leapYearOffset_, return 5.
+          1. If _dayWithinYear_ &lt; 212 + _leapYearOffset_, return 6.
+          1. If _dayWithinYear_ &lt; 243 + _leapYearOffset_, return 7.
+          1. If _dayWithinYear_ &lt; 273 + _leapYearOffset_, return 8.
+          1. If _dayWithinYear_ &lt; 304 + _leapYearOffset_, return 9.
+          1. If _dayWithinYear_ &lt; 334 + _leapYearOffset_, return 10.
+          1. Assert: _dayWithinYear_ &lt; 365 + _leapYearOffset_.
           1. Return 11.
         </emu-alg>
       </emu-clause>
@@ -33953,22 +33943,23 @@
           <dd>It returns the day of the month in which _tv_ falls.</dd>
         </dl>
         <emu-alg>
-          1. Let _inLeapYear_ be InLeapYear(_tv_).
+          1. Let _y_ be YearFromTime(_tv_).
+          1. If IsLeapYear(_y_) is *true*, let _leapYearOffset_ be 1; else let _leapYearOffset_ be 0.
           1. Let _dayWithinYear_ be DayWithinYear(_tv_).
           1. Let _month_ be MonthFromTime(_tv_).
           1. If _month_ = 0, return _dayWithinYear_ + 1.
           1. If _month_ = 1, return _dayWithinYear_ - 30.
-          1. If _month_ = 2, return _dayWithinYear_ - 58 - _inLeapYear_.
-          1. If _month_ = 3, return _dayWithinYear_ - 89 - _inLeapYear_.
-          1. If _month_ = 4, return _dayWithinYear_ - 119 - _inLeapYear_.
-          1. If _month_ = 5, return _dayWithinYear_ - 150 - _inLeapYear_.
-          1. If _month_ = 6, return _dayWithinYear_ - 180 - _inLeapYear_.
-          1. If _month_ = 7, return _dayWithinYear_ - 211 - _inLeapYear_.
-          1. If _month_ = 8, return _dayWithinYear_ - 242 - _inLeapYear_.
-          1. If _month_ = 9, return _dayWithinYear_ - 272 - _inLeapYear_.
-          1. If _month_ = 10, return _dayWithinYear_ - 303 - _inLeapYear_.
+          1. If _month_ = 2, return _dayWithinYear_ - 58 - _leapYearOffset_.
+          1. If _month_ = 3, return _dayWithinYear_ - 89 - _leapYearOffset_.
+          1. If _month_ = 4, return _dayWithinYear_ - 119 - _leapYearOffset_.
+          1. If _month_ = 5, return _dayWithinYear_ - 150 - _leapYearOffset_.
+          1. If _month_ = 6, return _dayWithinYear_ - 180 - _leapYearOffset_.
+          1. If _month_ = 7, return _dayWithinYear_ - 211 - _leapYearOffset_.
+          1. If _month_ = 8, return _dayWithinYear_ - 242 - _leapYearOffset_.
+          1. If _month_ = 9, return _dayWithinYear_ - 272 - _leapYearOffset_.
+          1. If _month_ = 10, return _dayWithinYear_ - 303 - _leapYearOffset_.
           1. Assert: _month_ = 11.
-          1. Return _dayWithinYear_ - 333 - _inLeapYear_.
+          1. Return _dayWithinYear_ - 333 - _leapYearOffset_.
         </emu-alg>
       </emu-clause>
 
@@ -34811,7 +34802,7 @@ THH:mm:ss.sss
         <pre><code class="javascript">
           Date.parse(x.toLocaleString())
         </code></pre>
-        <p>is not required to produce the same Number value as the preceding three expressions and, in general, the value produced by this function is implementation-defined when given any String value that does not conform to the Date Time String Format (<emu-xref href="#sec-date-time-string-format"></emu-xref>) and that could not be produced in that implementation by the `toString` or `toUTCString` method.</p>
+        <p>is not required to produce the same Number value as the preceding expressions and, in general, the value produced by this function is implementation-defined when given any String value that does not conform to the Date Time String Format (<emu-xref href="#sec-date-time-string-format"></emu-xref>) and that could not be produced in that implementation by the `toString` or `toUTCString` method.</p>
       </emu-clause>
 
       <emu-clause id="sec-date.prototype">
@@ -45966,7 +45957,7 @@ THH:mm:ss.sss
         <p>The implementation of HostGrowSharedArrayBuffer must conform to the following requirements:</p>
         <ul>
           <li>If the abstract operation does not complete normally with ~unhandled~, and _newByteLength_ &lt; the current byte length of the _buffer_ or _newByteLength_ > _buffer_.[[ArrayBufferMaxByteLength]], throw a *RangeError* exception.</li>
-          <li>Let _agentRecord_ be the Agent Record of the surrounding agent. Let _isLittleEndian_ be _agentRecord_.[[LittleEndian]]. If the abstract operation completes normally with ~handled~, a WriteSharedMemory or ReadModifyWriteSharedMemory event whose [[Order]] is ~seq-cst~, [[Payload]] is NumericToRawBytes(~biguint64~, _newByteLength_, _isLittleEndian_), [[Block]] is _buffer_.[[ArrayBufferByteLengthData]], [[ByteIndex]] is 0, and [[ElementSize]] is 8 is added to the surrounding agent's candidate execution such that racing calls to <emu-xref href="#sec-sharedarraybuffer.prototype.grow" title></emu-xref> are not “lost”, i.e. silently do nothing.</li>
+          <li>Let _agentRecord_ be the Agent Record of the surrounding agent. Let _isLittleEndian_ be _agentRecord_.[[LittleEndian]]. If the abstract operation completes normally with ~handled~, a WriteSharedMemory or ReadModifyWriteSharedMemory event whose [[Order]] is ~seq-cst~, [[Payload]] is NumericToRawBytes(~biguint64~, ℤ(_newByteLength_), _isLittleEndian_), [[Block]] is _buffer_.[[ArrayBufferByteLengthData]], [[ByteIndex]] is 0, and [[ElementSize]] is 8 is added to the surrounding agent's candidate execution such that racing calls to <emu-xref href="#sec-sharedarraybuffer.prototype.grow" title></emu-xref> are not “lost”, i.e. silently do nothing.</li>
         </ul>
 
         <emu-note>
@@ -47517,7 +47508,7 @@ THH:mm:ss.sss
 
     <emu-clause id="sec-atomics.waitasync" type="built-in function">
       <h1>Atomics.waitAsync ( _ta_, _index_, _value_, _timeout_ )</h1>
-      <p>This function returns a Promise that is resolved when the calling agent is notified or the timeout is reached.</p>
+      <p>This function returns an Object with `async` and `value` properties. If `async` is *true*, `value` is a Promise that is fulfilled with either *"ok"* when the calling agent is notified or with *"timed-out"* when the timeout is reached. Otherwise, `async` is *false* and `value` is either *"not-equal"* or *"timed-out"*.</p>
       <p>It performs the following steps when called:</p>
       <emu-alg>
         1. Return ? DoWait(~async~, _ta_, _index_, _value_, _timeout_).
@@ -48502,7 +48493,7 @@ THH:mm:ss.sss
         </emu-alg>
 
         <emu-note>
-          <p>Based on the algorithms and definitions in this specification, _cell_.[[HeldValue]] is live when _finalizationRegistry_.[[Cells]] contains _cell_; however, this does not necessarily mean that _cell_.[[UnregisterToken]] or _cell_.[[Target]] are live. For example, registering an object with itself as its unregister token would not keep the object alive forever.</p>
+          <p>Based on the algorithms and definitions in this specification, _cell_.[[HeldValue]] is live when _finalizationRegistry_.[[Cells]] contains _cell_; however, this does not necessarily mean that _cell_.[[UnregisterToken]] or _cell_.[[WeakRefTarget]] are live. For example, registering an object with itself as its unregister token would not keep the object alive forever.</p>
         </emu-note>
       </emu-clause>
 
@@ -51106,7 +51097,7 @@ THH:mm:ss.sss
           </h1>
           <dl class="header">
             <dt>description</dt>
-            <dd>It returns a new promise resolved with _resolution_.</dd>
+            <dd>It returns either a new promise resolved with _resolution_, or _resolution_ itself if it is a promise whose *"constructor"* property is _ctor_.</dd>
           </dl>
           <emu-alg>
             1. If IsPromise(_resolution_) is *true*, then
@@ -53052,7 +53043,7 @@ THH:mm:ss.sss
           <p>For each ReadSharedMemory or ReadModifyWriteSharedMemory event _readEvent_ in SharedDataBlockEventSet(_execution_), reads-bytes-from(_readEvent_) in _execution_ is a List of length _readEvent_.[[ElementSize]] whose elements are WriteSharedMemory or ReadModifyWriteSharedMemory events _writes_ such that all of the following are true.</p>
           <ul>
             <li>Each event _writeEvent_ with index _i_ in _writes_ has _readEvent_.[[ByteIndex]] + _i_ in its memory range.</li>
-            <li>_result_ is not in _writes_.</li>
+            <li>_readEvent_ is not in _writes_.</li>
           </ul>
         </li>
       </ul>
@@ -54045,8 +54036,8 @@ THH:mm:ss.sss
       <emu-annex id="sec-compileassertion-annexb">
         <h1>Runtime Semantics: CompileAssertion</h1>
         <p>The semantics of CompileAssertion with argument _regexpRecord_ is extended as follows:</p>
-        <p>The rule for <emu-grammar>QuantifiableAssertion :: `(?=` Disjunction `)`</emu-grammar> is the same as for <emu-grammar>Assertion :: `(?=` Disjunction `)`</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
-        <p>The rule for <emu-grammar>QuantifiableAssertion :: `(?!` Disjunction `)`</emu-grammar> is the same as for <emu-grammar>Assertion :: `(?!` Disjunction `)`</emu-grammar> but with |QuantifiableAssertion| substituted for |Atom|.</p>
+        <p>The rule for <emu-grammar>QuantifiableAssertion :: `(?=` Disjunction `)`</emu-grammar> is the same as for <emu-grammar>Assertion :: `(?=` Disjunction `)`</emu-grammar> but with |QuantifiableAssertion| substituted for |Assertion|.</p>
+        <p>The rule for <emu-grammar>QuantifiableAssertion :: `(?!` Disjunction `)`</emu-grammar> is the same as for <emu-grammar>Assertion :: `(?!` Disjunction `)`</emu-grammar> but with |QuantifiableAssertion| substituted for |Assertion|.</p>
       </emu-annex>
 
       <emu-annex id="sec-compileatom-annexb">
