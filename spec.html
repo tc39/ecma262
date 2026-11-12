@@ -24594,7 +24594,7 @@
             1. Let _done_ be ? IteratorComplete(_innerResult_).
             1. If _done_ is *true*, then
               1. Return ? IteratorValue(_innerResult_).
-            1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerResult_))).
+            1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerResult_), *false*)).
             1. Else, set _received_ to Completion(GeneratorYield(_innerResult_)).
           1. Else if _received_ is a throw completion, then
             1. Let _throw_ be ? GetMethod(_iterator_, *"throw"*).
@@ -24606,7 +24606,7 @@
               1. Let _done_ be ? IteratorComplete(_innerResult_).
               1. If _done_ is *true*, then
                 1. Return ? IteratorValue(_innerResult_).
-              1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerResult_))).
+              1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerResult_), *false*)).
               1. Else, set _received_ to Completion(GeneratorYield(_innerResult_)).
             1. Else,
               1. NOTE: If _iterator_ does not have a `throw` method, this throw is going to terminate the `yield*` loop. But first we need to give _iterator_ a chance to clean up.
@@ -24630,7 +24630,7 @@
             1. If _done_ is *true*, then
               1. Let _returnedValue_ be ? IteratorValue(_innerReturnResult_).
               1. Return ReturnCompletion(_returnedValue_).
-            1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerReturnResult_))).
+            1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerReturnResult_), *false*)).
             1. Else, set _received_ to Completion(GeneratorYield(_innerReturnResult_)).
       </emu-alg>
     </emu-clause>
@@ -51108,6 +51108,36 @@ THH:mm:ss.sss
             1. Return _promiseCapability_.[[Promise]].
           </emu-alg>
         </emu-clause>
+
+        <emu-clause id="sec-promiseresolveifthenable" type="abstract operation">
+          <h1>
+            PromiseResolveIfThenable (
+              _resolution_: an ECMAScript language value,
+            ): either a normal completion containing either a Promise or ~not-a-thenable~, or a throw completion
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>It behaves like PromiseResolve(%Promise%, _resolution_), except that it returns ~not-a-thenable~ if _resolution_ is not a thenable.</dd>
+          </dl>
+          <emu-alg>
+            1. If _resolution_ is not an Object, return ~not-a-thenable~.
+            1. If IsPromise(_resolution_) is *true*, then
+              1. Let _resolutionCtor_ be ? Get(_resolution_, *"constructor"*).
+              1. If SameValue(_resolutionCtor_, %Promise%) is *true*, return _resolution_.
+            1. Let _then_ be Completion(Get(_resolution_, *"then"*)).
+            1. If _then_ is an abrupt completion, then
+              1. Let _rejectedCapability_ be ! NewPromiseCapability(%Promise%).
+              1. Perform ! Call(_rejectedCapability_.[[Reject]], *undefined*, « _then_.[[Value]] »).
+              1. Return _rejectedCapability_.[[Promise]].
+            1. Let _thenAction_ be ! _then_.
+            1. If IsCallable(_thenAction_) is *false*, return ~not-a-thenable~.
+            1. Let _promiseCapability_ be ! NewPromiseCapability(%Promise%).
+            1. Let _thenJobCallback_ be HostMakeJobCallback(_thenAction_).
+            1. Let _job_ be NewPromiseResolveThenableJob(_promiseCapability_.[[Promise]], _resolution_, _thenJobCallback_).
+            1. Perform HostEnqueuePromiseJob(_job_.[[Job]], _job_.[[Realm]]).
+            1. Return _promiseCapability_.[[Promise]].
+          </emu-alg>
+        </emu-clause>
       </emu-clause>
 
       <emu-clause id="sec-promise.try" type="built-in function">
@@ -51828,8 +51858,12 @@ THH:mm:ss.sss
         </dl>
         <emu-alg>
           1. Let _genKind_ be GetGeneratorKind().
-          1. If _genKind_ is ~async~, return ? AsyncGeneratorYield(? Await(_arg_)).
-          1. Return ? GeneratorYield(CreateIteratorResultObject(_arg_, *false*)).
+          1. If _genKind_ is ~sync~, return ? GeneratorYield(CreateIteratorResultObject(_arg_, *false*)).
+          1. Assert: _genKind_ is ~async~.
+          1. Let _resolved_ be ? PromiseResolveIfThenable(_arg_).
+          1. If _resolved_ is ~not-a-thenable~, return ? AsyncGeneratorYield(_arg_, *true*).
+          1. Let _awaited_ be ? AwaitPromise(_resolved_).
+          1. Return ? AsyncGeneratorYield(_awaited_, *false*).
         </emu-alg>
       </emu-clause>
 
@@ -52174,6 +52208,7 @@ THH:mm:ss.sss
         <h1>
           AsyncGeneratorYield (
             _arg_: an ECMAScript language value,
+            _needsAwait_: a Boolean,
           ): either a normal completion containing an ECMAScript language value or an abrupt completion
         </h1>
         <dl class="header">
@@ -52190,7 +52225,11 @@ THH:mm:ss.sss
           1. Perform AsyncGeneratorCompleteStep(_gen_, _completion_, *false*, _previousRealm_).
           1. Let _queue_ be _gen_.[[AsyncGeneratorQueue]].
           1. If _queue_ is not empty, then
-            1. NOTE: Execution continues without suspending the generator.
+            1. If _needsAwait_ is *true*, then
+              1. NOTE: This ensures that the generator suspends before handling pending requests.
+              1. Perform ! Await(*undefined*).
+            1. Else,
+              1. NOTE: Execution continues without further suspending the generator.
             1. Let _toYield_ be the first element of _queue_.
             1. Let _resumptionValue_ be Completion(_toYield_.[[Completion]]).
             1. Return ? AsyncGeneratorUnwrapYieldResumption(_resumptionValue_).
@@ -52432,8 +52471,21 @@ THH:mm:ss.sss
         <dl class="header">
         </dl>
         <emu-alg>
-          1. Let _asyncContext_ be the running execution context.
           1. Let _promise_ be ? PromiseResolve(%Promise%, _arg_).
+          1. Return ? AwaitPromise(_promise_).
+        </emu-alg>
+      </emu-clause>
+
+      <emu-clause id="sec-awaitpromise" type="abstract operation">
+        <h1>
+          AwaitPromise (
+            _promise_: a Promise,
+          ): either a normal completion containing either an ECMAScript language value or ~empty~, or a throw completion
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-alg>
+          1. Let _asyncContext_ be the running execution context.
           1. Let _fulfilledClosure_ be a new Abstract Closure with parameters (_value_) that captures _asyncContext_ and performs the following steps when called:
             1. Perform Completion(RunSuspendedContext(_asyncContext_, NormalCompletion(_value_))).
             1. NOTE: The Completion Record returned by RunSuspendedContext is intentionally ignored.
