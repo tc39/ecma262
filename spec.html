@@ -24594,7 +24594,7 @@
             1. Let _done_ be ? IteratorComplete(_innerResult_).
             1. If _done_ is *true*, then
               1. Return ? IteratorValue(_innerResult_).
-            1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerResult_))).
+            1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerResult_), *false*)).
             1. Else, set _received_ to Completion(GeneratorYield(_innerResult_)).
           1. Else if _received_ is a throw completion, then
             1. Let _throw_ be ? GetMethod(_iterator_, *"throw"*).
@@ -24606,7 +24606,7 @@
               1. Let _done_ be ? IteratorComplete(_innerResult_).
               1. If _done_ is *true*, then
                 1. Return ? IteratorValue(_innerResult_).
-              1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerResult_))).
+              1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerResult_), *false*)).
               1. Else, set _received_ to Completion(GeneratorYield(_innerResult_)).
             1. Else,
               1. NOTE: If _iterator_ does not have a `throw` method, this throw is going to terminate the `yield*` loop. But first we need to give _iterator_ a chance to clean up.
@@ -24630,7 +24630,7 @@
             1. If _done_ is *true*, then
               1. Let _returnedValue_ be ? IteratorValue(_innerReturnResult_).
               1. Return ReturnCompletion(_returnedValue_).
-            1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerReturnResult_))).
+            1. If _genKind_ is ~async~, set _received_ to Completion(AsyncGeneratorYield(? IteratorValue(_innerReturnResult_), *false*)).
             1. Else, set _received_ to Completion(GeneratorYield(_innerReturnResult_)).
       </emu-alg>
     </emu-clause>
@@ -51861,14 +51861,9 @@ THH:mm:ss.sss
           1. If _genKind_ is ~sync~, return ? GeneratorYield(CreateIteratorResultObject(_arg_, *false*)).
           1. Assert: _genKind_ is ~async~.
           1. Let _resolved_ be ? PromiseResolveIfThenable(_arg_).
-          1. If _resolved_ is ~not-a-thenable~, then
-            1. Let _gen_ be the value of the Generator component of the running execution context.
-            1. If _gen_.[[AsyncGeneratorQueue]] has more than one element, then
-              1. NOTE: This ensures that the generator suspends before handling pending requests.
-              1. Perform ! Await(*undefined*).
-          1. Else,
-            1. Set _arg_ to ? AwaitPromise(_resolved_).
-          1. Return ? AsyncGeneratorYield(_arg_).
+          1. If _resolved_ is ~not-a-thenable~, return ? AsyncGeneratorYield(_arg_, *true*).
+          1. Let _awaited_ be ? AwaitPromise(_resolved_).
+          1. Return ? AsyncGeneratorYield(_awaited_, *false*).
         </emu-alg>
       </emu-clause>
 
@@ -52213,6 +52208,7 @@ THH:mm:ss.sss
         <h1>
           AsyncGeneratorYield (
             _arg_: an ECMAScript language value,
+            _needsAwait_: a Boolean,
           ): either a normal completion containing an ECMAScript language value or an abrupt completion
         </h1>
         <dl class="header">
@@ -52229,7 +52225,11 @@ THH:mm:ss.sss
           1. Perform AsyncGeneratorCompleteStep(_gen_, _completion_, *false*, _previousRealm_).
           1. Let _queue_ be _gen_.[[AsyncGeneratorQueue]].
           1. If _queue_ is not empty, then
-            1. NOTE: Execution continues without suspending the generator.
+            1. If _needsAwait_ is *true*, then
+              1. NOTE: This ensures that the generator suspends before handling pending requests.
+              1. Perform ! Await(*undefined*).
+            1. Else,
+              1. NOTE: Execution continues without further suspending the generator.
             1. Let _toYield_ be the first element of _queue_.
             1. Let _resumptionValue_ be Completion(_toYield_.[[Completion]]).
             1. Return ? AsyncGeneratorUnwrapYieldResumption(_resumptionValue_).
