@@ -28,7 +28,7 @@ const warnings = [];
 
 const specPathsWithRelative = args.specPaths.map(specPath => ({
   absolute: specPath,
-  relative: path.relative(process.cwd(), specPath) || path.basename(specPath),
+  relative: path.relative(process.cwd(), specPath),
 }));
 
 for (const specPath of specPathsWithRelative) {
