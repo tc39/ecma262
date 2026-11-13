@@ -84,7 +84,7 @@ function parseArgs(argv) {
 
   for (const arg of argv) {
     if (arg === '--help') {
-      console.log('Usage: node scripts/check-alias-abbreviations.mjs [path/to/spec1.html] [path/to/spec2.html] ...');
+      console.log('Usage: node scripts/check-alias-abbreviations.mjs [path/to/spec.html]...');
       process.exit(1);
     }
     if (arg.startsWith('-')) {
@@ -94,7 +94,7 @@ function parseArgs(argv) {
   }
 
   if (specPaths.length === 0) {
-    specPaths.push(...DEFAULT_SPEC_PATHS);
+    specPaths.unshift(...DEFAULT_SPEC_PATHS);
   }
   return {specPaths};
 }

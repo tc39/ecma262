@@ -29,12 +29,16 @@ function lines(text) {
   return text.split('\n');
 }
 
+function escapeShellArg(arg) {
+  return `'${arg.replaceAll("'", `'\\''`)}'`;
+}
+
 console.log(`base ref: ${BASE_REF}`);
 
-let { stdout } = await execP(`git ls-tree -r --name-only "${BASE_REF}" | grep -E '^spec.html$|[.]emu$'`);
+let { stdout } = await execP(`git ls-tree -r --name-only ${escapeShellArg(BASE_REF)} | grep -E '^spec.html$|[.]emu$'`);
 let baseSpecPaths = lines(stdout.trim());
 
-({ stdout } = await execP(`git show ${baseSpecPaths.map(p => JSON.stringify(`${BASE_REF}:${p}`)).join(' ')} | aspell ${ASPELL_OPTS} | sort -fu`));
+({ stdout } = await execP(`git show ${baseSpecPaths.map(p => escapeShellArg(`${BASE_REF}:${p}`)).join(' ')} | aspell ${ASPELL_OPTS} | sort -fu`));
 
 let existingWords = lines(stdout.trim());
 
@@ -57,7 +61,7 @@ novel.sort();
 console.log(`\npreviously used novel words: ${novel.join(', ')}`);
 await writeFile('aspell.txt', makeDict(novel));
 
-const specPathArgs = SPEC_PATHS.map(p => `'${p.replaceAll("'", `'\\''`)}'`).join(' ');
+const specPathArgs = SPEC_PATHS.map(p => escapeShellArg(p)).join(' ');
 ({ stdout } = await execP(`cat ${specPathArgs} | aspell --personal=./aspell.txt ${ASPELL_OPTS} list | sort -u`));
 let misspellings = lines(stdout.trim()).filter(w => w.length >= MIN_WORD_SIZE);
 
