@@ -1,9 +1,12 @@
 import { promisify } from 'node:util';
 import { exec } from 'node:child_process';
 const execP = promisify(exec);
+import { globSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 
 const MIN_WORD_SIZE = 3;
+
+const SPEC_PATHS = ['spec.html', ...globSync('*/*.emu')];
 
 const BASE_REF = process.argv[2];
 const ASPELL_OPTS = [
@@ -26,9 +29,16 @@ function lines(text) {
   return text.split('\n');
 }
 
+function escapeShellArg(arg) {
+  return `'${arg.replaceAll("'", `'\\''`)}'`;
+}
+
 console.log(`base ref: ${BASE_REF}`);
 
-let { stdout } = await execP(`git show "${BASE_REF}":spec.html | aspell ${ASPELL_OPTS} | sort -fu`);
+let { stdout } = await execP(`git ls-tree -r --name-only ${escapeShellArg(BASE_REF)} | grep -E '^spec.html$|[.]emu$'`);
+let baseSpecPaths = lines(stdout.trim());
+
+({ stdout } = await execP(`git show ${baseSpecPaths.map(p => escapeShellArg(`${BASE_REF}:${p}`)).join(' ')} | aspell ${ASPELL_OPTS} | sort -fu`));
 
 let existingWords = lines(stdout.trim());
 
@@ -51,13 +61,14 @@ novel.sort();
 console.log(`\npreviously used novel words: ${novel.join(', ')}`);
 await writeFile('aspell.txt', makeDict(novel));
 
-({ stdout } = await execP(`aspell --personal=./aspell.txt ${ASPELL_OPTS} list <spec.html | sort -u`));
+const specPathArgs = SPEC_PATHS.map(p => escapeShellArg(p)).join(' ');
+({ stdout } = await execP(`cat ${specPathArgs} | aspell --personal=./aspell.txt ${ASPELL_OPTS} list | sort -u`));
 let misspellings = lines(stdout.trim()).filter(w => w.length >= MIN_WORD_SIZE);
 
 if (misspellings.length > 0) {
   console.log(`\nmisspellings: ${misspellings.join(', ')}`);
   let pattern = misspellings.map(w => `-e ${JSON.stringify(w)}`).join(' --or ');
-  ({ stdout } = await execP(`git grep --line-number --column --fixed-strings --only-matching ${pattern} -- spec.html`));
+  ({ stdout } = await execP(`git grep --line-number --column --fixed-strings --only-matching ${pattern} -- ${specPathArgs}`));
 
   console.log('');
 
