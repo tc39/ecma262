@@ -34335,8 +34335,9 @@
         </dl>
         <emu-alg>
           1. Let _systemTimeZoneIdentifier_ be SystemTimeZoneIdentifier().
-          1. If IsTimeZoneOffsetString(_systemTimeZoneIdentifier_) is *true*, then
-            1. Let _offsetNanoseconds_ be ParseTimeZoneOffsetString(_systemTimeZoneIdentifier_).
+          1. Let _parseResult_ be ParseText(_systemTimeZoneIdentifier_, |UTCOffset|).
+          1. If _parseResult_ is a Parse Node, then
+            1. Let _offsetNanoseconds_ be ParseTimeZoneOffsetString of _systemTimeZoneIdentifier_.
           1. Else,
             1. Let _offsetNanoseconds_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℝ(_tv_) × NanosecondsPerMillisecond).
           1. Let _offsetMilliseconds_ be truncate(_offsetNanoseconds_ / NanosecondsPerMillisecond).
@@ -34370,8 +34371,9 @@
         <emu-alg>
           1. If _t_ is not a finite Number, return *NaN*.
           1. Let _systemTimeZoneIdentifier_ be SystemTimeZoneIdentifier().
-          1. If IsTimeZoneOffsetString(_systemTimeZoneIdentifier_) is *true*, then
-            1. Let _offsetNanoseconds_ be ParseTimeZoneOffsetString(_systemTimeZoneIdentifier_).
+          1. Let _parseResult_ be ParseText(_systemTimeZoneIdentifier_, |UTCOffset|).
+          1. If _parseResult_ is a Parse Node, then
+            1. Let _offsetNanoseconds_ be ParseTimeZoneOffsetString of _parseResult_.
           1. Else,
             1. Let _possibleInstants_ be GetNamedTimeZoneEpochNanoseconds(_systemTimeZoneIdentifier_, YearFromTime(_t_), MonthFromTime(_t_) + 1, DateFromTime(_t_), HourFromTime(_t_), MinuteFromTime(_t_), SecondFromTime(_t_), MillisecondFromTime(_t_), 0, 0).
             1. NOTE: The following steps ensure that when _t_ represents local time repeating multiple times at a negative time zone transition (e.g. when the daylight saving time ends or the time zone offset is decreased due to a time zone rule change) or skipped local time at a positive time zone transition (e.g. when the daylight saving time starts or the time zone offset is increased due to a time zone rule change), _t_ is interpreted using the time zone offset before the transition.
@@ -34735,64 +34737,67 @@ THH:mm:ss.sss
             `.` `,`
         </emu-grammar>
 
-        <emu-clause id="sec-istimezoneoffsetstring" type="abstract operation">
-          <h1>
-            IsTimeZoneOffsetString (
-              _offsetString_: a String,
-            ): a Boolean
-          </h1>
+        <emu-clause id="sec-runtime-semantics-parsetimezoneoffsetstring" oldids="sec-parsetimezoneoffsetstring sec-istimezoneoffsetstring" type="sdo">
+          <h1>Runtime Semantics: ParseTimeZoneOffsetString ( ): an integer</h1>
           <dl class="header">
             <dt>description</dt>
-            <dd>The return value indicates whether _offsetString_ conforms to the grammar given by |UTCOffset|.</dd>
+            <dd>It interprets the various Parse Nodes of a parsed UTC offset string into distinct fields for each component.</dd>
           </dl>
-          <emu-alg>
-            1. Let _parseResult_ be ParseText(_offsetString_, |UTCOffset|).
-            1. If _parseResult_ is a List of errors, return *false*.
-            1. Return *true*.
-          </emu-alg>
-        </emu-clause>
 
-        <emu-clause id="sec-parsetimezoneoffsetstring" type="abstract operation">
-          <h1>
-            ParseTimeZoneOffsetString (
-              _offsetString_: a String,
-            ): an integer
-          </h1>
-          <dl class="header">
-            <dt>description</dt>
-            <dd>The return value is the UTC offset, as a number of nanoseconds, that corresponds to the String _offsetString_.</dd>
-          </dl>
+          <emu-grammar>
+            UTCOffset :::
+              ASCIISign Hour
+          </emu-grammar>
           <emu-alg>
-            1. Let _parseResult_ be ParseText(_offsetString_, |UTCOffset|).
-            1. Assert: _parseResult_ is not a List of errors.
-            1. Assert: _parseResult_ contains a |ASCIISign| Parse Node.
-            1. Let _parsedSign_ be the source text matched by the |ASCIISign| Parse Node contained within _parseResult_.
-            1. If _parsedSign_ is the single code point U+002D (HYPHEN-MINUS), then
-              1. Let _sign_ be -1.
-            1. Else,
-              1. Let _sign_ be 1.
-            1. NOTE: Applications of StringToNumber below do not lose precision, since each of the parsed values is guaranteed to be a sufficiently short string of decimal digits.
-            1. Assert: _parseResult_ contains an |Hour| Parse Node.
-            1. Let _parsedHours_ be the source text matched by the |Hour| Parse Node contained within _parseResult_.
-            1. Let _hours_ be ℝ(StringToNumber(CodePointsToString(_parsedHours_))).
-            1. If _parseResult_ does not contain a |MinuteSecond| Parse Node, then
-              1. Let _minutes_ be 0.
-            1. Else,
-              1. Let _parsedMinutes_ be the source text matched by the first |MinuteSecond| Parse Node contained within _parseResult_.
-              1. Let _minutes_ be ℝ(StringToNumber(CodePointsToString(_parsedMinutes_))).
-            1. If _parseResult_ does not contain two |MinuteSecond| Parse Nodes, then
-              1. Let _seconds_ be 0.
-            1. Else,
-              1. Let _parsedSeconds_ be the source text matched by the second |MinuteSecond| Parse Node contained within _parseResult_.
-              1. Let _seconds_ be ℝ(StringToNumber(CodePointsToString(_parsedSeconds_))).
-            1. If _parseResult_ does not contain a |TemporalDecimalFraction| Parse Node, then
-              1. Let _nanoseconds_ be 0.
-            1. Else,
-              1. Let _parsedFraction_ be the source text matched by the |TemporalDecimalFraction| Parse Node contained within _parseResult_.
-              1. Let _fraction_ be the string-concatenation of CodePointsToString(_parsedFraction_) and *"000000000"*.
-              1. Let _nanosecondsString_ be the substring of _fraction_ from 1 to 10.
-              1. Let _nanoseconds_ be ℝ(StringToNumber(_nanosecondsString_)).
-            1. Return _sign_ × (((_hours_ × MinutesPerHour + _minutes_) × SecondsPerMinute + _seconds_) × NanosecondsPerSecond + _nanoseconds_).
+            1. Let _hoursString_ be CodePointsToString(the source text matched by |Hour|).
+            1. Let _hours_ be ! SnapToInteger(_hoursString_, ~reject~).
+            1. Let _offsetNanoseconds_ be _hours_ × MillisecondsPerHour × NanosecondsPerMillisecond.
+            1. If the source text matched by |ASCIISign| is the single code point U+002D (HYPHEN-MINUS), then
+              1. Set _offsetNanoseconds_ to -_offsetNanoseconds_.
+            1. Return _offsetNanoseconds_.
+          </emu-alg>
+
+          <emu-grammar>
+            UTCOffset :::
+              ASCIISign Hour HourSubcomponents[+Extended]
+              ASCIISign Hour HourSubcomponents[~Extended]
+          </emu-grammar>
+          <emu-alg>
+            1. Let _hoursString_ be CodePointsToString(the source text matched by |Hour|).
+            1. Let _hours_ be ! SnapToInteger(_hoursString_, ~reject~).
+            1. Let _offsetNanoseconds_ be ParseTimeZoneOffsetString of |HourSubcomponents|.
+            1. Set _offsetNanoseconds_ to _hours_ × MillisecondsPerHour × NanosecondsPerMillisecond + _offsetNanoseconds_.
+            1. If the source text matched by |ASCIISign| is the single code point U+002D (HYPHEN-MINUS), then
+              1. Set _offsetNanoseconds_ to -_offsetNanoseconds_.
+            1. Return _offsetNanoseconds_.
+          </emu-alg>
+
+          <emu-grammar>
+            HourSubcomponents :::
+              TimeSeparator MinuteSecond
+          </emu-grammar>
+          <emu-alg>
+            1. Let _minutesString_ be CodePointsToString(the source text matched by |MinuteSecond|).
+            1. Let _minutes_ be ! SnapToInteger(_minutesString_, ~reject~).
+            1. Return _minutes_ × MillisecondsPerMinute × NanosecondsPerMillisecond.
+          </emu-alg>
+
+          <emu-grammar>
+            HourSubcomponents :::
+              TimeSeparator MinuteSecond TimeSeparator MinuteSecond TemporalDecimalFraction?
+          </emu-grammar>
+          <emu-alg>
+            1. Let _minutesString_ be CodePointsToString(the source text matched by the first |MinuteSecond|).
+            1. Let _minutes_ be ! SnapToInteger(_minutesString_, ~reject~).
+            1. Let _secondsString_ be CodePointsToString(the source text matched by the second |MinuteSecond|).
+            1. Let _seconds_ be ! SnapToInteger(_secondsString_, ~reject~).
+            1. If |TemporalDecimalFraction| is not present, then
+              1. Return (_minutes_ × SecondsPerMinute + _seconds_) × NanosecondsPerSecond.
+            1. Let _fraction_ be CodePointsToString(the source text matched by |TemporalDecimalFraction|).
+            1. Let _fractionDigits_ be the string-concatenation of _fraction_ and *"00000000"*.
+            1. Let _nanosecondsString_ be the substring of _fractionDigits_ from 1 to 10.
+            1. Let _nanoseconds_ be ! SnapToInteger(_nanosecondsString_, ~reject~).
+            1. Return (_minutes_ × SecondsPerMinute + _seconds_) × NanosecondsPerSecond + _nanoseconds_.
           </emu-alg>
         </emu-clause>
       </emu-clause>
@@ -35762,8 +35767,9 @@ THH:mm:ss.sss
           </dl>
           <emu-alg>
             1. Let _systemTimeZoneIdentifier_ be SystemTimeZoneIdentifier().
-            1. If IsTimeZoneOffsetString(_systemTimeZoneIdentifier_) is *true*, then
-              1. Let _offsetNanoseconds_ be ParseTimeZoneOffsetString(_systemTimeZoneIdentifier_).
+            1. Let _parseResult_ be ParseText(_systemTimeZoneIdentifier_, |UTCOffset|).
+            1. If _parseResult_ is a Parse Node, then
+              1. Let _offsetNanoseconds_ be ParseTimeZoneOffsetString of _parseResult_.
             1. Else,
               1. Let _offsetNanoseconds_ be GetNamedTimeZoneOffsetNanoseconds(_systemTimeZoneIdentifier_, ℝ(_tv_) × NanosecondsPerMillisecond).
             1. Let _offsetMilliseconds_ be truncate(_offsetNanoseconds_ / NanosecondsPerMillisecond).
